@@ -20,7 +20,9 @@ public class Atsc3QueryImpl implements IAtsc3Query {
     public List<String> queryService2(List<String> properties) {
         Log.i("queryService2", String.format("org.atsc.query.service with properties: %s", properties));
         ArrayList<String> result = new ArrayList<String>();
-        result.add("ngbp.org");
+        result.add("ngbp.org1");
+        result.add("ngbp.org2");
+        result.add("ngbp.org3");
         return result;
     }
 }
