@@ -9,11 +9,11 @@ import org.ngbp.jsonrpc4jtestharness.rsp.cacheRequest.model.QueryCacheUsage;
 @JsonRpcService("")
 public interface CacheRequest {
     @JsonRpcMethod("org.atsc.CacheRequest")
-    JsonRpcResponse<CacheRequest> cacheRequest ();
+    CacheRequest cacheRequest ();
 
     @JsonRpcMethod("org.atsc.CacheRequestDASH")
-    JsonRpcResponse<CacheRequest> CacheRequestDASH ();
+    CacheRequest CacheRequestDASH ();
 
     @JsonRpcMethod("org.atsc.cacheUsage")
-    JsonRpcResponse<QueryCacheUsage> queryCacheUsage ();
+    QueryCacheUsage queryCacheUsage ();
 }

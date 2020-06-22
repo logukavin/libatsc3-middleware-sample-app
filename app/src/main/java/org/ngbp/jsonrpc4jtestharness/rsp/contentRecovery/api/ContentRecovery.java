@@ -3,7 +3,6 @@ package org.ngbp.jsonrpc4jtestharness.rsp.contentRecovery.api;
 import com.googlecode.jsonrpc4j.JsonRpcMethod;
 import com.googlecode.jsonrpc4j.JsonRpcService;
 
-import org.ngbp.jsonrpc4jtestharness.models.JsonRpcResponse;
 import org.ngbp.jsonrpc4jtestharness.rsp.contentRecovery.model.CecoveredComponentInfo;
 import org.ngbp.jsonrpc4jtestharness.rsp.contentRecovery.model.ContentRecoveryState;
 
@@ -11,11 +10,11 @@ import org.ngbp.jsonrpc4jtestharness.rsp.contentRecovery.model.ContentRecoverySt
 public interface ContentRecovery {
 
     @JsonRpcMethod("org.atsc.query.contentRecoveryState")
-    JsonRpcResponse<ContentRecoveryState> queryContentRecoveryState();
+    ContentRecoveryState queryContentRecoveryState();
 
     @JsonRpcMethod("org.atsc.query.recoveredComponentInfo")
-    JsonRpcResponse<CecoveredComponentInfo> queryRecoveredComponentInfo ();
+    CecoveredComponentInfo queryRecoveredComponentInfo ();
 
     @JsonRpcMethod("org.atsc.notify")
-    JsonRpcResponse<CecoveredComponentInfo> contentRecoveryStateChangeNotification ();
+    CecoveredComponentInfo contentRecoveryStateChangeNotification ();
 }

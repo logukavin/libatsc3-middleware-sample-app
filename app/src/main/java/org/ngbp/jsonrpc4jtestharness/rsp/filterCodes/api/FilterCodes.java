@@ -10,7 +10,7 @@ import org.ngbp.jsonrpc4jtestharness.rsp.filterCodes.model.GetFilterCodes;
 public interface FilterCodes {
 
     @JsonRpcMethod("org.atsc.getFilterCodes")
-    JsonRpcResponse<GetFilterCodes> getFilterCodes();
+    GetFilterCodes getFilterCodes();
 
     @JsonRpcMethod("org.atsc.setFilterCodes")
     JsonRpcResponse<Object> setFilterCodes();
