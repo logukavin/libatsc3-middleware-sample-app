@@ -1,7 +1,7 @@
 package org.ngbp.jsonrpc4jtestharness.rsp.xLink.api;
 
+import org.ngbp.jsonrpc4jtestharness.models.JsonRpcResponse;
 import org.ngbp.jsonrpc4jtestharness.rsp.drm.model.NotifyParams;
-import org.ngbp.jsonrpc4jtestharness.rsp.mapper.JsonRpcResponse;
 
 public class XLinkImpl implements XLink {
     @Override

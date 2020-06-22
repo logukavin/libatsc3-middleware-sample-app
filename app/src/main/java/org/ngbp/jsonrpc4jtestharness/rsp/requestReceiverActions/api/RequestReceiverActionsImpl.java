@@ -1,6 +1,6 @@
 package org.ngbp.jsonrpc4jtestharness.rsp.requestReceiverActions.api;
 
-import org.ngbp.jsonrpc4jtestharness.rsp.mapper.JsonRpcResponse;
+import org.ngbp.jsonrpc4jtestharness.models.JsonRpcResponse;
 import org.ngbp.jsonrpc4jtestharness.rsp.requestReceiverActions.model.AudioVolume;
 
 public class RequestReceiverActionsImpl implements RequestReceiverActions {
