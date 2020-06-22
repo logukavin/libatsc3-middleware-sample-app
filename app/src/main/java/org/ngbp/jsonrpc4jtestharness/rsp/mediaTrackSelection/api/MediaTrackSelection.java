@@ -3,7 +3,8 @@ package org.ngbp.jsonrpc4jtestharness.rsp.mediaTrackSelection.api;
 import com.googlecode.jsonrpc4j.JsonRpcMethod;
 import com.googlecode.jsonrpc4j.JsonRpcService;
 
-import org.ngbp.jsonrpc4jtestharness.rsp.mapper.JsonRpcResponse;
+import org.ngbp.jsonrpc4jtestharness.models.JsonRpcResponse;
+
 
 @JsonRpcService("")
 public interface MediaTrackSelection {

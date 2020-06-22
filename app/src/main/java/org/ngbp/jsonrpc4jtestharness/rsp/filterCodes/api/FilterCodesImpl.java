@@ -1,7 +1,7 @@
 package org.ngbp.jsonrpc4jtestharness.rsp.filterCodes.api;
 
+import org.ngbp.jsonrpc4jtestharness.models.JsonRpcResponse;
 import org.ngbp.jsonrpc4jtestharness.rsp.filterCodes.model.GetFilterCodes;
-import org.ngbp.jsonrpc4jtestharness.rsp.mapper.JsonRpcResponse;
 
 public class FilterCodesImpl implements FilterCodes {
     @Override
