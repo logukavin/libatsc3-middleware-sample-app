@@ -1,6 +1,6 @@
 package org.ngbp.jsonrpc4jtestharness.rsp.receiverQueryApi.api;
 
-import org.ngbp.jsonrpc4jtestharness.rsp.mapper.JsonRpcResponse;
+import org.ngbp.jsonrpc4jtestharness.models.JsonRpcResponse;
 import org.ngbp.jsonrpc4jtestharness.rsp.receiverQueryApi.model.Alerting;
 import org.ngbp.jsonrpc4jtestharness.rsp.receiverQueryApi.model.AudioAccessibilityPref;
 import org.ngbp.jsonrpc4jtestharness.rsp.receiverQueryApi.model.BaseURI;

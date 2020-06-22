@@ -1,6 +1,7 @@
 package org.ngbp.jsonrpc4jtestharness.rsp.eventStream.api;
 
-import org.ngbp.jsonrpc4jtestharness.rsp.mapper.JsonRpcResponse;
+
+import org.ngbp.jsonrpc4jtestharness.models.JsonRpcResponse;
 
 public class EventStreamImpl implements EventStream {
     @Override
