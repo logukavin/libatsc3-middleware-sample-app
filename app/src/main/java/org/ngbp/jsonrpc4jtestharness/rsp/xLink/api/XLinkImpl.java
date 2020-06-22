@@ -5,12 +5,12 @@ import org.ngbp.jsonrpc4jtestharness.rsp.drm.model.NotifyParams;
 
 public class XLinkImpl implements XLink {
     @Override
-    public JsonRpcResponse<Object> xLinkResolutionNotification() {
+    public Object xLinkResolutionNotification() {
         return null;
     }
 
     @Override
-    public JsonRpcResponse<NotifyParams> xLinkResolved() {
+    public NotifyParams xLinkResolved() {
         return null;
     }
 }

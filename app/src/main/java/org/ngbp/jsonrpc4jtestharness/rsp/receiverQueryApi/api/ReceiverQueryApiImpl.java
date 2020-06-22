@@ -1,6 +1,5 @@
 package org.ngbp.jsonrpc4jtestharness.rsp.receiverQueryApi.api;
 
-import org.ngbp.jsonrpc4jtestharness.models.JsonRpcResponse;
 import org.ngbp.jsonrpc4jtestharness.rsp.receiverQueryApi.model.Alerting;
 import org.ngbp.jsonrpc4jtestharness.rsp.receiverQueryApi.model.AudioAccessibilityPref;
 import org.ngbp.jsonrpc4jtestharness.rsp.receiverQueryApi.model.BaseURI;
@@ -14,48 +13,49 @@ import org.ngbp.jsonrpc4jtestharness.rsp.receiverQueryApi.model.ServiceGuideUrls
 import java.util.List;
 
 public class ReceiverQueryApiImpl implements ReceiverQueryApi {
+
     @Override
-    public JsonRpcResponse<RatingLevel> queryContentAdvisoryRating() {
+    public RatingLevel queryContentAdvisoryRating() {
         return null;
     }
 
     @Override
-    public JsonRpcResponse<CC> queryClosedCaptionsStatus() {
+    public CC queryClosedCaptionsStatus() {
         return null;
     }
 
     @Override
-    public JsonRpcResponse<Service> queryServiceID() {
+    public Service queryServiceID() {
         return null;
     }
 
     @Override
-    public JsonRpcResponse<Languages> queryLanguagePreferences() {
+    public Languages queryLanguagePreferences() {
         return null;
     }
 
     @Override
-    public JsonRpcResponse<CaptionDisplay> queryCaptionDisplayPreferences() {
+    public CaptionDisplay queryCaptionDisplayPreferences() {
         return null;
     }
 
     @Override
-    public JsonRpcResponse<AudioAccessibilityPref> queryAudioAccessibilityPreferences() {
+    public AudioAccessibilityPref queryAudioAccessibilityPreferences() {
         return null;
     }
 
     @Override
-    public JsonRpcResponse<BaseURI> queryReceiverWebServerURI() {
+    public BaseURI queryReceiverWebServerURI() {
         return null;
     }
 
     @Override
-    public JsonRpcResponse<List<Alerting>> queryAlertingSignaling() {
+    public List<Alerting> queryAlertingSignaling() {
         return null;
     }
 
     @Override
-    public JsonRpcResponse<List<ServiceGuideUrls>> queryServiceGuideURLs() {
+    public List<ServiceGuideUrls> queryServiceGuideURLs() {
         return null;
     }
 }

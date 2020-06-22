@@ -20,29 +20,29 @@ import java.util.List;
 public interface ReceiverQueryApi {
 
     @JsonRpcMethod("org.atsc.query.ratingLevel")
-    JsonRpcResponse<RatingLevel> queryContentAdvisoryRating();
+    RatingLevel queryContentAdvisoryRating();
 
     @JsonRpcMethod("org.atsc.query.cc")
-    JsonRpcResponse<CC> queryClosedCaptionsStatus();
+    CC queryClosedCaptionsStatus();
 
     @JsonRpcMethod("org.atsc.query.service")
-    JsonRpcResponse<Service> queryServiceID();
+    Service queryServiceID();
 
     @JsonRpcMethod("org.atsc.query.languages")
-    JsonRpcResponse<Languages> queryLanguagePreferences();
+    Languages queryLanguagePreferences();
 
     @JsonRpcMethod("org.atsc.query.captionDisplay")
-    JsonRpcResponse<CaptionDisplay> queryCaptionDisplayPreferences();
+    CaptionDisplay queryCaptionDisplayPreferences();
 
     @JsonRpcMethod("org.atsc.query.audioAccessibilityPref")
-    JsonRpcResponse<AudioAccessibilityPref> queryAudioAccessibilityPreferences();
+    AudioAccessibilityPref queryAudioAccessibilityPreferences();
 
     @JsonRpcMethod("org.atsc.query.baseURI")
-    JsonRpcResponse<BaseURI> queryReceiverWebServerURI();
+    BaseURI queryReceiverWebServerURI();
 
     @JsonRpcMethod("org.atsc.query.alerting")
-    JsonRpcResponse<List<Alerting>> queryAlertingSignaling();
+    List<Alerting> queryAlertingSignaling();
 
     @JsonRpcMethod("org.atsc.query.serviceGuideUrls")
-    JsonRpcResponse<List<ServiceGuideUrls>> queryServiceGuideURLs ();
+    List<ServiceGuideUrls> queryServiceGuideURLs ();
 }

@@ -10,6 +10,6 @@ import org.ngbp.jsonrpc4jtestharness.rsp.asynchronousNotificationsofChanges.mode
 public interface AsynchronousNotificationsOfChanges {
 
     @JsonRpcMethod("org.atsc.notify")
-    JsonRpcResponse<Object> contentAdvisoryRatingChangeNotification();
+    Object contentAdvisoryRatingChangeNotification();
 
 }
