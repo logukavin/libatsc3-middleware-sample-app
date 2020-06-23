@@ -11,18 +11,18 @@ import org.ngbp.jsonrpc4jtestharness.rsp.rmpContentSynchronization.model.RmpWall
 public interface RMPContentSynchronization {
 
     @JsonRpcMethod("org.atsc.query.rmpMediaTime")
-    JsonRpcResponse<RmpMediaTime> queryRMPMediaTime();
+    RmpMediaTime queryRMPMediaTime();
 
     @JsonRpcMethod("org.atsc.query.rmpMediaTime")
-    JsonRpcResponse<RmpWallClockTime> queryRMPWallClock();
+    RmpWallClockTime queryRMPWallClock();
 
     @JsonRpcMethod("org.atsc.query.rmpPlaybackState")
-    JsonRpcResponse<RmpWallClockTime> queryRMPPlaybackState();
+    RmpWallClockTime queryRMPPlaybackState();
 
     @JsonRpcMethod("org.atsc.query.rmpPlaybackRate")
-    JsonRpcResponse<RmpWallClockTime> queryRMPPlaybackRate();
+    RmpWallClockTime queryRMPPlaybackRate();
 
     @JsonRpcMethod("org.atsc.notify")
-    JsonRpcResponse<RmpWallClockTime> rMPMediaTimeChangeNotification();
+    RmpWallClockTime rMPMediaTimeChangeNotification();
 
 }
