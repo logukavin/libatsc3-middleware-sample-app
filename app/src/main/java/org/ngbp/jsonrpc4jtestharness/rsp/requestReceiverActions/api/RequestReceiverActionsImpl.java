@@ -4,23 +4,24 @@ import org.ngbp.jsonrpc4jtestharness.models.JsonRpcResponse;
 import org.ngbp.jsonrpc4jtestharness.rsp.requestReceiverActions.model.AudioVolume;
 
 public class RequestReceiverActionsImpl implements RequestReceiverActions {
+
     @Override
-    public JsonRpcResponse<Object> acquireService() {
+    public Object acquireService() {
         return null;
     }
 
     @Override
-    public JsonRpcResponse<Object> videoScalingAndPositioning() {
+    public Object videoScalingAndPositioning() {
         return null;
     }
 
     @Override
-    public JsonRpcResponse<Object> setRMPURL() {
+    public Object setRMPURL() {
         return null;
     }
 
     @Override
-    public JsonRpcResponse<AudioVolume> audioVolume() {
+    public AudioVolume audioVolume() {
         return null;
     }
 }

@@ -4,18 +4,19 @@ package org.ngbp.jsonrpc4jtestharness.rsp.eventStream.api;
 import org.ngbp.jsonrpc4jtestharness.models.JsonRpcResponse;
 
 public class EventStreamImpl implements EventStream {
+
     @Override
-    public JsonRpcResponse<Object> eventStreamSubscribe() {
+    public Object eventStreamSubscribe() {
         return null;
     }
 
     @Override
-    public JsonRpcResponse<Object> eventStreamUnsubscribe() {
+    public Object eventStreamUnsubscribe() {
         return null;
     }
 
     @Override
-    public JsonRpcResponse<Object> eventStreamEvent() {
+    public Object eventStreamEvent() {
         return null;
     }
 }

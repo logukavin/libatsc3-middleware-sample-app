@@ -5,7 +5,7 @@ import org.ngbp.jsonrpc4jtestharness.models.JsonRpcResponse;
 
 public class AsynchronousNotificationsOfChangesImpl implements AsynchronousNotificationsOfChanges {
     @Override
-    public JsonRpcResponse<Object> contentAdvisoryRatingChangeNotification() {
-            return null;
+    public Object contentAdvisoryRatingChangeNotification() {
+        return null;
     }
 }

@@ -1,32 +1,32 @@
 package org.ngbp.jsonrpc4jtestharness.rsp.rmpContentSynchronization.api;
 
-import org.ngbp.jsonrpc4jtestharness.models.JsonRpcResponse;
 import org.ngbp.jsonrpc4jtestharness.rsp.rmpContentSynchronization.model.RmpMediaTime;
 import org.ngbp.jsonrpc4jtestharness.rsp.rmpContentSynchronization.model.RmpWallClockTime;
 
 public class RMPContentSynchronizationImpl implements RMPContentSynchronization {
+
     @Override
-    public JsonRpcResponse<RmpMediaTime> queryRMPMediaTime() {
+    public RmpMediaTime queryRMPMediaTime() {
         return null;
     }
 
     @Override
-    public JsonRpcResponse<RmpWallClockTime> queryRMPWallClock() {
+    public RmpWallClockTime queryRMPWallClock() {
         return null;
     }
 
     @Override
-    public JsonRpcResponse<RmpWallClockTime> queryRMPPlaybackState() {
+    public RmpWallClockTime queryRMPPlaybackState() {
         return null;
     }
 
     @Override
-    public JsonRpcResponse<RmpWallClockTime> queryRMPPlaybackRate() {
+    public RmpWallClockTime queryRMPPlaybackRate() {
         return null;
     }
 
     @Override
-    public JsonRpcResponse<RmpWallClockTime> rMPMediaTimeChangeNotification() {
+    public RmpWallClockTime rMPMediaTimeChangeNotification() {
         return null;
     }
 }
