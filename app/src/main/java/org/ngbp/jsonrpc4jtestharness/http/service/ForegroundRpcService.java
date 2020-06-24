@@ -7,9 +7,14 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
 import android.os.IBinder;
+import android.util.Log;
 
 import org.ngbp.jsonrpc4jtestharness.MainActivity;
 import org.ngbp.jsonrpc4jtestharness.R;
+import org.ngbp.jsonrpc4jtestharness.http.servers.SimpleJettyWebServer;
+
+import java.io.IOException;
+import java.io.InputStream;
 
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
@@ -39,25 +44,35 @@ public class ForegroundRpcService extends Service {
 
         startForeground(1, notification);
 
+//        Convert content of htm file to string
+        final String content;
+        try {
+            InputStream is = getAssets().open("GitHub.htm");
+            int size = is.available();
+            byte[] buffer = new byte[size];
+            is.read(buffer);
+            is.close();
+            content = new String(buffer);
+        } catch (IOException e) {throw new RuntimeException(e);}
+
         //do heavy work on a background thread
-        /*Thread thread = new Thread() {
+        Thread thread = new Thread() {
             @Override
             public void run() {
-                SimpleJettyWebServer jettyServer = new SimpleJettyWebServer();
+                SimpleJettyWebServer jettyServer = new SimpleJettyWebServer(content);
                 try {
                     jettyServer.startup();
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
-
-                Log.d("Server"," isStarted? - " + jettyServer.getServer().isStarted());
                 Log.d("Server"," isStarting? - " + jettyServer.getServer().isStarting());
+                Log.d("Server"," isStarted? - " + jettyServer.getServer().isStarted());
                 Log.d("Server"," isRunning? - " + jettyServer.getServer().isRunning());
                 Log.d("Server"," Uri = " + jettyServer.getServer().getURI());
             }
         };
 
-        thread.start();*/
+        thread.start();
 
         return START_NOT_STICKY;
     }
