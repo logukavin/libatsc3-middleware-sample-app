@@ -3,10 +3,12 @@ package org.ngbp.jsonrpc4jtestharness;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.googlecode.jsonrpc4j.JsonRpcServer;
 
+import org.ngbp.jsonrpc4jtestharness.http.service.Action;
 import org.ngbp.jsonrpc4jtestharness.http.service.ForegroundRpcService;
 import org.ngbp.jsonrpc4jtestharness.mappers.RequestRpcMapper;
 import org.ngbp.jsonrpc4jtestharness.mappers.ResponseRpcMapper;
@@ -34,8 +36,19 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        startService();
 
+        findViewById(R.id.stop).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+               stopService();
+            }
+        });
+        findViewById(R.id.start).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                startService();
+            }
+        });
         ats3Query = new Atsc3QueryImpl();
         JsonRpcServer server = new JsonRpcServer(mapper, ats3Query, IAtsc3Query.class);
 
@@ -54,7 +67,7 @@ public class MainActivity extends AppCompatActivity {
 
         try {
             server.handleRequest(inputStream, outputStream);
-            String outputJsonResponse = new String(((ByteArrayOutputStream)outputStream).toByteArray());
+            String outputJsonResponse = new String(((ByteArrayOutputStream) outputStream).toByteArray());
 
             ResponseRpcMapper rpcMapper = new ResponseRpcMapper<Service>();
             JsonRpcResponse jsonRpcResponse = rpcMapper.mapSingleJsonRpcToResponseModel(outputJsonResponse);
@@ -100,7 +113,7 @@ public class MainActivity extends AppCompatActivity {
 
         try {
             server.handleRequest(inputStreamBatch, outputStreamBatch);
-            String outputJsonResponseBatch = new String(((ByteArrayOutputStream)outputStreamBatch).toByteArray());
+            String outputJsonResponseBatch = new String(((ByteArrayOutputStream) outputStreamBatch).toByteArray());
 
             ResponseRpcMapper responceMapperBatch = new ResponseRpcMapper<List<String>>();
             List<JsonRpcResponse> jsonRpcResponseBatch = responceMapperBatch.mapBatchJsonRpcToResponseModelList(outputJsonResponseBatch);
@@ -114,12 +127,15 @@ public class MainActivity extends AppCompatActivity {
 
     public void startService() {
         Intent serviceIntent = new Intent(this, ForegroundRpcService.class);
+        serviceIntent.setAction(Action.START.name());
         serviceIntent.putExtra("inputExtra", "Foreground RPC Service Example in Android");
         ContextCompat.startForegroundService(this, serviceIntent);
     }
+
     public void stopService() {
         Intent serviceIntent = new Intent(this, ForegroundRpcService.class);
-        stopService(serviceIntent);
+        serviceIntent.setAction(Action.STOP.name());
+        ContextCompat.startForegroundService(this, serviceIntent);
     }
 
     @Override
