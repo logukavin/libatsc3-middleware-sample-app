@@ -1,13 +1,13 @@
 package org.ngbp.jsonrpc4jtestharness;
 
-import androidx.appcompat.app.AppCompatActivity;
-
+import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.googlecode.jsonrpc4j.JsonRpcServer;
 
+import org.ngbp.jsonrpc4jtestharness.http.service.ForegroundRpcService;
 import org.ngbp.jsonrpc4jtestharness.mappers.RequestRpcMapper;
 import org.ngbp.jsonrpc4jtestharness.mappers.ResponseRpcMapper;
 import org.ngbp.jsonrpc4jtestharness.models.JsonRpcResponse;
@@ -21,9 +21,11 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
+
 public class MainActivity extends AppCompatActivity {
 
-    JsonRpcServer server;
     IAtsc3Query ats3Query;
     public static final ObjectMapper mapper = new ObjectMapper();
 
@@ -31,6 +33,8 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        startService();
 
         ats3Query = new Atsc3QueryImpl();
         JsonRpcServer server = new JsonRpcServer(mapper, ats3Query, IAtsc3Query.class);
@@ -105,5 +109,22 @@ public class MainActivity extends AppCompatActivity {
         } catch (IOException e) {
             e.printStackTrace();
         }
+
+    }
+
+    public void startService() {
+        Intent serviceIntent = new Intent(this, ForegroundRpcService.class);
+        serviceIntent.putExtra("inputExtra", "Foreground RPC Service Example in Android");
+        ContextCompat.startForegroundService(this, serviceIntent);
+    }
+    public void stopService() {
+        Intent serviceIntent = new Intent(this, ForegroundRpcService.class);
+        stopService(serviceIntent);
+    }
+
+    @Override
+    protected void onDestroy() {
+        stopService();
+        super.onDestroy();
     }
 }
