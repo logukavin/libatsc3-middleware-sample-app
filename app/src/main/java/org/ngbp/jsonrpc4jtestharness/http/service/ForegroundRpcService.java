@@ -26,10 +26,12 @@ public class ForegroundRpcService extends Service {
     private Boolean isServiceStarted = false;
     private final static String START = "START";
     private final static String STOP = "STOP";
+    private String notification_test = "Initial Text";
 
     @Override
     public void onCreate() {
         super.onCreate();
+        startForeground(1, createNotification(notification_test));
     }
 
     @Override
