@@ -5,10 +5,12 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.googlecode.jsonrpc4j.JsonRpcServer;
 
-import org.ngbp.jsonrpc4jtestharness.http.service.Action;
 import org.ngbp.jsonrpc4jtestharness.http.service.ForegroundRpcService;
 import org.ngbp.jsonrpc4jtestharness.mappers.RequestRpcMapper;
 import org.ngbp.jsonrpc4jtestharness.mappers.ResponseRpcMapper;
@@ -22,9 +24,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
-
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.content.ContextCompat;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -127,14 +126,14 @@ public class MainActivity extends AppCompatActivity {
 
     public void startService() {
         Intent serviceIntent = new Intent(this, ForegroundRpcService.class);
-        serviceIntent.setAction(Action.START.name());
+        serviceIntent.setAction(ForegroundRpcService.START);
         serviceIntent.putExtra("inputExtra", "Foreground RPC Service Example in Android");
         ContextCompat.startForegroundService(this, serviceIntent);
     }
 
     public void stopService() {
         Intent serviceIntent = new Intent(this, ForegroundRpcService.class);
-        serviceIntent.setAction(Action.STOP.name());
+        serviceIntent.setAction(ForegroundRpcService.STOP);
         ContextCompat.startForegroundService(this, serviceIntent);
     }
 

@@ -12,30 +12,30 @@ import org.ngbp.jsonrpc4jtestharness.MainActivity;
 import org.ngbp.jsonrpc4jtestharness.R;
 
 
-public class NotificationManager {
+public class NotificationHelper {
 
     private Context context;
     private String CHANNEL_ID = "ForegroundRpcServiceChannel";
 
-    public NotificationManager(Context context) {
+    public NotificationHelper(Context context) {
         this.context = context;
         createNotificationChannel();
     }
 
-    public NotificationManager(Context context, String channelID) {
+    public NotificationHelper(Context context, String channelID) {
         this.context = context;
         this.CHANNEL_ID = channelID;
         createNotificationChannel();
     }
 
-    public Notification createNotification(String input) {
+    public Notification createNotification(String contentText) {
         Intent notificationIntent = new Intent(context, MainActivity.class);
         PendingIntent pendingIntent = PendingIntent.getActivity(context,
                 0, notificationIntent, 0);
 
         return new NotificationCompat.Builder(context, CHANNEL_ID)
                 .setContentTitle("Foreground Rpc Service")
-                .setContentText(input)
+                .setContentText(contentText)
                 .setSmallIcon(R.mipmap.ic_launcher_round)
                 .setContentIntent(pendingIntent)
                 .build();

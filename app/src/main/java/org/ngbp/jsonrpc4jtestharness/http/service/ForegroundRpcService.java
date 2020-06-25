@@ -15,20 +15,19 @@ public class ForegroundRpcService extends Service {
 
     private PowerManager.WakeLock wakeLock;
     private Boolean isServiceStarted = false;
-    private final static String START = "START";
-    private final static String STOP = "STOP";
-    private NotificationManager notificationManager;
-
+    public final static String START = "START";
+    public final static String STOP = "STOP";
+    private NotificationHelper notificationHelper;
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        notificationManager = new NotificationManager(this);
-        String input = intent.getStringExtra("inputExtra");
+        notificationHelper = new NotificationHelper(this);
+        String message = intent.getStringExtra("inputExtra");
         String action = intent.getAction();
         if (action != null) {
             switch (action) {
                 case START:
-                    startService(input);
+                    startService(message);
                     break;
                 case STOP:
                     stopService();
@@ -40,12 +39,12 @@ public class ForegroundRpcService extends Service {
         return START_NOT_STICKY;
     }
 
-    private void startService(String input) {
+    private void startService(String message) {
         if (isServiceStarted) return;
         isServiceStarted = true;
         wakeLock = ((PowerManager) Objects.requireNonNull(getSystemService(Context.POWER_SERVICE))).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "ForegroundRpcService::lock");
         wakeLock.acquire();
-        startForeground(1, notificationManager.createNotification(input));
+        startForeground(1, notificationHelper.createNotification(message));
     }
 
     private void stopService() {
