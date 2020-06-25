@@ -1,84 +1,62 @@
 package org.ngbp.jsonrpc4jtestharness.http.service;
 
-import android.app.Notification;
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
-import android.app.PendingIntent;
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
 import android.os.IBinder;
-import android.util.Log;
-
-import org.ngbp.jsonrpc4jtestharness.MainActivity;
-import org.ngbp.jsonrpc4jtestharness.R;
-import org.ngbp.jsonrpc4jtestharness.http.servers.SimpleJettyWebServer;
-
-import java.io.IOException;
-import java.io.InputStream;
+import android.os.PowerManager;
 
 import androidx.annotation.Nullable;
-import androidx.core.app.NotificationCompat;
+
+import java.util.Objects;
 
 public class ForegroundRpcService extends Service {
 
-    public static final String CHANNEL_ID = "ForegroundRpcServiceChannel";
-    @Override
-    public void onCreate() {
-        super.onCreate();
-    }
+
+    private PowerManager.WakeLock wakeLock;
+    private Boolean isServiceStarted = false;
+    public final static String START = "START";
+    public final static String STOP = "STOP";
+    private NotificationHelper notificationHelper;
+
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-
-        String input = intent.getStringExtra("inputExtra");
-        createNotificationChannel();
-        Intent notificationIntent = new Intent(this, MainActivity.class);
-        PendingIntent pendingIntent = PendingIntent.getActivity(this,
-                0, notificationIntent, 0);
-
-        Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
-                .setContentTitle("Foreground Rpc Service")
-                .setContentText(input)
-                .setSmallIcon(R.mipmap.ic_launcher_round)
-                .setContentIntent(pendingIntent)
-                .build();
-
-        startForeground(1, notification);
-
-//        Convert content of htm file to string
-        final String content;
-        try {
-            InputStream is = getAssets().open("GitHub.htm");
-            int size = is.available();
-            byte[] buffer = new byte[size];
-            is.read(buffer);
-            is.close();
-            content = new String(buffer);
-        } catch (IOException e) {throw new RuntimeException(e);}
-
-        //do heavy work on a background thread
-        Thread thread = new Thread() {
-            @Override
-            public void run() {
-                SimpleJettyWebServer jettyServer = new SimpleJettyWebServer(content);
-                try {
-                    jettyServer.startup();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-                Log.d("Server"," isStarting? - " + jettyServer.getServer().isStarting());
-                Log.d("Server"," isStarted? - " + jettyServer.getServer().isStarted());
-                Log.d("Server"," isRunning? - " + jettyServer.getServer().isRunning());
-                Log.d("Server"," Uri = " + jettyServer.getServer().getURI());
+        notificationHelper = new NotificationHelper(this);
+        String message = intent.getStringExtra("inputExtra");
+        String action = intent.getAction();
+        if (action != null) {
+            switch (action) {
+                case START:
+                    startService(message);
+                    break;
+                case STOP:
+                    stopService();
+                    break;
+                default:
             }
-        };
-
-        thread.start();
+        }
 
         return START_NOT_STICKY;
     }
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
+
+    private void startService(String message) {
+        if (isServiceStarted) return;
+        isServiceStarted = true;
+        wakeLock = ((PowerManager) Objects.requireNonNull(getSystemService(Context.POWER_SERVICE))).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "ForegroundRpcService::lock");
+        wakeLock.acquire();
+        startForeground(1, notificationHelper.createNotification(message));
+    }
+
+    private void stopService() {
+        if (isServiceStarted) {
+            if (wakeLock != null) {
+                wakeLock.release();
+            }
+            stopForeground(true);
+            stopSelf();
+        }
+        isServiceStarted = false;
+
     }
 
     @Nullable
@@ -87,15 +65,4 @@ public class ForegroundRpcService extends Service {
         return null;
     }
 
-    private void createNotificationChannel() {
-        NotificationChannel serviceChannel = new NotificationChannel(
-                CHANNEL_ID,
-                "Foreground Rpc Service Channel",
-                NotificationManager.IMPORTANCE_DEFAULT
-        );
-        NotificationManager manager = getSystemService(NotificationManager.class);
-        if (manager != null) {
-            manager.createNotificationChannel(serviceChannel);
-        }
-    }
 }
