@@ -1,11 +1,11 @@
 package org.ngbp.jsonrpc4jtestharness.rpc.xLink;
 
-import com.googlecode.jsonrpc4j.JsonRpcMethod;
-import com.googlecode.jsonrpc4j.JsonRpcService;
+import com.github.nmuzhichin.jsonrpc.annotation.JsonRpcMethod;
+import com.github.nmuzhichin.jsonrpc.annotation.JsonRpcType;
 
 import org.ngbp.jsonrpc4jtestharness.rpc.drm.model.NotifyParams;
 
-@JsonRpcService("")
+@JsonRpcType
 public interface IXLink {
     @JsonRpcMethod("org.atsc.notify")
     Object xLinkResolutionNotification();
