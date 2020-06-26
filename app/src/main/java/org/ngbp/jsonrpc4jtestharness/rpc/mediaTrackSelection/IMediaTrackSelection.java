@@ -1,10 +1,10 @@
 package org.ngbp.jsonrpc4jtestharness.rpc.mediaTrackSelection;
 
-import com.googlecode.jsonrpc4j.JsonRpcMethod;
-import com.googlecode.jsonrpc4j.JsonRpcService;
+import com.github.nmuzhichin.jsonrpc.annotation.JsonRpcMethod;
+import com.github.nmuzhichin.jsonrpc.annotation.JsonRpcType;
 
 
-@JsonRpcService("")
+@JsonRpcType
 public interface IMediaTrackSelection {
 
     @JsonRpcMethod("org.atsc.track.selection")

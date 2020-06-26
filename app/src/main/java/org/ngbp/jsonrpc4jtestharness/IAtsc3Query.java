@@ -1,12 +1,12 @@
 package org.ngbp.jsonrpc4jtestharness;
 
-import com.googlecode.jsonrpc4j.JsonRpcMethod;
-import com.googlecode.jsonrpc4j.JsonRpcParam;
-import com.googlecode.jsonrpc4j.JsonRpcService;
+import com.github.nmuzhichin.jsonrpc.annotation.JsonRpcMethod;
+import com.github.nmuzhichin.jsonrpc.annotation.JsonRpcParam;
+import com.github.nmuzhichin.jsonrpc.annotation.JsonRpcType;
 
 import java.util.List;
 
-@JsonRpcService("")
+@JsonRpcType
 public interface IAtsc3Query {
     @JsonRpcMethod("org.atsc.query.service")
     ServiceResponse queryService();

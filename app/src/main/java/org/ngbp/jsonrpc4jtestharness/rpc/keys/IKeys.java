@@ -1,12 +1,12 @@
 package org.ngbp.jsonrpc4jtestharness.rpc.keys;
 
-import com.googlecode.jsonrpc4j.JsonRpcMethod;
-import com.googlecode.jsonrpc4j.JsonRpcService;
+import com.github.nmuzhichin.jsonrpc.annotation.JsonRpcMethod;
+import com.github.nmuzhichin.jsonrpc.annotation.JsonRpcType;
 
 import org.ngbp.jsonrpc4jtestharness.rpc.filterCodes.model.GetFilterCodes;
 import org.ngbp.jsonrpc4jtestharness.rpc.keys.model.Keys;
 
-@JsonRpcService("")
+@JsonRpcType
 public interface IKeys {
     @JsonRpcMethod("org.atsc.request.keys")
     Keys requestKeys();
