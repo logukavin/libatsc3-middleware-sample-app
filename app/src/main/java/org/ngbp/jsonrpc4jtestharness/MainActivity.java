@@ -9,9 +9,19 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.nmuzhichin.jsonrpc.api.RpcConsumer;
+import com.github.nmuzhichin.jsonrpc.context.ConsumerBuilder;
+import com.github.nmuzhichin.jsonrpc.model.request.CompleteRequest;
+import com.github.nmuzhichin.jsonrpc.model.request.Request;
+import com.github.nmuzhichin.jsonrpc.model.response.Response;
+import com.github.nmuzhichin.jsonrpc.normalizer.JacksonNormalization;
 import com.googlecode.jsonrpc4j.JsonRpcServer;
 
 import org.ngbp.jsonrpc4jtestharness.http.service.ForegroundRpcService;
+import org.ngbp.jsonrpc4jtestharness.jsonrpc2.MockService;
+import org.ngbp.jsonrpc4jtestharness.jsonrpc2.MockServiceImpl;
+import org.ngbp.jsonrpc4jtestharness.jsonrpc2.SomeService;
+import org.ngbp.jsonrpc4jtestharness.jsonrpc2.SomeServiceImpl;
 import org.ngbp.jsonrpc4jtestharness.mappers.RequestRpcMapper;
 import org.ngbp.jsonrpc4jtestharness.mappers.ResponseRpcMapper;
 import org.ngbp.jsonrpc4jtestharness.models.JsonRpcResponse;
@@ -23,7 +33,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Random;
+import java.util.concurrent.Executors;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -50,9 +65,27 @@ public class MainActivity extends AppCompatActivity {
         });
         ats3Query = new Atsc3QueryImpl();
         JsonRpcServer server = new JsonRpcServer(mapper, ats3Query, IAtsc3Query.class);
-
+        test();
         sampleForParsingSingleRequest(server);
         sampleForParsingBatchRequest(server);
+    }
+
+    private void test() {
+        final Map<String, Object> params = new LinkedHashMap<>(1 << 2, 1f);
+        params.put("name", "Octavianus Augustus");
+        params.put("age", 76L);
+
+        final CompleteRequest request = new CompleteRequest("2.0", 54321L, "strictCall", params);
+
+        final RpcConsumer consumer = new ConsumerBuilder()
+                .valueNormalizer(new JacksonNormalization(new ObjectMapper()))
+                .resultListener(Optional::ofNullable)
+                .build();
+
+        consumer.getProcessor().process(new MockServiceImpl(), MockService.class);
+
+        final Response response = consumer.execution(request);
+        Log.d("TEST", response.toString());
     }
 
     private void sampleForParsingSingleRequest(JsonRpcServer server) {

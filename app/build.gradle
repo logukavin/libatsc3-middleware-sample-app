@@ -20,7 +20,11 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
-
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    useLibrary 'org.apache.http.legacy'
 }
 
 dependencies {
@@ -34,6 +38,11 @@ dependencies {
 
     /* jsonrpc4j // https://mvnrepository.com/artifact/com.github.briandilley.jsonrpc4j/jsonrpc4j */
     implementation group: 'com.github.briandilley.jsonrpc4j', name: 'jsonrpc4j', version: '1.5.3'
+    implementation group: 'com.github.nmuzhichin', name: 'jsonrpc-core', version: '1.0.4.0'
+    implementation group: 'com.github.nmuzhichin', name: 'jsonrpc-cache-extension', version: '1.0.4.0'
+    implementation group: 'com.github.nmuzhichin', name: 'jsonrpc-jackson-extension', version: '1.0.3.0'
+//    implementation 'com.github.nmuzhichin:jsonrpc2:1.0.4.0'
+    implementation 'com.github.nmuzhichin:jsonrpc2:1.0.4.0'
     implementation group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.11.0'
     implementation 'com.google.code.gson:gson:2.8.6'
     implementation 'org.java-websocket:Java-WebSocket:1.5.1'
