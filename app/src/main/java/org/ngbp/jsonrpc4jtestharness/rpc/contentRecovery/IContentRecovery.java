@@ -1,12 +1,12 @@
 package org.ngbp.jsonrpc4jtestharness.rpc.contentRecovery;
 
-import com.googlecode.jsonrpc4j.JsonRpcMethod;
-import com.googlecode.jsonrpc4j.JsonRpcService;
+import com.github.nmuzhichin.jsonrpc.annotation.JsonRpcMethod;
+import com.github.nmuzhichin.jsonrpc.annotation.JsonRpcType;
 
 import org.ngbp.jsonrpc4jtestharness.rpc.contentRecovery.model.CecoveredComponentInfo;
 import org.ngbp.jsonrpc4jtestharness.rpc.contentRecovery.model.ContentRecoveryState;
 
-@JsonRpcService("")
+@JsonRpcType
 public interface IContentRecovery {
 
     @JsonRpcMethod("org.atsc.query.contentRecoveryState")

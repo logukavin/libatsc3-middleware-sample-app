@@ -1,12 +1,12 @@
 package org.ngbp.jsonrpc4jtestharness.rpc.subscribeUnsubscribe;
 
 
-import com.googlecode.jsonrpc4j.JsonRpcMethod;
-import com.googlecode.jsonrpc4j.JsonRpcService;
+import com.github.nmuzhichin.jsonrpc.annotation.JsonRpcMethod;
+import com.github.nmuzhichin.jsonrpc.annotation.JsonRpcType;
 
 import org.ngbp.jsonrpc4jtestharness.rpc.subscribeUnsubscribe.model.Subscribe;
 
-@JsonRpcService("")
+@JsonRpcType
 public interface ISubscribeUnsubscribe {
 
     @JsonRpcMethod("org.atsc.subscribe")
