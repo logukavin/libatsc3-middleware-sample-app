@@ -99,7 +99,7 @@ public class RPCProcessor implements IRPCProcessor {
             }
             final List<Response> response = consumer.execution(responseList);
             for (int i = 0; i < response.size(); i++) {
-                wrappedList.add(response.get(i).getBody());
+                wrappedList.set(i,response.get(i).getBody());
             }
         } catch (JsonProcessingException e) {
             e.printStackTrace();
