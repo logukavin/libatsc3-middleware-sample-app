@@ -75,10 +75,10 @@ public class CallWrapper implements ICallWrapper {
     }
 
     @Override
-    public <T> T getResponse(String requests) {
+    public <T> T getResponse(String request) {
         Response response = null;
         try {
-            response = consumer.execution(objectMapper.readValue(requests, Request.class));
+            response = consumer.execution(objectMapper.readValue(request, Request.class));
         } catch (JsonProcessingException e) {
             e.printStackTrace();
         }
