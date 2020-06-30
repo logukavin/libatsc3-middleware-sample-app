@@ -1,12 +1,12 @@
 package org.ngbp.jsonrpc4jtestharness.rpc.filterCodes;
 
-import com.googlecode.jsonrpc4j.JsonRpcMethod;
-import com.googlecode.jsonrpc4j.JsonRpcService;
+import com.github.nmuzhichin.jsonrpc.annotation.JsonRpcMethod;
+import com.github.nmuzhichin.jsonrpc.annotation.JsonRpcType;
 
 import org.ngbp.jsonrpc4jtestharness.models.JsonRpcResponse;
 import org.ngbp.jsonrpc4jtestharness.rpc.filterCodes.model.GetFilterCodes;
 
-@JsonRpcService("")
+@JsonRpcType
 public interface IFilterCodes {
 
     @JsonRpcMethod("org.atsc.getFilterCodes")
