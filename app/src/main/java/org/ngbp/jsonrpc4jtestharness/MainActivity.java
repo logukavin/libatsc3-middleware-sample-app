@@ -2,6 +2,7 @@ package org.ngbp.jsonrpc4jtestharness;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -13,10 +14,17 @@ import com.github.nmuzhichin.jsonrpc.model.request.CompleteRequest;
 import com.github.nmuzhichin.jsonrpc.model.request.Request;
 import com.github.nmuzhichin.jsonrpc.module.JsonRpcModule;
 
+import org.java_websocket.client.WebSocketClient;
+import org.java_websocket.handshake.ServerHandshake;
+import org.ngbp.jsonrpc4jtestharness.core.ws.MiddlewareWSServer;
 import org.ngbp.jsonrpc4jtestharness.http.service.ForegroundRpcService;
 import org.ngbp.jsonrpc4jtestharness.jsonrpc2.RPCProcessor;
 import org.ngbp.jsonrpc4jtestharness.rpc.filterCodes.model.GetFilterCodes;
 
+import java.net.InetSocketAddress;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -43,7 +51,12 @@ public class MainActivity extends AppCompatActivity {
                 startService();
             }
         });
-
+        findViewById(R.id.server).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                startServer();
+            }
+        });
         RPCProcessor callWrapper = new RPCProcessor();
         List<String> requestParams = new ArrayList<>();
 
@@ -66,6 +79,61 @@ public class MainActivity extends AppCompatActivity {
         requestParams.add(json);
         requestParams.add(json2);
         List<Object> composedResponses =   callWrapper.processRequest(requestParams);
+    }
+
+    private void startServer() {
+//        InetSocketAddress inetSocketAddress = new InetSocketAddress(1);
+//        try {
+//            MiddlewareWSServer ws = new MiddlewareWSServer(1);
+//
+//        } catch (UnknownHostException e) {
+//            e.printStackTrace();
+//        }
+        Thread thread = new Thread(new Runnable() {
+
+            @Override
+            public void run() {
+                try  {
+                    InetSocketAddress inetSocketAddress = new InetSocketAddress(8080);
+                    MiddlewareWSServer middlewareWSServer =  new MiddlewareWSServer(inetSocketAddress);
+                    middlewareWSServer.start();
+                    System.out.println( "ChatServer started on port: " + middlewareWSServer.getPort() );
+                    Log.d("Socket","onOpen");
+                    try {
+                        WebSocketClient cc = new WebSocketClient(new URI( "ws://localhost:8080/" )) {
+                            @Override
+                            public void onOpen(ServerHandshake handshakedata) {
+                                Log.d("Socket","onOpen");
+                            }
+
+                            @Override
+                            public void onMessage(String message) {
+                                Log.d("Socket","onMessage");
+                            }
+
+                            @Override
+                            public void onClose(int code, String reason, boolean remote) {
+                                Log.d("Socket","onClose");
+                            }
+
+                            @Override
+                            public void onError(Exception ex) {
+                                Log.d("Socket","onError");
+                            }
+                        };
+                        cc.connect();
+                        cc.send("Ololo");
+                    } catch (URISyntaxException e) {
+                        e.printStackTrace();
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+
+        thread.start();
+
     }
 
     public void startService() {
