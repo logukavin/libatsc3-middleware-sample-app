@@ -22,8 +22,8 @@ public class ForegroundRpcService extends Service {
 
     private PowerManager.WakeLock wakeLock;
     private Boolean isServiceStarted = false;
-    public final static String START = "START";
-    public final static String STOP = "STOP";
+    public final static String ACTION_START = "START";
+    public final static String ACTION_STOP = "STOP";
     private NotificationHelper notificationHelper;
 
     @Override
@@ -33,10 +33,10 @@ public class ForegroundRpcService extends Service {
         String action = intent.getAction();
         if (action != null) {
             switch (action) {
-                case START:
+                case ACTION_START:
                     startService(message);
                     break;
-                case STOP:
+                case ACTION_STOP:
                     stopService();
                     break;
                 default:
