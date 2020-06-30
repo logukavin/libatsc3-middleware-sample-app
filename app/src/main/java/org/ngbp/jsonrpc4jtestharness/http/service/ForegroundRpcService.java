@@ -6,9 +6,16 @@ import android.content.Intent;
 import android.os.IBinder;
 import android.os.PowerManager;
 
-import androidx.annotation.Nullable;
+import org.ngbp.jsonrpc4jtestharness.http.servers.SimpleJettyWebServer;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.Objects;
+
+import androidx.annotation.Nullable;
 
 public class ForegroundRpcService extends Service {
 
@@ -45,6 +52,43 @@ public class ForegroundRpcService extends Service {
         wakeLock = ((PowerManager) Objects.requireNonNull(getSystemService(Context.POWER_SERVICE))).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "ForegroundRpcService::lock");
         wakeLock.acquire();
         startForeground(1, notificationHelper.createNotification(message));
+
+        startWebServer(this);
+    }
+
+    private void startWebServer(Context context) {
+
+        Thread serverThread = new Thread() {
+            @Override
+            public void run() {
+
+                //        Read web content from assets folder
+                StringBuilder sb = new StringBuilder();
+                try {
+                    String content;
+                    InputStream is = getAssets().open("GitHub.htm");
+                    BufferedReader br = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8 ));
+
+                    while ((content = br.readLine()) != null) {
+                        sb.append(content);
+                    }
+                    br.close();
+
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+
+                String finalContent = sb.toString();
+
+                SimpleJettyWebServer server = new SimpleJettyWebServer(finalContent, context);
+                try {
+                    server.startup();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        };
+        serverThread.start();
     }
 
     private void stopService() {
