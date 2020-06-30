@@ -1,11 +1,13 @@
 package org.ngbp.jsonrpc4jtestharness.jsonrpc2;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.nmuzhichin.jsonrpc.api.Processor;
 import com.github.nmuzhichin.jsonrpc.api.RpcConsumer;
 import com.github.nmuzhichin.jsonrpc.context.ConsumerBuilder;
-import com.github.nmuzhichin.jsonrpc.model.request.CompleteRequest;
 import com.github.nmuzhichin.jsonrpc.model.request.Request;
 import com.github.nmuzhichin.jsonrpc.model.response.Response;
+import com.github.nmuzhichin.jsonrpc.module.JsonRpcModule;
 
 import org.ngbp.jsonrpc4jtestharness.rpc.asynchronousNotificationsofChanges.AsynchronousNotificationsOfChangesImpl;
 import org.ngbp.jsonrpc4jtestharness.rpc.asynchronousNotificationsofChanges.IAsynchronousNotificationsOfChanges;
@@ -44,11 +46,13 @@ import java.util.List;
 public class CallWrapper implements ICallWrapper {
     private final RpcConsumer consumer;
     private final Processor processor;
+    private static final ObjectMapper objectMapper = new ObjectMapper();
 
     public CallWrapper() {
         consumer = new ConsumerBuilder()
                 .build();
         processor = consumer.getProcessor();
+        objectMapper.registerModule(new JsonRpcModule());
         filRequests();
     }
 
@@ -71,9 +75,13 @@ public class CallWrapper implements ICallWrapper {
     }
 
     @Override
-    public <T> T getResponse(RequestParams requestParams) {
-        final CompleteRequest request = new CompleteRequest(requestParams.getId(), requestParams.getMethod(), requestParams.getParams());
-        final Response response = consumer.execution(request);
+    public <T> T getResponse(String requests) {
+        Response response = null;
+        try {
+            response = consumer.execution(objectMapper.readValue(requests, Request.class));
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+        }
         if (response.isSuccess()) {
             return (T) response.getBody();
         } else {
@@ -82,19 +90,24 @@ public class CallWrapper implements ICallWrapper {
     }
 
     @Override
-    public List<ComposedResponse> getResponses(List<RequestParams> methods) {
-        List<Request> responseList = new ArrayList<>();
-        for (int i = 0; i < methods.size(); i++) {
-            RequestParams requestParams = methods.get(i);
-            responseList.add(new CompleteRequest(requestParams.getId(), requestParams.getMethod(), requestParams.getParams()));
-        }
-        final List<Response> response2 = consumer.execution(responseList);
+    public List<ComposedResponse> getResponses(List<String> requests) {
         List<ComposedResponse> wrappedList = new ArrayList<>();
-        for (int i = 0; i < response2.size(); i++) {
-            ComposedResponse composedResponse = new ComposedResponse();
-            composedResponse.setResult(response2.get(i).getBody());
-            wrappedList.add(composedResponse);
+        try {
+            List<Request> responseList = new ArrayList<>();
+            for (int i = 0; i < requests.size(); i++) {
+                responseList.add(objectMapper.readValue(requests.get(i), Request.class));
+            }
+            final List<Response> response2 = consumer.execution(responseList);
+
+            for (int i = 0; i < response2.size(); i++) {
+                ComposedResponse composedResponse = new ComposedResponse();
+                composedResponse.setResult(response2.get(i).getBody());
+                wrappedList.add(composedResponse);
+            }
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
         }
         return wrappedList;
     }
+
 }
