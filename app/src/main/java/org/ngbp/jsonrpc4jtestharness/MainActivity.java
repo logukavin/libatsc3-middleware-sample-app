@@ -15,7 +15,6 @@ import com.github.nmuzhichin.jsonrpc.module.JsonRpcModule;
 
 import org.ngbp.jsonrpc4jtestharness.http.service.ForegroundRpcService;
 import org.ngbp.jsonrpc4jtestharness.jsonrpc2.RPCProcessor;
-import org.ngbp.jsonrpc4jtestharness.jsonrpc2.ComposedResponse;
 import org.ngbp.jsonrpc4jtestharness.rpc.filterCodes.model.GetFilterCodes;
 
 import java.util.ArrayList;
@@ -66,7 +65,7 @@ public class MainActivity extends AppCompatActivity {
         GetFilterCodes val =   callWrapper.processRequest(json);
         requestParams.add(json);
         requestParams.add(json2);
-        List<ComposedResponse> composedResponses =   callWrapper.processRequest(requestParams);
+        List<Object> composedResponses =   callWrapper.processRequest(requestParams);
     }
 
     public void startService() {
