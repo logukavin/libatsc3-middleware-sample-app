@@ -2,33 +2,35 @@ package org.ngbp.jsonrpc4jtestharness;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.nmuzhichin.jsonrpc.model.request.CompleteRequest;
+import com.github.nmuzhichin.jsonrpc.model.request.Request;
+import com.github.nmuzhichin.jsonrpc.module.JsonRpcModule;
 
 import org.ngbp.jsonrpc4jtestharness.http.service.ForegroundRpcService;
 import org.ngbp.jsonrpc4jtestharness.jsonrpc2.CallWrapper;
 import org.ngbp.jsonrpc4jtestharness.jsonrpc2.ComposedResponse;
-import org.ngbp.jsonrpc4jtestharness.jsonrpc2.RequestParams;
 import org.ngbp.jsonrpc4jtestharness.rpc.filterCodes.model.GetFilterCodes;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
-    IAtsc3Query ats3Query;
     public static final ObjectMapper mapper = new ObjectMapper();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
+        mapper.registerModule(new JsonRpcModule());
 
         findViewById(R.id.stop).setOnClickListener(new View.OnClickListener() {
             @Override
@@ -44,93 +46,28 @@ public class MainActivity extends AppCompatActivity {
         });
 
         CallWrapper callWrapper = new CallWrapper();
-        List<RequestParams> requestParams = new ArrayList<>();
+        List<String> requestParams = new ArrayList<>();
 
-        RequestParams filterParams = new RequestParams();
-        filterParams.setId(1L);
-        filterParams.setMethod("org.atsc.getFilterCodes");
-        filterParams.setParams(null);
-        
-        GetFilterCodes val =   callWrapper.getResponse(filterParams);
+        final Request request = new CompleteRequest("2.0", 1L, "org.atsc.getFilterCodes", new HashMap<>());
+         String json="";
+        try {
+           json = mapper.writeValueAsString(request);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+        }
 
-        RequestParams serviceParams = new RequestParams();
-        serviceParams.setId(2L);
-        serviceParams.setMethod("org.atsc.query.service");
-        serviceParams.setParams(null);
-
-        requestParams.add(filterParams);
-        requestParams.add(serviceParams);
+        final Request request2 = new CompleteRequest("2.0", 2L, "org.atsc.query.service", new HashMap<>());
+         String json2="";
+        try {
+            json2 = mapper.writeValueAsString(request2);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+        }
+        GetFilterCodes val =   callWrapper.getResponse(json);
+        requestParams.add(json);
+        requestParams.add(json2);
         List<ComposedResponse> composedResponses =   callWrapper.getResponses(requestParams);
     }
-
-//    private void sampleForParsingSingleRequest(JsonRpcServer server) {
-////        Map params to RPCRequest
-//        RequestRpcMapper requestMapper = new RequestRpcMapper<Properties>();
-//        InputStream inputStream = requestMapper.mapModelToInputStream(null, "org.atsc.query.service");
-//
-//        Log.d("Test", "Request : " + requestMapper.mapModelToSingleRpcRequest(null, "org.atsc.query.service").toString());
-//
-//        OutputStream outputStream = new ByteArrayOutputStream();
-//
-//        try {
-//            server.handleRequest(inputStream, outputStream);
-//            String outputJsonResponse = new String(((ByteArrayOutputStream) outputStream).toByteArray());
-//
-//            ResponseRpcMapper rpcMapper = new ResponseRpcMapper<Service>();
-//            JsonRpcResponse jsonRpcResponse = rpcMapper.mapSingleJsonRpcToResponseModel(outputJsonResponse);
-//
-//            Log.d("Test", "Response : " + jsonRpcResponse.toString());
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
-//    }
-//
-//    private void sampleForParsingBatchRequest(JsonRpcServer server) {
-////        Create params for batch request
-//        List<Properties> batchRequest = new ArrayList<>();
-//
-//        Properties properties1 = new Properties();
-//        List<String> listOfProperties1 = new ArrayList<>();
-//        listOfProperties1.add("123");
-//        listOfProperties1.add("456");
-//        properties1.setProperties(listOfProperties1);
-//
-//        Properties properties2 = new Properties();
-//        List<String> listOfProperties2 = new ArrayList<>();
-////        listOfProperties2.add("789");
-////        listOfProperties2.add("101112");
-//        properties2.setProperties(listOfProperties2);
-//
-//        Properties properties3 = new Properties();
-//        List<String> listOfProperties3 = new ArrayList<>();
-//        listOfProperties3.add("131415");
-//        listOfProperties3.add("161718");
-//        properties3.setProperties(listOfProperties3);
-//
-//        batchRequest.add(properties1);
-//        batchRequest.add(properties2);
-//        batchRequest.add(properties3);
-////        Map params to BatchRPCRequest
-//        RequestRpcMapper requestMapperBatch = new RequestRpcMapper<Properties>();
-//        InputStream inputStreamBatch = requestMapperBatch.mapModelListToInputStream(batchRequest, "org.atsc.query.service2");
-//
-//        Log.d("Test", "Request Batch : " + requestMapperBatch.mapModelsToBatchRpcRequest(batchRequest, "org.atsc.query.service2").toString());
-//
-//        OutputStream outputStreamBatch = new ByteArrayOutputStream();
-//
-//        try {
-//            server.handleRequest(inputStreamBatch, outputStreamBatch);
-//            String outputJsonResponseBatch = new String(((ByteArrayOutputStream) outputStreamBatch).toByteArray());
-//
-//            ResponseRpcMapper responceMapperBatch = new ResponseRpcMapper<List<String>>();
-//            List<JsonRpcResponse> jsonRpcResponseBatch = responceMapperBatch.mapBatchJsonRpcToResponseModelList(outputJsonResponseBatch);
-//
-//            Log.d("Test", "Response Batch: " + jsonRpcResponseBatch.toString());
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
-//
-//    }
 
     public void startService() {
         Intent serviceIntent = new Intent(this, ForegroundRpcService.class);
