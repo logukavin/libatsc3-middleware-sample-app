@@ -1,11 +1,11 @@
 package org.ngbp.jsonrpc4jtestharness.rpc.cacheRequest;
 
-import com.googlecode.jsonrpc4j.JsonRpcMethod;
-import com.googlecode.jsonrpc4j.JsonRpcService;
+import com.github.nmuzhichin.jsonrpc.annotation.JsonRpcMethod;
+import com.github.nmuzhichin.jsonrpc.annotation.JsonRpcType;
 
 import org.ngbp.jsonrpc4jtestharness.rpc.cacheRequest.model.QueryCacheUsage;
 
-@JsonRpcService("")
+@JsonRpcType
 public interface ICacheRequest {
     @JsonRpcMethod("org.atsc.CacheRequest")
     ICacheRequest cacheRequest();
