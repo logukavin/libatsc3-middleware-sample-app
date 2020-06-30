@@ -1,11 +1,11 @@
 package org.ngbp.jsonrpc4jtestharness.rpc.requestReceiverActions;
 
-import com.googlecode.jsonrpc4j.JsonRpcMethod;
-import com.googlecode.jsonrpc4j.JsonRpcService;
+import com.github.nmuzhichin.jsonrpc.annotation.JsonRpcMethod;
+import com.github.nmuzhichin.jsonrpc.annotation.JsonRpcType;
 
 import org.ngbp.jsonrpc4jtestharness.rpc.requestReceiverActions.model.AudioVolume;
 
-@JsonRpcService("")
+@JsonRpcType
 public interface IRequestReceiverActions {
 
     @JsonRpcMethod("org.atsc.acquire.service")
