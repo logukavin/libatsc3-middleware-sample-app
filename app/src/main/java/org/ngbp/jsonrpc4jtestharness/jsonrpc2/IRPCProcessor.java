@@ -4,5 +4,5 @@ import java.util.List;
 
 public interface IRPCProcessor {
     public <T> T processRequest(String request);
-    public List<ComposedResponse> processRequest(List<String> requests);
+    public List<Object> processRequest(List<String> requests);
 }
