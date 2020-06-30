@@ -14,7 +14,7 @@ import com.github.nmuzhichin.jsonrpc.model.request.Request;
 import com.github.nmuzhichin.jsonrpc.module.JsonRpcModule;
 
 import org.ngbp.jsonrpc4jtestharness.http.service.ForegroundRpcService;
-import org.ngbp.jsonrpc4jtestharness.jsonrpc2.CallWrapper;
+import org.ngbp.jsonrpc4jtestharness.jsonrpc2.RPCProcessor;
 import org.ngbp.jsonrpc4jtestharness.jsonrpc2.ComposedResponse;
 import org.ngbp.jsonrpc4jtestharness.rpc.filterCodes.model.GetFilterCodes;
 
@@ -45,7 +45,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        CallWrapper callWrapper = new CallWrapper();
+        RPCProcessor callWrapper = new RPCProcessor();
         List<String> requestParams = new ArrayList<>();
 
         final Request request = new CompleteRequest("2.0", 1L, "org.atsc.getFilterCodes", new HashMap<>());

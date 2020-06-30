@@ -43,12 +43,12 @@ import org.ngbp.jsonrpc4jtestharness.rpc.xLink.XLinkImpl;
 import java.util.ArrayList;
 import java.util.List;
 
-public class CallWrapper implements ICallWrapper {
+public class RPCProcessor implements IRPCProcessor {
     private final RpcConsumer consumer;
     private final Processor processor;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public CallWrapper() {
+    public RPCProcessor() {
         consumer = new ConsumerBuilder()
                 .build();
         processor = consumer.getProcessor();
