@@ -63,10 +63,10 @@ public class MainActivity extends AppCompatActivity {
         } catch (JsonProcessingException e) {
             e.printStackTrace();
         }
-        GetFilterCodes val =   callWrapper.getResponse(json);
+        GetFilterCodes val =   callWrapper.processRequest(json);
         requestParams.add(json);
         requestParams.add(json2);
-        List<ComposedResponse> composedResponses =   callWrapper.getResponses(requestParams);
+        List<ComposedResponse> composedResponses =   callWrapper.processRequest(requestParams);
     }
 
     public void startService() {

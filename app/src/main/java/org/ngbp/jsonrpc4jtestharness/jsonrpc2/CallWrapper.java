@@ -46,7 +46,7 @@ import java.util.List;
 public class CallWrapper implements ICallWrapper {
     private final RpcConsumer consumer;
     private final Processor processor;
-    private static final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public CallWrapper() {
         consumer = new ConsumerBuilder()
@@ -75,14 +75,14 @@ public class CallWrapper implements ICallWrapper {
     }
 
     @Override
-    public <T> T getResponse(String request) {
+    public <T> T processRequest(String request) {
         Response response = null;
         try {
             response = consumer.execution(objectMapper.readValue(request, Request.class));
         } catch (JsonProcessingException e) {
             e.printStackTrace();
         }
-        if (response.isSuccess()) {
+        if (response!=null&&response.isSuccess()) {
             return (T) response.getBody();
         } else {
             return null;
@@ -90,18 +90,18 @@ public class CallWrapper implements ICallWrapper {
     }
 
     @Override
-    public List<ComposedResponse> getResponses(List<String> requests) {
-        List<ComposedResponse> wrappedList = new ArrayList<>();
+    public List<ComposedResponse> processRequest(List<String> requests) {
+        List<ComposedResponse> wrappedList = new ArrayList<>(requests.size());
         try {
             List<Request> responseList = new ArrayList<>();
             for (int i = 0; i < requests.size(); i++) {
                 responseList.add(objectMapper.readValue(requests.get(i), Request.class));
             }
-            final List<Response> response2 = consumer.execution(responseList);
+            final List<Response> response = consumer.execution(responseList);
 
-            for (int i = 0; i < response2.size(); i++) {
+            for (int i = 0; i < response.size(); i++) {
                 ComposedResponse composedResponse = new ComposedResponse();
-                composedResponse.setResult(response2.get(i).getBody());
+                composedResponse.setResult(response.get(i).getBody());
                 wrappedList.add(composedResponse);
             }
         } catch (JsonProcessingException e) {
