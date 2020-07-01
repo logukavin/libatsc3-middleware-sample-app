@@ -5,25 +5,29 @@ import android.util.Log;
 import org.java_websocket.WebSocket;
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.WebSocketServer;
+import org.ngbp.jsonrpc4jtestharness.jsonrpc2.IOnMessageListener;
 
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
-public class MiddlewareWSServer extends WebSocketServer {
+public class MiddlewareWSServer extends WebSocketServer implements IOnRequest {
+    private final IOnMessageListener listener;
 
-
-    public MiddlewareWSServer(int port) throws UnknownHostException {
+    public MiddlewareWSServer(int port, IOnMessageListener listener) throws UnknownHostException {
         super(new InetSocketAddress(port));
+        this.listener = listener;
     }
 
-    public MiddlewareWSServer(String hostname, int port) throws UnknownHostException {
+    public MiddlewareWSServer(String hostname, int port, IOnMessageListener listener) throws UnknownHostException {
         super(new InetSocketAddress(hostname, port));
+        this.listener = listener;
     }
 
-    public MiddlewareWSServer(InetSocketAddress address) {
+    public MiddlewareWSServer(InetSocketAddress address, IOnMessageListener listener) {
         super(address);
+        this.listener = listener;
     }
 
     @Override
@@ -42,15 +46,19 @@ public class MiddlewareWSServer extends WebSocketServer {
     @Override
     public void onMessage(WebSocket conn, String message) {
         broadcast(message);
-        if(message.equals("hop_open")) {
+        if (message.equals("hop_open")) {
             broadcast("hop_hop_hop");
         }
+        if (listener != null)
+            listener.onMessageReceiver(message);
         Log.i(MiddlewareWSServer.class.getSimpleName(), "onMessage(String): " + message);
     }
 
     @Override
     public void onMessage(WebSocket conn, ByteBuffer message) {
         broadcast(message.array());
+        if (listener != null)
+            listener.onMessageReceiver(message.array());
         Log.i(MiddlewareWSServer.class.getSimpleName(), "onMessage(BB): " + Arrays.toString(message.array()));
     }
 
@@ -63,5 +71,11 @@ public class MiddlewareWSServer extends WebSocketServer {
     public void onStart() {
         Log.i(MiddlewareWSServer.class.getSimpleName(), "Server started");
         setConnectionLostTimeout(100);
+    }
+
+    @Override
+    public void onRequest(String request) {
+        broadcast(request);
+        Log.i(MiddlewareWSServer.class.getSimpleName(), "answer from RPC server " + request);
     }
 }

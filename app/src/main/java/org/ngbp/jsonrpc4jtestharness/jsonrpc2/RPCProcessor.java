@@ -43,12 +43,12 @@ import org.ngbp.jsonrpc4jtestharness.rpc.xLink.XLinkImpl;
 import java.util.ArrayList;
 import java.util.List;
 
-public class RPCProcessor implements IRPCProcessor {
+    public class RPCProcessor implements IRPCProcessor {
     private final RpcConsumer consumer;
     private final Processor processor;
     private final ObjectMapper objectMapper = new ObjectMapper();
-
     public RPCProcessor() {
+
         consumer = new ConsumerBuilder()
                 .build();
         processor = consumer.getProcessor();
@@ -75,7 +75,7 @@ public class RPCProcessor implements IRPCProcessor {
     }
 
     @Override
-    public <T> T processRequest(String request) {
+    public String processRequest(String request) {
         Response response = null;
         try {
             response = consumer.execution(objectMapper.readValue(request, Request.class));
@@ -83,15 +83,20 @@ public class RPCProcessor implements IRPCProcessor {
             e.printStackTrace();
         }
         if (response != null && response.isSuccess()) {
-            return (T) response.getBody();
+            try {
+                return objectMapper.writeValueAsString(response);
+            } catch (JsonProcessingException e) {
+                e.printStackTrace();
+                return null;
+            }
         } else {
             return null;
         }
     }
 
     @Override
-    public List<Object> processRequest(List<String> requests) {
-        List<Object> wrappedList = new ArrayList<>(requests.size());
+    public List<String> processRequest(List<String> requests) {
+        List<String> wrappedList = new ArrayList<>(requests.size());
         try {
             List<Request> responseList = new ArrayList<>();
             for (int i = 0; i < requests.size(); i++) {
@@ -99,7 +104,7 @@ public class RPCProcessor implements IRPCProcessor {
             }
             final List<Response> response = consumer.execution(responseList);
             for (int i = 0; i < response.size(); i++) {
-                wrappedList.add( response.get(i).getBody());
+                wrappedList.add(objectMapper.writeValueAsString(response));
             }
         } catch (JsonProcessingException e) {
             e.printStackTrace();
