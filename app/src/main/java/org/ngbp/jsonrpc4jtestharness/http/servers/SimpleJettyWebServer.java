@@ -2,6 +2,7 @@ package org.ngbp.jsonrpc4jtestharness.http.servers;
 
 import android.content.Context;
 
+import org.eclipse.jetty.http.HttpVersion;
 import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.HttpConfiguration;
 import org.eclipse.jetty.server.HttpConnectionFactory;
@@ -34,17 +35,17 @@ public class SimpleJettyWebServer implements AutoCloseable {
 
         server = new Server();
 
-        InputStream i = context.getResources().openRawResource(R.raw.jetty);
+        InputStream i = context.getResources().openRawResource(R.raw.mykey);
 
-        KeyStore keystore = KeyStore.getInstance("bks");
+        KeyStore keystore = KeyStore.getInstance("PKCS12");
         try {
-            keystore.load(i, null);
+            keystore.load(i, "MY_PASSWORD".toCharArray());
         } finally {
             i.close();
         }
 
         KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance("X509");
-        keyManagerFactory.init(keystore, null);
+        keyManagerFactory.init(keystore, "MY_PASSWORD".toCharArray());
         TrustManagerFactory tmf = TrustManagerFactory.getInstance("X509");
         tmf.init(keystore);
 
@@ -62,17 +63,17 @@ public class SimpleJettyWebServer implements AutoCloseable {
 
         // Configuring SSL
         SslContextFactory sslContextFactory = new SslContextFactory.Server();
-        sslContextFactory.setKeyStoreType("bks");
+        sslContextFactory.setKeyStoreType("PKCS12");
 
         // Defining keystore path and passwords
 //        sslContextFactory.setKeyStorePath("/raw/jetty.bks");
 //        sslContextFactory.setKeyStore(keystore);
         sslContextFactory.setSslContext(sslContext);
-        sslContextFactory.setKeyStorePassword("password");
-        sslContextFactory.setKeyManagerPassword("password");
+        sslContextFactory.setKeyStorePassword("MY_PASSWORD");
+        sslContextFactory.setKeyManagerPassword("MY_PASSWORD");
 
         // Configuring the connector
-        ServerConnector sslConnector = new ServerConnector(server, new SslConnectionFactory(sslContextFactory, "http/1.1"), new HttpConnectionFactory(https));
+        ServerConnector sslConnector = new ServerConnector(server, new SslConnectionFactory(sslContextFactory, HttpVersion.HTTP_1_1.toString()), new HttpConnectionFactory(https));
         sslConnector.setPort(8443);
 
         // Setting HTTP and HTTPS connectors
