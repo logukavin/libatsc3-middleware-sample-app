@@ -47,4 +47,6 @@ dependencies {
 
     implementation 'org.eclipse.jetty:jetty-server:9.4.30.v20200611'
     implementation 'org.eclipse.jetty:jetty-servlet:9.4.30.v20200611'
+    implementation group: 'org.eclipse.jetty.websocket', name: 'websocket-server', version: '9.4.30.v20200611'
+    implementation group: 'org.eclipse.jetty.websocket', name: 'websocket-client', version: '9.4.30.v20200611'
 }

@@ -5,15 +5,16 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.IBinder;
 import android.os.PowerManager;
+import android.util.Log;
 
+import org.eclipse.jetty.websocket.api.Session;
+import org.eclipse.jetty.websocket.client.WebSocketClient;
+import org.ngbp.jsonrpc4jtestharness.core.ws.EchoSocket;
 import org.ngbp.jsonrpc4jtestharness.http.servers.SimpleJettyWebServer;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
+import java.net.URI;
 import java.util.Objects;
+import java.util.concurrent.Future;
 
 import androidx.annotation.Nullable;
 
@@ -25,6 +26,7 @@ public class ForegroundRpcService extends Service {
     public final static String ACTION_START = "START";
     public final static String ACTION_STOP = "STOP";
     private NotificationHelper notificationHelper;
+    private SimpleJettyWebServer webServer;
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
@@ -54,6 +56,7 @@ public class ForegroundRpcService extends Service {
         startForeground(1, notificationHelper.createNotification(message));
 
         startWebServer(this);
+        startWSClient();
     }
 
     private void startWebServer(Context context) {
@@ -62,27 +65,10 @@ public class ForegroundRpcService extends Service {
             @Override
             public void run() {
 
-                //        Read web content from assets folder
-                StringBuilder sb = new StringBuilder();
+                webServer = new SimpleJettyWebServer(context);
                 try {
-                    String content;
-                    InputStream is = getAssets().open("GitHub.htm");
-                    BufferedReader br = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8 ));
-
-                    while ((content = br.readLine()) != null) {
-                        sb.append(content);
-                    }
-                    br.close();
-
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-
-                String finalContent = sb.toString();
-
-                SimpleJettyWebServer server = new SimpleJettyWebServer(finalContent, context);
-                try {
-                    server.startup();
+                    webServer.runWebServer();
+                    Log.d("Test", " URL: " + webServer.getServer().getURI());
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -91,10 +77,29 @@ public class ForegroundRpcService extends Service {
         serverThread.start();
     }
 
+    private void startWSClient() {
+        Thread client = new Thread() {
+            @Override
+            public void run() {
+                startClient();
+            }
+        };
+
+        client.start();
+    }
+
     private void stopService() {
         if (isServiceStarted) {
             if (wakeLock != null) {
                 wakeLock.release();
+            }
+
+            if (webServer.getServer().isRunning()) {
+                try {
+                    webServer.stop();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
             }
             stopForeground(true);
             stopSelf();
@@ -109,4 +114,29 @@ public class ForegroundRpcService extends Service {
         return null;
     }
 
+    public void startClient() {
+        URI uri = URI.create("ws://localhost:8080/github");
+
+        WebSocketClient client = new WebSocketClient();
+        try {
+            try {
+                client.start();
+                // The socket that receives events
+                EchoSocket socket = new EchoSocket();
+                // Attempt Connect
+                Future<Session> fut = client.connect(socket,uri);
+                // Wait for Connect
+                Session session = fut.get();
+                // Send a message
+                session.getRemote().sendString("Hello");
+                // Close session
+                session.close();
+            } finally {
+                client.stop();
+            }
+        }
+        catch (Throwable t) {
+            t.printStackTrace(System.err);
+        }
+    }
 }
