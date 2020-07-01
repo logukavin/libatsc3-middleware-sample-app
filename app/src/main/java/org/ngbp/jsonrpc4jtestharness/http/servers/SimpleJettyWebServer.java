@@ -10,34 +10,27 @@ import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.SslConnectionFactory;
 import org.eclipse.jetty.servlet.ServletContextHandler;
+import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.ngbp.jsonrpc4jtestharness.R;
 
-import java.io.IOException;
 import java.io.InputStream;
-import java.io.PrintWriter;
 import java.security.KeyStore;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManagerFactory;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 
 public class SimpleJettyWebServer implements AutoCloseable {
 
-    public SimpleJettyWebServer(String text, Context context) {
-        SimpleJettyWebServer.text = text;
+    public SimpleJettyWebServer(Context context) {
         this.context = context;
     }
 
     private Server server;
-    private static String text;
     private Context context;
 
-    public void startup() throws Exception {
+    public void runWebServer() throws Exception {
 
         server = new Server();
 
@@ -60,7 +53,7 @@ public class SimpleJettyWebServer implements AutoCloseable {
 
         // HTTP connector
         ServerConnector connector = new ServerConnector(server);
-        connector.setPort(8080);
+        connector.setPort(8081);
 
         // HTTPS configuration
         HttpConfiguration https = new HttpConfiguration();
@@ -85,12 +78,14 @@ public class SimpleJettyWebServer implements AutoCloseable {
         // Setting HTTP and HTTPS connectors
         server.setConnectors(new Connector[]{connector, sslConnector});
 
-        ServletContextHandler handler = new ServletContextHandler(server, "/example");
-        handler.addServlet(JsonRpcTestServlet.class, "/");
+        ServletContextHandler handler = new ServletContextHandler(server, "/");
+        JsonRpcTestServlet servlet = new JsonRpcTestServlet(context);
+        ServletHolder holder = new ServletHolder(servlet);
+        handler.addServlet(holder, "/github");
 
         try {
             server.start();
-            server.join();
+//            server.join();
         } catch (Throwable t) {
             t.printStackTrace(System.err);
         }
@@ -111,16 +106,5 @@ public class SimpleJettyWebServer implements AutoCloseable {
 
     public void setServer(Server server) {
         this.server = server;
-    }
-
-    public static class JsonRpcTestServlet extends HttpServlet {
-
-        @Override
-        protected void doGet(HttpServletRequest request, HttpServletResponse response)
-                throws ServletException, IOException {
-
-            PrintWriter out = response.getWriter();
-            out.println(text);
-        }
     }
 }
