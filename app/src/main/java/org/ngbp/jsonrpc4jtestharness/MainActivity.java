@@ -14,6 +14,7 @@ import com.github.nmuzhichin.jsonrpc.model.request.Request;
 import com.github.nmuzhichin.jsonrpc.module.JsonRpcModule;
 
 import org.ngbp.jsonrpc4jtestharness.http.service.ForegroundRpcService;
+import org.ngbp.jsonrpc4jtestharness.jsonrpc2.RPCManager;
 import org.ngbp.jsonrpc4jtestharness.jsonrpc2.RPCProcessor;
 import org.ngbp.jsonrpc4jtestharness.rpc.filterCodes.model.GetFilterCodes;
 
@@ -24,13 +25,13 @@ import java.util.List;
 public class MainActivity extends AppCompatActivity {
 
     public static final ObjectMapper mapper = new ObjectMapper();
-
+    private RPCManager rpcManager;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         mapper.registerModule(new JsonRpcModule());
-
+        rpcManager = RPCManager.newInstance();
         findViewById(R.id.stop).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -44,7 +45,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        RPCProcessor callWrapper = new RPCProcessor();
+        RPCProcessor callWrapper = new RPCProcessor(rpcManager);
         List<String> requestParams = new ArrayList<>();
 
         final Request request = new CompleteRequest("2.0", 1L, "org.atsc.getFilterCodes", new HashMap<>());
