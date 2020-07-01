@@ -53,7 +53,6 @@ public class RPCProcessor implements IRPCProcessor {
     private String NULL_ERROR_HEADER = "{\"jsonrpc\":\"2.0\",\"error\":{\"code\": -32603, \"message\": \"Internal NullPointerException error\"},";
 
     public RPCProcessor() {
-
         consumer = new ConsumerBuilder()
                 .build();
         processor = consumer.getProcessor();
@@ -107,13 +106,13 @@ public class RPCProcessor implements IRPCProcessor {
     public List<String> processRequest(List<String> requests) {
         List<String> wrappedList = new ArrayList<>(requests.size());
         try {
-            List<Request> responseList = new ArrayList<>();
+            List<Request> requestList = new ArrayList<>();
             for (int i = 0; i < requests.size(); i++) {
-                responseList.add(objectMapper.readValue(requests.get(i), Request.class));
+                requestList.add(objectMapper.readValue(requests.get(i), Request.class));
             }
-            final List<Response> response = consumer.execution(responseList);
-            for (int i = 0; i < response.size(); i++) {
-                wrappedList.add(objectMapper.writeValueAsString(response));
+            final List<Response> responseList = consumer.execution(requestList);
+            for (Response r : responseList) {
+                wrappedList.add(objectMapper.writeValueAsString(r.getBody()));
             }
         } catch (JsonProcessingException e) {
             e.printStackTrace();
