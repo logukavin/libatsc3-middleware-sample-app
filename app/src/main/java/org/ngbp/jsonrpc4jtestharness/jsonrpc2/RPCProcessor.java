@@ -1,5 +1,7 @@
 package org.ngbp.jsonrpc4jtestharness.jsonrpc2;
 
+import androidx.annotation.NonNull;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.nmuzhichin.jsonrpc.api.Processor;
@@ -43,10 +45,13 @@ import org.ngbp.jsonrpc4jtestharness.rpc.xLink.XLinkImpl;
 import java.util.ArrayList;
 import java.util.List;
 
-    public class RPCProcessor implements IRPCProcessor {
+public class RPCProcessor implements IRPCProcessor {
     private final RpcConsumer consumer;
     private final Processor processor;
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private String PARSE_ERROR_HEADER = "{\"jsonrpc\":\"2.0\",\"error\":{\"code\": -32700, \"message\": \"Parse error\"},";
+    private String NULL_ERROR_HEADER = "{\"jsonrpc\":\"2.0\",\"error\":{\"code\": -32603, \"message\": \"Internal NullPointerException error\"},";
+
     public RPCProcessor() {
 
         consumer = new ConsumerBuilder()
@@ -74,10 +79,13 @@ import java.util.List;
         processor.process(new XLinkImpl(), IXLink.class);
     }
 
+    @NonNull
     @Override
     public String processRequest(String request) {
         Response response = null;
+        Long requestId = -1L;
         try {
+            requestId = objectMapper.readValue(request, Request.class).getId();
             response = consumer.execution(objectMapper.readValue(request, Request.class));
         } catch (JsonProcessingException e) {
             e.printStackTrace();
@@ -87,13 +95,14 @@ import java.util.List;
                 return objectMapper.writeValueAsString(response);
             } catch (JsonProcessingException e) {
                 e.printStackTrace();
-                return null;
+                return PARSE_ERROR_HEADER + "\"id\":\"" + response.getId() + "\"}";
             }
         } else {
-            return null;
+            return NULL_ERROR_HEADER + "\"id\":\"" + requestId + "\"}";
         }
     }
 
+    @NonNull
     @Override
     public List<String> processRequest(List<String> requests) {
         List<String> wrappedList = new ArrayList<>(requests.size());
@@ -111,5 +120,4 @@ import java.util.List;
         }
         return wrappedList;
     }
-
 }
