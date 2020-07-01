@@ -91,15 +91,16 @@ public class RPCProcessor implements IRPCProcessor {
 
     @Override
     public List<Object> processRequest(List<String> requests) {
-        List<Object> wrappedList = new ArrayList<>(requests.size());
+        List<Object> wrappedList = new ArrayList<>();
         try {
-            List<Request> responseList = new ArrayList<>();
+            List<Request> requestList = new ArrayList<>();
             for (int i = 0; i < requests.size(); i++) {
-                responseList.add(objectMapper.readValue(requests.get(i), Request.class));
+                requestList.add(objectMapper.readValue(requests.get(i), Request.class));
             }
-            final List<Response> response = consumer.execution(responseList);
-            for (int i = 0; i < response.size(); i++) {
-                wrappedList.set(i, response.get(i).getBody());
+
+            final List<Response> responseList = consumer.execution(requestList);
+            for (Response r : responseList) {
+                wrappedList.add(r.getBody());
             }
         } catch (JsonProcessingException e) {
             e.printStackTrace();
