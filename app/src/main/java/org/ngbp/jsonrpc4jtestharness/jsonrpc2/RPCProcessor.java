@@ -47,12 +47,13 @@ public class RPCProcessor implements IRPCProcessor {
     private final RpcConsumer consumer;
     private final Processor processor;
     private final ObjectMapper objectMapper = new ObjectMapper();
-
-    public RPCProcessor() {
+    private RPCManager rpcManager;
+    public RPCProcessor(RPCManager rpcManager) {
         consumer = new ConsumerBuilder()
                 .build();
         processor = consumer.getProcessor();
         objectMapper.registerModule(new JsonRpcModule());
+        this.rpcManager = rpcManager;
         filRequests();
     }
 
@@ -68,7 +69,7 @@ public class RPCProcessor implements IRPCProcessor {
         processor.process(new MediaTrackSelectionImpl(), IMediaTrackSelection.class);
         processor.process(new QueryDeviceInfoImpl(), IQueryDeviceInfo.class);
         processor.process(new ReceiverQueryApiImpl(), IReceiverQueryApi.class);
-        processor.process(new RequestReceiverActionsImpl(), IRequestReceiverActions.class);
+        processor.process(new RequestReceiverActionsImpl(rpcManager), IRequestReceiverActions.class);
         processor.process(new RMPContentSynchronizationImpl(), IRMPContentSynchronization.class);
         processor.process(new SubscribeUnsubscribeImp(), ISubscribeUnsubscribe.class);
         processor.process(new XLinkImpl(), IXLink.class);
