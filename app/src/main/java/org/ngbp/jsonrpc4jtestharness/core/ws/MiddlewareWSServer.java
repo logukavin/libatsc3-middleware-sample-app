@@ -14,6 +14,7 @@ import java.util.Arrays;
 
 public class MiddlewareWSServer extends WebSocketServer implements IOnRequest {
     private final IOnMessageListener listener;
+    private String TAG = MiddlewareWSServer.class.getSimpleName();
 
     public MiddlewareWSServer(int port, IOnMessageListener listener) throws UnknownHostException {
         super(new InetSocketAddress(port));
@@ -34,13 +35,13 @@ public class MiddlewareWSServer extends WebSocketServer implements IOnRequest {
     public void onOpen(WebSocket conn, ClientHandshake handshake) {
         conn.send("test onOpen");
         broadcast("new connection: " + handshake.getResourceDescriptor());
-        Log.i(MiddlewareWSServer.class.getSimpleName(), "new connection: " + handshake.getResourceDescriptor());
+        Log.i(TAG, "new connection: " + handshake.getResourceDescriptor());
     }
 
     @Override
     public void onClose(WebSocket conn, int code, String reason, boolean remote) {
         broadcast("connection closed with: " + conn);
-        Log.i(MiddlewareWSServer.class.getSimpleName(), "connection closed with: " + conn);
+        Log.i(TAG, "connection closed with: " + conn);
     }
 
     @Override
@@ -51,7 +52,7 @@ public class MiddlewareWSServer extends WebSocketServer implements IOnRequest {
         }
         if (listener != null)
             listener.onMessageReceiver(message);
-        Log.i(MiddlewareWSServer.class.getSimpleName(), "onMessage(String): " + message);
+        Log.i(TAG, "onMessage(String): " + message);
     }
 
     @Override
@@ -59,7 +60,7 @@ public class MiddlewareWSServer extends WebSocketServer implements IOnRequest {
         broadcast(message.array());
         if (listener != null)
             listener.onMessageReceiver(message.array());
-        Log.i(MiddlewareWSServer.class.getSimpleName(), "onMessage(BB): " + Arrays.toString(message.array()));
+        Log.i(TAG, "onMessage(BB): " + Arrays.toString(message.array()));
     }
 
     @Override
@@ -69,13 +70,13 @@ public class MiddlewareWSServer extends WebSocketServer implements IOnRequest {
 
     @Override
     public void onStart() {
-        Log.i(MiddlewareWSServer.class.getSimpleName(), "Server started");
+        Log.i(TAG, "Server started");
         setConnectionLostTimeout(100);
     }
 
     @Override
     public void onRequest(String request) {
         broadcast(request);
-        Log.i(MiddlewareWSServer.class.getSimpleName(), "answer from RPC server " + request);
+        Log.i(TAG, "answer from RPC server " + request);
     }
 }
