@@ -8,7 +8,7 @@ import org.ngbp.jsonrpc4jtestharness.rpc.requestReceiverActions.model.AudioVolum
 import org.ngbp.jsonrpc4jtestharness.rpc.EmptyModel;
 
 @JsonRpcType
-public interface IRequestReceiverActions {
+public interface IReceiverAction {
 
     @JsonRpcMethod("org.atsc.acquire.service")
     Object acquireService();

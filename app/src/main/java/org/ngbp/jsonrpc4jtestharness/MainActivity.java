@@ -28,16 +28,14 @@ import org.ngbp.jsonrpc4jtestharness.core.FileUtils;
 import org.ngbp.jsonrpc4jtestharness.http.service.ForegroundRpcService;
 import org.ngbp.jsonrpc4jtestharness.jsonrpc2.RPCManager;
 import org.ngbp.jsonrpc4jtestharness.jsonrpc2.RPCProcessor;
-import org.ngbp.jsonrpc4jtestharness.jsonrpc2.TempActivityCallback;
-import org.ngbp.jsonrpc4jtestharness.rpc.filterCodes.model.GetFilterCodes;
+import org.ngbp.jsonrpc4jtestharness.jsonrpc2.ReceiverActionCallback;
 import org.ngbp.libatsc3.Atsc3Module;
 import org.ngbp.libatsc3.ndk.a331.Service;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-public class MainActivity extends AppCompatActivity implements TempActivityCallback {
+public class MainActivity extends AppCompatActivity implements ReceiverActionCallback {
 
     private static final int FILE_REQUEST_CODE = 133;
 
@@ -109,8 +107,9 @@ public class MainActivity extends AppCompatActivity implements TempActivityCallb
         makeCall();
     }
 
-        final Request request = new CompleteRequest("2.0", 1L, "org.atsc.getFilterCodes", new HashMap<>());
-        String json = "";
+    final Request request = new CompleteRequest("2.0", 1L, "org.atsc.getFilterCodes", new HashMap<>());
+    String json = "";
+
     private void makeCall() {
         HashMap<String, Object> propertioes = new HashMap<>();
         propertioes.put("scaleFactor", 10);
@@ -124,18 +123,7 @@ public class MainActivity extends AppCompatActivity implements TempActivityCallb
         } catch (JsonProcessingException e) {
             e.printStackTrace();
         }
-
-        final Request request2 = new CompleteRequest("2.0", 2L, "org.atsc.query.service", new HashMap<>());
-        String json2 = "";
-        try {
-            json2 = mapper.writeValueAsString(request2);
-        } catch (JsonProcessingException e) {
-            e.printStackTrace();
-        }
-        GetFilterCodes val = callWrapper.processRequest(json);
-        requestParams.add(json);
-        requestParams.add(json2);
-        //List<Object> composedResponses =   callWrapper.processRequest(requestParams);
+        callWrapper.processRequest(json);
 
         initLibAtsc3();
     }
@@ -184,7 +172,7 @@ public class MainActivity extends AppCompatActivity implements TempActivityCallb
 
         stsc3Start = findViewById(R.id.atsc3_start);
         stsc3Start.setOnClickListener(v -> {
-                //atsc3Module.
+            //atsc3Module.
         });
 
         stsc3Stop = findViewById(R.id.atsc3_stop);
