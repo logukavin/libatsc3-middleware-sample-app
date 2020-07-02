@@ -11,6 +11,7 @@ import com.github.nmuzhichin.jsonrpc.model.request.Request;
 import com.github.nmuzhichin.jsonrpc.model.response.Response;
 import com.github.nmuzhichin.jsonrpc.module.JsonRpcModule;
 
+import org.ngbp.jsonrpc4jtestharness.models.JsonRpcError;
 import org.ngbp.jsonrpc4jtestharness.rpc.asynchronousNotificationsofChanges.AsynchronousNotificationsOfChangesImpl;
 import org.ngbp.jsonrpc4jtestharness.rpc.asynchronousNotificationsofChanges.IAsynchronousNotificationsOfChanges;
 import org.ngbp.jsonrpc4jtestharness.rpc.cacheRequest.CacheRequestImpl;
@@ -45,12 +46,15 @@ import org.ngbp.jsonrpc4jtestharness.rpc.xLink.XLinkImpl;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.ngbp.jsonrpc4jtestharness.models.JsonRpcError.NULL_POINTER_CODE;
+import static org.ngbp.jsonrpc4jtestharness.models.JsonRpcError.NULL_POINTER_ERROR;
+import static org.ngbp.jsonrpc4jtestharness.models.JsonRpcError.PARSE_ERROR;
+import static org.ngbp.jsonrpc4jtestharness.models.JsonRpcError.PARSE_ERROR_CODE;
+
 public class RPCProcessor implements IRPCProcessor {
     private final RpcConsumer consumer;
     private final Processor processor;
     private final ObjectMapper objectMapper = new ObjectMapper();
-    private String PARSE_ERROR_HEADER = "{\"jsonrpc\":\"2.0\",\"error\":{\"code\": -32700, \"message\": \"Parse error\"},";
-    private String NULL_ERROR_HEADER = "{\"jsonrpc\":\"2.0\",\"error\":{\"code\": -32603, \"message\": \"Internal NullPointerException error\"},";
 
     public RPCProcessor() {
         consumer = new ConsumerBuilder()
@@ -94,10 +98,10 @@ public class RPCProcessor implements IRPCProcessor {
                 return objectMapper.writeValueAsString(response);
             } catch (JsonProcessingException e) {
                 e.printStackTrace();
-                return PARSE_ERROR_HEADER + "\"id\":\"" + response.getId() + "\"}";
+                return new JsonRpcError(PARSE_ERROR_CODE,PARSE_ERROR,requestId).toString();
             }
         } else {
-            return NULL_ERROR_HEADER + "\"id\":\"" + requestId + "\"}";
+            return new JsonRpcError(NULL_POINTER_CODE,NULL_POINTER_ERROR,requestId).toString();
         }
     }
 
