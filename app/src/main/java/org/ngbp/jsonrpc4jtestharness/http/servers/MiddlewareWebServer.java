@@ -66,19 +66,6 @@ public class MiddlewareWebServer implements AutoCloseable {
         SSLContext sslContext = SSLContext.getInstance("TLS");
         sslContext.init(keyManagerFactory.getKeyManagers(), tmf.getTrustManagers(), null);
 
-        // HTTP connector
-        ServerConnector connector = new ServerConnector(server);
-        connector.setPort(8081);
-
-        // HTTPS configuration
-        HttpConfiguration https = new HttpConfiguration();
-        https.addCustomizer(new SecureRequestCustomizer());
-        https.setSecurePort(8443);
-
-        HttpConfiguration wss = new HttpConfiguration();
-        https.addCustomizer(new SecureRequestCustomizer());
-        https.setSecurePort(9999);
-
         // Configuring SSL
         SslContextFactory sslContextFactory = new SslContextFactory.Server();
         sslContextFactory.setKeyStoreType("PKCS12");
@@ -88,14 +75,27 @@ public class MiddlewareWebServer implements AutoCloseable {
         sslContextFactory.setKeyStorePassword("MY_PASSWORD");
         sslContextFactory.setKeyManagerPassword("MY_PASSWORD");
 
-        // Configuring the connector
+        // HTTP connector
+        ServerConnector connector = new ServerConnector(server);
+        connector.setPort(8081);
+
+        // HTTPS configuration
+        HttpConfiguration https = new HttpConfiguration();
+        https.addCustomizer(new SecureRequestCustomizer());
+        https.setSecurePort(8443);
+        // Configuring the https connector
         ServerConnector sslConnector = new ServerConnector(server, new SslConnectionFactory(sslContextFactory, HttpVersion.HTTP_1_1.toString()), new HttpConnectionFactory(https));
         sslConnector.setPort(8443);
 
+        // WSS configuration
+        HttpConfiguration wss = new HttpConfiguration();
+        https.addCustomizer(new SecureRequestCustomizer());
+        https.setSecurePort(9999);
+        // Configuring the wss connector
         ServerConnector wssConnector = new ServerConnector(server, new SslConnectionFactory(sslContextFactory, HttpVersion.HTTP_1_1.toString()), new HttpConnectionFactory(wss));
-        sslConnector.setPort(9999);
+        wssConnector.setPort(9999);
 
-        // Setting HTTP and HTTPS connectors
+        // Setting HTTP and HTTPS and WSS connectors
         server.setConnectors(new Connector[]{connector, sslConnector, wssConnector});
 
         ServletContextHandler handler = new ServletContextHandler(server, "/");
