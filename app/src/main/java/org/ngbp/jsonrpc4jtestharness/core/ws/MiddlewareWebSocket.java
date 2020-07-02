@@ -5,7 +5,7 @@ import android.util.Log;
 import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.WebSocketAdapter;
 
-public class EchoSocket extends WebSocketAdapter {
+public class MiddlewareWebSocket extends WebSocketAdapter {
     private Session outbound;
 
     @Override
@@ -34,7 +34,7 @@ public class EchoSocket extends WebSocketAdapter {
     @Override
     public void onWebSocketConnect(Session session) {
         super.onWebSocketConnect(session);
-        Log.d("WSServer: ", "onWebSocketConnect: " + session.toString());
+        Log.d("WSServer: ", "onWebSocketConnect: " + session.getLocalAddress());
         this.outbound = session;
     }
 

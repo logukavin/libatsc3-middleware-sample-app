@@ -5,16 +5,10 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.IBinder;
 import android.os.PowerManager;
-import android.util.Log;
 
-import org.eclipse.jetty.websocket.api.Session;
-import org.eclipse.jetty.websocket.client.WebSocketClient;
-import org.ngbp.jsonrpc4jtestharness.core.ws.EchoSocket;
-import org.ngbp.jsonrpc4jtestharness.http.servers.SimpleJettyWebServer;
+import org.ngbp.jsonrpc4jtestharness.http.servers.MiddlewareWebServer;
 
-import java.net.URI;
 import java.util.Objects;
-import java.util.concurrent.Future;
 
 import androidx.annotation.Nullable;
 
@@ -26,7 +20,7 @@ public class ForegroundRpcService extends Service {
     public final static String ACTION_START = "START";
     public final static String ACTION_STOP = "STOP";
     private NotificationHelper notificationHelper;
-    private SimpleJettyWebServer webServer;
+    private MiddlewareWebServer webServer;
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
@@ -55,37 +49,22 @@ public class ForegroundRpcService extends Service {
         wakeLock.acquire();
         startForeground(1, notificationHelper.createNotification(message));
 
-        startWebServer(this);
-        startWSClient();
+        startWebServer();
     }
 
-    private void startWebServer(Context context) {
-
+    private void startWebServer() {
         Thread serverThread = new Thread() {
             @Override
             public void run() {
-
-                webServer = new SimpleJettyWebServer(context);
+                webServer = new MiddlewareWebServer(getApplicationContext());
                 try {
                     webServer.runWebServer();
-                    Log.d("Test", " URL: " + webServer.getServer().getURI());
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
             }
         };
         serverThread.start();
-    }
-
-    private void startWSClient() {
-        Thread client = new Thread() {
-            @Override
-            public void run() {
-                startClient();
-            }
-        };
-
-        client.start();
     }
 
     private void stopService() {
@@ -112,31 +91,5 @@ public class ForegroundRpcService extends Service {
     @Override
     public IBinder onBind(Intent intent) {
         return null;
-    }
-
-    public void startClient() {
-        URI uri = URI.create("ws://localhost:8080/github");
-
-        WebSocketClient client = new WebSocketClient();
-        try {
-            try {
-                client.start();
-                // The socket that receives events
-                EchoSocket socket = new EchoSocket();
-                // Attempt Connect
-                Future<Session> fut = client.connect(socket,uri);
-                // Wait for Connect
-                Session session = fut.get();
-                // Send a message
-                session.getRemote().sendString("Hello");
-                // Close session
-                session.close();
-            } finally {
-                client.stop();
-            }
-        }
-        catch (Throwable t) {
-            t.printStackTrace(System.err);
-        }
     }
 }
