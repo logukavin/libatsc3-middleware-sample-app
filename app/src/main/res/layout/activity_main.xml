@@ -31,4 +31,72 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="5dp"
+        android:text="ATSC3"
+        app:layout_constraintBottom_toTopOf="@+id/atsc3_file_path"
+        app:layout_constraintStart_toStartOf="@+id/atsc3_file_path" />
+
+    <androidx.appcompat.widget.AppCompatEditText
+        android:id="@+id/atsc3_file_path"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="10dp"
+        android:layout_marginEnd="10dp"
+        android:maxLines="2"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/atsc3_file_choose"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.6" />
+
+    <Button
+        android:id="@+id/atsc3_file_choose"
+        android:layout_width="50dp"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="10dp"
+        android:text="..."
+        app:layout_constraintBottom_toBottomOf="@+id/atsc3_file_path"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/atsc3_file_path"
+        app:layout_constraintTop_toTopOf="@+id/atsc3_file_path" />
+
+    <Button
+        android:id="@+id/atsc3_open"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Open"
+        app:layout_constraintEnd_toStartOf="@+id/atsc3_start"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/atsc3_file_path" />
+
+    <Button
+        android:id="@+id/atsc3_start"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Start"
+        app:layout_constraintEnd_toStartOf="@+id/atsc3_stop"
+        app:layout_constraintStart_toEndOf="@+id/atsc3_open"
+        app:layout_constraintTop_toTopOf="@+id/atsc3_open" />
+
+    <Button
+        android:id="@+id/atsc3_stop"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Stop"
+        app:layout_constraintEnd_toStartOf="@+id/atsc3_close"
+        app:layout_constraintStart_toEndOf="@+id/atsc3_start"
+        app:layout_constraintTop_toTopOf="@+id/atsc3_open" />
+
+    <Button
+        android:id="@+id/atsc3_close"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Close"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/atsc3_stop"
+        app:layout_constraintTop_toTopOf="@+id/atsc3_open" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>
