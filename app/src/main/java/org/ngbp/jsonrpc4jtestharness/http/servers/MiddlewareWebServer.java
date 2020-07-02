@@ -99,7 +99,7 @@ public class MiddlewareWebServer implements AutoCloseable {
         server.setConnectors(new Connector[]{connector, sslConnector, wssConnector});
 
         ServletContextHandler handler = new ServletContextHandler(server, "/");
-        JsonRpcTestServlet servlet = new JsonRpcTestServlet(context);
+        ContentDisplayingServlet servlet = new ContentDisplayingServlet(context);
         ServletHolder holder = new ServletHolder(servlet);
         handler.addServlet(holder, "/github");
 
