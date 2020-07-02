@@ -10,7 +10,7 @@ import com.github.nmuzhichin.jsonrpc.model.request.CompleteRequest;
 import com.github.nmuzhichin.jsonrpc.model.request.Request;
 import com.github.nmuzhichin.jsonrpc.module.JsonRpcModule;
 
-import org.ngbp.jsonrpc4jtestharness.core.ws.SimplyJettyWSServer;
+import org.ngbp.jsonrpc4jtestharness.core.ws.MiddlewareWebSocketClient;
 import org.ngbp.jsonrpc4jtestharness.http.service.ForegroundRpcService;
 import org.ngbp.jsonrpc4jtestharness.jsonrpc2.RPCProcessor;
 import org.ngbp.jsonrpc4jtestharness.rpc.filterCodes.model.GetFilterCodes;
@@ -44,6 +44,12 @@ public class MainActivity extends AppCompatActivity {
                 startService();
             }
         });
+        findViewById(R.id.connect_to_ws).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                startWSClient();
+            }
+        });
 
         RPCProcessor callWrapper = new RPCProcessor();
         List<String> requestParams = new ArrayList<>();
@@ -67,19 +73,6 @@ public class MainActivity extends AppCompatActivity {
         requestParams.add(json);
         requestParams.add(json2);
         List<Object> composedResponses =   callWrapper.processRequest(requestParams);
-
-        Thread wsServer = new Thread() {
-            @Override
-            public void run() {
-                SimplyJettyWSServer wsServer = new SimplyJettyWSServer(getBaseContext(), 8080);
-                try {
-                    wsServer.runWSServer();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        };
-        wsServer.start();
     }
 
     public void startService() {
@@ -99,5 +92,16 @@ public class MainActivity extends AppCompatActivity {
     protected void onDestroy() {
         stopService();
         super.onDestroy();
+    }
+
+    private void startWSClient() {
+        Thread wsClient = new Thread() {
+            @Override
+            public void run() {
+                MiddlewareWebSocketClient client = new MiddlewareWebSocketClient();
+                client.start();
+            }
+        };
+        wsClient.start();
     }
 }
