@@ -4,10 +4,10 @@ import org.ngbp.jsonrpc4jtestharness.jsonrpc2.RPCManager;
 import org.ngbp.jsonrpc4jtestharness.rpc.requestReceiverActions.model.AudioVolume;
 import org.ngbp.jsonrpc4jtestharness.rpc.EmptyModel;
 
-public class RequestReceiverActionsImpl implements IRequestReceiverActions {
+public class ReceiverActionImpl implements IReceiverAction {
     private RPCManager rpcManager;
 
-    public RequestReceiverActionsImpl(RPCManager rpcManager) {
+    public ReceiverActionImpl(RPCManager rpcManager) {
         this.rpcManager = rpcManager;
     }
 

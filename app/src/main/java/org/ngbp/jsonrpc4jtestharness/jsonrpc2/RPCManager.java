@@ -2,16 +2,16 @@ package org.ngbp.jsonrpc4jtestharness.jsonrpc2;
 
 public class RPCManager {
     private static RPCManager instance;
-    private TempActivityCallback callback;
+    private ReceiverActionCallback callback;
 
     public RPCManager() {
     }
 
-    public TempActivityCallback getCallback() {
+    public ReceiverActionCallback getCallback() {
         return callback;
     }
 
-    public void setCallback(TempActivityCallback callback) {
+    public void setCallback(ReceiverActionCallback callback) {
         this.callback = callback;
     }
 
