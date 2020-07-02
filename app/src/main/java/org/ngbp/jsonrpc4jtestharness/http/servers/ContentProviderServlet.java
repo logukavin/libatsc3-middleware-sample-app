@@ -13,9 +13,9 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-public  class ContentDisplayingServlet extends HttpServlet {
+public  class ContentProviderServlet extends HttpServlet {
 
-    ContentDisplayingServlet(Context context) {
+    ContentProviderServlet(Context context) {
 
         //        Read web content from assets folder
         StringBuilder sb = new StringBuilder();
