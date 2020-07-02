@@ -1,12 +1,12 @@
 package org.ngbp.jsonrpc4jtestharness.rpc.requestReceiverActions;
 
-import android.util.Log;
-
 import org.ngbp.jsonrpc4jtestharness.jsonrpc2.RPCManager;
 import org.ngbp.jsonrpc4jtestharness.rpc.requestReceiverActions.model.AudioVolume;
+import org.ngbp.jsonrpc4jtestharness.rpc.EmptyModel;
 
 public class RequestReceiverActionsImpl implements IRequestReceiverActions {
     private RPCManager rpcManager;
+
     public RequestReceiverActionsImpl(RPCManager rpcManager) {
         this.rpcManager = rpcManager;
     }
@@ -17,10 +17,9 @@ public class RequestReceiverActionsImpl implements IRequestReceiverActions {
     }
 
     @Override
-    public Object videoScalingAndPositioning(Double scaleFactor, Double xPos, Double yPos) {
-        Log.d("videoScalingAndPositioning ","");
-        rpcManager.updateViewPosition(scaleFactor,xPos,yPos);
-        return new Object();
+    public EmptyModel videoScalingAndPositioning(Double scaleFactor, Double xPos, Double yPos) {
+        rpcManager.updateViewPosition(scaleFactor, xPos, yPos);
+        return new EmptyModel();
     }
 
     @Override

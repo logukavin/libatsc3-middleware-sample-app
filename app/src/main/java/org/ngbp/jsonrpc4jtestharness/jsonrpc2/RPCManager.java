@@ -2,19 +2,20 @@ package org.ngbp.jsonrpc4jtestharness.jsonrpc2;
 
 public class RPCManager {
     private static RPCManager instance;
-private TempActivityCallback callback;
-    private RPCManager(TempActivityCallback callback) {
-        this.callback = callback;
+    private TempActivityCallback callback;
 
+    public RPCManager() {
     }
-    public static RPCManager newInstance(TempActivityCallback callback) {
-        if (instance == null){
-            instance = new RPCManager(callback);
-        }
-        return instance;
+
+    public TempActivityCallback getCallback() {
+        return callback;
+    }
+
+    public void setCallback(TempActivityCallback callback) {
+        this.callback = callback;
     }
 
     public void updateViewPosition(Double scaleFactor, Double xPos, Double yPos) {
-        callback.updateViewPosition(scaleFactor,xPos,yPos);
+        callback.updateViewPosition(scaleFactor, xPos, yPos);
     }
 }
