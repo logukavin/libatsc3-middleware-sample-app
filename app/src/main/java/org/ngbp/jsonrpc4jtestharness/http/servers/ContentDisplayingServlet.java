@@ -9,14 +9,13 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 
-import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-public  class JsonRpcTestServlet extends HttpServlet {
+public  class ContentDisplayingServlet extends HttpServlet {
 
-    public JsonRpcTestServlet(Context context) {
+    ContentDisplayingServlet(Context context) {
 
         //        Read web content from assets folder
         StringBuilder sb = new StringBuilder();
@@ -41,7 +40,7 @@ public  class JsonRpcTestServlet extends HttpServlet {
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
+            throws IOException {
 
         PrintWriter out = response.getWriter();
         out.println(content);
