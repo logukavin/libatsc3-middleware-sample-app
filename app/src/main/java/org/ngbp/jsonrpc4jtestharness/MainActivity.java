@@ -2,7 +2,6 @@ package org.ngbp.jsonrpc4jtestharness;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -14,16 +13,9 @@ import com.github.nmuzhichin.jsonrpc.model.request.CompleteRequest;
 import com.github.nmuzhichin.jsonrpc.model.request.Request;
 import com.github.nmuzhichin.jsonrpc.module.JsonRpcModule;
 
-import org.java_websocket.client.WebSocketClient;
-import org.java_websocket.handshake.ServerHandshake;
-import org.ngbp.jsonrpc4jtestharness.core.ws.IOnRequest;
-import org.ngbp.jsonrpc4jtestharness.core.ws.MiddlewareWSServer;
 import org.ngbp.jsonrpc4jtestharness.http.service.ForegroundRpcService;
-import org.ngbp.jsonrpc4jtestharness.jsonrpc2.IOnMessageListener;
 import org.ngbp.jsonrpc4jtestharness.jsonrpc2.RPCProcessor;
 
-import java.net.InetSocketAddress;
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -50,7 +42,7 @@ public class MainActivity extends AppCompatActivity {
                 startService();
             }
         });
-        findViewById(R.id.server).setOnClickListener(new View.OnClickListener() {
+        findViewById(R.id.ma_start_server_btn).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
             }
