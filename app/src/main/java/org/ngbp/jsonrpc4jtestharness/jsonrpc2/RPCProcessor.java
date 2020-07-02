@@ -1,5 +1,7 @@
 package org.ngbp.jsonrpc4jtestharness.jsonrpc2;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.nmuzhichin.jsonrpc.api.Processor;
@@ -48,10 +50,12 @@ public class RPCProcessor implements IRPCProcessor {
     private final Processor processor;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private RPCManager rpcManager;
+
     public RPCProcessor(RPCManager rpcManager) {
         consumer = new ConsumerBuilder()
                 .build();
         processor = consumer.getProcessor();
+        objectMapper.setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
         objectMapper.registerModule(new JsonRpcModule());
         this.rpcManager = rpcManager;
         filRequests();

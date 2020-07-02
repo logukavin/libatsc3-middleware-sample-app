@@ -28,6 +28,7 @@ public class MainActivity extends AppCompatActivity implements TempActivityCallb
 
     public static final ObjectMapper mapper = new ObjectMapper();
     private RPCManager rpcManager;
+    RPCProcessor callWrapper;
     private Double xPos = Double.valueOf(50);
     private Double yPos = Double.valueOf(50);
 
@@ -36,7 +37,9 @@ public class MainActivity extends AppCompatActivity implements TempActivityCallb
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         mapper.registerModule(new JsonRpcModule());
-        rpcManager = RPCManager.newInstance(this);
+        rpcManager = new RPCManager();
+        rpcManager.setCallback(this);
+        callWrapper = new RPCProcessor(rpcManager);
         findViewById(R.id.stop).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -84,7 +87,6 @@ public class MainActivity extends AppCompatActivity implements TempActivityCallb
     }
 
     private void makeCall() {
-        RPCProcessor callWrapper = new RPCProcessor(rpcManager);
         HashMap<String, Object> propertioes = new HashMap<>();
         propertioes.put("scaleFactor", 10);
         propertioes.put("xPos", xPos);
@@ -97,7 +99,7 @@ public class MainActivity extends AppCompatActivity implements TempActivityCallb
         } catch (JsonProcessingException e) {
             e.printStackTrace();
         }
-        Object val = callWrapper.processRequest(json);
+        callWrapper.processRequest(json);
     }
 
     public void startService() {

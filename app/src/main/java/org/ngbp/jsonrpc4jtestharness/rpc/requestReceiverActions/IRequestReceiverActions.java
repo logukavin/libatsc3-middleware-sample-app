@@ -5,9 +5,7 @@ import com.github.nmuzhichin.jsonrpc.annotation.JsonRpcParam;
 import com.github.nmuzhichin.jsonrpc.annotation.JsonRpcType;
 
 import org.ngbp.jsonrpc4jtestharness.rpc.requestReceiverActions.model.AudioVolume;
-import org.ngbp.jsonrpc4jtestharness.rpc.requestReceiverActions.model.VideoScalingPositioningParams;
-
-import java.util.List;
+import org.ngbp.jsonrpc4jtestharness.rpc.EmptyModel;
 
 @JsonRpcType
 public interface IRequestReceiverActions {
@@ -16,7 +14,7 @@ public interface IRequestReceiverActions {
     Object acquireService();
 
     @JsonRpcMethod("org.atsc.scale-position")
-    Object videoScalingAndPositioning(@JsonRpcParam("scaleFactor") Double scaleFactor, @JsonRpcParam("xPos") Double xPos, @JsonRpcParam("yPos") Double yPos);
+    EmptyModel videoScalingAndPositioning(@JsonRpcParam("scaleFactor") Double scaleFactor, @JsonRpcParam("xPos") Double xPos, @JsonRpcParam("yPos") Double yPos);
 
     @JsonRpcMethod("org.atsc.service")
     Object setRMPURL();
