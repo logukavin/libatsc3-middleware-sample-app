@@ -11,7 +11,6 @@ import com.github.nmuzhichin.jsonrpc.model.request.Request;
 import com.github.nmuzhichin.jsonrpc.model.response.Response;
 import com.github.nmuzhichin.jsonrpc.module.JsonRpcModule;
 
-import org.ngbp.jsonrpc4jtestharness.models.JsonRpcError;
 import org.ngbp.jsonrpc4jtestharness.rpc.asynchronousNotificationsofChanges.AsynchronousNotificationsOfChangesImpl;
 import org.ngbp.jsonrpc4jtestharness.rpc.asynchronousNotificationsofChanges.IAsynchronousNotificationsOfChanges;
 import org.ngbp.jsonrpc4jtestharness.rpc.cacheRequest.CacheRequestImpl;
@@ -45,11 +44,6 @@ import org.ngbp.jsonrpc4jtestharness.rpc.xLink.XLinkImpl;
 
 import java.util.ArrayList;
 import java.util.List;
-
-import static org.ngbp.jsonrpc4jtestharness.models.JsonRpcError.NULL_POINTER_CODE;
-import static org.ngbp.jsonrpc4jtestharness.models.JsonRpcError.NULL_POINTER_ERROR;
-import static org.ngbp.jsonrpc4jtestharness.models.JsonRpcError.PARSE_ERROR;
-import static org.ngbp.jsonrpc4jtestharness.models.JsonRpcError.PARSE_ERROR_CODE;
 
 public class RPCProcessor implements IRPCProcessor {
     private final RpcConsumer consumer;
@@ -90,18 +84,14 @@ public class RPCProcessor implements IRPCProcessor {
         try {
             requestId = objectMapper.readValue(request, Request.class).getId();
             response = consumer.execution(objectMapper.readValue(request, Request.class));
+            return objectMapper.writeValueAsString(response);
         } catch (JsonProcessingException e) {
-            e.printStackTrace();
-        }
-        if (response != null && response.isSuccess()) {
             try {
-                return objectMapper.writeValueAsString(response);
-            } catch (JsonProcessingException e) {
-                e.printStackTrace();
-                return new JsonRpcError(PARSE_ERROR_CODE,PARSE_ERROR,requestId).toString();
+                return objectMapper.writeValueAsString(Response.createResponse(requestId, new InternalRpcError(ERROR_CODES.PARSING_ERROR_CODE.getValue(), e.getLocalizedMessage())));
+            } catch (JsonProcessingException ex) {
+                // This catch will never been executed during code logic, but it need because objectMapper throw exception
+                return "";
             }
-        } else {
-            return new JsonRpcError(NULL_POINTER_CODE,NULL_POINTER_ERROR,requestId).toString();
         }
     }
 

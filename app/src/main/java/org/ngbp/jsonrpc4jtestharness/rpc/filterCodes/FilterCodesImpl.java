@@ -1,6 +1,5 @@
 package org.ngbp.jsonrpc4jtestharness.rpc.filterCodes;
 
-import org.ngbp.jsonrpc4jtestharness.models.JsonRpcResponse;
 import org.ngbp.jsonrpc4jtestharness.rpc.filterCodes.model.GetFilterCodes;
 
 import java.util.ArrayList;
