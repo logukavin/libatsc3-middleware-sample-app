@@ -1,6 +1,6 @@
 package org.ngbp.jsonrpc4jtestharness.rpc.requestReceiverActions;
 
-import org.ngbp.jsonrpc4jtestharness.jsonrpc2.RPCManager;
+import org.ngbp.jsonrpc4jtestharness.rpc.processor.RPCManager;
 import org.ngbp.jsonrpc4jtestharness.rpc.requestReceiverActions.model.AudioVolume;
 import org.ngbp.jsonrpc4jtestharness.rpc.EmptyModel;
 

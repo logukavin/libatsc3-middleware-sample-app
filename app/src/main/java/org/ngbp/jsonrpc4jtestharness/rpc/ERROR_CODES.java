@@ -1,6 +1,6 @@
-package org.ngbp.jsonrpc4jtestharness.jsonrpc2;
+package org.ngbp.jsonrpc4jtestharness.rpc;
 
-enum ERROR_CODES {
+public enum ERROR_CODES {
     PARSING_ERROR_CODE(-1);
     private final int value;
 

@@ -1,4 +1,4 @@
-package org.ngbp.jsonrpc4jtestharness.jsonrpc2;
+package org.ngbp.jsonrpc4jtestharness.rpc.processor;
 
 public class RPCManager {
     private static RPCManager instance;
