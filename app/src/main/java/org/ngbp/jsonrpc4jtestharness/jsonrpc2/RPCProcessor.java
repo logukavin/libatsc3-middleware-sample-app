@@ -1,5 +1,7 @@
 package org.ngbp.jsonrpc4jtestharness.jsonrpc2;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.PropertyAccessor;
 import androidx.annotation.NonNull;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -33,8 +35,8 @@ import org.ngbp.jsonrpc4jtestharness.rpc.queryDeviceInf.IQueryDeviceInfo;
 import org.ngbp.jsonrpc4jtestharness.rpc.queryDeviceInf.QueryDeviceInfoImpl;
 import org.ngbp.jsonrpc4jtestharness.rpc.receiverQueryApi.IReceiverQueryApi;
 import org.ngbp.jsonrpc4jtestharness.rpc.receiverQueryApi.ReceiverQueryApiImpl;
-import org.ngbp.jsonrpc4jtestharness.rpc.requestReceiverActions.IRequestReceiverActions;
-import org.ngbp.jsonrpc4jtestharness.rpc.requestReceiverActions.RequestReceiverActionsImpl;
+import org.ngbp.jsonrpc4jtestharness.rpc.requestReceiverActions.IReceiverAction;
+import org.ngbp.jsonrpc4jtestharness.rpc.requestReceiverActions.ReceiverActionImpl;
 import org.ngbp.jsonrpc4jtestharness.rpc.rmpContentSynchronization.IRMPContentSynchronization;
 import org.ngbp.jsonrpc4jtestharness.rpc.rmpContentSynchronization.RMPContentSynchronizationImpl;
 import org.ngbp.jsonrpc4jtestharness.rpc.subscribeUnsubscribe.ISubscribeUnsubscribe;
@@ -49,12 +51,15 @@ public class RPCProcessor implements IRPCProcessor {
     private final RpcConsumer consumer;
     private final Processor processor;
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private RPCManager rpcManager;
 
-    public RPCProcessor() {
+    public RPCProcessor(RPCManager rpcManager) {
         consumer = new ConsumerBuilder()
                 .build();
         processor = consumer.getProcessor();
+        objectMapper.setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
         objectMapper.registerModule(new JsonRpcModule());
+        this.rpcManager = rpcManager;
         filRequests();
     }
 
@@ -70,7 +75,7 @@ public class RPCProcessor implements IRPCProcessor {
         processor.process(new MediaTrackSelectionImpl(), IMediaTrackSelection.class);
         processor.process(new QueryDeviceInfoImpl(), IQueryDeviceInfo.class);
         processor.process(new ReceiverQueryApiImpl(), IReceiverQueryApi.class);
-        processor.process(new RequestReceiverActionsImpl(), IRequestReceiverActions.class);
+        processor.process(new ReceiverActionImpl(rpcManager), IReceiverAction.class);
         processor.process(new RMPContentSynchronizationImpl(), IRMPContentSynchronization.class);
         processor.process(new SubscribeUnsubscribeImp(), ISubscribeUnsubscribe.class);
         processor.process(new XLinkImpl(), IXLink.class);
