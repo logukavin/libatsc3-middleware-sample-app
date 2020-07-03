@@ -39,6 +39,7 @@ import java.util.List;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
+import androidx.lifecycle.Observer;
 
 public class MainActivity extends AppCompatActivity implements ReceiverActionCallback {
 
@@ -141,23 +142,12 @@ public class MainActivity extends AppCompatActivity implements ReceiverActionCal
 
     private void initLibAtsc3() {
         atsc3Module = new Atsc3Module(getApplicationContext());
-        atsc3Module.setListener(new Atsc3Module.Listener() {
-            @Override
-            public void onServicesLoaded(@NonNull List<Service> services) {
-                Service s = services.stream()
-                        .filter(service -> "WZTV".equals(service.getShortServiceName()))
-                        .findFirst()
-                        .orElse(null);
-
-                if (s != null) {
-                    Uri mediaPath = atsc3Module.getMediaUri(s);
-                }
-            }
-
-            @Override
-            public void onStateChanged(Atsc3Module.State state) {
-                updateAssc3Buttons(state);
-            }
+        atsc3Module.getState().observe(this, this::updateAssc3Buttons);
+        atsc3Module.getSltServices().observe(this, services -> {
+            services.stream()
+                    .filter(service -> "WZTV".equals(service.getShortServiceName()))
+                    .findFirst()
+                    .ifPresent(service -> atsc3Module.selectService(service));
         });
 
         stsc3FilePath = findViewById(R.id.atsc3_file_path);
