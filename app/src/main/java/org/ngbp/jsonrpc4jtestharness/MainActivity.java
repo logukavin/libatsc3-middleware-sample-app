@@ -14,6 +14,8 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.constraintlayout.widget.ConstraintLayout;
+import androidx.constraintlayout.widget.ConstraintSet;
 import androidx.core.content.ContextCompat;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -25,8 +27,9 @@ import com.github.nmuzhichin.jsonrpc.module.JsonRpcModule;
 import org.ngbp.jsonrpc4jtestharness.core.FileUtils;
 import org.ngbp.jsonrpc4jtestharness.core.ws.MiddlewareWebSocketClient;
 import org.ngbp.jsonrpc4jtestharness.http.service.ForegroundRpcService;
+import org.ngbp.jsonrpc4jtestharness.jsonrpc2.RPCManager;
 import org.ngbp.jsonrpc4jtestharness.jsonrpc2.RPCProcessor;
-import org.ngbp.jsonrpc4jtestharness.rpc.filterCodes.model.GetFilterCodes;
+import org.ngbp.jsonrpc4jtestharness.jsonrpc2.ReceiverActionCallback;
 import org.ngbp.libatsc3.Atsc3Module;
 import org.ngbp.libatsc3.ndk.a331.Service;
 
@@ -37,11 +40,15 @@ import java.util.List;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements ReceiverActionCallback {
 
     private static final int FILE_REQUEST_CODE = 133;
 
     public static final ObjectMapper mapper = new ObjectMapper();
+    private RPCManager rpcManager;
+    RPCProcessor callWrapper;
+    private Double xPos = Double.valueOf(50);
+    private Double yPos = Double.valueOf(50);
 
     private Atsc3Module atsc3Module;
 
@@ -56,7 +63,9 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         mapper.registerModule(new JsonRpcModule());
-
+        rpcManager = new RPCManager();
+        rpcManager.setCallback(this);
+        callWrapper = new RPCProcessor(rpcManager);
         findViewById(R.id.stop).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -76,28 +85,56 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        RPCProcessor callWrapper = new RPCProcessor();
-        List<String> requestParams = new ArrayList<>();
+        findViewById(R.id.left).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (xPos > 0)
+                    xPos = xPos - 10;
+                makeCall();
+            }
+        });
+        findViewById(R.id.right).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                xPos = xPos + 10;
+                makeCall();
+            }
+        });
+        findViewById(R.id.top).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (xPos > 0)
+                    yPos = yPos - 10;
+                makeCall();
+            }
+        });
+        findViewById(R.id.bottom).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                yPos = yPos + 10;
+                makeCall();
+            }
+        });
+        makeCall();
+    }
 
-        final Request request = new CompleteRequest("2.0", 1L, "org.atsc.getFilterCodes", new HashMap<>());
+    final Request request = new CompleteRequest("2.0", 1L, "org.atsc.getFilterCodes", new HashMap<>());
+    String json = "";
+
+    private void makeCall() {
+        HashMap<String, Object> propertioes = new HashMap<>();
+        propertioes.put("scaleFactor", 10);
+        propertioes.put("xPos", xPos);
+        propertioes.put("yPos", yPos);
+
+        final Request request = new CompleteRequest("2.0", 1L, "org.atsc.scale-position", propertioes);
         String json = "";
         try {
             json = mapper.writeValueAsString(request);
         } catch (JsonProcessingException e) {
             e.printStackTrace();
         }
-
-        final Request request2 = new CompleteRequest("2.0", 2L, "org.atsc.query.service", new HashMap<>());
-        String json2 = "";
-        try {
-            json2 = mapper.writeValueAsString(request2);
-        } catch (JsonProcessingException e) {
-            e.printStackTrace();
-        }
-        GetFilterCodes val = callWrapper.processRequest(json);
-        requestParams.add(json);
-        requestParams.add(json2);
-        //List<Object> composedResponses =   callWrapper.processRequest(requestParams);
+        callWrapper.processRequest(json);
 
         initLibAtsc3();
     }
@@ -146,7 +183,7 @@ public class MainActivity extends AppCompatActivity {
 
         stsc3Start = findViewById(R.id.atsc3_start);
         stsc3Start.setOnClickListener(v -> {
-                //atsc3Module.
+            //atsc3Module.
         });
 
         stsc3Stop = findViewById(R.id.atsc3_stop);
@@ -165,6 +202,7 @@ public class MainActivity extends AppCompatActivity {
         stsc3Start.setEnabled(state == Atsc3Module.State.OPENED || state == Atsc3Module.State.PAUSED);
         stsc3Stop.setEnabled(state == Atsc3Module.State.OPENED);
         stsc3Close.setEnabled(state == Atsc3Module.State.OPENED || state == Atsc3Module.State.PAUSED);
+        callWrapper.processRequest(json);
     }
 
     public void startService() {
@@ -195,6 +233,17 @@ public class MainActivity extends AppCompatActivity {
     protected void onDestroy() {
         stopService();
         super.onDestroy();
+    }
+
+    @Override
+    public void updateViewPosition(Double scaleFactor, Double xPos, Double yPos) {
+        ConstraintLayout constraintLayout = findViewById(R.id.root);
+        View view = findViewById(R.id.testView);
+        ConstraintSet set = new ConstraintSet();
+        set.clone(constraintLayout);
+        set.connect(view.getId(), ConstraintSet.LEFT, constraintLayout.getId(), ConstraintSet.LEFT, xPos.intValue() * 10);
+        set.connect(view.getId(), ConstraintSet.TOP, constraintLayout.getId(), ConstraintSet.TOP, yPos.intValue() * 10);
+        set.applyTo(constraintLayout);
     }
 
     private void showFileChooser() {
