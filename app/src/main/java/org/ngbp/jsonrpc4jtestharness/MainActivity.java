@@ -25,6 +25,7 @@ import com.github.nmuzhichin.jsonrpc.model.request.Request;
 import com.github.nmuzhichin.jsonrpc.module.JsonRpcModule;
 
 import org.ngbp.jsonrpc4jtestharness.core.FileUtils;
+import org.ngbp.jsonrpc4jtestharness.core.ws.MiddlewareWebSocketClient;
 import org.ngbp.jsonrpc4jtestharness.http.service.ForegroundRpcService;
 import org.ngbp.jsonrpc4jtestharness.jsonrpc2.RPCManager;
 import org.ngbp.jsonrpc4jtestharness.jsonrpc2.RPCProcessor;
@@ -32,8 +33,12 @@ import org.ngbp.jsonrpc4jtestharness.jsonrpc2.ReceiverActionCallback;
 import org.ngbp.libatsc3.Atsc3Module;
 import org.ngbp.libatsc3.ndk.a331.Service;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 
 public class MainActivity extends AppCompatActivity implements ReceiverActionCallback {
 
@@ -71,6 +76,12 @@ public class MainActivity extends AppCompatActivity implements ReceiverActionCal
             @Override
             public void onClick(View view) {
                 startService();
+            }
+        });
+        findViewById(R.id.connect_to_ws).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                startWSClient();
             }
         });
 
@@ -196,15 +207,26 @@ public class MainActivity extends AppCompatActivity implements ReceiverActionCal
 
     public void startService() {
         Intent serviceIntent = new Intent(this, ForegroundRpcService.class);
-        serviceIntent.setAction(ForegroundRpcService.START);
+        serviceIntent.setAction(ForegroundRpcService.ACTION_START);
         serviceIntent.putExtra("inputExtra", "Foreground RPC Service Example in Android");
         ContextCompat.startForegroundService(this, serviceIntent);
     }
 
     public void stopService() {
         Intent serviceIntent = new Intent(this, ForegroundRpcService.class);
-        serviceIntent.setAction(ForegroundRpcService.STOP);
+        serviceIntent.setAction(ForegroundRpcService.ACTION_STOP);
         ContextCompat.startForegroundService(this, serviceIntent);
+    }
+
+    private void startWSClient() {
+        Thread wsClient = new Thread() {
+            @Override
+            public void run() {
+                MiddlewareWebSocketClient client = new MiddlewareWebSocketClient();
+                client.start();
+            }
+        };
+        wsClient.start();
     }
 
     @Override
