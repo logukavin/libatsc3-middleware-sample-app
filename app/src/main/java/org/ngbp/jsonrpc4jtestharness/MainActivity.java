@@ -124,8 +124,8 @@ public class MainActivity extends AppCompatActivity implements ReceiverActionCal
         makeCall();
     }
 
-        final Request request = new CompleteRequest("2.0", 1L, "org.atsc.getFilterCodes", new HashMap<>());
-        String json = "";
+    final Request request2 = new CompleteRequest("2.0", 2L, "org.atsc.query.service", new HashMap<>());
+    String json2 = "";
     final Request request = new CompleteRequest("2.0", 1L, "org.atsc.getFilterCodes", new HashMap<>());
     String json = "";
 
@@ -180,22 +180,24 @@ public class MainActivity extends AppCompatActivity implements ReceiverActionCal
 
             }
 
-        final Request request2 = new CompleteRequest("2.0", 2L, "org.atsc.query.service", new HashMap<>());
-        String json2 = "";
-        try {
-            json2 = mapper.writeValueAsString(request2);
-        } catch (JsonProcessingException e) {
-            e.printStackTrace();
-        }
-        String val = callWrapper.processRequest(json);
-        requestParams.add(json);
-        requestParams.add(json2);
-        List<String> composedResponses = callWrapper.processRequest(requestParams);
             @Override
             public void afterTextChanged(Editable s) {
                 updateAssc3Buttons(TextUtils.isEmpty(s) ? null : Atsc3Module.State.IDLE);
             }
         });
+
+        try {
+            json2 = mapper.writeValueAsString(request2);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+        }
+
+        String val = callWrapper.processRequest(json);
+        List<String> requestParams = new ArrayList<>();
+        requestParams.add(json);
+        requestParams.add(json2);
+        List<String> composedResponses = callWrapper.processRequest(requestParams);
+
 
         stsc3Open = findViewById(R.id.atsc3_open);
         stsc3Open.setOnClickListener(v -> atsc3Module.openPcapFile(stsc3FilePath.getText().toString()));
