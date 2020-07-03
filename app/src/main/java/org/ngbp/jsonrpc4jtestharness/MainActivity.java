@@ -27,18 +27,15 @@ import com.github.nmuzhichin.jsonrpc.module.JsonRpcModule;
 import org.ngbp.jsonrpc4jtestharness.core.FileUtils;
 import org.ngbp.jsonrpc4jtestharness.core.ws.MiddlewareWebSocketClient;
 import org.ngbp.jsonrpc4jtestharness.http.service.ForegroundRpcService;
-import org.ngbp.jsonrpc4jtestharness.jsonrpc2.RPCManager;
-import org.ngbp.jsonrpc4jtestharness.jsonrpc2.RPCProcessor;
-import org.ngbp.jsonrpc4jtestharness.jsonrpc2.ReceiverActionCallback;
+import org.ngbp.jsonrpc4jtestharness.rpc.processor.RPCManager;
+import org.ngbp.jsonrpc4jtestharness.rpc.processor.RPCProcessor;
+import org.ngbp.jsonrpc4jtestharness.rpc.processor.ReceiverActionCallback;
 import org.ngbp.libatsc3.Atsc3Module;
 import org.ngbp.libatsc3.ndk.a331.Service;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.content.ContextCompat;
 
 public class MainActivity extends AppCompatActivity implements ReceiverActionCallback {
 

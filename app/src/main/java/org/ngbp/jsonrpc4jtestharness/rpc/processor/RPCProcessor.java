@@ -1,7 +1,8 @@
-package org.ngbp.jsonrpc4jtestharness.jsonrpc2;
+package org.ngbp.jsonrpc4jtestharness.rpc.processor;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
+
 import androidx.annotation.NonNull;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -13,6 +14,7 @@ import com.github.nmuzhichin.jsonrpc.model.request.Request;
 import com.github.nmuzhichin.jsonrpc.model.response.Response;
 import com.github.nmuzhichin.jsonrpc.module.JsonRpcModule;
 
+import org.ngbp.jsonrpc4jtestharness.rpc.ERROR_CODES;
 import org.ngbp.jsonrpc4jtestharness.rpc.asynchronousNotificationsofChanges.AsynchronousNotificationsOfChangesImpl;
 import org.ngbp.jsonrpc4jtestharness.rpc.asynchronousNotificationsofChanges.IAsynchronousNotificationsOfChanges;
 import org.ngbp.jsonrpc4jtestharness.rpc.cacheRequest.CacheRequestImpl;
