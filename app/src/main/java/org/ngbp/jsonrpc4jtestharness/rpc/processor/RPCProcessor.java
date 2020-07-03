@@ -1,7 +1,10 @@
-package org.ngbp.jsonrpc4jtestharness.jsonrpc2;
+package org.ngbp.jsonrpc4jtestharness.rpc.processor;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
+
+import androidx.annotation.NonNull;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.nmuzhichin.jsonrpc.api.Processor;
@@ -11,6 +14,7 @@ import com.github.nmuzhichin.jsonrpc.model.request.Request;
 import com.github.nmuzhichin.jsonrpc.model.response.Response;
 import com.github.nmuzhichin.jsonrpc.module.JsonRpcModule;
 
+import org.ngbp.jsonrpc4jtestharness.rpc.ERROR_CODES;
 import org.ngbp.jsonrpc4jtestharness.rpc.asynchronousNotificationsofChanges.AsynchronousNotificationsOfChangesImpl;
 import org.ngbp.jsonrpc4jtestharness.rpc.asynchronousNotificationsofChanges.IAsynchronousNotificationsOfChanges;
 import org.ngbp.jsonrpc4jtestharness.rpc.cacheRequest.CacheRequestImpl;
@@ -79,38 +83,41 @@ public class RPCProcessor implements IRPCProcessor {
         processor.process(new XLinkImpl(), IXLink.class);
     }
 
+    @NonNull
     @Override
-    public <T> T processRequest(String request) {
+    public String processRequest(String request) {
         Response response = null;
+        Long requestId = -1L;
         try {
+            requestId = objectMapper.readValue(request, Request.class).getId();
             response = consumer.execution(objectMapper.readValue(request, Request.class));
+            return objectMapper.writeValueAsString(response);
         } catch (JsonProcessingException e) {
-            e.printStackTrace();
-        }
-        if (response != null && response.isSuccess()) {
-            return (T) response.getBody();
-        } else {
-            return null;
+            try {
+                return objectMapper.writeValueAsString(Response.createResponse(requestId, new InternalRpcError(ERROR_CODES.PARSING_ERROR_CODE.getValue(), e.getLocalizedMessage())));
+            } catch (JsonProcessingException ex) {
+                // This catch will never been executed during code logic, but it need because objectMapper throw exception
+                return "";
+            }
         }
     }
 
+    @NonNull
     @Override
-    public List<Object> processRequest(List<String> requests) {
-        List<Object> wrappedList = new ArrayList<>();
+    public List<String> processRequest(List<String> requests) {
+        List<String> wrappedList = new ArrayList<>(requests.size());
         try {
             List<Request> requestList = new ArrayList<>();
             for (int i = 0; i < requests.size(); i++) {
                 requestList.add(objectMapper.readValue(requests.get(i), Request.class));
             }
-
             final List<Response> responseList = consumer.execution(requestList);
             for (Response r : responseList) {
-                wrappedList.add(r.getBody());
+                wrappedList.add(objectMapper.writeValueAsString(r.getBody()));
             }
         } catch (JsonProcessingException e) {
             e.printStackTrace();
         }
         return wrappedList;
     }
-
 }

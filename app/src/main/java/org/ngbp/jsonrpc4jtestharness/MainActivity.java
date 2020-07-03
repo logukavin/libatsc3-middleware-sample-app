@@ -27,9 +27,9 @@ import com.github.nmuzhichin.jsonrpc.module.JsonRpcModule;
 import org.ngbp.jsonrpc4jtestharness.core.FileUtils;
 import org.ngbp.jsonrpc4jtestharness.core.ws.MiddlewareWebSocketClient;
 import org.ngbp.jsonrpc4jtestharness.http.service.ForegroundRpcService;
-import org.ngbp.jsonrpc4jtestharness.jsonrpc2.RPCManager;
-import org.ngbp.jsonrpc4jtestharness.jsonrpc2.RPCProcessor;
-import org.ngbp.jsonrpc4jtestharness.jsonrpc2.ReceiverActionCallback;
+import org.ngbp.jsonrpc4jtestharness.rpc.processor.RPCManager;
+import org.ngbp.jsonrpc4jtestharness.rpc.processor.RPCProcessor;
+import org.ngbp.jsonrpc4jtestharness.rpc.processor.ReceiverActionCallback;
 import org.ngbp.libatsc3.Atsc3Module;
 import org.ngbp.libatsc3.ndk.a331.Service;
 
@@ -79,6 +79,12 @@ public class MainActivity extends AppCompatActivity implements ReceiverActionCal
                 startService();
             }
         });
+        findViewById(R.id.ma_start_server_btn).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+            }
+        });
+        List<String> requestParams = new ArrayList<>();
         findViewById(R.id.connect_to_ws).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -119,6 +125,8 @@ public class MainActivity extends AppCompatActivity implements ReceiverActionCal
         makeCall();
     }
 
+    final Request request2 = new CompleteRequest("2.0", 2L, "org.atsc.query.service", new HashMap<>());
+    String json2 = "";
     final Request request = new CompleteRequest("2.0", 1L, "org.atsc.getFilterCodes", new HashMap<>());
     String json = "";
 
@@ -167,6 +175,19 @@ public class MainActivity extends AppCompatActivity implements ReceiverActionCal
                 updateAssc3Buttons(TextUtils.isEmpty(s) ? null : Atsc3Module.State.IDLE);
             }
         });
+
+        try {
+            json2 = mapper.writeValueAsString(request2);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+        }
+
+        String val = callWrapper.processRequest(json);
+        List<String> requestParams = new ArrayList<>();
+        requestParams.add(json);
+        requestParams.add(json2);
+        List<String> composedResponses = callWrapper.processRequest(requestParams);
+
 
         stsc3Open = findViewById(R.id.atsc3_open);
         stsc3Open.setOnClickListener(v -> atsc3Module.openPcapFile(stsc3FilePath.getText().toString()));

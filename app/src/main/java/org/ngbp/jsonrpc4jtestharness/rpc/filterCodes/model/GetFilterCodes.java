@@ -7,6 +7,5 @@ public class GetFilterCodes {
     public static class Filters{
         public Integer filterCode;
         public String expires;
-
     }
 }
