@@ -133,4 +133,14 @@
         app:layout_constraintStart_toEndOf="@+id/atsc3_stop"
         app:layout_constraintTop_toTopOf="@+id/atsc3_open" />
 
+    <Button
+        android:id="@+id/connect_to_ws"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="88dp"
+        android:layout_marginEnd="76dp"
+        android:text="Connect to web socket server"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>
