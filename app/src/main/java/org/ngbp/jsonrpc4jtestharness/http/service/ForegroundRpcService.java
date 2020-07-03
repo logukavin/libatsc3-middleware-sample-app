@@ -6,11 +6,17 @@ import android.content.Intent;
 import android.os.IBinder;
 import android.os.PowerManager;
 
-import org.ngbp.jsonrpc4jtestharness.http.servers.MiddlewareWebServer;
+import org.ngbp.jsonrpc4jtestharness.core.ws.GenerateSSLContext;
+import org.ngbp.jsonrpc4jtestharness.core.ws.MiddlewareWebServer;
+import org.ngbp.jsonrpc4jtestharness.core.ws.MiddlewareWebSocket;
+import org.ngbp.jsonrpc4jtestharness.http.servers.ContentProviderServlet;
 
 import java.util.Objects;
 
 import androidx.annotation.Nullable;
+
+import static org.ngbp.jsonrpc4jtestharness.core.ws.MiddlewareWebServer.Connectors.HTTPS_CONNECTOR;
+import static org.ngbp.jsonrpc4jtestharness.core.ws.MiddlewareWebServer.Connectors.WSS_CONNECTOR;
 
 public class ForegroundRpcService extends Service {
 
@@ -56,9 +62,19 @@ public class ForegroundRpcService extends Service {
         Thread serverThread = new Thread() {
             @Override
             public void run() {
-                webServer = new MiddlewareWebServer(getApplicationContext());
                 try {
-                    webServer.runWebServer();
+                    webServer = new MiddlewareWebServer.Builder()
+                            .hostName("localHost")
+                            .httpPort(8080)
+                            .httpsPort(8443)
+                            .wsPort(9998)
+                            .wssPort(9999)
+                            .addServlet(new ContentProviderServlet(getApplicationContext()))
+                            .addWebSocket(new MiddlewareWebSocket())
+                            .sslContext(new GenerateSSLContext(getApplicationContext()))
+                            .enableConnectors(new MiddlewareWebServer.Connectors[]{HTTPS_CONNECTOR, WSS_CONNECTOR})
+                            .build();
+                    webServer.start();
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
