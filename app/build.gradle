@@ -1,8 +1,13 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 29
-    buildToolsVersion "29.0.2"
+    compileSdkVersion rootProject.compileSdkVersion
+    buildToolsVersion rootProject.buildToolsVersion
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
@@ -11,8 +16,8 @@ android {
 
     defaultConfig {
         applicationId "org.ngbp.jsonrpc4jtestharness"
-        minSdkVersion 27
-        targetSdkVersion 29
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0"
 
@@ -31,15 +36,22 @@ android {
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
 
+    api project(":libatsc3Module")
+
     implementation 'androidx.appcompat:appcompat:1.0.2'
     implementation 'androidx.constraintlayout:constraintlayout:1.1.3'
     testImplementation 'junit:junit:4.12'
     androidTestImplementation 'androidx.test.ext:junit:1.1.1'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'
+
+    implementation group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.11.0'
+    implementation 'com.google.code.gson:gson:2.8.6'
     implementation 'com.github.nmuzhichin:jsonrpc-core:1.0.3.0'
     implementation 'com.github.nmuzhichin:jsonrpc-jackson-extension:1.0.3.0'
     implementation 'org.apache.commons:commons-lang3:3.9'
-    implementation group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.11.0'
-    implementation 'com.google.code.gson:gson:2.8.6'
-    implementation 'org.java-websocket:Java-WebSocket:1.5.1'
+
+    implementation 'org.eclipse.jetty:jetty-server:9.4.30.v20200611'
+    implementation 'org.eclipse.jetty:jetty-servlet:9.4.30.v20200611'
+    implementation group: 'org.eclipse.jetty.websocket', name: 'websocket-server', version: '9.4.30.v20200611'
+    implementation group: 'org.eclipse.jetty.websocket', name: 'websocket-client', version: '9.4.30.v20200611'
 }
