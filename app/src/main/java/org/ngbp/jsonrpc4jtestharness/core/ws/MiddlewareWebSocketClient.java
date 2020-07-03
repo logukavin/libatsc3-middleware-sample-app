@@ -11,7 +11,7 @@ import java.util.concurrent.Future;
 public class MiddlewareWebSocketClient {
 
     public void start() {
-        URI uri = URI.create("wss://localhost:9999/echo");
+        URI uri = URI.create("wss://localhost:9999/atscCmd");
 
         SslContextFactory sslContextFactory = new SslContextFactory.Client();
         sslContextFactory.setTrustAll(true);
