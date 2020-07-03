@@ -2,21 +2,19 @@ package org.ngbp.libatsc3;
 
 import android.content.Context;
 import android.net.Uri;
-import android.os.Handler;
-import android.os.Looper;
-import android.os.Message;
 import android.text.TextUtils;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.lifecycle.LiveData;
+import androidx.lifecycle.MutableLiveData;
 
 import org.ngbp.libatsc3.ndk.atsc3NdkClient;
 import org.ngbp.libatsc3.ndk.Atsc3UsbDevice;
 import org.ngbp.libatsc3.ndk.a331.LLSParserSLT;
 import org.ngbp.libatsc3.ndk.a331.Service;
 
-import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -33,20 +31,15 @@ public class Atsc3Module implements atsc3NdkClient.ClientListener {
         OPENED, PAUSED, IDLE
     }
 
-    public interface Listener {
-        void onStateChanged(State state);
-        void onServicesLoaded(@NonNull List<Service> services);
-    }
-
     private final atsc3NdkClient client;
-    private final EventHandler handler = new EventHandler(this);
 
     private Atsc3UsbDevice usbDevice = null;
-    private ArrayList<Service> sltServices;
-    private boolean isPcapOpened;
-    private State state = State.IDLE;
 
-    private Listener listener;
+    private boolean isPcapOpened;
+
+    private MutableLiveData<List<Service>> sltServices = new MutableLiveData<>();
+    private MutableLiveData<Uri> serviceMediaUri = new MutableLiveData<>();
+    private MutableLiveData<State> state = new MutableLiveData<>();
 
     public Atsc3Module(@NonNull Context context) {
         client = new atsc3NdkClient(context.getCacheDir(), this);
@@ -59,8 +52,16 @@ public class Atsc3Module implements atsc3NdkClient.ClientListener {
         }
     }
 
-    public void setListener(Listener listener) {
-        this.listener = listener;
+    public LiveData<List<Service>> getSltServices() {
+        return sltServices;
+    }
+
+    public LiveData<Uri> getServiceMediaUri() {
+        return serviceMediaUri;
+    }
+
+    public LiveData<State> getState() {
+        return state;
     }
 
     public boolean openPcapFile(String filename) {
@@ -114,26 +115,26 @@ public class Atsc3Module implements atsc3NdkClient.ClientListener {
     }
 
     @Nullable
-    public Uri getMediaUri(Service service) {
+    public void selectService(Service service) {
         final int serviceId = service.getServiceId();
 
         int selectedServiceSLSProtocol = client.atsc3_slt_selectService(serviceId);
 
+        Uri mediaUri = null;
         if (selectedServiceSLSProtocol == 1) {
             String[] routeMPDFileName = client.atsc3_slt_alc_get_sls_metadata_fragments_content_locations_from_monitor_service_id(serviceId, DASH_CONTENT_TYPE);
-            if (routeMPDFileName.length == 0) {
+            if (routeMPDFileName.length > 0) {
+                mediaUri = Uri.parse(String.format("%s/%s", client.getCacheDir(), routeMPDFileName[0]));
+            } else {
                 log("Unable to resolve Dash MPD path from MBMS envelope, service_id: %d", serviceId);
-                return null;
             }
-
-            String tempDir = String.format("%s/%s", client.getCacheDir(), routeMPDFileName[0]);
-            return Uri.parse(tempDir);
-        } else if (selectedServiceSLSProtocol == 2) {
+        } /*else if (selectedServiceSLSProtocol == 2) {
             //TODO: add support
+        }*/ else {
+            log("unsupported service protocol: %d", selectedServiceSLSProtocol);
         }
 
-        log("unsupported service protocol: %d", selectedServiceSLSProtocol);
-        return null;
+        serviceMediaUri.postValue(mediaUri);
     }
 
     public void stop() {
@@ -176,9 +177,7 @@ public class Atsc3Module implements atsc3NdkClient.ClientListener {
         LLSParserSLT llsParserSLT = new LLSParserSLT();
         ArrayList<Service> services = llsParserSLT.parseXML(sls_payload_xml);
 
-        this.sltServices = services;
-
-        handler.notifyServicesLoaded(Collections.unmodifiableList(services));
+        sltServices.postValue(Collections.unmodifiableList(services));
     }
 
     @Override
@@ -187,11 +186,7 @@ public class Atsc3Module implements atsc3NdkClient.ClientListener {
     }
 
     private void setState(State newState) {
-        if (state == newState) return;
-
-        state = newState;
-
-        handler.notifyStateChanged(newState);
+        state.postValue(newState);
     }
 
     private void log(String text, Object... params) {
@@ -201,42 +196,4 @@ public class Atsc3Module implements atsc3NdkClient.ClientListener {
         Log.d(TAG, text);
     }
 
-    private static class EventHandler extends Handler {
-        final int MSG_SERVICES_LOADED = 1;
-        final int MSG_STATE_CHANGED = 2;
-
-        private final WeakReference<Atsc3Module> moduleRef;
-
-        public EventHandler(Atsc3Module module) {
-            super(Looper.getMainLooper());
-            moduleRef = new WeakReference<>(module);
-        }
-
-        @Override
-        public void handleMessage(@NonNull Message msg) {
-            Atsc3Module module = moduleRef.get();
-            if (module == null) return;
-
-            Listener listener = module.listener;
-            if (listener == null) return;
-
-            switch (msg.what) {
-                case MSG_SERVICES_LOADED:
-                    listener.onServicesLoaded((List<Service>) msg.obj);
-                    break;
-
-                case MSG_STATE_CHANGED:
-                    listener.onStateChanged((State) msg.obj);
-                    break;
-            }
-        }
-
-        void notifyServicesLoaded(List<Service> services) {
-            obtainMessage(MSG_SERVICES_LOADED, services).sendToTarget();
-        }
-
-        void notifyStateChanged(State state) {
-            obtainMessage(MSG_STATE_CHANGED, state).sendToTarget();
-        }
-    }
 }

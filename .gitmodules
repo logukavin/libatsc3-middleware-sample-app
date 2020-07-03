@@ -1,4 +1,4 @@
 [submodule "libatsc3"]
 	path = libatsc3
-	url = https://viktor.matiash@dev.azure.com/NGWP/Middleware/_git/libatsc3
+	url = https://NGWP@dev.azure.com/NGWP/Middleware/_git/libatsc3
 	branch = route-dash-alc-multiple-object-same-content-type
