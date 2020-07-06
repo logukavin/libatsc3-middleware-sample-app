@@ -8,7 +8,7 @@ import org.ngbp.jsonrpc4jtestharness.rpc.keys.model.Keys
 @JsonRpcType
 interface IKeys {
     @JsonRpcMethod("org.atsc.request.keys")
-    fun requestKeys(@JsonRpcParam("keys") listOfKeys: List<String>): Keys?
+    fun requestKeys(@JsonRpcParam("keys") listOfKeys: List<String>): Keys
 
     @JsonRpcMethod("org.atsc.relinquish.keys")
     fun relinquishKeys(): Any?
