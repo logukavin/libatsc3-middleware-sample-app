@@ -1,13 +1,13 @@
 package org.ngbp.jsonrpc4jtestharness.rpc.queryDeviceInf.model
 
-import org.ngbp.jsonrpc4jtestharness.rpc.IBARpc
+import org.ngbp.jsonrpc4jtestharness.rpc.RpcEmpty
 
 data class DeviceInfo(
         var deviceMake: String? = null,
         var deviceModel: String? = null,
         var deviceInput: DeviceInput? = null,
         var deviceInfo: Info? = null
-) : IBARpc()
+) : RpcEmpty()
 
 data class DeviceInput(
         var ArrowUp: Int? = null,
