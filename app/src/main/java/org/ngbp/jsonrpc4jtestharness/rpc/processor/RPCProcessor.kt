@@ -73,7 +73,7 @@ class RPCProcessor(rpcManager: RPCManager) : IRPCProcessor {
         processor.process(KeysImpl(), IKeys::class.java)
         processor.process(MarkUnusedImpl(), IMarkUnused::class.java)
         processor.process(MediaTrackSelectionImpl(), IMediaTrackSelection::class.java)
-        processor.process(QueryDeviceInfoImpl(rpcManager), IQueryDeviceInfo::class.java)
+        processor.process(QueryDeviceInfoImpl(), IQueryDeviceInfo::class.java)
         processor.process(ReceiverQueryApiImpl(), IReceiverQueryApi::class.java)
         processor.process(ReceiverActionImpl(rpcManager), IReceiverAction::class.java)
         processor.process(RMPContentSynchronizationImpl(), IRMPContentSynchronization::class.java)

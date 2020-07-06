@@ -9,7 +9,7 @@ import org.ngbp.jsonrpc4jtestharness.rpc.queryDeviceInf.model.DeviceInput
 import org.ngbp.jsonrpc4jtestharness.rpc.queryDeviceInf.model.Info
 import java.text.SimpleDateFormat
 
-class QueryDeviceInfoImpl(val rpcManager: RPCManager) : IQueryDeviceInfo {
+class QueryDeviceInfoImpl() : IQueryDeviceInfo {
     @SuppressLint("SimpleDateFormat")
     override fun queryDeviceInfo(deviceInfoParams: List<String>): DeviceInfo? {
         return DeviceInfo()
