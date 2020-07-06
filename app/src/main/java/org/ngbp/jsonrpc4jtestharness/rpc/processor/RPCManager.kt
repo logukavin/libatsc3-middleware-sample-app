@@ -1,14 +1,6 @@
 package org.ngbp.jsonrpc4jtestharness.rpc.processor
 
-import android.annotation.SuppressLint
-import android.os.Build
-import java.text.SimpleDateFormat
-
 class RPCManager {
-    val numberOfTuners = 1
-    @SuppressLint("SimpleDateFormat")
-    val yearOfMfr = SimpleDateFormat("yyyy").format(Build.TIME).toInt()
-
     private var callback: ReceiverActionCallback? = null
 
     fun getCallback(): ReceiverActionCallback? {
