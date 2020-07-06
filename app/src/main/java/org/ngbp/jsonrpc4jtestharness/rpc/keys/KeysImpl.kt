@@ -6,7 +6,7 @@ import org.ngbp.jsonrpc4jtestharness.rpc.processor.RPCManager
 class KeysImpl(val rpcManager: RPCManager) : IKeys {
     override fun requestKeys(listOfKeys: List<String>): Keys {
         return Keys().apply {
-            this.accepted = rpcManager.keysList
+            this.accepted = listOfKeys
         }
     }
 
