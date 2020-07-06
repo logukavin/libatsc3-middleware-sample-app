@@ -6,5 +6,5 @@ import javax.net.ssl.SSLContext
 
 interface IUserAgentSSLContext {
     @Throws(GeneralSecurityException::class, IOException::class)
-    fun getInitializedSSLContext(password: String): SSLContext?
+    fun getInitializedSSLContext(password: String): SSLContext
 }
