@@ -179,7 +179,7 @@ class MainActivity : AppCompatActivity(), ReceiverActionCallback {
     private fun startWSClient() {
         val wsClient: Thread = object : Thread() {
             override fun run() {
-                val client = MiddlewareWebSocketClient()
+                val client = MiddlewareWebSocketClient(callWrapper)
                 client.start()
             }
         }
