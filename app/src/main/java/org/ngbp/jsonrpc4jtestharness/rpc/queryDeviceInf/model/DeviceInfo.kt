@@ -1,14 +1,13 @@
 package org.ngbp.jsonrpc4jtestharness.rpc.queryDeviceInf.model
 
-import com.fasterxml.jackson.annotation.JsonInclude
+import org.ngbp.jsonrpc4jtestharness.rpc.IBARpc
 
-@JsonInclude(JsonInclude.Include.NON_NULL)
 data class DeviceInfo (
         var deviceMake: String? = null,
         var deviceModel: String? = null,
         var deviceInput: DeviceInput? = null,
         var deviceInfo: Info? = null
-)
+) : IBARpc()
 
 data class DeviceInput (
     var ArrowUp: Int? = null,
