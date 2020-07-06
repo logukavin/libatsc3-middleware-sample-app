@@ -1,13 +1,16 @@
 package org.ngbp.jsonrpc4jtestharness.rpc.queryDeviceInf
 
+import android.annotation.SuppressLint
 import android.os.Build
 import org.ngbp.jsonrpc4jtestharness.rpc.KeyCode
 import org.ngbp.jsonrpc4jtestharness.rpc.processor.RPCManager
 import org.ngbp.jsonrpc4jtestharness.rpc.queryDeviceInf.model.DeviceInfo
 import org.ngbp.jsonrpc4jtestharness.rpc.queryDeviceInf.model.DeviceInput
 import org.ngbp.jsonrpc4jtestharness.rpc.queryDeviceInf.model.Info
+import java.text.SimpleDateFormat
 
 class QueryDeviceInfoImpl(val rpcManager: RPCManager) : IQueryDeviceInfo {
+    @SuppressLint("SimpleDateFormat")
     override fun queryDeviceInfo(deviceInfoParams: List<String>): DeviceInfo? {
         return DeviceInfo()
                 .apply {
@@ -22,8 +25,8 @@ class QueryDeviceInfoImpl(val rpcManager: RPCManager) : IQueryDeviceInfo {
                         Back = KeyCode.BACK
                     }
                     deviceInfo = Info().apply {
-                        numberOfTuners = rpcManager.numberOfTuners
-                        yearOfMfr = rpcManager.yearOfMfr
+                        numberOfTuners = 1
+                        yearOfMfr = SimpleDateFormat("yyyy").format(Build.TIME).toInt()
                     }
                 }
     }
