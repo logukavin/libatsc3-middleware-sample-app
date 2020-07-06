@@ -89,9 +89,7 @@ class MiddlewareWebServer private constructor(builder: Builder) : AutoCloseable 
     private fun configureSSLFactory() {
         if (generatedSSLContext != null) {
             // Configuring SSL
-            sslContextFactory = SslContextFactory.Server()
-
-            sslContextFactory?.apply {
+            sslContextFactory = SslContextFactory.Server().apply {
                 keyStoreType = "PKCS12"
                 sslContext = generatedSSLContext.getInitializedSSLContext("MY_PASSWORD")
                 setKeyStorePassword("MY_PASSWORD")
