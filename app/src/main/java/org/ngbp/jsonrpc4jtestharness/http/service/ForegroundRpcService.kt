@@ -6,18 +6,28 @@ import android.content.Intent
 import android.os.IBinder
 import android.os.PowerManager
 import android.os.PowerManager.WakeLock
-import org.ngbp.jsonrpc4jtestharness.core.ws.MiddlewareWebSocket
+import dagger.android.AndroidInjection
 import org.ngbp.jsonrpc4jtestharness.core.ws.UserAgentSSLContext
 import org.ngbp.jsonrpc4jtestharness.http.servers.ContentProviderServlet
 import org.ngbp.jsonrpc4jtestharness.http.servers.MiddlewareWebServer
+import org.ngbp.jsonrpc4jtestharness.rpc.processor.RPCProcessor
 import java.util.*
+import javax.inject.Inject
 
 class ForegroundRpcService : Service() {
+    @Inject
+    lateinit var rpcProcessor: RPCProcessor
+
     private lateinit var wakeLock: WakeLock
     private lateinit var notificationHelper: NotificationHelper
 
     private var isServiceStarted: Boolean = false
     private var webServer: MiddlewareWebServer? = null
+
+    override fun onCreate() {
+        AndroidInjection.inject(this)
+        super.onCreate()
+    }
 
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
         notificationHelper = NotificationHelper(this)
@@ -54,7 +64,7 @@ class ForegroundRpcService : Service() {
                         .httpsPort(8443)
                         .wsPort(9998)
                         .wssPort(9999)
-                        .addWebSocket(MiddlewareWebSocket())
+                        .addRPCProcessor(rpcProcessor)
                         .addServlet(ContentProviderServlet(applicationContext))
                         .sslContext(UserAgentSSLContext(applicationContext))
                         .enableConnectors(arrayOf(MiddlewareWebServer.Connectors.HTTPS_CONNECTOR, MiddlewareWebServer.Connectors.WSS_CONNECTOR))
