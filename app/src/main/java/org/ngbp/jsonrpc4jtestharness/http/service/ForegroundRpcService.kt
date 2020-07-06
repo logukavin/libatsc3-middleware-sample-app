@@ -6,6 +6,9 @@ import android.content.Intent
 import android.os.IBinder
 import android.os.PowerManager
 import android.os.PowerManager.WakeLock
+import org.ngbp.jsonrpc4jtestharness.core.ws.MiddlewareWebSocket
+import org.ngbp.jsonrpc4jtestharness.core.ws.UserAgentSSLContext
+import org.ngbp.jsonrpc4jtestharness.http.servers.ContentProviderServlet
 import org.ngbp.jsonrpc4jtestharness.http.servers.MiddlewareWebServer
 import java.util.*
 
@@ -45,13 +48,18 @@ class ForegroundRpcService : Service() {
     private fun startWebServer() {
         val serverThread: Thread = object : Thread() {
             override fun run() {
-                webServer = MiddlewareWebServer(applicationContext).also {
-                    try {
-                        it.runWebServer()
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
-                }
+                webServer = MiddlewareWebServer.Builder()
+                        .hostName("localHost")
+                        .httpPort(8080)
+                        .httpsPort(8443)
+                        .wsPort(9998)
+                        .wssPort(9999)
+                        .addWebSocket(MiddlewareWebSocket())
+                        .addServlet(ContentProviderServlet(applicationContext))
+                        .sslContext(UserAgentSSLContext(applicationContext))
+                        .enableConnectors(arrayOf(MiddlewareWebServer.Connectors.HTTPS_CONNECTOR, MiddlewareWebServer.Connectors.WSS_CONNECTOR))
+                        .build()
+                webServer?.start()
             }
         }
         serverThread.start()
@@ -62,7 +70,7 @@ class ForegroundRpcService : Service() {
             wakeLock.release()
 
             webServer?.let { server ->
-                if (server.getServer()?.isRunning == true) {
+                if (server.server?.isRunning == true) {
                     try {
                         server.stop()
                     } catch (e: Exception) {
