@@ -70,7 +70,7 @@ class RPCProcessor(rpcManager: RPCManager) : IRPCProcessor {
         processor.process(ContentRecoveryImpl(), IContentRecovery::class.java)
         processor.process(DRMImpl(), IDRM::class.java)
         processor.process(EventStreamImpl(), IEventStream::class.java)
-        processor.process(KeysImpl(), IKeys::class.java)
+        processor.process(KeysImpl(rpcManager), IKeys::class.java)
         processor.process(MarkUnusedImpl(), IMarkUnused::class.java)
         processor.process(MediaTrackSelectionImpl(), IMediaTrackSelection::class.java)
         processor.process(QueryDeviceInfoImpl(), IQueryDeviceInfo::class.java)

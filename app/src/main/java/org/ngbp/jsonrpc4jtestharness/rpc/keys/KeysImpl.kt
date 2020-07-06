@@ -1,10 +1,13 @@
 package org.ngbp.jsonrpc4jtestharness.rpc.keys
 
 import org.ngbp.jsonrpc4jtestharness.rpc.keys.model.Keys
+import org.ngbp.jsonrpc4jtestharness.rpc.processor.RPCManager
 
-class KeysImpl : IKeys {
-    override fun requestKeys(): Keys? {
-        return null
+class KeysImpl(val rpcManager: RPCManager) : IKeys {
+    override fun requestKeys(listOfKeys: List<String>): Keys? {
+        return Keys().apply {
+            this.accepted = rpcManager.keysList.toMutableList()
+        }
     }
 
     override fun relinquishKeys(): Any? {
