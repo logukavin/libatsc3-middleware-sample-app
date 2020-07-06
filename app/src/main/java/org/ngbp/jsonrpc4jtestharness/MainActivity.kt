@@ -89,7 +89,7 @@ class MainActivity : AppCompatActivity(), ReceiverActionCallback {
         val propertioes = HashMap<String?, Any?>()
         val deviceInfoProperties = listOf<String>("numberOfTuners", "yearOfMfr")
         propertioes["deviceInfoProperties"] = deviceInfoProperties
-        val request: Request = CompleteRequest("2.0", 1L, "org.atsc.query.deviceInfo", propertioes)
+        val request: Request = CompleteRequest("2.0", 1L, "org.atsc.query.service", null)
         var json: String? = ""
         try {
             json = mapper.writeValueAsString(request)

@@ -1,6 +1,7 @@
 package org.ngbp.jsonrpc4jtestharness.rpc.processor
 
 class RPCManager {
+    val queryServiceId = "tag:sinclairplatform.com,2020:WZTV:2727"
     private var callback: ReceiverActionCallback? = null
 
     fun getCallback(): ReceiverActionCallback? {
