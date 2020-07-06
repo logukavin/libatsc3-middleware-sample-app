@@ -70,7 +70,7 @@ class ForegroundRpcService : Service() {
             wakeLock.release()
 
             webServer?.let { server ->
-                if (server.server?.isRunning == true) {
+                if (server.isRunning()) {
                     try {
                         server.stop()
                     } catch (e: Exception) {

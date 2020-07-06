@@ -16,16 +16,17 @@ import java.security.GeneralSecurityException
 import java.util.*
 import javax.servlet.http.HttpServlet
 
-class MiddlewareWebServer private constructor(
-        private val httpsPort: Int,
-        private val httpPort: Int,
-        private val wssPort: Int,
-        private val wsPort: Int,
-        private val hostName: String?,
-        private val servlet: HttpServlet?,
-        private val webSocket: WebSocketAdapter?,
-        private val connectors: Array<Connectors>,
-        private val generatedSSLContext: IUserAgentSSLContext?) : AutoCloseable {
+class MiddlewareWebServer private constructor(builder: Builder) : AutoCloseable {
+
+    private val httpsPort: Int
+    private val httpPort: Int
+    private val wssPort: Int
+    private val wsPort: Int
+    private val hostName: String?
+    private val servlet: HttpServlet?
+    private val webSocket: WebSocketAdapter?
+    private val connectors: Array<Connectors>
+    private val generatedSSLContext: IUserAgentSSLContext?
 
     enum class Connectors {
         HTTP_CONNECTOR, HTTPS_CONNECTOR, WS_CONNECTOR, WSS_CONNECTOR
@@ -38,17 +39,16 @@ class MiddlewareWebServer private constructor(
         const val WS_PORT = 9998
     }
 
-    data class Builder (
-            private var httpsPort: Int = HTTPS_PORT,
-            private var httpPort: Int = HTTP_PORT,
-            private var wssPort: Int = WSS_PORT,
-            private var wsPort: Int = WS_PORT,
-            private var hostName: String? = null,
-            private var servlet: HttpServlet? = null,
-            private var webSocket: WebSocketAdapter? = null,
-            private var connectors: Array<Connectors> = arrayOf(),
-            private var generatedSSLContext: IUserAgentSSLContext? = null
-    ) {
+    class Builder {
+        var httpsPort: Int = HTTPS_PORT
+        var httpPort: Int = HTTP_PORT
+        var wssPort: Int = WSS_PORT
+        var wsPort: Int = WS_PORT
+        var hostName: String? = null
+        var servlet: HttpServlet? = null
+        var webSocket: WebSocketAdapter? = null
+        var connectors: Array<Connectors> = arrayOf()
+        var generatedSSLContext: IUserAgentSSLContext? = null
 
         fun httpsPort(value : Int) = apply { httpsPort = value }
 
@@ -68,26 +68,18 @@ class MiddlewareWebServer private constructor(
 
         fun sslContext(value : IUserAgentSSLContext?) = apply { generatedSSLContext = value }
 
-        fun build() = MiddlewareWebServer(
-                httpsPort,
-                httpPort,
-                wssPort,
-                wsPort,
-                hostName,
-                servlet,
-                webSocket,
-                connectors,
-                generatedSSLContext
-        )
+        fun build() = MiddlewareWebServer(this)
     }
 
-    var server: Server? = null
-        private set
+    private var server: Server = Server()
+        private set(value) {
+            if (!value.isRunning) field = value
+        }
+
     private var sslContextFactory: SslContextFactory? = null
 
     @Throws(Exception::class)
     private fun prepareServer() {
-        server = Server()
         configureSSLFactory()
         configureConnectors()
         configureHandlers()
@@ -98,12 +90,13 @@ class MiddlewareWebServer private constructor(
         if (generatedSSLContext != null) {
             // Configuring SSL
             sslContextFactory = SslContextFactory.Server()
-            sslContextFactory?.keyStoreType = "PKCS12"
 
-            // Defining keystore path and passwords
-            sslContextFactory?.sslContext = generatedSSLContext.getInitializedSSLContext("MY_PASSWORD")
-            sslContextFactory?.setKeyStorePassword("MY_PASSWORD")
-            sslContextFactory?.setKeyManagerPassword("MY_PASSWORD")
+            sslContextFactory?.apply {
+                keyStoreType = "PKCS12"
+                sslContext = generatedSSLContext.getInitializedSSLContext("MY_PASSWORD")
+                setKeyStorePassword("MY_PASSWORD")
+                setKeyManagerPassword("MY_PASSWORD")
+            }
         }
     }
 
@@ -137,7 +130,7 @@ class MiddlewareWebServer private constructor(
 
         // Setting HTTP, HTTPS, WS and WSS connectors
         if (enabledConnectors.isNotEmpty()) {
-            server?.connectors = enabledConnectors.toTypedArray()
+            server.connectors = enabledConnectors.toTypedArray()
         }
     }
 
@@ -162,7 +155,7 @@ class MiddlewareWebServer private constructor(
         if (handlerArray.isNotEmpty()) {
             val handlers = HandlerList()
             handlers.handlers = handlerArray.toTypedArray()
-            server?.handler = handlers
+            server.handler = handlers
         }
     }
 
@@ -194,14 +187,16 @@ class MiddlewareWebServer private constructor(
         return connector
     }
 
+    fun isRunning() = server.isRunning
+
     @Throws(MiddlewareWebServerError::class)
     fun start() {
-        server?.start()
+        server.start()
     }
 
     @Throws(Exception::class)
     fun stop() {
-        server?.stop()
+        server.stop()
     }
 
     @Throws(Exception::class)
@@ -210,6 +205,16 @@ class MiddlewareWebServer private constructor(
     }
 
     init {
+        httpsPort = builder.httpsPort
+        httpPort = builder.httpPort
+        wssPort = builder.wssPort
+        wsPort = builder.wsPort
+        hostName = builder.hostName
+        servlet = builder.servlet
+        webSocket = builder.webSocket
+        connectors = builder.connectors
+        generatedSSLContext = builder.generatedSSLContext
+
         prepareServer()
     }
 }
