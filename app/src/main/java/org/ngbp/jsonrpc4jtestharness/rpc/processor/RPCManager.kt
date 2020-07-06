@@ -18,8 +18,4 @@ class RPCManager @Inject constructor() {
     fun updateViewPosition(scaleFactor: Double?, xPos: Double?, yPos: Double?) {
         callback?.updateViewPosition(scaleFactor ?: 1.0, xPos ?: 0.0, yPos ?: 0.0)
     }
-
-    companion object {
-        private val instance: RPCManager? = null
-    }
 }

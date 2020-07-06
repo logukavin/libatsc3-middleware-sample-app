@@ -7,14 +7,19 @@ import org.eclipse.jetty.server.handler.HandlerList
 import org.eclipse.jetty.servlet.ServletContextHandler
 import org.eclipse.jetty.servlet.ServletHolder
 import org.eclipse.jetty.util.ssl.SslContextFactory
-import org.eclipse.jetty.websocket.api.WebSocketAdapter
 import org.eclipse.jetty.websocket.server.WebSocketHandler
+import org.eclipse.jetty.websocket.servlet.ServletUpgradeRequest
+import org.eclipse.jetty.websocket.servlet.ServletUpgradeResponse
+import org.eclipse.jetty.websocket.servlet.WebSocketCreator
 import org.eclipse.jetty.websocket.servlet.WebSocketServletFactory
 import org.ngbp.jsonrpc4jtestharness.core.ws.IUserAgentSSLContext
+import org.ngbp.jsonrpc4jtestharness.core.ws.MiddlewareWebSocket
+import org.ngbp.jsonrpc4jtestharness.rpc.processor.RPCProcessor
 import java.io.IOException
 import java.security.GeneralSecurityException
 import java.util.*
 import javax.servlet.http.HttpServlet
+
 
 class MiddlewareWebServer private constructor(builder: Builder) : AutoCloseable {
 
@@ -24,7 +29,7 @@ class MiddlewareWebServer private constructor(builder: Builder) : AutoCloseable 
     private val wsPort: Int
     private val hostName: String?
     private val servlet: HttpServlet?
-    private val webSocket: WebSocketAdapter?
+    private val rpcProcessor: RPCProcessor?
     private val connectors: Array<Connectors>
     private val generatedSSLContext: IUserAgentSSLContext?
 
@@ -46,7 +51,7 @@ class MiddlewareWebServer private constructor(builder: Builder) : AutoCloseable 
         var wsPort: Int = WS_PORT
         var hostName: String? = null
         var servlet: HttpServlet? = null
-        var webSocket: WebSocketAdapter? = null
+        var rpcProcessor: RPCProcessor? = null
         var connectors: Array<Connectors> = arrayOf()
         var generatedSSLContext: IUserAgentSSLContext? = null
 
@@ -62,7 +67,7 @@ class MiddlewareWebServer private constructor(builder: Builder) : AutoCloseable 
 
         fun addServlet(value : HttpServlet?) = apply { servlet = value }
 
-        fun addWebSocket(value : WebSocketAdapter?) = apply { webSocket = value }
+        fun addRPCProcessor(value: RPCProcessor) = apply { rpcProcessor = value }
 
         fun enableConnectors(value : Array<Connectors>) = apply { connectors = value }
 
@@ -132,12 +137,18 @@ class MiddlewareWebServer private constructor(builder: Builder) : AutoCloseable 
         }
     }
 
+    inner class MiddlewareWebSocketCreator : WebSocketCreator {
+        override fun createWebSocket(req: ServletUpgradeRequest, resp: ServletUpgradeResponse): Any? {
+            return rpcProcessor?.let { MiddlewareWebSocket(it) }
+        }
+    }
+
     private fun configureHandlers() {
         val handlerArray: MutableList<Handler> = ArrayList()
-        if (webSocket != null) {
+        if (rpcProcessor != null) {
             val webSocketHandler: WebSocketHandler = object : WebSocketHandler() {
                 override fun configure(factory: WebSocketServletFactory) {
-                    factory.register(webSocket.javaClass)
+                    factory.creator = MiddlewareWebSocketCreator()
                 }
             }
             val contextHandler = ContextHandler(server, "/atscCmd")
@@ -209,7 +220,7 @@ class MiddlewareWebServer private constructor(builder: Builder) : AutoCloseable 
         wsPort = builder.wsPort
         hostName = builder.hostName
         servlet = builder.servlet
-        webSocket = builder.webSocket
+        rpcProcessor = builder.rpcProcessor
         connectors = builder.connectors
         generatedSSLContext = builder.generatedSSLContext
 

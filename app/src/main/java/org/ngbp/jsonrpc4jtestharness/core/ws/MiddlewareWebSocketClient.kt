@@ -3,9 +3,10 @@ package org.ngbp.jsonrpc4jtestharness.core.ws
 import org.eclipse.jetty.client.HttpClient
 import org.eclipse.jetty.util.ssl.SslContextFactory
 import org.eclipse.jetty.websocket.client.WebSocketClient
+import org.ngbp.jsonrpc4jtestharness.rpc.processor.IRPCProcessor
 import java.net.URI
 
-class MiddlewareWebSocketClient {
+class MiddlewareWebSocketClient(private var rpcProcessor: IRPCProcessor) {
     fun start() {
         val uri = URI.create("wss://localhost:9999/atscCmd")
         val sslContextFactory: SslContextFactory = SslContextFactory.Client()
@@ -16,13 +17,13 @@ class MiddlewareWebSocketClient {
             try {
                 client.start()
                 // The socket that receives events
-                val socket = MiddlewareWebSocket()
+                val socket = MiddlewareWebSocket(rpcProcessor)
                 // Attempt Connect
                 val fut = client.connect(socket, uri)
                 // Wait for Connect
                 val session = fut.get()
                 // Send a message
-                session.remote.sendString("Hello")
+                session.remote.sendString("{\"jsonrpc\":\"2.0\",\"method\":\"org.atsc.subscribe\",\"params\":{\"msgType\":[\"All\"]},\"id\":1}")
                 // Close session
                 session.close()
             } finally {
