@@ -49,7 +49,6 @@ class MainActivity : AppCompatActivity(), ReceiverActionCallback {
         super.onCreate(savedInstanceState)
 
         setContentView(R.layout.activity_main)
-
         mapper.registerModule(JsonRpcModule())
         rpcManager = RPCManager()
         rpcManager.setCallback(this)
@@ -78,6 +77,7 @@ class MainActivity : AppCompatActivity(), ReceiverActionCallback {
             yPos += 10
             makeCall()
         }
+        makeCall_9_7_5_1()
         makeCall()
     }
 
@@ -85,7 +85,22 @@ class MainActivity : AppCompatActivity(), ReceiverActionCallback {
     var json2: String? = ""
     val request: Request? = CompleteRequest("2.0", 1L, "org.atsc.getFilterCodes", HashMap())
     var json: String? = ""
-
+    private fun makeCall_9_7_5_1() {
+        val propertioes = HashMap<String?, Any?>()
+        val types = listOf<String>("t1", "t2")
+        propertioes["msgType"] = types
+        val request: Request = CompleteRequest("2.0", 1L, "org.atsc.subscribe", propertioes)
+        var json: String? = ""
+        try {
+            json = mapper.writeValueAsString(request)
+        } catch (e: JsonProcessingException) {
+            e.printStackTrace()
+        }
+        json?.let {
+            callWrapper.processRequest(json)
+        }
+        initLibAtsc3()
+    }
     private fun makeCall() {
         val propertioes = HashMap<String?, Any?>()
         propertioes["scaleFactor"] = 10
