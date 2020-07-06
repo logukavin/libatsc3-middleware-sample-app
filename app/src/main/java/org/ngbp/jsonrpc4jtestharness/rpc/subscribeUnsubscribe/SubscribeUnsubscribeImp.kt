@@ -4,7 +4,7 @@ import org.ngbp.jsonrpc4jtestharness.rpc.EmptyModel
 import org.ngbp.jsonrpc4jtestharness.rpc.subscribeUnsubscribe.model.Subscribe
 
 class SubscribeUnsubscribeImp : ISubscribeUnsubscribe {
-    override fun integratedSubscribe(): EmptyModel {
+    override fun integratedSubscribe(types: List<String>): EmptyModel {
         return EmptyModel()
     }
 
