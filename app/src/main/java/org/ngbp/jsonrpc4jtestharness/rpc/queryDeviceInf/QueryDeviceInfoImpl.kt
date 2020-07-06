@@ -1,11 +1,30 @@
 package org.ngbp.jsonrpc4jtestharness.rpc.queryDeviceInf
 
+import android.os.Build
+import org.ngbp.jsonrpc4jtestharness.rpc.KeyCode
 import org.ngbp.jsonrpc4jtestharness.rpc.processor.RPCManager
 import org.ngbp.jsonrpc4jtestharness.rpc.queryDeviceInf.model.DeviceInfo
 import org.ngbp.jsonrpc4jtestharness.rpc.queryDeviceInf.model.DeviceInput
+import org.ngbp.jsonrpc4jtestharness.rpc.queryDeviceInf.model.Info
 
 class QueryDeviceInfoImpl(val rpcManager: RPCManager) : IQueryDeviceInfo {
     override fun queryDeviceInfo(deviceInfoParams: List<String>): DeviceInfo? {
-        return rpcManager.deviceInfoParams
+        return DeviceInfo()
+                .apply {
+                    deviceMake = Build.MANUFACTURER
+                    deviceModel = Build.MODEL
+                    deviceInput = DeviceInput().apply {
+                        ArrowUp = KeyCode.ARROW_UP
+                        ArrowDown = KeyCode.ARROW_DOWN
+                        ArrowRight = KeyCode.ARROW_RIGHT
+                        ArrowLeft = KeyCode.ARROW_LEFT
+                        Select = KeyCode.SELECT
+                        Back = KeyCode.BACK
+                    }
+                    deviceInfo = Info().apply {
+                        numberOfTuners = rpcManager.numberOfTuners
+                        yearOfMfr = rpcManager.yearOfMfr
+                    }
+                }
     }
 }
