@@ -18,4 +18,6 @@ class RPCManager {
     companion object {
         private val instance: RPCManager? = null
     }
+
+
 }
