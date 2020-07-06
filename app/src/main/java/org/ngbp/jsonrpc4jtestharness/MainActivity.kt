@@ -19,6 +19,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.github.nmuzhichin.jsonrpc.model.request.CompleteRequest
 import com.github.nmuzhichin.jsonrpc.model.request.Request
 import com.github.nmuzhichin.jsonrpc.module.JsonRpcModule
+import dagger.android.AndroidInjection
 import org.ngbp.jsonrpc4jtestharness.core.FileUtils
 import org.ngbp.jsonrpc4jtestharness.core.ws.MiddlewareWebSocketClient
 import org.ngbp.jsonrpc4jtestharness.http.service.ForegroundRpcService
@@ -26,15 +27,20 @@ import org.ngbp.jsonrpc4jtestharness.rpc.processor.RPCManager
 import org.ngbp.jsonrpc4jtestharness.rpc.processor.RPCProcessor
 import org.ngbp.jsonrpc4jtestharness.rpc.processor.ReceiverActionCallback
 import org.ngbp.libatsc3.Atsc3Module
-import org.ngbp.libatsc3.ndk.a331.Service
 import java.util.*
+import javax.inject.Inject
 
 class MainActivity : AppCompatActivity(), ReceiverActionCallback {
-    private var rpcManager = RPCManager()
-    private val mapper = ObjectMapper()
-    private var callWrapper = RPCProcessor(rpcManager)
+    @Inject
+    lateinit var rpcManager: RPCManager
+    @Inject
+    lateinit var callWrapper: RPCProcessor
+    @Inject
+    lateinit var atsc3Module: Atsc3Module
 
-    private lateinit var atsc3Module: Atsc3Module
+    private val mapper = ObjectMapper().apply {
+        registerModule(JsonRpcModule())
+    }
 
     private var xPos: Double = java.lang.Double.valueOf(50.0)
     private var yPos: Double = java.lang.Double.valueOf(50.0)
@@ -46,19 +52,16 @@ class MainActivity : AppCompatActivity(), ReceiverActionCallback {
     private lateinit var stsc3Close: View
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        AndroidInjection.inject(this)
         super.onCreate(savedInstanceState)
 
         setContentView(R.layout.activity_main)
-        mapper.registerModule(JsonRpcModule())
-        rpcManager = RPCManager()
+
         rpcManager.setCallback(this)
-        callWrapper = RPCProcessor(rpcManager)
 
         findViewById<View>(R.id.stop).setOnClickListener { stopService() }
         findViewById<View>(R.id.start).setOnClickListener { startService() }
         findViewById<View>(R.id.ma_start_server_btn).setOnClickListener { }
-
-        val requestParams: MutableList<String?> = ArrayList()
 
         findViewById<View>(R.id.connect_to_ws).setOnClickListener { startWSClient() }
         findViewById<View>(R.id.left).setOnClickListener {
@@ -77,14 +80,11 @@ class MainActivity : AppCompatActivity(), ReceiverActionCallback {
             yPos += 10
             makeCall()
         }
+
         makeCall_9_7_5_1()
         makeCall()
     }
 
-    val request2: Request? = CompleteRequest("2.0", 2L, "org.atsc.query.service", HashMap())
-    var json2: String? = ""
-    val request: Request? = CompleteRequest("2.0", 1L, "org.atsc.getFilterCodes", HashMap())
-    var json: String? = ""
     private fun makeCall_9_7_5_1() {
         val propertioes = HashMap<String?, Any?>()
         val deviceInfoProperties = listOf<String>("Numeric", "ChannelUp")
@@ -99,6 +99,7 @@ class MainActivity : AppCompatActivity(), ReceiverActionCallback {
         json?.let {
             callWrapper.processRequest(json)
         }
+
         initLibAtsc3()
     }
 
@@ -121,8 +122,7 @@ class MainActivity : AppCompatActivity(), ReceiverActionCallback {
     }
 
     private fun initLibAtsc3() {
-        atsc3Module = Atsc3Module(applicationContext)
-        atsc3Module.state.observe(this, Observer { state: Atsc3Module.State? -> updateAssc3Buttons(state) })
+        atsc3Module.state.observe(this, Observer { state -> updateAssc3Buttons(state) })
         atsc3Module.sltServices.observe(this, Observer { services ->
             services.stream()
                     .filter { service -> "WZTV" == service?.shortServiceName }
@@ -139,31 +139,20 @@ class MainActivity : AppCompatActivity(), ReceiverActionCallback {
             }
         })
 
-        try {
-            json2 = mapper.writeValueAsString(request2)
-        } catch (e: JsonProcessingException) {
-            e.printStackTrace()
-        }
-
-        json?.let {
-            callWrapper.processRequest(it)
-        }
-
-        val requestParams: MutableList<String?> = ArrayList()
-        requestParams.add(json)
-        requestParams.add(json2)
-        callWrapper.processRequest(requestParams)
-
         stsc3Open = findViewById(R.id.atsc3_open)
-        stsc3Open.setOnClickListener(View.OnClickListener { v: View? -> atsc3Module.openPcapFile(stsc3FilePath.getText().toString()) })
-        stsc3Start = findViewById(R.id.atsc3_start)
-        stsc3Start.setOnClickListener(View.OnClickListener { v: View? -> })
-        stsc3Stop = findViewById(R.id.atsc3_stop)
-        stsc3Stop.setOnClickListener(View.OnClickListener { v: View? -> atsc3Module.stop() })
-        stsc3Close = findViewById(R.id.atsc3_close)
-        stsc3Close.setOnClickListener(View.OnClickListener { v: View? -> atsc3Module.close() })
+        stsc3Open.setOnClickListener { atsc3Module.openPcapFile(stsc3FilePath.text.toString()) }
 
-        findViewById<View>(R.id.atsc3_file_choose).setOnClickListener { v: View? -> showFileChooser() }
+        stsc3Start = findViewById(R.id.atsc3_start)
+        stsc3Start.setOnClickListener {}
+
+        stsc3Stop = findViewById(R.id.atsc3_stop)
+        stsc3Stop.setOnClickListener { atsc3Module.stop() }
+
+        stsc3Close = findViewById(R.id.atsc3_close)
+        stsc3Close.setOnClickListener { atsc3Module.close() }
+
+        findViewById<View>(R.id.atsc3_file_choose).setOnClickListener { showFileChooser() }
+
         updateAssc3Buttons(null)
     }
 
@@ -172,19 +161,16 @@ class MainActivity : AppCompatActivity(), ReceiverActionCallback {
         stsc3Start.isEnabled = state == Atsc3Module.State.OPENED || state == Atsc3Module.State.PAUSED
         stsc3Stop.isEnabled = state == Atsc3Module.State.OPENED
         stsc3Close.isEnabled = state == Atsc3Module.State.OPENED || state == Atsc3Module.State.PAUSED
-        json?.let {
-            callWrapper.processRequest(it)
-        }
     }
 
-    fun startService() {
+    private fun startService() {
         val serviceIntent = Intent(this, ForegroundRpcService::class.java)
         serviceIntent.action = ForegroundRpcService.Companion.ACTION_START
         serviceIntent.putExtra("inputExtra", "Foreground RPC Service Example in Android")
         ContextCompat.startForegroundService(this, serviceIntent)
     }
 
-    fun stopService() {
+    private fun stopService() {
         val serviceIntent = Intent(this, ForegroundRpcService::class.java)
         serviceIntent.action = ForegroundRpcService.Companion.ACTION_STOP
         ContextCompat.startForegroundService(this, serviceIntent)

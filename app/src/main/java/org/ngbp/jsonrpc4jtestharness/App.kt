@@ -1,9 +1,12 @@
 package org.ngbp.jsonrpc4jtestharness
 
-import android.app.Application
+import dagger.android.AndroidInjector
+import dagger.android.DaggerApplication
+import org.ngbp.jsonrpc4jtestharness.di.DaggerApplicationComponent
 
-class App : Application() {
-    override fun onCreate() {
-        super.onCreate()
+class App : DaggerApplication() {
+
+    override fun applicationInjector(): AndroidInjector<out DaggerApplication> {
+        return DaggerApplicationComponent.factory().create(this)
     }
 }
