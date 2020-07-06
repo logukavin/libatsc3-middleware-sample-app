@@ -7,7 +7,7 @@ import java.net.URI
 
 class MiddlewareWebSocketClient {
     fun start() {
-        val uri = URI.create("wss://localhost:9999/echo")
+        val uri = URI.create("wss://localhost:9999/atscCmd")
         val sslContextFactory: SslContextFactory = SslContextFactory.Client()
         sslContextFactory.isTrustAll = true
         val http = HttpClient(sslContextFactory)

@@ -1,6 +1,5 @@
 package org.ngbp.jsonrpc4jtestharness.http.servers
 
-import android.content.Context
 import org.eclipse.jetty.http.HttpVersion
 import org.eclipse.jetty.server.*
 import org.eclipse.jetty.server.handler.ContextHandler
@@ -8,87 +7,201 @@ import org.eclipse.jetty.server.handler.HandlerList
 import org.eclipse.jetty.servlet.ServletContextHandler
 import org.eclipse.jetty.servlet.ServletHolder
 import org.eclipse.jetty.util.ssl.SslContextFactory
+import org.eclipse.jetty.websocket.api.WebSocketAdapter
 import org.eclipse.jetty.websocket.server.WebSocketHandler
 import org.eclipse.jetty.websocket.servlet.WebSocketServletFactory
-import org.ngbp.jsonrpc4jtestharness.R
-import org.ngbp.jsonrpc4jtestharness.core.ws.MiddlewareWebSocket
-import java.security.KeyStore
-import javax.net.ssl.KeyManagerFactory
-import javax.net.ssl.SSLContext
-import javax.net.ssl.TrustManagerFactory
+import org.ngbp.jsonrpc4jtestharness.core.ws.IUserAgentSSLContext
+import java.io.IOException
+import java.security.GeneralSecurityException
+import java.util.*
+import javax.servlet.http.HttpServlet
 
-class MiddlewareWebServer(private val context: Context) : AutoCloseable {
-    class MiddlewareSocketHandler : WebSocketHandler() {
-        override fun configure(factory: WebSocketServletFactory) {
-            factory.register(MiddlewareWebSocket::class.java)
+class MiddlewareWebServer private constructor(
+        private val httpsPort: Int,
+        private val httpPort: Int,
+        private val wssPort: Int,
+        private val wsPort: Int,
+        private val hostName: String?,
+        private val servlet: HttpServlet?,
+        private val webSocket: WebSocketAdapter?,
+        private val connectors: Array<Connectors>,
+        private val generatedSSLContext: IUserAgentSSLContext?) : AutoCloseable {
+
+    enum class Connectors {
+        HTTP_CONNECTOR, HTTPS_CONNECTOR, WS_CONNECTOR, WSS_CONNECTOR
+    }
+
+    companion object {
+        const val HTTP_PORT = 8080
+        const val HTTPS_PORT = 8443
+        const val WSS_PORT = 9999
+        const val WS_PORT = 9998
+    }
+
+    data class Builder (
+            private var httpsPort: Int = HTTPS_PORT,
+            private var httpPort: Int = HTTP_PORT,
+            private var wssPort: Int = WSS_PORT,
+            private var wsPort: Int = WS_PORT,
+            private var hostName: String? = null,
+            private var servlet: HttpServlet? = null,
+            private var webSocket: WebSocketAdapter? = null,
+            private var connectors: Array<Connectors> = arrayOf(),
+            private var generatedSSLContext: IUserAgentSSLContext? = null
+    ) {
+
+        fun httpsPort(value : Int) = apply { httpsPort = value }
+
+        fun httpPort(value : Int) = apply { httpPort = value }
+
+        fun wssPort(value : Int) = apply { wssPort = value }
+
+        fun wsPort(value : Int) = apply { wsPort = value }
+
+        fun hostName(value : String?) = apply { hostName = value }
+
+        fun addServlet(value : HttpServlet?) = apply { servlet = value }
+
+        fun addWebSocket(value : WebSocketAdapter?) = apply { webSocket = value }
+
+        fun enableConnectors(value : Array<Connectors>) = apply { connectors = value }
+
+        fun sslContext(value : IUserAgentSSLContext?) = apply { generatedSSLContext = value }
+
+        fun build() = MiddlewareWebServer(
+                httpsPort,
+                httpPort,
+                wssPort,
+                wsPort,
+                hostName,
+                servlet,
+                webSocket,
+                connectors,
+                generatedSSLContext
+        )
+    }
+
+    var server: Server? = null
+        private set
+    private var sslContextFactory: SslContextFactory? = null
+
+    @Throws(Exception::class)
+    private fun prepareServer() {
+        server = Server()
+        configureSSLFactory()
+        configureConnectors()
+        configureHandlers()
+    }
+
+    @Throws(GeneralSecurityException::class, IOException::class)
+    private fun configureSSLFactory() {
+        if (generatedSSLContext != null) {
+            // Configuring SSL
+            sslContextFactory = SslContextFactory.Server()
+            sslContextFactory?.keyStoreType = "PKCS12"
+
+            // Defining keystore path and passwords
+            sslContextFactory?.sslContext = generatedSSLContext.getInitializedSSLContext("MY_PASSWORD")
+            sslContextFactory?.setKeyStorePassword("MY_PASSWORD")
+            sslContextFactory?.setKeyManagerPassword("MY_PASSWORD")
         }
     }
 
-    private lateinit var server: Server
-
-    @Throws(Exception::class)
-    fun runWebServer() {
-        server = Server()
-        val i = context.getResources().openRawResource(R.raw.mykey)
-        val keystore = KeyStore.getInstance("PKCS12")
-        try {
-            keystore.load(i, "MY_PASSWORD".toCharArray())
-        } finally {
-            i.close()
-        }
-        val keyManagerFactory = KeyManagerFactory.getInstance("X509")
-        keyManagerFactory.init(keystore, "MY_PASSWORD".toCharArray())
-        val tmf = TrustManagerFactory.getInstance("X509")
-        tmf.init(keystore)
-        val sslContext = SSLContext.getInstance("TLS")
-        sslContext.init(keyManagerFactory.keyManagers, tmf.trustManagers, null)
-
-        // Configuring SSL
-        val sslContextFactory: SslContextFactory = SslContextFactory.Server()
-        sslContextFactory.keyStoreType = "PKCS12"
-
-        // Defining keystore path and passwords
-        sslContextFactory.sslContext = sslContext
-        sslContextFactory.setKeyStorePassword("MY_PASSWORD")
-        sslContextFactory.setKeyManagerPassword("MY_PASSWORD")
+    private fun configureConnectors() {
+        val enabledConnectors: MutableList<Connector> = ArrayList()
 
         // HTTP connector
-        val connector = ServerConnector(server)
-        connector.port = 8081
-
-        // HTTPS configuration
-        val https = HttpConfiguration()
-        https.addCustomizer(SecureRequestCustomizer())
-        https.securePort = 8443
-        // Configuring the https connector
-        val sslConnector = ServerConnector(server, SslConnectionFactory(sslContextFactory, HttpVersion.HTTP_1_1.toString()), HttpConnectionFactory(https))
-        sslConnector.port = 8443
-
-        // WSS configuration
-        val wss = HttpConfiguration()
-        https.addCustomizer(SecureRequestCustomizer())
-        https.securePort = 9999
-        // Configuring the wss connector
-        val wssConnector = ServerConnector(server, SslConnectionFactory(sslContextFactory, HttpVersion.HTTP_1_1.toString()), HttpConnectionFactory(wss))
-        wssConnector.port = 9999
-
-        // Setting HTTP and HTTPS and WSS connectors
-        server.setConnectors(arrayOf<Connector?>(connector, sslConnector, wssConnector))
-        val handler = ServletContextHandler(server, "/")
-        val servlet = ContentProviderServlet(context)
-        val holder = ServletHolder(servlet)
-        handler.addServlet(holder, "/github")
-        val ch = ContextHandler(server, "/echo")
-        ch.handler = MiddlewareSocketHandler()
-        val handlers = HandlerList()
-        handlers.handlers = arrayOf<Handler?>(MiddlewareSocketHandler(), handler) //Added socket handler
-        server.setHandler(handlers)
-        try {
-            server.start()
-            server.join()
-        } catch (t: Throwable) {
-            t.printStackTrace(System.err)
+        if (connectors.contains(Connectors.HTTP_CONNECTOR)) {
+            val httpConnector = getServerConnector(httpPort)
+            enabledConnectors.add(httpConnector)
         }
+
+        // WS configuration
+        if (connectors.contains(Connectors.WS_CONNECTOR)) {
+            val wsConnector = getServerConnector(wsPort)
+            enabledConnectors.add(wsConnector)
+        }
+        if (sslContextFactory != null) {
+            // HTTPS configuration
+            if (connectors.contains(Connectors.HTTPS_CONNECTOR)) {
+                val httpsConnector = getSecureServerConnector(sslContextFactory, httpsPort)
+                enabledConnectors.add(httpsConnector)
+            }
+
+            // WSS configuration
+            if (connectors.contains(Connectors.WSS_CONNECTOR)) {
+                val wssConnector = getSecureServerConnector(sslContextFactory, wssPort)
+                enabledConnectors.add(wssConnector)
+            }
+        }
+
+        // Setting HTTP, HTTPS, WS and WSS connectors
+        if (enabledConnectors.isNotEmpty()) {
+            server?.connectors = enabledConnectors.toTypedArray()
+        }
+    }
+
+    private fun configureHandlers() {
+        val handlerArray: MutableList<Handler> = ArrayList()
+        if (webSocket != null) {
+            val webSocketHandler: WebSocketHandler = object : WebSocketHandler() {
+                override fun configure(factory: WebSocketServletFactory) {
+                    factory.register(webSocket.javaClass)
+                }
+            }
+            val contextHandler = ContextHandler(server, "/atscCmd")
+            contextHandler.handler = webSocketHandler
+            handlerArray.add(contextHandler)
+        }
+        if (servlet != null) {
+            val servletHandler = ServletContextHandler(server, "/")
+            val servletHolder = ServletHolder(servlet)
+            servletHandler.addServlet(servletHolder, "/github")
+            handlerArray.add(servletHandler)
+        }
+        if (handlerArray.isNotEmpty()) {
+            val handlers = HandlerList()
+            handlers.handlers = handlerArray.toTypedArray()
+            server?.handler = handlers
+        }
+    }
+
+    private fun getServerConnector(port: Int): ServerConnector {
+        val connector = ServerConnector(server)
+        connector.port = port
+
+        if (hostName != null) {
+            if (hostName.isEmpty()) {
+                connector.host = hostName
+            }
+        }
+        return connector
+    }
+
+    private fun getSecureServerConnector(sslContextFactory: SslContextFactory?, securePort: Int): ServerConnector {
+        val config = HttpConfiguration()
+        config.addCustomizer(SecureRequestCustomizer())
+        config.securePort = securePort
+
+        // Configuring the secure connector
+        val connector = ServerConnector(server, SslConnectionFactory(sslContextFactory, HttpVersion.HTTP_1_1.toString()), HttpConnectionFactory(config))
+        connector.port = securePort
+        if (hostName != null) {
+            if (hostName.isEmpty()) {
+                connector.host = hostName
+            }
+        }
+        return connector
+    }
+
+    @Throws(MiddlewareWebServerError::class)
+    fun start() {
+        server?.start()
+    }
+
+    @Throws(Exception::class)
+    fun stop() {
+        server?.stop()
     }
 
     @Throws(Exception::class)
@@ -96,13 +209,7 @@ class MiddlewareWebServer(private val context: Context) : AutoCloseable {
         stop()
     }
 
-    @Throws(Exception::class)
-    fun stop() {
-        server.stop()
+    init {
+        prepareServer()
     }
-
-    fun getServer(): Server? {
-        return server
-    }
-
 }
