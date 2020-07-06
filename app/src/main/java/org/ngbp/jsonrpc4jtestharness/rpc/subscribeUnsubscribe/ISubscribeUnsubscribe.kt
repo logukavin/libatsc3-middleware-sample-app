@@ -9,7 +9,7 @@ import org.ngbp.jsonrpc4jtestharness.rpc.subscribeUnsubscribe.model.Subscribe
 @JsonRpcType
 interface ISubscribeUnsubscribe {
     @JsonRpcMethod("org.atsc.subscribe")
-    fun integratedSubscribe(@JsonRpcParam("msgType") types: List<String>): EmptyModel
+    fun integratedSubscribe(@JsonRpcParam("msgType") types: List<String>): Subscribe
 
     @JsonRpcMethod("org.atsc.unsubscribe")
     fun integratedUnsubscribe(): Subscribe?
