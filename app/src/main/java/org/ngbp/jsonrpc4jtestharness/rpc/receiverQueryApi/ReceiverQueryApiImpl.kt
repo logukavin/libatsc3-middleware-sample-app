@@ -1,8 +1,9 @@
 package org.ngbp.jsonrpc4jtestharness.rpc.receiverQueryApi
 
+import org.ngbp.jsonrpc4jtestharness.rpc.processor.RPCManager
 import org.ngbp.jsonrpc4jtestharness.rpc.receiverQueryApi.model.*
 
-class ReceiverQueryApiImpl : IReceiverQueryApi {
+class ReceiverQueryApiImpl(val rpcManager: RPCManager) : IReceiverQueryApi {
     override fun queryContentAdvisoryRating(): RatingLevel? {
         return null
     }
@@ -12,7 +13,9 @@ class ReceiverQueryApiImpl : IReceiverQueryApi {
     }
 
     override fun queryServiceID(): Service? {
-        return null
+        return Service().apply {
+            this.service = rpcManager.queryServiceId
+        }
     }
 
     override fun queryLanguagePreferences(): Languages? {
