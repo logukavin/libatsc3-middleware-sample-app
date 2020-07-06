@@ -4,7 +4,6 @@ import javax.inject.Singleton
 
 @Singleton
 class RPCManager @Inject constructor() {
-    val keysList = listOf("ArrowRight")
     val queryServiceId = "tag:sinclairplatform.com,2020:WZTV:2727"
     private var callback: ReceiverActionCallback? = null
 
