@@ -87,9 +87,9 @@ class MainActivity : AppCompatActivity(), ReceiverActionCallback {
     var json: String? = ""
     private fun makeCall_9_7_5_1() {
         val propertioes = HashMap<String?, Any?>()
-        val types = listOf<String>("t1", "t2")
-        propertioes["msgType"] = types
-        val request: Request = CompleteRequest("2.0", 1L, "org.atsc.subscribe", propertioes)
+        val deviceInfoProperties = listOf<String>("numberOfTuners", "yearOfMfr")
+        propertioes["deviceInfoProperties"] = deviceInfoProperties
+        val request: Request = CompleteRequest("2.0", 1L, "org.atsc.query.deviceInfo", propertioes)
         var json: String? = ""
         try {
             json = mapper.writeValueAsString(request)
@@ -101,6 +101,7 @@ class MainActivity : AppCompatActivity(), ReceiverActionCallback {
         }
         initLibAtsc3()
     }
+
     private fun makeCall() {
         val propertioes = HashMap<String?, Any?>()
         propertioes["scaleFactor"] = 10
