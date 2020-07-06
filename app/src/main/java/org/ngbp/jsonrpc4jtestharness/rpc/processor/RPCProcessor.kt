@@ -43,12 +43,14 @@ import org.ngbp.jsonrpc4jtestharness.rpc.subscribeUnsubscribe.SubscribeUnsubscri
 import org.ngbp.jsonrpc4jtestharness.rpc.xLink.IXLink
 import org.ngbp.jsonrpc4jtestharness.rpc.xLink.XLinkImpl
 import java.util.*
+import javax.inject.Inject
 
-class RPCProcessor(rpcManager: RPCManager) : IRPCProcessor {
+class RPCProcessor @Inject constructor(
+        private val rpcManager: RPCManager
+) : IRPCProcessor {
     private val consumer: RpcConsumer
     private val processor: Processor
     private val objectMapper: ObjectMapper = ObjectMapper()
-    private val rpcManager: RPCManager
 
     init {
         consumer = ConsumerBuilder().build().also {
@@ -57,8 +59,6 @@ class RPCProcessor(rpcManager: RPCManager) : IRPCProcessor {
 
         objectMapper.setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY)
         objectMapper.registerModule(JsonRpcModule())
-
-        this.rpcManager = rpcManager
 
         filRequests()
     }
