@@ -121,10 +121,10 @@ class MainActivity : AppCompatActivity(), ReceiverActionCallback {
 
     private fun initLibAtsc3() {
         atsc3Module = Atsc3Module(applicationContext)
-        atsc3Module.getState().observe(this, Observer { state: Atsc3Module.State? -> updateAssc3Buttons(state) })
-        atsc3Module.getSltServices().observe(this, Observer { services: MutableList<Service?> ->
+        atsc3Module.state.observe(this, Observer { state: Atsc3Module.State? -> updateAssc3Buttons(state) })
+        atsc3Module.sltServices.observe(this, Observer { services ->
             services.stream()
-                    .filter { service -> "WZTV" == service?.getShortServiceName() }
+                    .filter { service -> "WZTV" == service?.shortServiceName }
                     .findFirst()
                     .ifPresent { service -> atsc3Module.selectService(service) }
         })
