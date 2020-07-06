@@ -1,7 +1,12 @@
 package org.ngbp.jsonrpc4jtestharness.rpc.processor
 
-class RPCManager {
+import javax.inject.Inject
+import javax.inject.Singleton
+
+@Singleton
+class RPCManager @Inject constructor() {
     val queryServiceId = "tag:sinclairplatform.com,2020:WZTV:2727"
+
     private var callback: ReceiverActionCallback? = null
 
     fun getCallback(): ReceiverActionCallback? {
@@ -19,6 +24,4 @@ class RPCManager {
     companion object {
         private val instance: RPCManager? = null
     }
-
-
 }
