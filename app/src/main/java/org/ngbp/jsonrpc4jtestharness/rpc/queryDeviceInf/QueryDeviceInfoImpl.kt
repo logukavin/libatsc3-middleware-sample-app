@@ -24,10 +24,10 @@ class QueryDeviceInfoImpl() : IQueryDeviceInfo {
                         Select = KeyCode.SELECT
                         Back = KeyCode.BACK
                     }
-//                    deviceInfo = Info().apply {
-//                        numberOfTuners = 1
-//                        yearOfMfr = SimpleDateFormat("yyyy").format(Build.TIME).toInt()
-//                    }
+                    deviceInfo = Info().apply {
+                        numberOfTuners = 1
+                        yearOfMfr = SimpleDateFormat("yyyy").format(Build.TIME).toInt()
+                    }
                 }
     }
 }
