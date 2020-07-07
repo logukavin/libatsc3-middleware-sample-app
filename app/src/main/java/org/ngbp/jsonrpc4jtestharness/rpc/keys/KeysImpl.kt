@@ -1,7 +1,7 @@
 package org.ngbp.jsonrpc4jtestharness.rpc.keys
 
+import org.ngbp.jsonrpc4jtestharness.rpc.RpcResponse
 import org.ngbp.jsonrpc4jtestharness.rpc.keys.model.Keys
-import org.ngbp.jsonrpc4jtestharness.rpc.processor.RPCManager
 
 class KeysImpl() : IKeys {
     override fun requestKeys(listOfKeys: List<String>): Keys {
@@ -10,8 +10,8 @@ class KeysImpl() : IKeys {
         }
     }
 
-    override fun relinquishKeys(): Any? {
-        return null
+    override fun relinquishKeys(listOfKeys: List<String>): RpcResponse {
+        return RpcResponse()
     }
 
     override fun requestKeysTimeout(): Any? {
