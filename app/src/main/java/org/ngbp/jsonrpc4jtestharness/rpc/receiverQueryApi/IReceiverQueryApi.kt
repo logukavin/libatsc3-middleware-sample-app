@@ -31,5 +31,5 @@ interface IReceiverQueryApi {
     fun queryAlertingSignaling(): MutableList<Alerting?>?
 
     @JsonRpcMethod("org.atsc.query.serviceGuideUrls")
-    fun queryServiceGuideURLs(): MutableList<ServiceGuideUrls?>?
+    fun queryServiceGuideURLs(): List<ServiceGuideUrls>
 }
