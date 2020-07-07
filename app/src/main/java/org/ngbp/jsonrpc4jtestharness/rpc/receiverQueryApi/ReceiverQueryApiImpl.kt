@@ -42,7 +42,7 @@ class ReceiverQueryApiImpl(val rpcManager: RPCManager) : IReceiverQueryApi {
         return null
     }
 
-    override fun queryServiceGuideURLs(): MutableList<ServiceGuideUrls?>? {
-        return null
+    override fun queryServiceGuideURLs(): List<ServiceGuideUrls> {
+        return rpcManager.listOfServiceGuideUrls
     }
 }
