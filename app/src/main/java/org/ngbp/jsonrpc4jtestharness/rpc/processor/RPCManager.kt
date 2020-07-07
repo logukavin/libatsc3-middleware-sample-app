@@ -6,9 +6,7 @@ import javax.inject.Singleton
 
 @Singleton
 class RPCManager @Inject constructor() {
-    val preferredUiLang: String? = Locale.getDefault().language
-    val preferredCaptionSubtitleLang: String? = Locale.getDefault().language
-    val preferredAudioLang: String? = Locale.getDefault().language
+    val language = Locale.getDefault().language
 
     val queryServiceId = "tag:sinclairplatform.com,2020:WZTV:2727"
     private var callback: ReceiverActionCallback? = null
