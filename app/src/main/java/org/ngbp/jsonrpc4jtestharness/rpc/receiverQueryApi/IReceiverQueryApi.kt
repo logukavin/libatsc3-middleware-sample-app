@@ -16,7 +16,7 @@ interface IReceiverQueryApi {
     fun queryServiceID(): Service?
 
     @JsonRpcMethod("org.atsc.query.languages")
-    fun queryLanguagePreferences(): Languages?
+    fun queryLanguagePreferences(): Languages
 
     @JsonRpcMethod("org.atsc.query.captionDisplay")
     fun queryCaptionDisplayPreferences(): CaptionDisplay?

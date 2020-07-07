@@ -18,8 +18,12 @@ class ReceiverQueryApiImpl(val rpcManager: RPCManager) : IReceiverQueryApi {
         }
     }
 
-    override fun queryLanguagePreferences(): Languages? {
-        return null
+    override fun queryLanguagePreferences(): Languages {
+        return Languages().apply {
+            this.preferredAudioLang = rpcManager.preferredAudioLang
+            this.preferredCaptionSubtitleLang = rpcManager.preferredCaptionSubtitleLang
+            this.preferredUiLang = rpcManager.preferredUiLang
+        }
     }
 
     override fun queryCaptionDisplayPreferences(): CaptionDisplay? {
