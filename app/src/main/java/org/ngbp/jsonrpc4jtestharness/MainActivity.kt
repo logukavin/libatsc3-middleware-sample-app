@@ -9,6 +9,7 @@ import android.text.TextWatcher
 import android.view.View
 import android.widget.EditText
 import android.widget.Toast
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.constraintlayout.widget.ConstraintSet
@@ -20,23 +21,26 @@ import com.github.nmuzhichin.jsonrpc.model.request.CompleteRequest
 import com.github.nmuzhichin.jsonrpc.model.request.Request
 import com.github.nmuzhichin.jsonrpc.module.JsonRpcModule
 import dagger.android.AndroidInjection
+import org.ngbp.jsonrpc4jtestharness.controller.IReceiverController
 import org.ngbp.jsonrpc4jtestharness.core.FileUtils
 import org.ngbp.jsonrpc4jtestharness.core.ws.MiddlewareWebSocketClient
+import org.ngbp.jsonrpc4jtestharness.lifecycle.RMPViewModel
+import org.ngbp.jsonrpc4jtestharness.lifecycle.factory.UserAgentViewModelFactory
 import org.ngbp.jsonrpc4jtestharness.service.ForegroundRpcService
-import org.ngbp.jsonrpc4jtestharness.rpc.manager.RPCManager
 import org.ngbp.jsonrpc4jtestharness.rpc.processor.RPCProcessor
-import org.ngbp.jsonrpc4jtestharness.rpc.manager.ReceiverActionCallback
 import org.ngbp.libatsc3.Atsc3Module
 import java.util.*
 import javax.inject.Inject
 
-class MainActivity : AppCompatActivity(), ReceiverActionCallback {
-    @Inject
-    lateinit var rpcManager: RPCManager
+class MainActivity : AppCompatActivity() {
     @Inject
     lateinit var callWrapper: RPCProcessor
     @Inject
-    lateinit var atsc3Module: Atsc3Module
+    lateinit var controller: IReceiverController
+    @Inject
+    lateinit var userAgentViewModelFactory: UserAgentViewModelFactory
+
+    private val userAgentViewModel: RMPViewModel by viewModels { userAgentViewModelFactory }
 
     private val mapper = ObjectMapper().apply {
         registerModule(JsonRpcModule())
@@ -56,8 +60,6 @@ class MainActivity : AppCompatActivity(), ReceiverActionCallback {
         super.onCreate(savedInstanceState)
 
         setContentView(R.layout.activity_main)
-
-        rpcManager.setCallback(this)
 
         findViewById<View>(R.id.stop).setOnClickListener { stopService() }
         findViewById<View>(R.id.start).setOnClickListener { startService() }
@@ -81,8 +83,26 @@ class MainActivity : AppCompatActivity(), ReceiverActionCallback {
             makeCall()
         }
 
+        initLibAtsc3()
+
+        userAgentViewModel.rmpX.observe(this, Observer { x ->
+            moveSprite(ConstraintSet.LEFT, ConstraintSet.LEFT, x)
+        })
+        userAgentViewModel.rmpY.observe(this, Observer { y ->
+            moveSprite(ConstraintSet.TOP, ConstraintSet.TOP, y)
+        })
+
         makeCall_9_7_5_1()
         makeCall()
+    }
+
+    private fun moveSprite(startSide: Int, endSide: Int, value: Int) {
+        val constraintLayout = findViewById<ConstraintLayout>(R.id.root)
+        val view = findViewById<View>(R.id.testView)
+        val set = ConstraintSet()
+        set.clone(constraintLayout)
+        set.connect(view.id, startSide, constraintLayout.id, endSide, value * 10)
+        set.applyTo(constraintLayout)
     }
 
     private fun makeCall_9_7_5_1() {
@@ -99,8 +119,6 @@ class MainActivity : AppCompatActivity(), ReceiverActionCallback {
         json?.let {
             callWrapper.processRequest(json)
         }
-
-        initLibAtsc3()
     }
 
     private fun makeCall() {
@@ -118,17 +136,10 @@ class MainActivity : AppCompatActivity(), ReceiverActionCallback {
         json?.let {
             callWrapper.processRequest(json)
         }
-        initLibAtsc3()
     }
 
     private fun initLibAtsc3() {
-        atsc3Module.state.observe(this, Observer { state -> updateAssc3Buttons(state) })
-        atsc3Module.sltServices.observe(this, Observer { services ->
-            services.stream()
-                    .filter { service -> "WZTV" == service?.shortServiceName }
-                    .findFirst()
-                    .ifPresent { service -> atsc3Module.selectService(service) }
-        })
+        controller.state.observe(this, Observer { state -> updateAssc3Buttons(state) })
 
         stsc3FilePath = findViewById(R.id.atsc3_file_path)
         stsc3FilePath.addTextChangedListener(object : TextWatcher {
@@ -140,16 +151,16 @@ class MainActivity : AppCompatActivity(), ReceiverActionCallback {
         })
 
         stsc3Open = findViewById(R.id.atsc3_open)
-        stsc3Open.setOnClickListener { atsc3Module.openPcapFile(stsc3FilePath.text.toString()) }
+        stsc3Open.setOnClickListener { controller.openRoute(stsc3FilePath.text.toString()) }
 
         stsc3Start = findViewById(R.id.atsc3_start)
         stsc3Start.setOnClickListener {}
 
         stsc3Stop = findViewById(R.id.atsc3_stop)
-        stsc3Stop.setOnClickListener { atsc3Module.stop() }
+        stsc3Stop.setOnClickListener { controller.stopRoute() }
 
         stsc3Close = findViewById(R.id.atsc3_close)
-        stsc3Close.setOnClickListener { atsc3Module.close() }
+        stsc3Close.setOnClickListener { controller.closeRoute() }
 
         findViewById<View>(R.id.atsc3_file_choose).setOnClickListener { showFileChooser() }
 
@@ -189,16 +200,6 @@ class MainActivity : AppCompatActivity(), ReceiverActionCallback {
     override fun onDestroy() {
         stopService()
         super.onDestroy()
-    }
-
-    override fun updateViewPosition(scaleFactor: Double, xPos: Double, yPos: Double) {
-        val constraintLayout = findViewById<ConstraintLayout>(R.id.root)
-        val view = findViewById<View>(R.id.testView)
-        val set = ConstraintSet()
-        set.clone(constraintLayout)
-        set.connect(view.id, ConstraintSet.LEFT, constraintLayout.id, ConstraintSet.LEFT, xPos.toInt() * 10)
-        set.connect(view.id, ConstraintSet.TOP, constraintLayout.id, ConstraintSet.TOP, yPos.toInt() * 10)
-        set.applyTo(constraintLayout)
     }
 
     private fun showFileChooser() {
