@@ -9,6 +9,7 @@ import com.github.nmuzhichin.jsonrpc.api.RpcConsumer
 import com.github.nmuzhichin.jsonrpc.context.ConsumerBuilder
 import com.github.nmuzhichin.jsonrpc.model.request.Request
 import com.github.nmuzhichin.jsonrpc.model.response.Response
+import com.github.nmuzhichin.jsonrpc.model.response.ResponseUtils
 import com.github.nmuzhichin.jsonrpc.model.response.errors.Error
 import com.github.nmuzhichin.jsonrpc.module.JsonRpcModule
 import org.ngbp.jsonrpc4jtestharness.rpc.ERROR_CODES
@@ -92,7 +93,7 @@ class RPCProcessor @Inject constructor(
             objectMapper.writeValueAsString(response)
         } catch (e: JsonProcessingException) {
             try {
-                objectMapper.writeValueAsString(Response.createResponse(requestId, InternalRpcError(ERROR_CODES.PARSING_ERROR_CODE.value, e.localizedMessage)))
+                objectMapper.writeValueAsString(ResponseUtils.createResponse(requestId, InternalRpcError(ERROR_CODES.PARSING_ERROR_CODE.value, e.localizedMessage)))
             } catch (ex: JsonProcessingException) {
                 // This catch will never been executed during code logic, but it need because objectMapper throw exception
                 ""
