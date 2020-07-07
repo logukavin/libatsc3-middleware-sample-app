@@ -1,7 +1,7 @@
 package org.ngbp.jsonrpc4jtestharness.rpc.requestReceiverActions
 
 import org.ngbp.jsonrpc4jtestharness.rpc.RpcResponse
-import org.ngbp.jsonrpc4jtestharness.rpc.processor.RPCManager
+import org.ngbp.jsonrpc4jtestharness.rpc.manager.RPCManager
 import org.ngbp.jsonrpc4jtestharness.rpc.requestReceiverActions.model.AudioVolume
 
 class ReceiverActionImpl(private val rpcManager: RPCManager) : IReceiverAction {

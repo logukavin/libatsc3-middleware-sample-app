@@ -1,6 +1,6 @@
 package org.ngbp.jsonrpc4jtestharness.rpc.receiverQueryApi
 
-import org.ngbp.jsonrpc4jtestharness.rpc.processor.RPCManager
+import org.ngbp.jsonrpc4jtestharness.rpc.manager.RPCManager
 import org.ngbp.jsonrpc4jtestharness.rpc.receiverQueryApi.model.*
 
 class ReceiverQueryApiImpl(val rpcManager: RPCManager) : IReceiverQueryApi {
@@ -20,9 +20,11 @@ class ReceiverQueryApiImpl(val rpcManager: RPCManager) : IReceiverQueryApi {
 
     override fun queryLanguagePreferences(): Languages {
         return Languages().apply {
-            this.preferredAudioLang = rpcManager.language
-            this.preferredCaptionSubtitleLang = rpcManager.language
-            this.preferredUiLang = rpcManager.language
+            rpcManager.language.let { language ->
+                preferredAudioLang = language
+                preferredCaptionSubtitleLang = language
+                preferredUiLang = language
+            }
         }
     }
 
@@ -43,6 +45,6 @@ class ReceiverQueryApiImpl(val rpcManager: RPCManager) : IReceiverQueryApi {
     }
 
     override fun queryServiceGuideURLs(): List<ServiceGuideUrls> {
-        return rpcManager.listOfServiceGuideUrls
+        return listOf()
     }
 }

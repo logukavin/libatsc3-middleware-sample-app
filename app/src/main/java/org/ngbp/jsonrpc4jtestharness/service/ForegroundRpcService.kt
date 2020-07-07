@@ -1,4 +1,4 @@
-package org.ngbp.jsonrpc4jtestharness.http.service
+package org.ngbp.jsonrpc4jtestharness.service
 
 import android.app.Service
 import android.content.Context

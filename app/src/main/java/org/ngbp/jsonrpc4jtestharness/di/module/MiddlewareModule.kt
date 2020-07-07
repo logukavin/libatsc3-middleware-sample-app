@@ -4,7 +4,7 @@ import android.content.Context
 import dagger.Module
 import dagger.Provides
 import org.ngbp.jsonrpc4jtestharness.rpc.processor.IRPCProcessor
-import org.ngbp.jsonrpc4jtestharness.rpc.processor.RPCManager
+import org.ngbp.jsonrpc4jtestharness.rpc.manager.RPCManager
 import org.ngbp.jsonrpc4jtestharness.rpc.processor.RPCProcessor
 import org.ngbp.libatsc3.Atsc3Module
 import javax.inject.Singleton
