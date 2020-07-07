@@ -1,5 +1,6 @@
 package org.ngbp.jsonrpc4jtestharness
 
+import android.Manifest
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.os.Bundle
@@ -60,10 +61,11 @@ class MainActivity : AppCompatActivity(), ReceiverActionCallback {
         setContentView(R.layout.activity_main)
 
         rpcManager.setCallback(this)
+        requestPermissions(arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), 1)
 
         findViewById<View>(R.id.stop).setOnClickListener { stopService() }
         findViewById<View>(R.id.start).setOnClickListener { startService() }
-        findViewById<View>(R.id.ma_start_server_btn).setOnClickListener { }
+        findViewById<View>(R.id.start_user_agent).setOnClickListener { startUserAgent() }
 
         findViewById<View>(R.id.connect_to_ws).setOnClickListener { startWSClient() }
         findViewById<View>(R.id.left).setOnClickListener {
@@ -85,6 +87,11 @@ class MainActivity : AppCompatActivity(), ReceiverActionCallback {
 
         makeCall_9_7_5_1()
         makeCall()
+    }
+
+    private fun startUserAgent() {
+        val intent = Intent(this, UserAgentActivity::class.java)
+        startActivity(intent)
     }
 
     private fun makeCall_9_7_5_1() {
