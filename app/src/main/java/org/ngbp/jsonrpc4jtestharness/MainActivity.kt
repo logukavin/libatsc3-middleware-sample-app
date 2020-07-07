@@ -22,10 +22,10 @@ import com.github.nmuzhichin.jsonrpc.module.JsonRpcModule
 import dagger.android.AndroidInjection
 import org.ngbp.jsonrpc4jtestharness.core.FileUtils
 import org.ngbp.jsonrpc4jtestharness.core.ws.MiddlewareWebSocketClient
-import org.ngbp.jsonrpc4jtestharness.http.service.ForegroundRpcService
-import org.ngbp.jsonrpc4jtestharness.rpc.processor.RPCManager
+import org.ngbp.jsonrpc4jtestharness.service.ForegroundRpcService
+import org.ngbp.jsonrpc4jtestharness.rpc.manager.RPCManager
 import org.ngbp.jsonrpc4jtestharness.rpc.processor.RPCProcessor
-import org.ngbp.jsonrpc4jtestharness.rpc.processor.ReceiverActionCallback
+import org.ngbp.jsonrpc4jtestharness.rpc.manager.ReceiverActionCallback
 import org.ngbp.libatsc3.Atsc3Module
 import java.util.*
 import javax.inject.Inject
@@ -33,10 +33,8 @@ import javax.inject.Inject
 class MainActivity : AppCompatActivity(), ReceiverActionCallback {
     @Inject
     lateinit var rpcManager: RPCManager
-
     @Inject
     lateinit var callWrapper: RPCProcessor
-
     @Inject
     lateinit var atsc3Module: Atsc3Module
 
@@ -89,7 +87,7 @@ class MainActivity : AppCompatActivity(), ReceiverActionCallback {
 
     private fun makeCall_9_7_5_1() {
         val propertioes = HashMap<String?, Any?>()
-        val deviceInfoProperties = listOf<String>("Numeric", "ChannelUp")
+        val deviceInfoProperties = listOf("Numeric", "ChannelUp")
         propertioes["keys"] = deviceInfoProperties
         val request: Request = CompleteRequest("2.0", 1L, "org.atsc.query.languages", null)
         var json: String? = ""
@@ -167,14 +165,14 @@ class MainActivity : AppCompatActivity(), ReceiverActionCallback {
 
     private fun startService() {
         val serviceIntent = Intent(this, ForegroundRpcService::class.java)
-        serviceIntent.action = ForegroundRpcService.Companion.ACTION_START
+        serviceIntent.action = ForegroundRpcService.ACTION_START
         serviceIntent.putExtra("inputExtra", "Foreground RPC Service Example in Android")
         ContextCompat.startForegroundService(this, serviceIntent)
     }
 
     private fun stopService() {
         val serviceIntent = Intent(this, ForegroundRpcService::class.java)
-        serviceIntent.action = ForegroundRpcService.Companion.ACTION_STOP
+        serviceIntent.action = ForegroundRpcService.ACTION_STOP
         ContextCompat.startForegroundService(this, serviceIntent)
     }
 

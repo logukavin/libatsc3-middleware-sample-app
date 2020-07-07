@@ -12,6 +12,7 @@ import com.github.nmuzhichin.jsonrpc.model.response.Response
 import com.github.nmuzhichin.jsonrpc.model.response.errors.Error
 import com.github.nmuzhichin.jsonrpc.module.JsonRpcModule
 import org.ngbp.jsonrpc4jtestharness.rpc.ERROR_CODES
+import org.ngbp.jsonrpc4jtestharness.rpc.RpcError
 import org.ngbp.jsonrpc4jtestharness.rpc.asynchronousNotificationsofChanges.AsynchronousNotificationsOfChangesImpl
 import org.ngbp.jsonrpc4jtestharness.rpc.asynchronousNotificationsofChanges.IAsynchronousNotificationsOfChanges
 import org.ngbp.jsonrpc4jtestharness.rpc.cacheRequest.CacheRequestImpl
@@ -26,6 +27,7 @@ import org.ngbp.jsonrpc4jtestharness.rpc.filterCodes.FilterCodesImpl
 import org.ngbp.jsonrpc4jtestharness.rpc.filterCodes.IFilterCodes
 import org.ngbp.jsonrpc4jtestharness.rpc.keys.IKeys
 import org.ngbp.jsonrpc4jtestharness.rpc.keys.KeysImpl
+import org.ngbp.jsonrpc4jtestharness.rpc.manager.RPCManager
 import org.ngbp.jsonrpc4jtestharness.rpc.markUnused.IMarkUnused
 import org.ngbp.jsonrpc4jtestharness.rpc.markUnused.MarkUnusedImpl
 import org.ngbp.jsonrpc4jtestharness.rpc.mediaTrackSelection.IMediaTrackSelection
