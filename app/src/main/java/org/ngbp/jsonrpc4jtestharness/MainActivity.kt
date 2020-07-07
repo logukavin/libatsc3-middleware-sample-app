@@ -33,8 +33,10 @@ import javax.inject.Inject
 class MainActivity : AppCompatActivity(), ReceiverActionCallback {
     @Inject
     lateinit var rpcManager: RPCManager
+
     @Inject
     lateinit var callWrapper: RPCProcessor
+
     @Inject
     lateinit var atsc3Module: Atsc3Module
 
@@ -89,7 +91,7 @@ class MainActivity : AppCompatActivity(), ReceiverActionCallback {
         val propertioes = HashMap<String?, Any?>()
         val deviceInfoProperties = listOf<String>("Numeric", "ChannelUp")
         propertioes["keys"] = deviceInfoProperties
-        val request: Request = CompleteRequest("2.0", 1L, "org.atsc.request.keys", propertioes)
+        val request: Request = CompleteRequest("2.0", 1L, "org.atsc.query.languages", null)
         var json: String? = ""
         try {
             json = mapper.writeValueAsString(request)
