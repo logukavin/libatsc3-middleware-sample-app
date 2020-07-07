@@ -1,9 +1,13 @@
 package org.ngbp.jsonrpc4jtestharness.rpc.processor
+
+import java.util.*
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class RPCManager @Inject constructor() {
+    val language = Locale.getDefault().language
+
     val queryServiceId = "tag:sinclairplatform.com,2020:WZTV:2727"
     private var callback: ReceiverActionCallback? = null
 
