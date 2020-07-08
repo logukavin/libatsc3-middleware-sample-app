@@ -13,7 +13,7 @@ class UserAgentActivity : AppCompatActivity() {
     private var userAgent: WebView? = null
 
     companion object {
-        val CONTENT_URL = "http://127.0.0.1:8080/index.html"
+        const val CONTENT_URL = "https://127.0.0.1:8443/index.html?wsURL=ws://127.0.0.1:9998&rev=20180720"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -29,6 +29,7 @@ class UserAgentActivity : AppCompatActivity() {
                 domStorageEnabled = true
             }
 
+            clearSslPreferences()
             webViewClient = createWebViewClient()
         }.also {
             loadContent(it)
