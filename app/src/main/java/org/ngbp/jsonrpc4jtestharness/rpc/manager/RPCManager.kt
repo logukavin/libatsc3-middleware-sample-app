@@ -14,7 +14,7 @@ class RPCManager @Inject constructor() {
     private var callback: IReceiverCallback? = null
 
     var language: String = Locale.getDefault().language
-    var queryServiceId: String? = null
+    var queryServiceId: String? = "tag:sinclairplatform.com,2020:WZTV:2727" //TODO: remove after tests
 
     fun setCallback(callback: IReceiverCallback) {
         if (this.callback != null) throw IllegalStateException("RPCManager callback already initialized")

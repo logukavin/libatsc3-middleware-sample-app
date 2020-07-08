@@ -9,5 +9,5 @@ import org.ngbp.jsonrpc4jtestharness.rpc.queryDeviceInf.model.DeviceInfoParams
 @JsonRpcType
 interface IQueryDeviceInfo {
     @JsonRpcMethod("org.atsc.query.deviceInfo")
-    fun queryDeviceInfo(@JsonRpcParam("deviceInfoProperties") deviceInfoParams: List<String>): DeviceInfo?
+    fun queryDeviceInfo(/*@JsonRpcParam("deviceInfoProperties") deviceInfoParams: List<String>*/): DeviceInfo
 }
