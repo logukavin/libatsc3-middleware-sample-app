@@ -1,6 +1,5 @@
 package org.ngbp.jsonrpc4jtestharness
 
-import android.net.http.SslError
 import android.os.Bundle
 import android.webkit.ClientCertRequest
 import android.webkit.SslErrorHandler
