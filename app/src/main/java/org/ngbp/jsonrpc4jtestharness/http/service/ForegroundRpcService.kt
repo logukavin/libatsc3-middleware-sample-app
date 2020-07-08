@@ -8,7 +8,6 @@ import android.os.PowerManager
 import android.os.PowerManager.WakeLock
 import dagger.android.AndroidInjection
 import org.ngbp.jsonrpc4jtestharness.core.ws.UserAgentSSLContext
-import org.ngbp.jsonrpc4jtestharness.http.servers.ContentProviderServlet
 import org.ngbp.jsonrpc4jtestharness.http.servers.MiddlewareWebServer
 import org.ngbp.jsonrpc4jtestharness.rpc.processor.RPCProcessor
 import java.util.*
@@ -60,14 +59,21 @@ class ForegroundRpcService : Service() {
             override fun run() {
                 webServer = MiddlewareWebServer.Builder()
                         .hostName("localHost")
-                        .httpPort(8080)
+                        .resourcePath("storage/emulated/0/Download/test")
                         .httpsPort(8443)
-                        .wsPort(9998)
+                        .httpPort(8080)
                         .wssPort(9999)
+                        .wsPort(9998)
                         .addRPCProcessor(rpcProcessor)
-                        .addServlet(ContentProviderServlet(applicationContext))
                         .sslContext(UserAgentSSLContext(applicationContext))
-                        .enableConnectors(arrayOf(MiddlewareWebServer.Connectors.HTTPS_CONNECTOR, MiddlewareWebServer.Connectors.WSS_CONNECTOR))
+                        .enableConnectors(
+                                arrayOf(
+                                        MiddlewareWebServer.Connectors.HTTPS_CONNECTOR,
+                                        MiddlewareWebServer.Connectors.HTTP_CONNECTOR,
+                                        MiddlewareWebServer.Connectors.WS_CONNECTOR,
+                                        MiddlewareWebServer.Connectors.WSS_CONNECTOR
+                                )
+                        )
                         .build()
                 webServer?.start()
             }
