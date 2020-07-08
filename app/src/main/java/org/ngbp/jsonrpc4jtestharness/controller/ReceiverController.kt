@@ -2,6 +2,8 @@ package org.ngbp.jsonrpc4jtestharness.controller
 
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Transformations
+import org.ngbp.jsonrpc4jtestharness.controller.model.RPMParams
+import org.ngbp.jsonrpc4jtestharness.controller.model.SLSService
 import org.ngbp.jsonrpc4jtestharness.rpc.manager.RPCManager
 import org.ngbp.libatsc3.Atsc3Module
 import org.ngbp.libatsc3.ndk.a331.Service
@@ -61,14 +63,3 @@ class ReceiverController @Inject constructor(
         atsc3Module.close()
     }
 }
-
-data class SLSService(
-        val shortName: String?,
-        val globalId: String?
-)
-
-data class RPMParams(
-        val scale: Double,
-        val x: Int,
-        val y: Int
-)
