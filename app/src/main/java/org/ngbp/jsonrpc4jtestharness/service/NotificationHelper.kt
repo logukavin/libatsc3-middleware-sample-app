@@ -1,4 +1,4 @@
-package org.ngbp.jsonrpc4jtestharness.http.service
+package org.ngbp.jsonrpc4jtestharness.service
 
 import android.app.Notification
 import android.app.NotificationChannel

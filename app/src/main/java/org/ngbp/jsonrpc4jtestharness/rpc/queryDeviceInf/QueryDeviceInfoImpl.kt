@@ -3,7 +3,6 @@ package org.ngbp.jsonrpc4jtestharness.rpc.queryDeviceInf
 import android.annotation.SuppressLint
 import android.os.Build
 import org.ngbp.jsonrpc4jtestharness.rpc.KeyCode
-import org.ngbp.jsonrpc4jtestharness.rpc.processor.RPCManager
 import org.ngbp.jsonrpc4jtestharness.rpc.queryDeviceInf.model.DeviceInfo
 import org.ngbp.jsonrpc4jtestharness.rpc.queryDeviceInf.model.DeviceInput
 import org.ngbp.jsonrpc4jtestharness.rpc.queryDeviceInf.model.Info

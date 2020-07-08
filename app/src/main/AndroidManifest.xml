@@ -37,7 +37,7 @@
         </activity>
 
         <service
-            android:name=".http.service.ForegroundRpcService"
+            android:name=".service.ForegroundRpcService"
             android:enabled="true"
             android:exported="false" />
 

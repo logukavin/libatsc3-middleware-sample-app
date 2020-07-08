@@ -2,43 +2,47 @@ package org.ngbp.libatsc3
 
 import android.content.Context
 import android.net.Uri
-import android.text.TextUtils
 import android.util.Log
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import org.ngbp.libatsc3.ndk.Atsc3UsbDevice
 import org.ngbp.libatsc3.ndk.a331.LLSParserSLT
 import org.ngbp.libatsc3.ndk.a331.Service
 import org.ngbp.libatsc3.ndk.atsc3NdkClient
 import org.ngbp.libatsc3.ndk.atsc3NdkClient.ClientListener
+import java.lang.IllegalStateException
 import java.util.*
 
+//TODO: multithreading requests
 class Atsc3Module(context: Context) : ClientListener {
     enum class State {
         OPENED, PAUSED, IDLE
     }
 
+    interface Listener {
+        fun onStateChanged(state: State?)
+        fun onServicesLoaded(services: List<Service?>)
+    }
+
     private val client: atsc3NdkClient = atsc3NdkClient(context.cacheDir, this)
-
     private val usbDevice: Atsc3UsbDevice? = null
+
     private var isPcapOpened = false
+    private var state = State.IDLE
+    private var selectedServiceId = -1
+    private var selectedServiceSLSProtocol = -1
 
-    private val _sltServices = MutableLiveData<List<Service>>()
-    private val _serviceMediaUri = MutableLiveData<Uri?>()
-    private val _state = MutableLiveData<State>()
-
-    val sltServices: LiveData<List<Service>>
-        get() = _sltServices
-    val serviceMediaUri: LiveData<Uri?>
-        get() = _serviceMediaUri
-    val state: LiveData<State>
-        get() = _state
+    @Volatile
+    private var listener: Listener? = null
 
     init {
         client.ApiInit(client)
         if (BuildConfig.DEBUG) {
             client.setLogListener { s: String -> log("Client log: %s", s) }
         }
+    }
+
+    fun setListener(listener: Listener?) {
+        if (this.listener != null) throw IllegalStateException("Atsc3Module listener already initialized")
+        this.listener = listener
     }
 
     fun openPcapFile(filename: String?): Boolean {
@@ -85,25 +89,12 @@ class Atsc3Module(context: Context) : ClientListener {
         return false
     }
 
-    fun selectService(service: Service) {
-        val serviceId = service.serviceId
-        val selectedServiceSLSProtocol = client.atsc3_slt_selectService(serviceId)
-
-        var mediaUri: Uri? = null
-        if (selectedServiceSLSProtocol == 1) {
-            val routeMPDFileName = client.atsc3_slt_alc_get_sls_metadata_fragments_content_locations_from_monitor_service_id(serviceId, DASH_CONTENT_TYPE)
-            if (routeMPDFileName.isNotEmpty()) {
-                mediaUri = Uri.parse(String.format("%s/%s", client.cacheDir, routeMPDFileName[0]))
-            } else {
-                log("Unable to resolve Dash MPD path from MBMS envelope, service_id: %d", serviceId)
-            }
-        } /*else if (selectedServiceSLSProtocol == 2) {
-            //TODO: add support
-        }*/ else {
-            log("unsupported service protocol: %d", selectedServiceSLSProtocol)
+    fun selectService(service: Service): Boolean {
+        selectedServiceId = service.serviceId.also { serviceId ->
+            selectedServiceSLSProtocol = client.atsc3_slt_selectService(serviceId)
         }
 
-        _serviceMediaUri.postValue(mediaUri)
+        return selectedServiceSLSProtocol > 0
     }
 
     fun stop() {
@@ -118,7 +109,6 @@ class Atsc3Module(context: Context) : ClientListener {
         if (usbDevice == null) {
             log("no atlas device connected yet")
             return
-
         }
         client.ApiStop()
         setState(State.PAUSED)
@@ -138,10 +128,27 @@ class Atsc3Module(context: Context) : ClientListener {
         setState(State.IDLE)
     }
 
+    fun getSelectedServiceMediaUri(): Uri? {
+        var mediaUri: Uri? = null
+        if (selectedServiceSLSProtocol == 1) {
+            val routeMPDFileName = client.atsc3_slt_alc_get_sls_metadata_fragments_content_locations_from_monitor_service_id(selectedServiceId, DASH_CONTENT_TYPE)
+            if (routeMPDFileName.isNotEmpty()) {
+                mediaUri = Uri.parse(String.format("%s/%s", client.cacheDir, routeMPDFileName[0]))
+            } else {
+                log("Unable to resolve Dash MPD path from MBMS envelope, service_id: %d", selectedServiceId)
+            }
+        } /*else if (selectedServiceSLSProtocol == 2) {
+            //TODO: add support
+        }*/ else {
+            log("unsupported service protocol: %d", selectedServiceSLSProtocol)
+        }
+
+        return mediaUri
+    }
+
     override fun onSlsTablePresent(sls_payload_xml: String) {
-        val llsParserSLT = LLSParserSLT()
-        val services = llsParserSLT.parseXML(sls_payload_xml)
-        _sltServices.postValue(Collections.unmodifiableList(services))
+        val services = LLSParserSLT().parseXML(sls_payload_xml)
+        listener?.onServicesLoaded(Collections.unmodifiableList(services))
     }
 
     override fun onAlcObjectStatusMessage(alc_object_status_message: String) {
@@ -149,7 +156,8 @@ class Atsc3Module(context: Context) : ClientListener {
     }
 
     private fun setState(newState: State) {
-        _state.postValue(newState)
+        state = newState
+        listener?.onStateChanged(newState)
     }
 
     private fun log(text: String, vararg params: Any) {
