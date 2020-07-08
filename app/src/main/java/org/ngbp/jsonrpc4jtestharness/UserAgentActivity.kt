@@ -18,34 +18,33 @@ class UserAgentActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_user_agent)
-        userAgent = findViewById<WebView>(R.id.userAgent)?.also { initWebView(it) }
+
+        userAgent = findViewById<WebView>(R.id.userAgent).apply {
+            clearCache(true)
+            setInitialScale(150)
+
+            settings?.apply {
+                javaScriptEnabled = true
+                domStorageEnabled = true
+            }
+
+            webViewClient = createWebViewClient()
+        }.also {
+            it.loadUrl(CONTENT_URL)
+        }
     }
 
-    private fun initWebView(it: WebView) {
-        it.clearCache(true)
-        it.setInitialScale(150)
+    private fun createWebViewClient() = object : WebViewClient() {
 
-        it.settings?.also {
-            it.javaScriptEnabled = true
-            it.domStorageEnabled = true
+        override fun onReceivedSslError(view: WebView, handler: SslErrorHandler, error: SslError) {
+            handler.proceed()
         }
 
-        it.initWebViewClient()
-        it.loadUrl(CONTENT_URL)
-    }
-
-    private fun WebView.initWebViewClient() {
-        webViewClient = object : WebViewClient() {
-            override fun onReceivedSslError(view: WebView, handler: SslErrorHandler, error: SslError) {
-                handler.proceed()
+        override fun onReceivedClientCertRequest(view: WebView, request: ClientCertRequest) {
+            if (CertificateUtils.certificates == null || CertificateUtils.privateKey == null) {
+                CertificateUtils.loadCertificateAndPrivateKey(view.context)
             }
-
-            override fun onReceivedClientCertRequest(view: WebView, request: ClientCertRequest) {
-                if (CertificateUtils.certificates == null || CertificateUtils.privateKey == null) {
-                    CertificateUtils.loadCertificateAndPrivateKey(view.context)
-                }
-                request.proceed(CertificateUtils.privateKey, CertificateUtils.certificates)
-            }
+            request.proceed(CertificateUtils.privateKey, CertificateUtils.certificates)
         }
     }
 }
