@@ -1,7 +1,11 @@
 package org.ngbp.jsonrpc4jtestharness
 
+import android.net.http.SslError
 import android.os.Bundle
+import android.webkit.ClientCertRequest
+import android.webkit.SslErrorHandler
 import android.webkit.WebView
+import android.webkit.WebViewClient
 import androidx.appcompat.app.AppCompatActivity
 
 class UserAgentActivity : AppCompatActivity() {
@@ -14,17 +18,34 @@ class UserAgentActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_user_agent)
-        userAgent = findViewById<WebView>(R.id.userAgent).apply {
-            clearCache(true)
-            setInitialScale(150)
+        userAgent = findViewById<WebView>(R.id.userAgent)?.also { initWebView(it) }
+    }
 
-            settings?.apply{
-                javaScriptEnabled = true
-                domStorageEnabled = true
+    private fun initWebView(it: WebView) {
+        it.clearCache(true)
+        it.setInitialScale(150)
+
+        it.settings?.also {
+            it.javaScriptEnabled = true
+            it.domStorageEnabled = true
+        }
+
+        it.initWebViewClient()
+        it.loadUrl(CONTENT_URL)
+    }
+
+    private fun WebView.initWebViewClient() {
+        webViewClient = object : WebViewClient() {
+            override fun onReceivedSslError(view: WebView, handler: SslErrorHandler, error: SslError) {
+                handler.proceed()
             }
 
-            webViewClient = SecurityUtils.trustedWebViewClient
-            loadUrl(CONTENT_URL)
+            override fun onReceivedClientCertRequest(view: WebView, request: ClientCertRequest) {
+                if (CertificateUtils.certificates == null || CertificateUtils.privateKey == null) {
+                    CertificateUtils.loadCertificateAndPrivateKey(view.context)
+                }
+                request.proceed(CertificateUtils.privateKey, CertificateUtils.certificates)
+            }
         }
     }
 }

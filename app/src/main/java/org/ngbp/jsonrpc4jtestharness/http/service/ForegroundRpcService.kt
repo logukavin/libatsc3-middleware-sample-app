@@ -59,11 +59,13 @@ class ForegroundRpcService : Service() {
             override fun run() {
                 webServer = MiddlewareWebServer.Builder()
                         .hostName("localHost")
+                        .resourcePath("storage/emulated/0/Download/test")
+                        .httpsPort(8443)
                         .httpPort(8080)
                         .wsPort(9998)
                         .addRPCProcessor(rpcProcessor)
                         .sslContext(UserAgentSSLContext(applicationContext))
-                        .enableConnectors(arrayOf(MiddlewareWebServer.Connectors.HTTP_CONNECTOR, MiddlewareWebServer.Connectors.WS_CONNECTOR))
+                        .enableConnectors(arrayOf(MiddlewareWebServer.Connectors.HTTPS_CONNECTOR, MiddlewareWebServer.Connectors.HTTP_CONNECTOR, MiddlewareWebServer.Connectors.WS_CONNECTOR))
                         .build()
                 webServer?.start()
             }

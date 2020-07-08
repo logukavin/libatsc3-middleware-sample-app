@@ -1,21 +1,16 @@
 package org.ngbp.jsonrpc4jtestharness
 
 import android.content.Context
-import android.net.http.SslError
-import android.webkit.ClientCertRequest
-import android.webkit.SslErrorHandler
-import android.webkit.WebView
-import android.webkit.WebViewClient
 import java.security.KeyStore
 import java.security.PrivateKey
 import java.security.cert.X509Certificate
 
-object SecurityUtils {
+object CertificateUtils {
 
-    private var certificates: Array<X509Certificate?>? = null
-    private var privateKey: PrivateKey? = null
+    var certificates: Array<X509Certificate?>? = null
+    var privateKey: PrivateKey? = null
 
-    private fun loadCertificateAndPrivateKey(context: Context) {
+    fun loadCertificateAndPrivateKey(context: Context) {
         try {
             val certificateFileStream = context.resources.openRawResource(R.raw.mykey)
             val keyStore = KeyStore.getInstance("PKCS12")
@@ -37,18 +32,4 @@ object SecurityUtils {
             e.printStackTrace()
         }
     }
-
-    val trustedWebViewClient: WebViewClient = object : WebViewClient() {
-        override fun onReceivedSslError(view: WebView, handler: SslErrorHandler, error: SslError) {
-            handler.proceed()
-        }
-
-        override fun onReceivedClientCertRequest(view: WebView, request: ClientCertRequest) {
-            if (certificates == null || privateKey == null) {
-                loadCertificateAndPrivateKey(view.context)
-            }
-            request.proceed(privateKey, certificates)
-        }
-    }
-
 }
