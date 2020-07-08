@@ -26,6 +26,7 @@ class MiddlewareWebServer private constructor(builder: Builder) : AutoCloseable 
     private val wssPort: Int
     private val wsPort: Int
     private val hostName: String?
+    private val resourcePath: String?
     private val rpcProcessor: RPCProcessor?
     private val connectors: Array<Connectors>
     private val generatedSSLContext: IUserAgentSSLContext?
@@ -47,6 +48,7 @@ class MiddlewareWebServer private constructor(builder: Builder) : AutoCloseable 
         var wssPort: Int = WSS_PORT
         var wsPort: Int = WS_PORT
         var hostName: String? = null
+        var resourcePath: String? = null
         var rpcProcessor: RPCProcessor? = null
         var connectors: Array<Connectors> = arrayOf()
         var generatedSSLContext: IUserAgentSSLContext? = null
@@ -60,6 +62,8 @@ class MiddlewareWebServer private constructor(builder: Builder) : AutoCloseable 
         fun wsPort(value : Int) = apply { wsPort = value }
 
         fun hostName(value : String?) = apply { hostName = value }
+
+        fun resourcePath(value : String?) = apply { resourcePath = value }
 
         fun addRPCProcessor(value: RPCProcessor) = apply { rpcProcessor = value }
 
@@ -140,11 +144,13 @@ class MiddlewareWebServer private constructor(builder: Builder) : AutoCloseable 
     private fun configureHandlers() {
         val handlerArray: MutableList<Handler> = ArrayList()
 
-        val resourceHandler = ResourceHandler()
-        resourceHandler.isDirectoriesListed = true
-        resourceHandler.welcomeFiles = arrayOf("index.html")
-        resourceHandler.baseResource = Resource.newResource("storage/emulated/0/Download/test") // /route/5003/app/
-        handlerArray.add(resourceHandler)
+        if(resourcePath != null) {
+            val resourceHandler = ResourceHandler()
+            resourceHandler.isDirectoriesListed = true
+            resourceHandler.welcomeFiles = arrayOf("index.html")
+            resourceHandler.baseResource = Resource.newResource(resourcePath)
+            handlerArray.add(resourceHandler)
+        }
 
         if (rpcProcessor != null) {
             val webSocketHandler: WebSocketHandler = object : WebSocketHandler() {
@@ -213,6 +219,7 @@ class MiddlewareWebServer private constructor(builder: Builder) : AutoCloseable 
         wssPort = builder.wssPort
         wsPort = builder.wsPort
         hostName = builder.hostName
+        resourcePath = builder.resourcePath
         rpcProcessor = builder.rpcProcessor
         connectors = builder.connectors
         generatedSSLContext = builder.generatedSSLContext
