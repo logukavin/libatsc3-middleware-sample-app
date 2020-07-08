@@ -7,6 +7,7 @@ import android.webkit.SslErrorHandler
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.postDelayed
 
 class UserAgentActivity : AppCompatActivity() {
     private var userAgent: WebView? = null
@@ -30,7 +31,13 @@ class UserAgentActivity : AppCompatActivity() {
 
             webViewClient = createWebViewClient()
         }.also {
-            it.loadUrl(CONTENT_URL)
+            loadContent(it)
+        }
+    }
+
+    private fun loadContent(webView: WebView) {
+        webView.postDelayed(500) {
+            webView.loadUrl(CONTENT_URL)
         }
     }
 
