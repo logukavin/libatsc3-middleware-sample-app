@@ -10,7 +10,7 @@ import java.text.SimpleDateFormat
 
 class QueryDeviceInfoImpl() : IQueryDeviceInfo {
     @SuppressLint("SimpleDateFormat")
-    override fun queryDeviceInfo(deviceInfoParams: List<String>): DeviceInfo? {
+    override fun queryDeviceInfo(/*deviceInfoParams: List<String>*/): DeviceInfo {
         return DeviceInfo()
                 .apply {
                     deviceMake = Build.MANUFACTURER
