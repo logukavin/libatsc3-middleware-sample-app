@@ -2,10 +2,9 @@ package org.ngbp.jsonrpc4jtestharness.http.servers
 
 import org.eclipse.jetty.http.HttpVersion
 import org.eclipse.jetty.server.*
-import org.eclipse.jetty.server.handler.ContextHandler
 import org.eclipse.jetty.server.handler.HandlerList
-import org.eclipse.jetty.servlet.ServletContextHandler
-import org.eclipse.jetty.servlet.ServletHolder
+import org.eclipse.jetty.server.handler.ResourceHandler
+import org.eclipse.jetty.util.resource.Resource
 import org.eclipse.jetty.util.ssl.SslContextFactory
 import org.eclipse.jetty.websocket.server.WebSocketHandler
 import org.eclipse.jetty.websocket.servlet.ServletUpgradeRequest
@@ -18,7 +17,6 @@ import org.ngbp.jsonrpc4jtestharness.rpc.processor.RPCProcessor
 import java.io.IOException
 import java.security.GeneralSecurityException
 import java.util.*
-import javax.servlet.http.HttpServlet
 
 
 class MiddlewareWebServer private constructor(builder: Builder) : AutoCloseable {
@@ -28,7 +26,7 @@ class MiddlewareWebServer private constructor(builder: Builder) : AutoCloseable 
     private val wssPort: Int
     private val wsPort: Int
     private val hostName: String?
-    private val servlet: HttpServlet?
+    private val resourcePath: String?
     private val rpcProcessor: RPCProcessor?
     private val connectors: Array<Connectors>
     private val generatedSSLContext: IUserAgentSSLContext?
@@ -50,7 +48,7 @@ class MiddlewareWebServer private constructor(builder: Builder) : AutoCloseable 
         var wssPort: Int = WSS_PORT
         var wsPort: Int = WS_PORT
         var hostName: String? = null
-        var servlet: HttpServlet? = null
+        var resourcePath: String? = null
         var rpcProcessor: RPCProcessor? = null
         var connectors: Array<Connectors> = arrayOf()
         var generatedSSLContext: IUserAgentSSLContext? = null
@@ -65,7 +63,7 @@ class MiddlewareWebServer private constructor(builder: Builder) : AutoCloseable 
 
         fun hostName(value : String?) = apply { hostName = value }
 
-        fun addServlet(value : HttpServlet?) = apply { servlet = value }
+        fun resourcePath(value : String?) = apply { resourcePath = value }
 
         fun addRPCProcessor(value: RPCProcessor) = apply { rpcProcessor = value }
 
@@ -145,22 +143,24 @@ class MiddlewareWebServer private constructor(builder: Builder) : AutoCloseable 
 
     private fun configureHandlers() {
         val handlerArray: MutableList<Handler> = ArrayList()
+
+        if(resourcePath != null) {
+            val resourceHandler = ResourceHandler()
+            resourceHandler.isDirectoriesListed = true
+            resourceHandler.welcomeFiles = arrayOf("index.html")
+            resourceHandler.baseResource = Resource.newResource(resourcePath)
+            handlerArray.add(resourceHandler)
+        }
+
         if (rpcProcessor != null) {
             val webSocketHandler: WebSocketHandler = object : WebSocketHandler() {
                 override fun configure(factory: WebSocketServletFactory) {
                     factory.creator = MiddlewareWebSocketCreator()
                 }
             }
-            val contextHandler = ContextHandler(server, "/atscCmd")
-            contextHandler.handler = webSocketHandler
-            handlerArray.add(contextHandler)
+            handlerArray.add(webSocketHandler)
         }
-        if (servlet != null) {
-            val servletHandler = ServletContextHandler(server, "/")
-            val servletHolder = ServletHolder(servlet)
-            servletHandler.addServlet(servletHolder, "/github")
-            handlerArray.add(servletHandler)
-        }
+
         if (handlerArray.isNotEmpty()) {
             val handlers = HandlerList()
             handlers.handlers = handlerArray.toTypedArray()
@@ -219,7 +219,7 @@ class MiddlewareWebServer private constructor(builder: Builder) : AutoCloseable 
         wssPort = builder.wssPort
         wsPort = builder.wsPort
         hostName = builder.hostName
-        servlet = builder.servlet
+        resourcePath = builder.resourcePath
         rpcProcessor = builder.rpcProcessor
         connectors = builder.connectors
         generatedSSLContext = builder.generatedSSLContext
