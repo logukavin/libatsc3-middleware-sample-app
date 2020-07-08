@@ -1,7 +1,11 @@
 package org.ngbp.jsonrpc4jtestharness
 
+import android.net.http.SslError
 import android.os.Bundle
+import android.webkit.ClientCertRequest
+import android.webkit.SslErrorHandler
 import android.webkit.WebView
+import android.webkit.WebViewClient
 import androidx.appcompat.app.AppCompatActivity
 
 class UserAgentActivity : AppCompatActivity() {
@@ -23,7 +27,18 @@ class UserAgentActivity : AppCompatActivity() {
                 domStorageEnabled = true
             }
 
-            webViewClient = SecurityUtils.trustedWebViewClient
+            webViewClient = object : WebViewClient() {
+                override fun onReceivedSslError(view: WebView, handler: SslErrorHandler, error: SslError) {
+                    handler.proceed()
+                }
+
+                override fun onReceivedClientCertRequest(view: WebView, request: ClientCertRequest) {
+                    if (CertificateUtils.certificates == null || CertificateUtils.privateKey == null) {
+                        CertificateUtils.loadCertificateAndPrivateKey(view.context)
+                    }
+                    request.proceed(CertificateUtils.privateKey, CertificateUtils.certificates)
+                }
+            }
             loadUrl(CONTENT_URL)
         }
     }
