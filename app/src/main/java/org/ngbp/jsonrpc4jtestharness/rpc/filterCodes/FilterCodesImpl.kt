@@ -1,11 +1,12 @@
 package org.ngbp.jsonrpc4jtestharness.rpc.filterCodes
 
+import org.ngbp.jsonrpc4jtestharness.rpc.RpcResponse
 import org.ngbp.jsonrpc4jtestharness.rpc.filterCodes.model.Filters
 import org.ngbp.jsonrpc4jtestharness.rpc.filterCodes.model.GetFilterCodes
 import java.util.*
 
 class FilterCodesImpl : IFilterCodes {
-    override fun getFilterCodes(): GetFilterCodes? {
+    override fun getFilterCodes(): GetFilterCodes {
         val filters = Filters().apply {
             expires = " 10"
             filterCode = 10
@@ -17,7 +18,7 @@ class FilterCodesImpl : IFilterCodes {
         return getFilterCodes
     }
 
-    override fun setFilterCodes(): Any? {
-        return null
+    override fun setFilterCodes(): RpcResponse {
+        return RpcResponse()
     }
 }
