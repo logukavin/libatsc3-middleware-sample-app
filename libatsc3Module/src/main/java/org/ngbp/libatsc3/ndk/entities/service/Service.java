@@ -1,4 +1,4 @@
-package org.ngbp.libatsc3.ndk.a331;
+package org.ngbp.libatsc3.ndk.entities.service;
 
 import androidx.annotation.NonNull;
 
