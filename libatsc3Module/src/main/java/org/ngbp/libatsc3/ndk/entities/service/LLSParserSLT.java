@@ -1,4 +1,4 @@
-package org.ngbp.libatsc3.ndk.a331;
+package org.ngbp.libatsc3.ndk.entities.service;
 
 import android.util.Log;
 
@@ -12,15 +12,14 @@ import java.util.ArrayList;
 
 public class LLSParserSLT {
 
-    public ArrayList<Service> parseXML(String myXml) {
+    public ArrayList<Service> parseXML(String xmlPayload) {
         ArrayList<Service> services = new ArrayList<>();
         XmlPullParserFactory parserFactory;
         try {
             parserFactory = XmlPullParserFactory.newInstance();
             XmlPullParser parser = parserFactory.newPullParser();
-            //InputStream is = getAssets().open("data.xml");
             parser.setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, false);
-            parser.setInput(new ByteArrayInputStream(myXml.getBytes()), null);
+            parser.setInput(new ByteArrayInputStream(xmlPayload.getBytes()), null);
 
             processParsing(services, parser);
 
