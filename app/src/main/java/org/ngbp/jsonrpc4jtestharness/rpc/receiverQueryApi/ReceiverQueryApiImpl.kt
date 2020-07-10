@@ -4,15 +4,15 @@ import org.ngbp.jsonrpc4jtestharness.rpc.manager.RPCManager
 import org.ngbp.jsonrpc4jtestharness.rpc.receiverQueryApi.model.*
 
 class ReceiverQueryApiImpl(val rpcManager: RPCManager) : IReceiverQueryApi {
-    override fun queryContentAdvisoryRating(): RatingLevel? {
-        return null
+    override fun queryContentAdvisoryRating(): RatingLevel {
+        return RatingLevel()
     }
 
-    override fun queryClosedCaptionsStatus(): CC? {
-        return null
+    override fun queryClosedCaptionsStatus(): CC {
+        return CC()
     }
 
-    override fun queryServiceID(): Service? {
+    override fun queryServiceID(): Service {
         return Service().apply {
             this.service = rpcManager.queryServiceId
         }
@@ -28,23 +28,23 @@ class ReceiverQueryApiImpl(val rpcManager: RPCManager) : IReceiverQueryApi {
         }
     }
 
-    override fun queryCaptionDisplayPreferences(): CaptionDisplay? {
-        return null
+    override fun queryCaptionDisplayPreferences(): CaptionDisplay {
+        return CaptionDisplay()
     }
 
-    override fun queryAudioAccessibilityPreferences(): AudioAccessibilityPref? {
-        return null
+    override fun queryAudioAccessibilityPreferences(): AudioAccessibilityPref {
+        return AudioAccessibilityPref()
     }
 
-    override fun queryReceiverWebServerURI(): BaseURI? {
-        return null
+    override fun queryReceiverWebServerURI(): BaseURI {
+        return BaseURI()
     }
 
-    override fun queryAlertingSignaling(): MutableList<Alerting?>? {
-        return null
+    override fun queryAlertingSignaling(): Alerting {
+        return Alerting()
     }
 
-    override fun queryServiceGuideURLs(): List<ServiceGuideUrls> {
-        return listOf()
+    override fun queryServiceGuideURLs(): ServiceGuideUrls {
+        return ServiceGuideUrls()
     }
 }

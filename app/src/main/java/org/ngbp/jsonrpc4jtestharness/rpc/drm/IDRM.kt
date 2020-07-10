@@ -8,8 +8,8 @@ import org.ngbp.jsonrpc4jtestharness.rpc.drm.model.NotifyParams
 @JsonRpcType
 interface IDRM {
     @JsonRpcMethod("org.atsc.notify")
-    fun drmNotification(): NotifyParams?
+    fun drmNotification(): NotifyParams
 
     @JsonRpcMethod("org.atsc.drmOperation")
-    fun drmOperation(): DRMOperation?
+    fun drmOperation(): DRMOperation
 }

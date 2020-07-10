@@ -1,5 +1,7 @@
 package org.ngbp.jsonrpc4jtestharness.rpc.requestReceiverActions.model
 
-data class AudioVolume (
-    var audioVolume: Double? = null
-)
+import org.ngbp.jsonrpc4jtestharness.rpc.RpcResponse
+
+data class AudioVolume(
+        var audioVolume: Double? = null
+) : RpcResponse()
