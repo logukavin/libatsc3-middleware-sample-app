@@ -1,5 +1,7 @@
 package org.ngbp.jsonrpc4jtestharness.rpc.keys.model
 
-data class Keys (
+import org.ngbp.jsonrpc4jtestharness.rpc.RpcResponse
+
+data class Keys(
         var accepted: List<String>? = null
-)
+) : RpcResponse()
