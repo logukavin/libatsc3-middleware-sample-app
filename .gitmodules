@@ -2,3 +2,7 @@
 	path = libatsc3
 	url = https://NGWP@dev.azure.com/NGWP/Middleware/_git/libatsc3
 	branch = route-dash-alc-multiple-object-same-content-type
+[submodule "jsonrpc2"]
+	path = jsonrpc2
+	url = https://NGWP@dev.azure.com/NGWP/Middleware/_git/jsonrpc2
+	branch = master

@@ -45,28 +45,26 @@ import org.ngbp.jsonrpc4jtestharness.rpc.subscribeUnsubscribe.ISubscribeUnsubscr
 import org.ngbp.jsonrpc4jtestharness.rpc.subscribeUnsubscribe.SubscribeUnsubscribeImp
 import org.ngbp.jsonrpc4jtestharness.rpc.xLink.IXLink
 import org.ngbp.jsonrpc4jtestharness.rpc.xLink.XLinkImpl
-import java.util.*
 import javax.inject.Inject
 
 class RPCProcessor @Inject constructor(
         private val rpcManager: RPCManager
 ) : IRPCProcessor {
     private val consumer: RpcConsumer
-    private val processor: Processor
-    private val objectMapper: ObjectMapper = ObjectMapper()
+    private val objectMapper: ObjectMapper
 
     init {
         consumer = ConsumerBuilder().build().also {
-            processor = it.processor
+            filRequests(it.processor)
         }
 
-        objectMapper.setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY)
-        objectMapper.registerModule(JsonRpcModule())
-
-        filRequests()
+        objectMapper = ObjectMapper().apply {
+            setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY)
+            registerModule(JsonRpcModule())
+        }
     }
 
-    private fun filRequests() {
+    private fun filRequests(processor: Processor) {
         processor.process(FilterCodesImpl(), IFilterCodes::class.java)
         processor.process(AsynchronousNotificationsOfChangesImpl(), IAsynchronousNotificationsOfChanges::class.java)
         processor.process(CacheRequestImpl(), ICacheRequest::class.java)
@@ -85,37 +83,47 @@ class RPCProcessor @Inject constructor(
     }
 
     override fun processRequest(request: String): String {
-        var response: Response? = null
-        var requestId: Long? = -1L
+        var requestId: Long = -1L
         return try {
-            requestId = objectMapper.readValue(request, Request::class.java).id
-            response = consumer.execution(objectMapper.readValue(request, Request::class.java))
-            objectMapper.writeValueAsString(response)
+            val req = jsonToRequest(request).also {
+                requestId = it.id
+            }
+
+            val response = consumer.execution(req)
+
+            responseToJson(response)
         } catch (e: JsonProcessingException) {
-            try {
-                objectMapper.writeValueAsString(ResponseUtils.createResponse(requestId, InternalRpcError(ERROR_CODES.PARSING_ERROR_CODE.value, e.localizedMessage)))
-            } catch (ex: JsonProcessingException) {
-                // This catch will never been executed during code logic, but it need because objectMapper throw exception
-                ""
+            errorResponse(requestId, e)
+        }
+    }
+
+    override fun processRequest(requests: List<String>): List<String> {
+        return try {
+            val requestList = requests.map { jsonToRequest(it) }
+
+            val responseList = consumer.execution(requestList)
+
+            responseList.map { responseToJson(it) }
+        } catch (e: JsonProcessingException) {
+            e.printStackTrace()
+            ArrayList<String>(requests.size).apply {
+                //TODO: we should return error's with request ID's
+                fill("")
             }
         }
     }
 
-    override fun processRequest(requests: MutableList<String?>): MutableList<String?> {
-        val wrappedList: MutableList<String?> = ArrayList(requests.size)
-        try {
-            val requestList: MutableList<Request?> = ArrayList()
-            for (i in requests.indices) {
-                requestList.add(objectMapper.readValue(requests.get(i), Request::class.java))
-            }
-            val responseList = consumer.execution(requestList)
-            for (r in responseList) {
-                wrappedList.add(objectMapper.writeValueAsString(r.body))
-            }
-        } catch (e: JsonProcessingException) {
-            e.printStackTrace()
+    private fun jsonToRequest(json: String) = objectMapper.readValue(json, Request::class.java)
+
+    private fun responseToJson(response: Response) = objectMapper.writeValueAsString(response)
+
+    private fun errorResponse(requestId: Long, e: JsonProcessingException): String {
+        return try {
+            responseToJson(ResponseUtils.createResponse(requestId, InternalRpcError(ERROR_CODES.PARSING_ERROR_CODE.value, e.localizedMessage)))
+        } catch (ex: JsonProcessingException) {
+            // This catch will never been executed during code logic, but it need because objectMapper throw exception
+            ""
         }
-        return wrappedList
     }
 
     internal class InternalRpcError(code: Int, message: String?) : RpcError(code, message), Error {
