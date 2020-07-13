@@ -87,25 +87,8 @@ class MainActivity : AppCompatActivity() {
         }
 
         initLibAtsc3()
-
-        userAgentViewModel.rmpX.observe(this, Observer { x ->
-            moveSprite(ConstraintSet.LEFT, ConstraintSet.LEFT, x)
-        })
-        userAgentViewModel.rmpY.observe(this, Observer { y ->
-            moveSprite(ConstraintSet.TOP, ConstraintSet.TOP, y)
-        })
-
         makeCall_9_7_5_1()
         makeCall()
-    }
-
-    private fun moveSprite(startSide: Int, endSide: Int, value: Int) {
-        val constraintLayout = findViewById<ConstraintLayout>(R.id.root)
-        val view = findViewById<View>(R.id.testView)
-        val set = ConstraintSet()
-        set.clone(constraintLayout)
-        set.connect(view.id, startSide, constraintLayout.id, endSide, value * 10)
-        set.applyTo(constraintLayout)
     }
 
     private fun startUserAgent() {
