@@ -4,12 +4,15 @@ import android.content.Context
 import android.net.Uri
 import android.util.Log
 import org.ngbp.libatsc3.ndk.Atsc3UsbDevice
-import org.ngbp.libatsc3.ndk.a331.LLSParserSLT
-import org.ngbp.libatsc3.ndk.a331.Service
+import org.ngbp.libatsc3.ndk.entities.service.LLSParserSLT
+import org.ngbp.libatsc3.ndk.entities.service.Service
 import org.ngbp.libatsc3.ndk.atsc3NdkClient
 import org.ngbp.libatsc3.ndk.atsc3NdkClient.ClientListener
+import org.ngbp.libatsc3.ndk.entities.held.Held
+import org.ngbp.libatsc3.ndk.entities.held.HeldXmlParser
 import java.lang.IllegalStateException
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 
 //TODO: multithreading requests
 class Atsc3Module(context: Context) : ClientListener {
@@ -20,10 +23,14 @@ class Atsc3Module(context: Context) : ClientListener {
     interface Listener {
         fun onStateChanged(state: State?)
         fun onServicesLoaded(services: List<Service?>)
+        fun onCurrentServiceHeldChanged(appContextId: String, entryPage: String)
     }
 
     private val client: atsc3NdkClient = atsc3NdkClient(context.cacheDir, this)
     private val usbDevice: Atsc3UsbDevice? = null
+
+    private val serviceMap = ConcurrentHashMap<Int, Service>()
+    private val heldMap = ConcurrentHashMap<Int, Held>()
 
     private var isPcapOpened = false
     private var state = State.IDLE
@@ -101,6 +108,7 @@ class Atsc3Module(context: Context) : ClientListener {
         if (isPcapOpened) {
             isPcapOpened = false
             client.atsc3_pcap_thread_stop()
+            clear()
             setState(State.IDLE)
             log("pcap thread stopped")
             return
@@ -119,6 +127,8 @@ class Atsc3Module(context: Context) : ClientListener {
             log("no atlas device connected yet")
             return
         }
+
+        clear()
 
         val status = client.ApiClose()
         if (status != RES_OK) {
@@ -146,9 +156,40 @@ class Atsc3Module(context: Context) : ClientListener {
         return mediaUri
     }
 
+    fun getSelectedServiceAppContextId(): String? {
+        return heldMap[selectedServiceId]?.appContextId
+    }
+
+    fun getSelectedServiceEntryPoint(): String? {
+        return heldMap[selectedServiceId]?.bcastEntryPageUrl
+    }
+
+    private fun clear() {
+        heldMap.clear()
+        serviceMap.clear()
+        selectedServiceId = -1
+        selectedServiceSLSProtocol = -1
+    }
+
     override fun onSlsTablePresent(sls_payload_xml: String) {
         val services = LLSParserSLT().parseXML(sls_payload_xml)
+
+        serviceMap.putAll(services.map { it.serviceId to it }.toMap())
+
         listener?.onServicesLoaded(Collections.unmodifiableList(services))
+    }
+
+    override fun onSlsHeldReceived(service_id: Int, held_payload_xml: String) {
+        if (!heldMap.contains(service_id)) {
+            val held = HeldXmlParser().parseXML(held_payload_xml)
+            if (held != null) {
+                heldMap[service_id] = held
+
+                if (service_id == selectedServiceId) {
+                    listener?.onCurrentServiceHeldChanged(held.appContextId, held.bcastEntryPageUrl)
+                }
+            }
+        }
     }
 
     override fun onAlcObjectStatusMessage(alc_object_status_message: String) {

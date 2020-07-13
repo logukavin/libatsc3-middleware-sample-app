@@ -20,6 +20,7 @@ public class atsc3NdkClient {
 
     public interface ClientListener {
         void onSlsTablePresent(String sls_payload_xml);
+        void onSlsHeldReceived(int service_id, String held_payload_xml);
         void onAlcObjectStatusMessage(String alc_object_status_message);
     }
 
@@ -93,6 +94,11 @@ public class atsc3NdkClient {
 
     int atsc3_onSlsTablePresent(String sls_payload_xml) {
         clientListener.onSlsTablePresent(sls_payload_xml);
+        return 0;
+    }
+
+    int atsc3_onSlsHeldReceived(int service_id, String held_payload_xml) {
+        clientListener.onSlsHeldReceived(service_id, held_payload_xml);
         return 0;
     }
 
