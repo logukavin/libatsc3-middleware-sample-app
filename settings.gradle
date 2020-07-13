@@ -1,2 +1,8 @@
 rootProject.name='jsonrpc4j test harness'
 include ':app', ':libatsc3Module'
+
+include ':jsonrpc-core'
+project(':jsonrpc-core').projectDir = new File(rootProject.projectDir, 'jsonrpc2/jsonrpc-core')
+
+include ':jsonrpc-jackson'
+project(':jsonrpc-jackson').projectDir = new File(rootProject.projectDir, 'jsonrpc2/jsonrpc-jackson-extension')
