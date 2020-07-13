@@ -14,7 +14,7 @@ class KeysImpl() : IKeys {
         return RpcResponse()
     }
 
-    override fun requestKeysTimeout(): Any? {
-        return null
+    override fun requestKeysTimeout(): RpcResponse {
+        return RpcResponse()
     }
 }

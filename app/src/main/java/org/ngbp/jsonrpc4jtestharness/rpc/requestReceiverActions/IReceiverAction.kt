@@ -9,14 +9,14 @@ import org.ngbp.jsonrpc4jtestharness.rpc.requestReceiverActions.model.AudioVolum
 @JsonRpcType
 interface IReceiverAction {
     @JsonRpcMethod("org.atsc.acquire.service")
-    fun acquireService(): Any?
+    fun acquireService(): RpcResponse
 
     @JsonRpcMethod("org.atsc.scale-position")
-    fun videoScalingAndPositioning(@JsonRpcParam("scaleFactor") scaleFactor: Double?, @JsonRpcParam("xPos") xPos: Double?, @JsonRpcParam("yPos") yPos: Double?): RpcResponse?
+    fun videoScalingAndPositioning(@JsonRpcParam("scaleFactor") scaleFactor: Double?, @JsonRpcParam("xPos") xPos: Double?, @JsonRpcParam("yPos") yPos: Double?): RpcResponse
 
     @JsonRpcMethod("org.atsc.service")
-    fun setRMPURL(): Any?
+    fun setRMPURL(): RpcResponse
 
     @JsonRpcMethod("org.atsc.audioVolume")
-    fun audioVolume(): AudioVolume?
+    fun audioVolume(): AudioVolume
 }

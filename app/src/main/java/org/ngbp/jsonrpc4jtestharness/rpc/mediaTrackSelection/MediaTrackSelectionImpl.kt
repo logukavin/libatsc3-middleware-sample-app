@@ -1,7 +1,9 @@
 package org.ngbp.jsonrpc4jtestharness.rpc.mediaTrackSelection
 
-class MediaTrackSelectionImpl : IMediaTrackSelection{
-    override fun mediaTrackSelection(): Any? {
-        return null
+import org.ngbp.jsonrpc4jtestharness.rpc.RpcResponse
+
+class MediaTrackSelectionImpl : IMediaTrackSelection {
+    override fun mediaTrackSelection(): RpcResponse {
+        return RpcResponse()
     }
 }
