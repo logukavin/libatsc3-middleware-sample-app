@@ -17,13 +17,15 @@ class MiddlewareWebSocket(
 
     override fun onWebSocketText(message: String?) {
         super.onWebSocketText(message)
-        Log.d("WSServer: ", "onWebSocketText: $message")
+        Log.d("WSServer: ", "<-- onWebSocketText: $message")
 
         if (message != null) {
             val response = rpcProcessor.processRequest(message)
 
             outbound?.let { session ->
                 if (session.isOpen) {
+                    Log.d("WSServer: ", "--> onWebSocketText: $response")
+
                     session.remote.sendString(response, null)
                 }
             }
