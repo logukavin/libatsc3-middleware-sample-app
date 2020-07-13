@@ -1,5 +1,7 @@
 package org.ngbp.jsonrpc4jtestharness.rpc.cacheRequest.model
 
-data class CacheRequest (
-    var cached: Boolean = false
-)
+import org.ngbp.jsonrpc4jtestharness.rpc.RpcResponse
+
+data class CacheRequest(
+        var cached: Boolean = false
+) : RpcResponse()

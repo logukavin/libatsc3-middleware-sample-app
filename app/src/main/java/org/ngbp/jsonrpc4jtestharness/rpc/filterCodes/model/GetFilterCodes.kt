@@ -1,10 +1,12 @@
 package org.ngbp.jsonrpc4jtestharness.rpc.filterCodes.model
 
-data class GetFilterCodes (
-    var filters: MutableList<Filters?>? = null
-)
+import org.ngbp.jsonrpc4jtestharness.rpc.RpcResponse
 
-data class Filters (
-    var filterCode: Int? = null,
-    var expires: String? = null
+data class GetFilterCodes(
+        var filters: MutableList<Filters?>? = null
+) : RpcResponse()
+
+data class Filters(
+        var filterCode: Int? = null,
+        var expires: String? = null
 )

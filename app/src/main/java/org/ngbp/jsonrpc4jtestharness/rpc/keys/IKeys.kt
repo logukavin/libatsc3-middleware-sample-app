@@ -15,5 +15,5 @@ interface IKeys {
     fun relinquishKeys(@JsonRpcParam("keys") listOfKeys: List<String>): RpcResponse
 
     @JsonRpcMethod("org.atsc.notify")
-    fun requestKeysTimeout(): Any?
+    fun requestKeysTimeout(): RpcResponse
 }
