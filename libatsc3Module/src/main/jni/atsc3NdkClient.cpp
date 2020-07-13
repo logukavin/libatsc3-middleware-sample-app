@@ -567,7 +567,7 @@ int atsc3NdkClient::atsc3_pcap_thread_run() {
         LogMsgF("atsc3NdkClient::atsc3_pcap_consumer_thread_run with this: %p", this);
 
         this->PcapConsumerThreadRun();
-        Atsc3_Jni_Processing_Thread_Env = nullptr;
+        Atsc3_Jni_Processing_Thread_Env = NULL;
         delete atsc3_jni_pcap_consumer_thread_env;
     });
 
@@ -613,7 +613,7 @@ int atsc3NdkClient::PcapLocalCleanup() {
 
     if(pcap_replay_asset_ref_ptr) {
         AAsset_close(pcap_replay_asset_ref_ptr);
-        pcap_replay_asset_ref_ptr = nullptr;
+        pcap_replay_asset_ref_ptr = NULL;
     }
 
     //we can close the asset reference, but don't close the AAssetManager GlobalReference
@@ -624,12 +624,12 @@ int atsc3NdkClient::PcapLocalCleanup() {
         } else {
             env.Get()->DeleteGlobalRef(global_pcap_asset_manager_ref);
         }
-        global_pcap_asset_manager_ref = nullptr;
+        global_pcap_asset_manager_ref = NULL;
     }
 
     if(pcap_replay_filename) {
         free(pcap_replay_filename);
-        pcap_replay_filename = nullptr;
+        pcap_replay_filename = NULL;
     }
 
     return 0;
@@ -782,7 +782,7 @@ std::string atsc3NdkClient::get_android_temp_folder() {
     jmethodID getPath = env.Get()->GetMethodID( fileClass, "getPath", "()Ljava/lang/String;" );
     jstring path_string = (jstring)env.Get()->CallObjectMethod( cache_dir, getPath );
 
-    const char *path_chars = env.Get()->GetStringUTFChars( path_string, nullptr );
+    const char *path_chars = env.Get()->GetStringUTFChars( path_string, NULL );
     std::string temp_folder( path_chars );
 
     env.Get()->ReleaseStringUTFChars( path_string, path_chars );
@@ -930,6 +930,23 @@ void atsc3NdkClient::atsc3_lls_sls_alc_on_route_mpd_patched_jni(uint16_t service
 
 }
 
+void atsc3NdkClient::atsc3_sls_on_held_trigger_received_callback_jni(uint16_t service_id, const char* held_payload_xml) {
+	if (!JReady() || !atsc3_onSlsHeldReceived_ID) {
+        eprintf("err: JReady: %d, atsc3_onSlsHeldReceived_ID: %d",  JReady(), atsc3_onSlsHeldReceived_ID);
+        return;
+    }
+
+	if (!Atsc3_Jni_Processing_Thread_Env) {
+		eprintf("!! err on get jni env\n");
+		return;
+	}
+
+    jstring js = Atsc3_Jni_Processing_Thread_Env->Get()->NewStringUTF(held_payload_xml);
+
+    int r = Atsc3_Jni_Processing_Thread_Env->Get()->CallIntMethod(mClsDrvIntf, atsc3_onSlsHeldReceived_ID, service_id, js);
+    Atsc3_Jni_Processing_Thread_Env->Get()->DeleteLocalRef(js);
+}
+
 void atsc3NdkClient::atsc3_onSlsTablePresent(const char *sls_payload_xml) {
     if (!JReady() || !atsc3_onSlsTablePresent_ID) {
         eprintf("err: JReady: %d, atsc3_onSlsTablePresent_ID: %d",  JReady(), atsc3_onSlsTablePresent_ID);
@@ -958,45 +975,45 @@ Java_org_ngbp_libatsc3_ndk_atsc3NdkClient_ApiInit(JNIEnv *env, jobject instance,
     api.mJniEnv = env;
 
     env->GetJavaVM(&api.mJavaVM);
-    if(api.mJavaVM == nullptr) {
+    if(api.mJavaVM == NULL) {
         eprintf("!! no java vm\n");
         return -1;
     }
 
     jclass jClazz = env->FindClass("org/ngbp/libatsc3/ndk/atsc3NdkClient");
-    if (jClazz == nullptr) {
+    if (jClazz == NULL) {
         eprintf("!! Cannot find atsc3NdkClient java class\n");
         return -1;
     }
     api.mOnLogMsgId = env->GetMethodID(jClazz, "onLogMsg", "(Ljava/lang/String;)I");
-    if (api.mOnLogMsgId == nullptr) {
+    if (api.mOnLogMsgId == NULL) {
         eprintf("!! Cannot find 'onLogMsg' method id\n");
         return -1;
     }
 
     //atsc3_onSlsTablePresent_ID
     api.atsc3_onSlsTablePresent_ID = env->GetMethodID(jClazz, "atsc3_onSlsTablePresent", "(Ljava/lang/String;)I");
-    if (api.atsc3_onSlsTablePresent_ID == nullptr) {
+    if (api.atsc3_onSlsTablePresent_ID == NULL) {
         eprintf("!! Cannot find 'atsc3_onSlsTablePresent_ID' method id\n");
         return -1;
     }
 
     //java.nio.ByteBuffer, L: fully qualified class, J: long
     api.atsc3_onMfuPacketID = env->GetMethodID(jClazz, "atsc3_onMfuPacket", "(IIILjava/nio/ByteBuffer;IJI)I");
-    if (api.atsc3_onMfuPacketID == nullptr) {
+    if (api.atsc3_onMfuPacketID == NULL) {
         eprintf("!! Cannot find 'atsc3_onMfuPacket' method id\n");
         return -1;
     }
     //java.nio.ByteBuffer, L: fully qualified class, J: long
     api.atsc3_onMfuPacketCorruptID = env->GetMethodID(jClazz, "atsc3_onMfuPacketCorrupt", "(IIILjava/nio/ByteBuffer;IJII)I");
-    if (api.atsc3_onMfuPacketCorruptID == nullptr) {
+    if (api.atsc3_onMfuPacketCorruptID == NULL) {
         eprintf("!! Cannot find 'atsc3_onMfuPacketCorrupt' method id\n");
         return -1;
     }
 
     //java.nio.ByteBuffer, L: fully qualified class, J: long
     api.atsc3_onMfuPacketCorruptMmthSampleHeaderID = env->GetMethodID(jClazz, "atsc3_onMfuPacketCorruptMmthSampleHeader", "(IIILjava/nio/ByteBuffer;IJII)I");
-    if (api.atsc3_onMfuPacketCorruptMmthSampleHeaderID == nullptr) {
+    if (api.atsc3_onMfuPacketCorruptMmthSampleHeaderID == NULL) {
         eprintf("!! Cannot find 'atsc3_onMfuPacketCorruptMmthSampleHeaderID' method id\n");
         return -1;
     }
@@ -1004,14 +1021,14 @@ Java_org_ngbp_libatsc3_ndk_atsc3NdkClient_ApiInit(JNIEnv *env, jobject instance,
 
     //java.nio.ByteBuffer, L: fully qualified class, J: long
     api.atsc3_onMfuSampleMissingID = env->GetMethodID(jClazz, "atsc3_onMfuSampleMissing", "(III)I");
-    if (api.atsc3_onMfuSampleMissingID == nullptr) {
+    if (api.atsc3_onMfuSampleMissingID == NULL) {
         eprintf("!! Cannot find 'atsc3_onMfuSampleMissingID' method id\n");
         return -1;
     }
 
     //java.nio.ByteBuffer
     api.mOnInitHEVC_NAL_Extracted = env->GetMethodID(jClazz, "atsc3_onInitHEVC_NAL_Packet", "(IILjava/nio/ByteBuffer;I)I");
-    if (api.mOnInitHEVC_NAL_Extracted == nullptr) {
+    if (api.mOnInitHEVC_NAL_Extracted == NULL) {
         eprintf("!! Cannot find 'atsc3_onInitHEVC_NAL_Packet' method id\n");
         return -1;
     }
@@ -1023,59 +1040,66 @@ Java_org_ngbp_libatsc3_ndk_atsc3NdkClient_ApiInit(JNIEnv *env, jobject instance,
     */
 
     api.atsc3_signallingContext_notify_video_packet_id_and_mpu_timestamp_descriptor_ID = env->GetMethodID(jClazz, "atsc3_signallingContext_notify_video_packet_id_and_mpu_timestamp_descriptor", "(IIJII)I");
-    if (api.atsc3_signallingContext_notify_video_packet_id_and_mpu_timestamp_descriptor_ID == nullptr) {
+    if (api.atsc3_signallingContext_notify_video_packet_id_and_mpu_timestamp_descriptor_ID == NULL) {
         eprintf("!! Cannot find 'atsc3_signallingContext_notify_video_packet_id_and_mpu_timestamp_descriptor_ID' method id\n");
         return -1;
     }
     api.atsc3_signallingContext_notify_audio_packet_id_and_mpu_timestamp_descriptor_ID = env->GetMethodID(jClazz, "atsc3_signallingContext_notify_audio_packet_id_and_mpu_timestamp_descriptor", "(IIJII)I");
-    if (api.atsc3_signallingContext_notify_audio_packet_id_and_mpu_timestamp_descriptor_ID == nullptr) {
+    if (api.atsc3_signallingContext_notify_audio_packet_id_and_mpu_timestamp_descriptor_ID == NULL) {
         eprintf("!! Cannot find 'atsc3_signallingContext_notify_audio_packet_id_and_mpu_timestamp_descriptor_ID' method id\n");
         return -1;
     }
     api.atsc3_signallingContext_notify_stpp_packet_id_and_mpu_timestamp_descriptor_ID = env->GetMethodID(jClazz, "atsc3_signallingContext_notify_stpp_packet_id_and_mpu_timestamp_descriptor", "(IIJII)I");
-    if (api.atsc3_signallingContext_notify_stpp_packet_id_and_mpu_timestamp_descriptor_ID == nullptr) {
+    if (api.atsc3_signallingContext_notify_stpp_packet_id_and_mpu_timestamp_descriptor_ID == NULL) {
         eprintf("!! Cannot find 'atsc3_signallingContext_notify_stpp_packet_id_and_mpu_timestamp_descriptor_ID' method id\n");
         return -1;
     }
 
     api.atsc3_rf_phy_status_callback_ID = env->GetMethodID(jClazz, "atsc3_rf_phy_status_callback", "(IIIIIIIIIIIIIII)I");
-    if (api.atsc3_rf_phy_status_callback_ID == nullptr) {
+    if (api.atsc3_rf_phy_status_callback_ID == NULL) {
         eprintf("!! Cannot find 'atsc3_rf_phy_status_callback' method id\n");
         return -1;
     }
 
     //atsc3_onExtractedSampleDurationID
     api.atsc3_onExtractedSampleDurationID = env->GetMethodID(jClazz, "atsc3_onExtractedSampleDuration", "(III)I");
-    if (api.atsc3_onExtractedSampleDurationID == nullptr) {
+    if (api.atsc3_onExtractedSampleDurationID == NULL) {
         eprintf("!! Cannot find 'atsc3_onExtractedSampleDurationID' method id\n");
         return -1;
     }
 
     //atsc3_setVideoWidthHeightFromTrakID
     api.atsc3_setVideoWidthHeightFromTrakID = env->GetMethodID(jClazz, "atsc3_setVideoWidthHeightFromTrak", "(II)I");
-    if (api.atsc3_setVideoWidthHeightFromTrakID == nullptr) {
+    if (api.atsc3_setVideoWidthHeightFromTrakID == NULL) {
         eprintf("!! Cannot find 'atsc3_setVideoWidthHeightFromTrakID' method id\n");
         return -1;
     }
 
     //atsc3_update_rf_bw_stats_ID
     api.atsc3_update_rf_bw_stats_ID = env->GetMethodID(jClazz, "atsc3_updateRfBwStats", "(JJI)I");
-    if (api.atsc3_update_rf_bw_stats_ID == nullptr) {
+    if (api.atsc3_update_rf_bw_stats_ID == NULL) {
         eprintf("!! Cannot find 'atsc3_update_rf_bw_stats_ID' method id\n");
         return -1;
     }
 
     //atsc3_lls_sls_alc_on_route_mpd_patched_ID
     api.atsc3_lls_sls_alc_on_route_mpd_patched_ID = env->GetMethodID(jClazz, "atsc3_lls_sls_alc_on_route_mpd_patched", "(I)I");
-    if (api.atsc3_lls_sls_alc_on_route_mpd_patched_ID == nullptr) {
+    if (api.atsc3_lls_sls_alc_on_route_mpd_patched_ID == NULL) {
         eprintf("!! Cannot find 'atsc3_lls_sls_alc_on_route_mpd_patched_ID' method id\n");
         return -1;
     }
 
     //atsc3_on_alc_object_status_message_ID
     api.atsc3_on_alc_object_status_message_ID = env->GetMethodID(jClazz, "atsc3_on_alc_object_status_message", "(Ljava/lang/String;)I");
-    if (api.atsc3_on_alc_object_status_message_ID == nullptr) {
+    if (api.atsc3_on_alc_object_status_message_ID == NULL) {
         eprintf("!! Cannot find 'atsc3_on_alc_object_status_message_ID' method id\n");
+        return -1;
+    }
+
+    //atsc3_onSlsHeldReceived_ID
+    api.atsc3_onSlsHeldReceived_ID = env->GetMethodID(jClazz, "atsc3_onSlsHeldReceived", "(ILjava/lang/String;)I");
+    if (api.atsc3_onSlsHeldReceived_ID == NULL) {
+        eprintf("!! Cannot find 'atsc3_onSlsHeldReceived_ID' method id\n");
         return -1;
     }
 

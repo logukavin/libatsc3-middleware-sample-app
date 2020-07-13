@@ -6,7 +6,7 @@ import org.ngbp.jsonrpc4jtestharness.controller.model.RPMParams
 import org.ngbp.jsonrpc4jtestharness.controller.model.SLSService
 import org.ngbp.jsonrpc4jtestharness.rpc.manager.RPCManager
 import org.ngbp.libatsc3.Atsc3Module
-import org.ngbp.libatsc3.ndk.a331.Service
+import org.ngbp.libatsc3.ndk.entities.service.Service
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -32,6 +32,12 @@ class ReceiverController @Inject constructor(
     }
 
     override fun onStateChanged(state: Atsc3Module.State?) {
+        if (state == Atsc3Module.State.IDLE) {
+            _sltServices.postValue(emptyList())
+            _rpmParams.postValue(RPMParams(1.0, 0, 0))
+            rpcManager.queryServiceId = null
+        }
+
         _state.postValue(state)
     }
 
@@ -45,6 +51,10 @@ class ReceiverController @Inject constructor(
             atsc3Module.selectService(service)
             rpcManager.queryServiceId = service.globalServiceId
         }
+    }
+
+    override fun onCurrentServiceHeldChanged(appContextId: String, entryPage: String) {
+
     }
 
     override fun updateViewPosition(scaleFactor: Double, xPos: Double, yPos: Double) {
