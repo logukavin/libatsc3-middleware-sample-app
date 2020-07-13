@@ -7,3 +7,4 @@
 	path = jsonrpc2
 	url = https://NGWP@dev.azure.com/NGWP/Middleware/_git/jsonrpc2
 	branch = master
+	update = rebase
