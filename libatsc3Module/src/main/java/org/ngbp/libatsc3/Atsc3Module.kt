@@ -97,10 +97,9 @@ class Atsc3Module(context: Context) : ClientListener {
         return false
     }
 
-    fun selectService(service: Service): Boolean {
-        selectedServiceId = service.serviceId.also { serviceId ->
-            selectedServiceSLSProtocol = client.atsc3_slt_selectService(serviceId)
-        }
+    fun selectService(serviceId: Int): Boolean {
+        selectedServiceId = serviceId
+        selectedServiceSLSProtocol = client.atsc3_slt_selectService(serviceId)
 
         return selectedServiceSLSProtocol > 0
     }
