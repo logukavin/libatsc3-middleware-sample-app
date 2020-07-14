@@ -34,10 +34,8 @@ import javax.inject.Inject
 class MainActivity : AppCompatActivity() {
     @Inject
     lateinit var callWrapper: RPCProcessor
-
     @Inject
     lateinit var controller: IReceiverController
-
     @Inject
     lateinit var userAgentViewModelFactory: UserAgentViewModelFactory
 

@@ -19,8 +19,6 @@ import org.ngbp.jsonrpc4jtestharness.lifecycle.factory.UserAgentViewModelFactory
 import javax.inject.Inject
 
 class UserAgentActivity : AppCompatActivity() {
-    private var userAgent: WebView? = null
-
     companion object {
         const val CONTENT_URL = "https://127.0.0.1:8443/index.html?wsURL=ws://127.0.0.1:9998&rev=20180720"
     }
@@ -33,11 +31,10 @@ class UserAgentActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         AndroidInjection.inject(this)
         super.onCreate(savedInstanceState)
+
         setContentView(R.layout.activity_user_agent)
-        userAgentViewModel.rmpParams.observe(this, Observer { params ->
-            moveSprite(params.x, params.y, params.scale)
-        })
-        userAgent = findViewById<WebView>(R.id.userAgent).apply {
+
+        user_agent_web_view.apply {
             clearCache(true)
             setInitialScale(150)
             setBackgroundColor(Color.TRANSPARENT)
@@ -52,24 +49,19 @@ class UserAgentActivity : AppCompatActivity() {
             loadContent(it)
         }
 
+        userAgentViewModel.rmpParams.observe(this, Observer { params ->
+            updateRMPLayout(params.x.toFloat() / 100, params.y.toFloat() / 100, params.scale.toFloat() / 100)
+        })
     }
 
-    private fun moveSprite(x: Int, y: Int, scale: Double) {
-        val set = ConstraintSet()
-        set.clone(constraintLayout)
-        set.setMargin(simpleView.id, ConstraintSet.TOP, getMargin(constraintLayout.measuredHeight, y))
-        set.setMargin(simpleView.id, ConstraintSet.START, getMargin(constraintLayout.measuredHeight, x))
-        set.constrainPercentHeight(simpleView.id, getPercent(scale.toInt()))
-        set.constrainPercentWidth(simpleView.id, getPercent(scale.toInt()))
-        set.applyTo(constraintLayout)
-    }
-
-    private fun getMargin(percent: Int, value: Int): Int {
-        return (getPercent(percent) * value).toInt()
-    }
-
-    private fun getPercent(value: Int): Float {
-        return (value.toFloat() / 100)
+    private fun updateRMPLayout(x: Float, y: Float, scale: Float) {
+        ConstraintSet().apply {
+            clone(user_agent_root)
+            setHorizontalBias(R.id.receiver_media_player, x / (1f - scale))
+            setVerticalBias(R.id.receiver_media_player, y / (1f - scale))
+            constrainPercentHeight(R.id.receiver_media_player, scale)
+            constrainPercentWidth(R.id.receiver_media_player, scale)
+        }.applyTo(user_agent_root)
     }
 
     private fun loadContent(webView: WebView) {
