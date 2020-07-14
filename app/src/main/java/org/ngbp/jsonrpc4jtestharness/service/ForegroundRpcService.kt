@@ -26,11 +26,11 @@ class ForegroundRpcService : Service() {
     override fun onCreate() {
         AndroidInjection.inject(this)
         super.onCreate()
+        notificationHelper = NotificationHelper(this)
+        startForeground(1, notificationHelper.createNotification(""))
     }
 
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
-        notificationHelper = NotificationHelper(this)
-
         val message = intent.getStringExtra("inputExtra")
         val action = intent.getAction()
         if (action != null) {
@@ -95,8 +95,8 @@ class ForegroundRpcService : Service() {
                 }
             }
             stopForeground(true)
-            stopSelf()
         }
+        stopSelf()
         isServiceStarted = false
     }
 

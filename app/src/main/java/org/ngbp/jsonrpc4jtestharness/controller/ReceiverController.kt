@@ -7,7 +7,7 @@ import org.ngbp.jsonrpc4jtestharness.controller.model.RPMParams
 import org.ngbp.jsonrpc4jtestharness.controller.model.SLSService
 import org.ngbp.jsonrpc4jtestharness.rpc.manager.RPCManager
 import org.ngbp.libatsc3.Atsc3Module
-import org.ngbp.libatsc3.ndk.entities.service.Service
+import org.ngbp.libatsc3.entities.service.Service
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -49,7 +49,7 @@ class ReceiverController @Inject constructor(
         _sltServices.postValue(slsServices)
     }
 
-    override fun onCurrentServiceHeldChanged(appContextId: String, entryPage: String) {
+    override fun onCurrentServiceHeldChanged(appContextId: String?, entryPage: String?) {
         _appData.postValue(AppData(appContextId, entryPage))
     }
 
