@@ -96,10 +96,9 @@ class Atsc3Module(context: Context) : ClientListener {
         return false
     }
 
-    fun selectService(service: Service): Boolean {
-        selectedServiceId = service.serviceId.also { serviceId ->
-            selectedServiceSLSProtocol = client.atsc3_slt_selectService(serviceId)
-        }
+    fun selectService(serviceId: Int): Boolean {
+        selectedServiceId = serviceId
+        selectedServiceSLSProtocol = client.atsc3_slt_selectService(serviceId)
 
         return selectedServiceSLSProtocol > 0
     }
@@ -180,7 +179,7 @@ class Atsc3Module(context: Context) : ClientListener {
     }
 
     override fun onSlsHeldReceived(service_id: Int, held_payload_xml: String) {
-        if (!heldMap.contains(service_id)) {
+        if (!heldMap.containsKey(service_id)) {
             val held = HeldXmlParser().parseXML(held_payload_xml)
             if (held != null) {
                 heldMap[service_id] = held

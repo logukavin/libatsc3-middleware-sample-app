@@ -2,12 +2,15 @@ package org.ngbp.jsonrpc4jtestharness
 
 import android.Manifest
 import android.content.ActivityNotFoundException
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextUtils
 import android.text.TextWatcher
 import android.view.View
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
 import android.widget.EditText
 import android.widget.Toast
 import androidx.activity.viewModels
@@ -15,6 +18,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.content.ContextCompat
+import androidx.databinding.DataBindingUtil
 import androidx.lifecycle.Observer
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -22,13 +26,17 @@ import com.github.nmuzhichin.jsonrpc.model.request.CompleteRequest
 import com.github.nmuzhichin.jsonrpc.model.request.Request
 import com.github.nmuzhichin.jsonrpc.module.JsonRpcModule
 import dagger.android.AndroidInjection
+import kotlinx.android.synthetic.main.activity_main.*
 import org.ngbp.jsonrpc4jtestharness.controller.IReceiverController
+import org.ngbp.jsonrpc4jtestharness.controller.model.SLSService
 import org.ngbp.jsonrpc4jtestharness.core.FileUtils
 import org.ngbp.jsonrpc4jtestharness.core.ws.MiddlewareWebSocketClient
+import org.ngbp.jsonrpc4jtestharness.databinding.ActivityMainBinding
 import org.ngbp.jsonrpc4jtestharness.lifecycle.RMPViewModel
+import org.ngbp.jsonrpc4jtestharness.lifecycle.UserAgentViewModel
 import org.ngbp.jsonrpc4jtestharness.lifecycle.factory.UserAgentViewModelFactory
-import org.ngbp.jsonrpc4jtestharness.service.ForegroundRpcService
 import org.ngbp.jsonrpc4jtestharness.rpc.processor.RPCProcessor
+import org.ngbp.jsonrpc4jtestharness.service.ForegroundRpcService
 import org.ngbp.libatsc3.Atsc3Module
 import java.util.*
 import javax.inject.Inject
@@ -41,7 +49,8 @@ class MainActivity : AppCompatActivity() {
     @Inject
     lateinit var userAgentViewModelFactory: UserAgentViewModelFactory
 
-    private val userAgentViewModel: RMPViewModel by viewModels { userAgentViewModelFactory }
+    private val rmpViewModel: RMPViewModel by viewModels { userAgentViewModelFactory }
+    private val userAgentViewModel: UserAgentViewModel by viewModels { userAgentViewModelFactory }
 
     private val mapper = ObjectMapper().apply {
         registerModule(JsonRpcModule())
@@ -60,7 +69,10 @@ class MainActivity : AppCompatActivity() {
         AndroidInjection.inject(this)
         super.onCreate(savedInstanceState)
 
-        setContentView(R.layout.activity_main)
+        DataBindingUtil.setContentView<ActivityMainBinding>(this, R.layout.activity_main).apply {
+            userAgentModel = userAgentViewModel
+            lifecycleOwner = this@MainActivity
+        }
 
         requestPermissions(arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), 1)
 
@@ -88,15 +100,47 @@ class MainActivity : AppCompatActivity() {
 
         initLibAtsc3()
 
-        userAgentViewModel.rmpX.observe(this, Observer { x ->
+        rmpViewModel.rmpX.observe(this, Observer { x ->
             moveSprite(ConstraintSet.LEFT, ConstraintSet.LEFT, x)
         })
-        userAgentViewModel.rmpY.observe(this, Observer { y ->
+        rmpViewModel.rmpY.observe(this, Observer { y ->
             moveSprite(ConstraintSet.TOP, ConstraintSet.TOP, y)
         })
+        userAgentViewModel.services.observe(this, Observer { services ->
+            atsc3_service_spinner.adapter = ServiceAdapter(this, services)
+        })
+        atsc3_service_spinner.adapter = ServiceAdapter(this, emptyList())
+        atsc3_service_spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onNothingSelected(parent: AdapterView<*>?) {
+            }
+
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                if (id > 0) {
+                    userAgentViewModel.selectService(id.toInt())
+                }
+            }
+        }
 
         makeCall_9_7_5_1()
         makeCall()
+    }
+
+    private class ServiceAdapter(
+            context: Context,
+            private val items: List<SLSService>
+    ) : ArrayAdapter<String>(context, android.R.layout.simple_spinner_dropdown_item) {
+
+        init {
+            if (items.isEmpty()) {
+                add("No service available")
+            } else {
+                addAll(items.map { it.shortName })
+            }
+        }
+
+        override fun getItemId(position: Int): Long {
+            return items.getOrNull(position)?.id?.toLong() ?: -1
+        }
     }
 
     private fun moveSprite(startSide: Int, endSide: Int, value: Int) {

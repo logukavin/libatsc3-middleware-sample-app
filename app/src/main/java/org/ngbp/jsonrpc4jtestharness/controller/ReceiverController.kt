@@ -2,6 +2,7 @@ package org.ngbp.jsonrpc4jtestharness.controller
 
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Transformations
+import org.ngbp.jsonrpc4jtestharness.controller.model.AppData
 import org.ngbp.jsonrpc4jtestharness.controller.model.RPMParams
 import org.ngbp.jsonrpc4jtestharness.controller.model.SLSService
 import org.ngbp.jsonrpc4jtestharness.rpc.manager.RPCManager
@@ -20,10 +21,13 @@ class ReceiverController @Inject constructor(
     private val _sltServices = MutableLiveData<List<SLSService>>()
     //private val _serviceMediaUri = MutableLiveData<Uri?>()
 
+    val _appData = MutableLiveData<AppData?>()
+
     private val _rpmParams = MutableLiveData<RPMParams>()
 
     override val state = Transformations.distinctUntilChanged(_state)
     override val sltServices = Transformations.distinctUntilChanged(_sltServices)
+    override val appData = Transformations.distinctUntilChanged(_appData)
     override val rpmParams = Transformations.distinctUntilChanged(_rpmParams)
 
     init {
@@ -33,9 +37,7 @@ class ReceiverController @Inject constructor(
 
     override fun onStateChanged(state: Atsc3Module.State?) {
         if (state == Atsc3Module.State.IDLE) {
-            _sltServices.postValue(emptyList())
-            _rpmParams.postValue(RPMParams(1.0, 0, 0))
-            rpcManager.queryServiceId = null
+            reset()
         }
 
         _state.postValue(state)
@@ -43,18 +45,12 @@ class ReceiverController @Inject constructor(
 
     override fun onServicesLoaded(services: List<Service?>) {
         val slsServices = services.filterNotNull()
-                .map { SLSService(it.shortServiceName, it.globalServiceId) }
+                .map { SLSService(it.serviceId, it.shortServiceName, it.globalServiceId) }
         _sltServices.postValue(slsServices)
-
-        //TODO: move somewhere else
-        services.firstOrNull { service -> "WZTV" == service?.shortServiceName }?.let { service ->
-            atsc3Module.selectService(service)
-            rpcManager.queryServiceId = service.globalServiceId
-        }
     }
 
     override fun onCurrentServiceHeldChanged(appContextId: String, entryPage: String) {
-
+        _appData.postValue(AppData(appContextId, entryPage))
     }
 
     override fun updateViewPosition(scaleFactor: Double, xPos: Double, yPos: Double) {
@@ -71,5 +67,25 @@ class ReceiverController @Inject constructor(
 
     override fun closeRoute() {
         atsc3Module.close()
+    }
+
+    override fun selectService(service: SLSService) {
+        val res = atsc3Module.selectService(service.id)
+        if (res) {
+            //TODO: should we use globalId or context from HELD?
+            rpcManager.queryServiceId = service.globalId
+
+            _appData.postValue(AppData(
+                    atsc3Module.getSelectedServiceAppContextId(),
+                    atsc3Module.getSelectedServiceEntryPoint()
+            ))
+        }
+    }
+
+    private fun reset() {
+        rpcManager.queryServiceId = null
+        _sltServices.postValue(emptyList())
+        _rpmParams.postValue(RPMParams(1.0, 0, 0))
+        _appData.postValue(null)
     }
 }
