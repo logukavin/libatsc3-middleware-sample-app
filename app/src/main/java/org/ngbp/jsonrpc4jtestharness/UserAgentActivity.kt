@@ -57,15 +57,19 @@ class UserAgentActivity : AppCompatActivity() {
     private fun moveSprite(x: Int, y: Int, scale: Double) {
         val set = ConstraintSet()
         set.clone(constraintLayout)
-        set.setMargin(simpleView.id, ConstraintSet.TOP, getPercent(constraintLayout.measuredHeight, y))
-        set.setMargin(simpleView.id, ConstraintSet.START, getPercent(constraintLayout.measuredHeight, x))
-        set.constrainPercentHeight(simpleView.id, (scale / 100).toFloat())
-        set.constrainPercentWidth(simpleView.id, (scale / 100).toFloat())
+        set.setMargin(simpleView.id, ConstraintSet.TOP, getMargin(constraintLayout.measuredHeight, y))
+        set.setMargin(simpleView.id, ConstraintSet.START, getMargin(constraintLayout.measuredHeight, x))
+        set.constrainPercentHeight(simpleView.id, getPercent(scale.toInt()))
+        set.constrainPercentWidth(simpleView.id, getPercent(scale.toInt()))
         set.applyTo(constraintLayout)
     }
 
-    private fun getPercent(value: Int, coefficient: Int): Int {
-        return ((value.toFloat() / 100) * coefficient).toInt()
+    private fun getMargin(percent: Int, value: Int): Int {
+        return (getPercent(percent) * value).toInt()
+    }
+
+    private fun getPercent(value: Int): Float {
+        return (value.toFloat() / 100)
     }
 
     private fun loadContent(webView: WebView) {
