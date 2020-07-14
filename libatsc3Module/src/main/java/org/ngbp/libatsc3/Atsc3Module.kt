@@ -4,12 +4,12 @@ import android.content.Context
 import android.net.Uri
 import android.util.Log
 import org.ngbp.libatsc3.ndk.Atsc3UsbDevice
-import org.ngbp.libatsc3.ndk.entities.service.LLSParserSLT
-import org.ngbp.libatsc3.ndk.entities.service.Service
+import org.ngbp.libatsc3.entities.service.LLSParserSLT
+import org.ngbp.libatsc3.entities.service.Service
 import org.ngbp.libatsc3.ndk.atsc3NdkClient
 import org.ngbp.libatsc3.ndk.atsc3NdkClient.ClientListener
-import org.ngbp.libatsc3.ndk.entities.held.Held
-import org.ngbp.libatsc3.ndk.entities.held.HeldXmlParser
+import org.ngbp.libatsc3.entities.held.Held
+import org.ngbp.libatsc3.entities.held.HeldXmlParser
 import java.lang.IllegalStateException
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -23,19 +23,20 @@ class Atsc3Module(context: Context) : ClientListener {
     interface Listener {
         fun onStateChanged(state: State?)
         fun onServicesLoaded(services: List<Service?>)
-        fun onCurrentServiceHeldChanged(appContextId: String, entryPage: String)
+        fun onCurrentServiceHeldChanged(appContextId: String?, entryPage: String?)
     }
 
     private val client: atsc3NdkClient = atsc3NdkClient(context.cacheDir, this)
     private val usbDevice: Atsc3UsbDevice? = null
 
     private val serviceMap = ConcurrentHashMap<Int, Service>()
-    private val heldMap = ConcurrentHashMap<Int, Held>()
 
     private var isPcapOpened = false
     private var state = State.IDLE
     private var selectedServiceId = -1
     private var selectedServiceSLSProtocol = -1
+    private var selectedServiceHeld: Held? = null
+    private var selectedServiceHeldXml: String? = null
 
     @Volatile
     private var listener: Listener? = null
@@ -157,15 +158,16 @@ class Atsc3Module(context: Context) : ClientListener {
     }
 
     fun getSelectedServiceAppContextId(): String? {
-        return heldMap[selectedServiceId]?.appContextId
+        return selectedServiceHeld?.appContextId
     }
 
     fun getSelectedServiceEntryPoint(): String? {
-        return heldMap[selectedServiceId]?.bcastEntryPageUrl
+        return selectedServiceHeld?.bcastEntryPageUrl
     }
 
     private fun clear() {
-        heldMap.clear()
+        selectedServiceHeldXml = null
+        selectedServiceHeld = null
         serviceMap.clear()
         selectedServiceId = -1
         selectedServiceSLSProtocol = -1
@@ -180,12 +182,13 @@ class Atsc3Module(context: Context) : ClientListener {
     }
 
     override fun onSlsHeldReceived(service_id: Int, held_payload_xml: String) {
-        if (!heldMap.contains(service_id)) {
-            val held = HeldXmlParser().parseXML(held_payload_xml)
-            if (held != null) {
-                heldMap[service_id] = held
+        if (service_id == selectedServiceId) {
+            if (held_payload_xml != selectedServiceHeldXml) {
+                selectedServiceHeldXml = held_payload_xml
+                val held = HeldXmlParser().parseXML(held_payload_xml)
+                selectedServiceHeld = held
 
-                if (service_id == selectedServiceId) {
+                if (held != null) {
                     listener?.onCurrentServiceHeldChanged(held.appContextId, held.bcastEntryPageUrl)
                 }
             }
