@@ -83,7 +83,7 @@ class ReceiverController @Inject constructor(
     }
 
     override fun resetRMP() {
-        _rpmParams.postValue(RPMParams(1.0, 0, 0))
+        _rpmParams.postValue(RPMParams(100.0, 0, 0))
     }
 
     private fun reset() {
