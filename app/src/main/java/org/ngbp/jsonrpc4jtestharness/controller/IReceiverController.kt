@@ -19,4 +19,6 @@ interface IReceiverController {
     fun closeRoute()
 
     fun selectService(service: SLSService)
+
+    fun resetRMP()
 }
