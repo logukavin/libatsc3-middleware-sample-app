@@ -7,6 +7,6 @@ import org.ngbp.jsonrpc4jtestharness.controller.IReceiverController
 class RMPViewModel(
         controller: IReceiverController
 ) : ViewModel() {
-    val rmpParams = Transformations.map(controller.rpmParams) { it }
+    val rmpParams = Transformations.distinctUntilChanged(controller.rpmParams)
 }
 

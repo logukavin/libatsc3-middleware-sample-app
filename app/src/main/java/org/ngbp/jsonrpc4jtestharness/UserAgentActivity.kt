@@ -1,5 +1,6 @@
 package org.ngbp.jsonrpc4jtestharness
 
+import android.graphics.Color
 import android.net.http.SslError
 import android.os.Bundle
 import android.view.View
@@ -14,7 +15,6 @@ import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.view.postDelayed
 import androidx.lifecycle.Observer
 import dagger.android.AndroidInjection
-import org.ngbp.jsonrpc4jtestharness.controller.model.RPMParams
 import org.ngbp.jsonrpc4jtestharness.lifecycle.RMPViewModel
 import org.ngbp.jsonrpc4jtestharness.lifecycle.factory.UserAgentViewModelFactory
 import javax.inject.Inject
@@ -36,12 +36,12 @@ class UserAgentActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_user_agent)
         userAgentViewModel.rmpParams.observe(this, Observer { params ->
-            moveSprite(params)
+            moveSprite(params.x, params.y, params.scale)
         })
         userAgent = findViewById<WebView>(R.id.userAgent).apply {
             clearCache(true)
             setInitialScale(150)
-
+            setBackgroundColor(Color.TRANSPARENT)
             settings?.apply {
                 javaScriptEnabled = true
                 domStorageEnabled = true
@@ -52,18 +52,23 @@ class UserAgentActivity : AppCompatActivity() {
         }.also {
             loadContent(it)
         }
+
     }
 
-    private fun moveSprite(params: RPMParams) {
+    private fun moveSprite(x: Int, y: Int, scale: Double) {
         val constraintLayout = findViewById<ConstraintLayout>(R.id.root)
         val view = findViewById<View>(R.id.testView)
         val set = ConstraintSet()
         set.clone(constraintLayout)
-        set.connect(view.id, ConstraintSet.TOP, constraintLayout.id, ConstraintSet.TOP, ((constraintLayout.measuredHeight.toFloat() / 100) * params.y).toInt())
-        set.connect(view.id, ConstraintSet.START, constraintLayout.id, ConstraintSet.START, ((constraintLayout.measuredWidth.toFloat() / 100) * params.x).toInt())
-        set.constrainHeight(view.id, (constraintLayout.measuredHeight.toFloat() / 100 * params.scale).toInt())
-        set.constrainWidth(view.id, (constraintLayout.measuredWidth.toFloat() / 100 * params.scale).toInt())
+        set.connect(view.id, ConstraintSet.TOP, constraintLayout.id, ConstraintSet.TOP, getPercent(constraintLayout.measuredHeight, y))
+        set.connect(view.id, ConstraintSet.START, constraintLayout.id, ConstraintSet.START, getPercent(constraintLayout.measuredWidth, x))
+        set.constrainHeight(view.id, getPercent(constraintLayout.measuredHeight, scale.toInt()))
+        set.constrainWidth(view.id, getPercent(constraintLayout.measuredWidth, scale.toInt()))
         set.applyTo(constraintLayout)
+    }
+
+    private fun getPercent(value: Int, coefficient: Int): Int {
+        return ((value.toFloat() / 100) * coefficient).toInt()
     }
 
     private fun loadContent(webView: WebView) {
