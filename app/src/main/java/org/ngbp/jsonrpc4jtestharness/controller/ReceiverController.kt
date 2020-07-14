@@ -82,10 +82,14 @@ class ReceiverController @Inject constructor(
         }
     }
 
+    override fun resetRMP() {
+        _rpmParams.postValue(RPMParams(1.0, 0, 0))
+    }
+
     private fun reset() {
         rpcManager.queryServiceId = null
         _sltServices.postValue(emptyList())
-        _rpmParams.postValue(RPMParams(1.0, 0, 0))
         _appData.postValue(null)
+        resetRMP()
     }
 }
