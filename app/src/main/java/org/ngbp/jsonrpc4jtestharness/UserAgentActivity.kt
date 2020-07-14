@@ -3,18 +3,17 @@ package org.ngbp.jsonrpc4jtestharness
 import android.graphics.Color
 import android.net.http.SslError
 import android.os.Bundle
-import android.view.View
 import android.webkit.ClientCertRequest
 import android.webkit.SslErrorHandler
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.view.postDelayed
 import androidx.lifecycle.Observer
 import dagger.android.AndroidInjection
+import kotlinx.android.synthetic.main.activity_user_agent.*
 import org.ngbp.jsonrpc4jtestharness.lifecycle.RMPViewModel
 import org.ngbp.jsonrpc4jtestharness.lifecycle.factory.UserAgentViewModelFactory
 import javax.inject.Inject
@@ -56,14 +55,12 @@ class UserAgentActivity : AppCompatActivity() {
     }
 
     private fun moveSprite(x: Int, y: Int, scale: Double) {
-        val constraintLayout = findViewById<ConstraintLayout>(R.id.root)
-        val view = findViewById<View>(R.id.testView)
         val set = ConstraintSet()
         set.clone(constraintLayout)
-        set.connect(view.id, ConstraintSet.TOP, constraintLayout.id, ConstraintSet.TOP, getPercent(constraintLayout.measuredHeight, y))
-        set.connect(view.id, ConstraintSet.START, constraintLayout.id, ConstraintSet.START, getPercent(constraintLayout.measuredWidth, x))
-        set.constrainHeight(view.id, getPercent(constraintLayout.measuredHeight, scale.toInt()))
-        set.constrainWidth(view.id, getPercent(constraintLayout.measuredWidth, scale.toInt()))
+        set.setMargin(simpleView.id, ConstraintSet.TOP, getPercent(constraintLayout.measuredHeight, y))
+        set.setMargin(simpleView.id, ConstraintSet.START, getPercent(constraintLayout.measuredHeight, x))
+        set.constrainPercentHeight(simpleView.id, (scale / 100).toFloat())
+        set.constrainPercentWidth(simpleView.id, (scale / 100).toFloat())
         set.applyTo(constraintLayout)
     }
 
