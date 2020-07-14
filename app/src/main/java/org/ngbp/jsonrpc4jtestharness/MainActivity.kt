@@ -15,8 +15,6 @@ import android.widget.EditText
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import androidx.constraintlayout.widget.ConstraintLayout
-import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.content.ContextCompat
 import androidx.databinding.DataBindingUtil
 import androidx.lifecycle.Observer
@@ -100,12 +98,6 @@ class MainActivity : AppCompatActivity() {
 
         initLibAtsc3()
 
-        rmpViewModel.rmpX.observe(this, Observer { x ->
-            moveSprite(ConstraintSet.LEFT, ConstraintSet.LEFT, x)
-        })
-        rmpViewModel.rmpY.observe(this, Observer { y ->
-            moveSprite(ConstraintSet.TOP, ConstraintSet.TOP, y)
-        })
         userAgentViewModel.services.observe(this, Observer { services ->
             atsc3_service_spinner.adapter = ServiceAdapter(this, services)
         })
@@ -141,15 +133,6 @@ class MainActivity : AppCompatActivity() {
         override fun getItemId(position: Int): Long {
             return items.getOrNull(position)?.id?.toLong() ?: -1
         }
-    }
-
-    private fun moveSprite(startSide: Int, endSide: Int, value: Int) {
-        val constraintLayout = findViewById<ConstraintLayout>(R.id.root)
-        val view = findViewById<View>(R.id.testView)
-        val set = ConstraintSet()
-        set.clone(constraintLayout)
-        set.connect(view.id, startSide, constraintLayout.id, endSide, value * 10)
-        set.applyTo(constraintLayout)
     }
 
     private fun startUserAgent() {
