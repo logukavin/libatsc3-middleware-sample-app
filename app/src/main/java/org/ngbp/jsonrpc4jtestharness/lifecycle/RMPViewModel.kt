@@ -5,8 +5,12 @@ import androidx.lifecycle.ViewModel
 import org.ngbp.jsonrpc4jtestharness.controller.IReceiverController
 
 class RMPViewModel(
-        controller: IReceiverController
+        private val controller: IReceiverController
 ) : ViewModel() {
     val rmpParams = Transformations.distinctUntilChanged(controller.rpmParams)
+
+    fun reset() {
+        controller.resetRMP()
+    }
 }
 

@@ -49,6 +49,7 @@ class UserAgentActivity : AppCompatActivity() {
             loadContent(it)
         }
 
+        userAgentViewModel.reset()
         userAgentViewModel.rmpParams.observe(this, Observer { params ->
             updateRMPLayout(params.x.toFloat() / 100, params.y.toFloat() / 100, params.scale.toFloat() / 100)
         })
@@ -57,8 +58,8 @@ class UserAgentActivity : AppCompatActivity() {
     private fun updateRMPLayout(x: Float, y: Float, scale: Float) {
         ConstraintSet().apply {
             clone(user_agent_root)
-            setHorizontalBias(R.id.receiver_media_player, x / (1f - scale))
-            setVerticalBias(R.id.receiver_media_player, y / (1f - scale))
+            setHorizontalBias(R.id.receiver_media_player, if (scale == 1f) 0f else x / (1f - scale))
+            setVerticalBias(R.id.receiver_media_player, if (scale == 1f) 0f else y / (1f - scale))
             constrainPercentHeight(R.id.receiver_media_player, scale)
             constrainPercentWidth(R.id.receiver_media_player, scale)
         }.applyTo(user_agent_root)
