@@ -18,6 +18,7 @@ class RPCManager @Inject constructor() {
     var queryServiceId: String? = "tag:sinclairplatform.com,2020:WZTV:2727" //TODO: remove after tests
     val MPDUrl: String = "http://127.0.0.1:8080/10.4/MPD.mpd" //TODO: remove after applying data source
 
+    var playbackState: Int? = null
     fun setCallback(callback: IReceiverCallback) {
         if (this.callback != null) throw IllegalStateException("RPCManager callback already initialized")
         this.callback = callback

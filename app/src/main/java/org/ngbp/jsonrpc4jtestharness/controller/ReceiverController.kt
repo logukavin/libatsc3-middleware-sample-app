@@ -86,6 +86,10 @@ class ReceiverController @Inject constructor(
         _rpmParams.postValue(RPMParams(100.0, 0, 0))
     }
 
+    override fun rmpPlaybackChanged(state: Int) {
+        rpcManager.playbackState = state
+    }
+
     private fun reset() {
         rpcManager.queryServiceId = null
         _sltServices.postValue(emptyList())

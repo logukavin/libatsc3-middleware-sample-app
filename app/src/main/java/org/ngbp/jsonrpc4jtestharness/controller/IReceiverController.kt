@@ -21,4 +21,5 @@ interface IReceiverController {
     fun selectService(service: SLSService)
 
     fun resetRMP()
+    fun rmpPlaybackChanged(state: Int)
 }
