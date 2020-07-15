@@ -12,7 +12,6 @@ import com.github.nmuzhichin.jsonrpc.model.response.Response
 import com.github.nmuzhichin.jsonrpc.model.response.ResponseUtils
 import com.github.nmuzhichin.jsonrpc.model.response.errors.Error
 import com.github.nmuzhichin.jsonrpc.module.JsonRpcModule
-import org.ngbp.jsonrpc4jtestharness.PlaybackState
 import org.ngbp.jsonrpc4jtestharness.rpc.ERROR_CODES
 import org.ngbp.jsonrpc4jtestharness.rpc.RpcError
 import org.ngbp.jsonrpc4jtestharness.rpc.asynchronousNotificationsofChanges.AsynchronousNotificationsOfChangesImpl
@@ -132,9 +131,4 @@ class RPCProcessor @Inject constructor(
             return null
         }
     }
-
-    fun updatePlaybackState(state: PlaybackState) {
-        rpcManager.playbackState = state
-    }
-
 }
