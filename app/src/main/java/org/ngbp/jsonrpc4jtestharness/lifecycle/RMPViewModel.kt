@@ -15,7 +15,7 @@ class RMPViewModel(
     }
 
     fun setState(state: PlaybackState) {
-        controller.playerState.postValue(state.state)
+        controller.rmpPlaybackChanged(state.state)
     }
 }
 
