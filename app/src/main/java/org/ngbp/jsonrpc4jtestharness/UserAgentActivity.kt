@@ -39,7 +39,19 @@ class UserAgentActivity : AppCompatActivity() {
 
         setContentView(R.layout.activity_user_agent)
 
+        val swipeGD = GestureDetector(this, object: SwipeGestureDetector(user_agent_web_view) {
+            override fun onClose(view: View) {
+                closeBAMenu(view)
+            }
+
+            override fun onOpen(view: View) {
+                openBAMenu(view)
+            }
+        })
+
         user_agent_web_view.apply {
+            setOnTouchListener { _, motionEvent -> swipeGD.onTouchEvent(motionEvent) }
+
             clearCache(true)
             setInitialScale(150)
             setBackgroundColor(Color.TRANSPARENT)
@@ -52,9 +64,6 @@ class UserAgentActivity : AppCompatActivity() {
             webViewClient = createWebViewClient()
         }.also {
             loadContent(it)
-
-            val gd = GestureDetector(this, createSwipeGestureDetector(it))
-            it.setOnTouchListener { _, motionEvent -> gd.onTouchEvent(motionEvent) }
         }
 
         userAgentViewModel.reset()
@@ -93,20 +102,29 @@ class UserAgentActivity : AppCompatActivity() {
         }
     }
 
-    private fun createSwipeGestureDetector(view: View) = object : GestureDetector.SimpleOnGestureListener() {
+    private abstract class SwipeGestureDetector(private var view: View): GestureDetector.SimpleOnGestureListener() {
 
         override fun onFling(e1: MotionEvent, e2: MotionEvent, velocityX: Float, velocityY: Float): Boolean {
             if (e1.x - e2.x > 100 && abs(velocityX) > 800) {
-//                Close BA Menu
-                view.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_LEFT))
-                view.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_LEFT))
+                onClose(view)
             } else if (e2.x - e1.x > 100 && abs(velocityX) > 800) {
-//                Open BA Menu
-                view.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_RIGHT))
-                view.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_RIGHT))
+                onOpen(view)
             }
 
             return super.onFling(e1, e2, velocityX, velocityY)
         }
+
+        abstract fun onClose(view: View)
+        abstract fun onOpen(view: View)
+    }
+
+    private fun closeBAMenu(view: View) {
+        view.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_LEFT))
+        view.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_LEFT))
+    }
+
+    private fun openBAMenu(view: View) {
+        view.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_RIGHT))
+        view.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_RIGHT))
     }
 }
