@@ -5,7 +5,6 @@ import android.net.http.SslError
 import android.os.Bundle
 import android.view.GestureDetector
 import android.view.KeyEvent
-import android.view.MotionEvent
 import android.view.View
 import android.webkit.ClientCertRequest
 import android.webkit.SslErrorHandler
@@ -18,10 +17,10 @@ import androidx.core.view.postDelayed
 import androidx.lifecycle.Observer
 import dagger.android.AndroidInjection
 import kotlinx.android.synthetic.main.activity_user_agent.*
+import org.ngbp.jsonrpc4jtestharness.core.SwipeGestureDetector
 import org.ngbp.jsonrpc4jtestharness.lifecycle.RMPViewModel
 import org.ngbp.jsonrpc4jtestharness.lifecycle.factory.UserAgentViewModelFactory
 import javax.inject.Inject
-import kotlin.math.abs
 
 class UserAgentActivity : AppCompatActivity() {
     companion object {
@@ -100,22 +99,6 @@ class UserAgentActivity : AppCompatActivity() {
             }
             request.proceed(CertificateUtils.privateKey, CertificateUtils.certificates)
         }
-    }
-
-    private abstract class SwipeGestureDetector(private var view: View): GestureDetector.SimpleOnGestureListener() {
-
-        override fun onFling(e1: MotionEvent, e2: MotionEvent, velocityX: Float, velocityY: Float): Boolean {
-            if (e1.x - e2.x > 100 && abs(velocityX) > 800) {
-                onClose(view)
-            } else if (e2.x - e1.x > 100 && abs(velocityX) > 800) {
-                onOpen(view)
-            }
-
-            return super.onFling(e1, e2, velocityX, velocityY)
-        }
-
-        abstract fun onClose(view: View)
-        abstract fun onOpen(view: View)
     }
 
     private fun closeBAMenu(view: View) {
