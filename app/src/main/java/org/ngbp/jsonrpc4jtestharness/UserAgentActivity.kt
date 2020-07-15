@@ -16,11 +16,9 @@ import dagger.android.AndroidInjection
 import kotlinx.android.synthetic.main.activity_user_agent.*
 import org.ngbp.jsonrpc4jtestharness.lifecycle.RMPViewModel
 import org.ngbp.jsonrpc4jtestharness.lifecycle.factory.UserAgentViewModelFactory
-import org.ngbp.jsonrpc4jtestharness.rpc.manager.RPCManager
-import org.ngbp.jsonrpc4jtestharness.rpc.processor.RPCProcessor
 import javax.inject.Inject
 
-class UserAgentActivity : AppCompatActivity(), PlaybackListener {
+class UserAgentActivity : AppCompatActivity() {
     companion object {
         const val CONTENT_URL = "https://127.0.0.1:8443/index.html?wsURL=ws://127.0.0.1:9998&rev=20180720"
     }
@@ -85,9 +83,5 @@ class UserAgentActivity : AppCompatActivity(), PlaybackListener {
             }
             request.proceed(CertificateUtils.privateKey, CertificateUtils.certificates)
         }
-    }
-
-    override fun onStateChanged(state: PlaybackState) {
-        userAgentViewModel.setState(state)
     }
 }

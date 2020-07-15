@@ -29,14 +29,10 @@ class ReceiverController @Inject constructor(
     override val sltServices = Transformations.distinctUntilChanged(_sltServices)
     override val appData = Transformations.distinctUntilChanged(_appData)
     override val rpmParams = Transformations.distinctUntilChanged(_rpmParams)
-    override val playerState = MutableLiveData<Int>()
 
     init {
         atsc3Module.setListener(this)
         rpcManager.setCallback(this)
-        playerState.observeForever {
-            rpcManager.playbackState = it
-        }
     }
 
     override fun onStateChanged(state: Atsc3Module.State?) {
@@ -88,6 +84,10 @@ class ReceiverController @Inject constructor(
 
     override fun resetRMP() {
         _rpmParams.postValue(RPMParams(100.0, 0, 0))
+    }
+
+    override fun rmpPlaybackChanged(state: Int) {
+        rpcManager.playbackState = state
     }
 
     private fun reset() {
