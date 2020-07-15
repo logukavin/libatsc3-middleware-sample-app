@@ -16,6 +16,7 @@ import dagger.android.AndroidInjection
 import kotlinx.android.synthetic.main.activity_user_agent.*
 import org.ngbp.jsonrpc4jtestharness.lifecycle.RMPViewModel
 import org.ngbp.jsonrpc4jtestharness.lifecycle.factory.UserAgentViewModelFactory
+import org.ngbp.jsonrpc4jtestharness.rpc.manager.RPCManager
 import org.ngbp.jsonrpc4jtestharness.rpc.processor.RPCProcessor
 import javax.inject.Inject
 
@@ -28,7 +29,7 @@ class UserAgentActivity : AppCompatActivity(), PlaybackListener {
     lateinit var userAgentViewModelFactory: UserAgentViewModelFactory
 
     @Inject
-    lateinit var rpcProcessor: RPCProcessor
+    lateinit var rpcProcessor: RPCManager
 
     private val userAgentViewModel: RMPViewModel by viewModels { userAgentViewModelFactory }
 
@@ -90,6 +91,6 @@ class UserAgentActivity : AppCompatActivity(), PlaybackListener {
     }
 
     override fun onStateChanged(state: PlaybackState) {
-        rpcProcessor.updatePlaybackState(state)
+        rpcProcessor.playbackState = state
     }
 }
