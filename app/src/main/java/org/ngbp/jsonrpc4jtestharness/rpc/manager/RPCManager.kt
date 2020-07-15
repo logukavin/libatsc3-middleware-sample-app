@@ -1,6 +1,6 @@
 package org.ngbp.jsonrpc4jtestharness.rpc.manager
 
-import org.ngbp.jsonrpc4jtestharness.PlaybackState
+import org.ngbp.jsonrpc4jtestharness.rpc.receiverQueryApi.model.MPDUrl
 import java.lang.IllegalStateException
 import java.util.*
 import javax.inject.Inject
@@ -13,9 +13,10 @@ class RPCManager @Inject constructor() {
     }
 
     private var callback: IReceiverCallback? = null
-
     var language: String = Locale.getDefault().language
+
     var queryServiceId: String? = "tag:sinclairplatform.com,2020:WZTV:2727" //TODO: remove after tests
+    val MPDUrl: String = "http://127.0.0.1:8080/10.4/MPD.mpd" //TODO: remove after applying data source
 
     var playbackState: Int? = null
     fun setCallback(callback: IReceiverCallback) {
