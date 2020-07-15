@@ -1,6 +1,7 @@
 package org.ngbp.jsonrpc4jtestharness.controller
 
 import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import org.ngbp.jsonrpc4jtestharness.controller.model.AppData
 import org.ngbp.jsonrpc4jtestharness.controller.model.RPMParams
 import org.ngbp.jsonrpc4jtestharness.controller.model.SLSService
@@ -13,6 +14,8 @@ interface IReceiverController {
     val appData: LiveData<AppData?>
 
     val rpmParams: LiveData<RPMParams>
+
+    val playerState: MutableLiveData<Int>
 
     fun openRoute(pcapFile: String): Boolean
     fun stopRoute()
