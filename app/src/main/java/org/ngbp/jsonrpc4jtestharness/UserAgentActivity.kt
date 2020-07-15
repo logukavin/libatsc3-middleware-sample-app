@@ -53,7 +53,7 @@ class UserAgentActivity : AppCompatActivity() {
         }.also {
             loadContent(it)
 
-            val gd = GestureDetector(this, createSwipeGestureDetector(it))
+            val gd = GestureDetector(this, SwipeGestureDetector(it))
             it.setOnTouchListener { _, motionEvent -> gd.onTouchEvent(motionEvent) }
         }
 
@@ -93,7 +93,7 @@ class UserAgentActivity : AppCompatActivity() {
         }
     }
 
-    private fun createSwipeGestureDetector(view: View) = object : GestureDetector.SimpleOnGestureListener() {
+    private class SwipeGestureDetector(private var view: View): GestureDetector.SimpleOnGestureListener() {
 
         override fun onFling(e1: MotionEvent, e2: MotionEvent, velocityX: Float, velocityY: Float): Boolean {
             if (e1.x - e2.x > 100 && abs(velocityX) > 800) {
