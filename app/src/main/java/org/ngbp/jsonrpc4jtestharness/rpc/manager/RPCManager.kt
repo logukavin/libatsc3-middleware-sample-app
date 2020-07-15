@@ -1,5 +1,6 @@
 package org.ngbp.jsonrpc4jtestharness.rpc.manager
 
+import org.ngbp.jsonrpc4jtestharness.PlaybackState
 import java.lang.IllegalStateException
 import java.util.*
 import javax.inject.Inject
@@ -16,6 +17,7 @@ class RPCManager @Inject constructor() {
     var language: String = Locale.getDefault().language
     var queryServiceId: String? = "tag:sinclairplatform.com,2020:WZTV:2727" //TODO: remove after tests
 
+    var playbackState: PlaybackState? = null
     fun setCallback(callback: IReceiverCallback) {
         if (this.callback != null) throw IllegalStateException("RPCManager callback already initialized")
         this.callback = callback
