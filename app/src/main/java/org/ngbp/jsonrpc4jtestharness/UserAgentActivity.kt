@@ -28,9 +28,6 @@ class UserAgentActivity : AppCompatActivity(), PlaybackListener {
     @Inject
     lateinit var userAgentViewModelFactory: UserAgentViewModelFactory
 
-    @Inject
-    lateinit var rpcProcessor: RPCManager
-
     private val userAgentViewModel: RMPViewModel by viewModels { userAgentViewModelFactory }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -91,6 +88,6 @@ class UserAgentActivity : AppCompatActivity(), PlaybackListener {
     }
 
     override fun onStateChanged(state: PlaybackState) {
-        rpcProcessor.playbackState = state
+        userAgentViewModel.setState(state)
     }
 }

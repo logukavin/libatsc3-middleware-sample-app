@@ -18,7 +18,7 @@ class RMPContentSynchronizationImpl(val rpcManager: RPCManager) : IRMPContentSyn
 
     private val NOT_PAYING_STATE = 2
     override fun queryRMPPlaybackState(): RmpPlaybackState {
-        return RmpPlaybackState((rpcManager.playbackState?.state) ?: NOT_PAYING_STATE)
+        return RmpPlaybackState(rpcManager.playbackState ?: NOT_PAYING_STATE)
     }
 
     override fun queryRMPPlaybackRate(): RmpPlaybackRate {
