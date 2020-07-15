@@ -38,13 +38,13 @@ class UserAgentActivity : AppCompatActivity() {
 
         setContentView(R.layout.activity_user_agent)
 
-        val swipeGD = GestureDetector(this, object: SwipeGestureDetector(user_agent_web_view) {
-            override fun onClose(view: View) {
-                closeBAMenu(view)
+        val swipeGD = GestureDetector(this, object: SwipeGestureDetector() {
+            override fun onClose() {
+                closeBAMenu(user_agent_web_view)
             }
 
-            override fun onOpen(view: View) {
-                openBAMenu(view)
+            override fun onOpen() {
+                openBAMenu(user_agent_web_view)
             }
         })
 
@@ -101,13 +101,11 @@ class UserAgentActivity : AppCompatActivity() {
         }
     }
 
-    private fun closeBAMenu(view: View) {
-        view.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_LEFT))
-        view.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_LEFT))
+    private fun sendKeyPress(view: View, key: Int) {
+        view.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, key))
+        view.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, key))
     }
 
-    private fun openBAMenu(view: View) {
-        view.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_RIGHT))
-        view.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_RIGHT))
-    }
+    private fun closeBAMenu(view: View) = sendKeyPress(view, KeyEvent.KEYCODE_DPAD_LEFT)
+    private fun openBAMenu(view: View) = sendKeyPress(view, KeyEvent.KEYCODE_DPAD_RIGHT)
 }
