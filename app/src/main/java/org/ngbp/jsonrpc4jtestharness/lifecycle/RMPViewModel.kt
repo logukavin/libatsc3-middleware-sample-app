@@ -2,6 +2,7 @@ package org.ngbp.jsonrpc4jtestharness.lifecycle
 
 import androidx.lifecycle.Transformations
 import androidx.lifecycle.ViewModel
+import org.ngbp.jsonrpc4jtestharness.PlaybackState
 import org.ngbp.jsonrpc4jtestharness.controller.IReceiverController
 
 class RMPViewModel(
@@ -11,6 +12,10 @@ class RMPViewModel(
 
     fun reset() {
         controller.resetRMP()
+    }
+
+    fun setState(state: PlaybackState) {
+        controller.rmpPlaybackChanged(state.state)
     }
 }
 
