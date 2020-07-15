@@ -3,6 +3,10 @@ package org.ngbp.jsonrpc4jtestharness
 import android.graphics.Color
 import android.net.http.SslError
 import android.os.Bundle
+import android.view.GestureDetector
+import android.view.KeyEvent
+import android.view.MotionEvent
+import android.view.View
 import android.webkit.ClientCertRequest
 import android.webkit.SslErrorHandler
 import android.webkit.WebView
@@ -17,6 +21,7 @@ import kotlinx.android.synthetic.main.activity_user_agent.*
 import org.ngbp.jsonrpc4jtestharness.lifecycle.RMPViewModel
 import org.ngbp.jsonrpc4jtestharness.lifecycle.factory.UserAgentViewModelFactory
 import javax.inject.Inject
+import kotlin.math.abs
 
 class UserAgentActivity : AppCompatActivity() {
     companion object {
@@ -47,6 +52,9 @@ class UserAgentActivity : AppCompatActivity() {
             webViewClient = createWebViewClient()
         }.also {
             loadContent(it)
+
+            val gd = GestureDetector(this, createSwipeGestureDetector(it))
+            it.setOnTouchListener { _, motionEvent -> gd.onTouchEvent(motionEvent) }
         }
 
         userAgentViewModel.reset()
@@ -82,6 +90,23 @@ class UserAgentActivity : AppCompatActivity() {
                 CertificateUtils.loadCertificateAndPrivateKey(view.context)
             }
             request.proceed(CertificateUtils.privateKey, CertificateUtils.certificates)
+        }
+    }
+
+    private fun createSwipeGestureDetector(view: View) = object : GestureDetector.SimpleOnGestureListener() {
+
+        override fun onFling(e1: MotionEvent, e2: MotionEvent, velocityX: Float, velocityY: Float): Boolean {
+            if (e1.x - e2.x > 100 && abs(velocityX) > 800) {
+//                Close BA Menu
+                view.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_LEFT))
+                view.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_LEFT))
+            } else if (e2.x - e1.x > 100 && abs(velocityX) > 800) {
+//                Open BA Menu
+                view.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_RIGHT))
+                view.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_RIGHT))
+            }
+
+            return super.onFling(e1, e2, velocityX, velocityY)
         }
     }
 }
