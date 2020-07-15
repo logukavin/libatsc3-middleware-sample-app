@@ -36,7 +36,7 @@ class ReceiverQueryApiImpl(val rpcManager: RPCManager) : IReceiverQueryApi {
         return AudioAccessibilityPref()
     }
 
-    override fun queryMPDURL(): MPDUrl {
+    override fun queryMPDUrl(): MPDUrl {
         return MPDUrl(rpcManager.MPDUrl)
     }
 

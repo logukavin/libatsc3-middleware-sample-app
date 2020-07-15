@@ -25,7 +25,7 @@ interface IReceiverQueryApi {
     fun queryAudioAccessibilityPreferences(): AudioAccessibilityPref
 
     @JsonRpcMethod("org.atsc.query.MPDUrl")
-    fun queryMPDURL(): MPDUrl
+    fun queryMPDUrl(): MPDUrl
 
     @JsonRpcMethod("org.atsc.query.baseURI")
     fun queryReceiverWebServerURI(): BaseURI
