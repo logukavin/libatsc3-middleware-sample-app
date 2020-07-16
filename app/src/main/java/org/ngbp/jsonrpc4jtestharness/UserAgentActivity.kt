@@ -31,6 +31,7 @@ class UserAgentActivity : AppCompatActivity() {
     lateinit var userAgentViewModelFactory: UserAgentViewModelFactory
 
     private val userAgentViewModel: RMPViewModel by viewModels { userAgentViewModelFactory }
+    private var isBAMenuOpened = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         AndroidInjection.inject(this)
@@ -106,6 +107,20 @@ class UserAgentActivity : AppCompatActivity() {
         view.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, key))
     }
 
-    private fun closeBAMenu(view: View) = sendKeyPress(view, KeyEvent.KEYCODE_DPAD_LEFT)
-    private fun openBAMenu(view: View) = sendKeyPress(view, KeyEvent.KEYCODE_DPAD_RIGHT)
+    private fun closeBAMenu(view: View) {
+        sendKeyPress(view, KeyEvent.KEYCODE_DPAD_LEFT)
+        isBAMenuOpened = false
+    }
+
+    private fun openBAMenu(view: View) {
+        sendKeyPress(view, KeyEvent.KEYCODE_DPAD_RIGHT)
+        isBAMenuOpened = true
+    }
+
+    override fun onBackPressed() {
+        if (isBAMenuOpened) {
+            closeBAMenu(user_agent_web_view)
+        } else super.onBackPressed()
+    }
+
 }
