@@ -1,6 +1,5 @@
 package org.ngbp.jsonrpc4jtestharness.lifecycle
 
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Transformations
 import androidx.lifecycle.ViewModel
 import org.ngbp.jsonrpc4jtestharness.controller.IUserAgentController
@@ -11,7 +10,7 @@ class UserAgentViewModel(
 ) : ViewModel() {
 
     val services = Transformations.distinctUntilChanged(agentController.sltServices)
-    val isReady = MutableLiveData<Boolean>().apply { value = true } //TODO: Transformations.map(controller.appData) { isAppReady(it ) }
+    val isReady = /*MutableLiveData<Boolean>().apply { value = true } //TODO:*/ Transformations.map(agentController.appData) { isAppReady(it ) }
     val appData = Transformations.distinctUntilChanged(agentController.appData)
 
     fun selectService(serviceId: Int) {

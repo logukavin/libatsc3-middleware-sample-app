@@ -8,3 +8,8 @@
 	url = https://NGWP@dev.azure.com/NGWP/Middleware/_git/jsonrpc2
 	branch = master
 	update = rebase
+[submodule "ExoPlayer"]
+	path = ExoPlayer
+	url = https://github.com/jjustman/ExoPlayer.git
+	branch = release-v2
+	update = rebase
