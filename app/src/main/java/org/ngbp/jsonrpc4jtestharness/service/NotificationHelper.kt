@@ -7,10 +7,8 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import androidx.core.app.NotificationCompat
-import org.ngbp.jsonrpc4jtestharness.WithoutUIActivity
 import org.ngbp.jsonrpc4jtestharness.MainActivity
 import org.ngbp.jsonrpc4jtestharness.R
-import org.ngbp.jsonrpc4jtestharness.controller.model.PlaybackState
 
 class NotificationHelper {
     private var context: Context
@@ -18,9 +16,8 @@ class NotificationHelper {
 
 
     companion object {
-        private val PLAYER_ACTION_PLAY = "player_action_play"
-        private val PLAYER_ACTION_PAUSE = "player_action_pause"
-        val PLAYER_ACTION = "player_action"
+        const val PLAYER_ACTION_PLAY = "org.ngbp.jsonrpc4jtestharness.Notification.Play"
+        const val PLAYER_ACTION_PAUSE = "org.ngbp.jsonrpc4jtestharness.Notification.Pause"
     }
 
     constructor(context: Context) {
@@ -44,21 +41,20 @@ class NotificationHelper {
                 .setContentTitle("Foreground Rpc Service")
                 .setContentText(contentText)
                 .setSmallIcon(R.mipmap.ic_launcher_round)
-                .addAction(R.mipmap.ic_play, context.getString(R.string.play_btn_title), getPendingIntent(PLAYER_ACTION_PLAY, PlaybackState.PLAYING.state)) // #0
-                .addAction(R.mipmap.ic_pause, context.getString(R.string.pause_btn_title), getPendingIntent(PLAYER_ACTION_PAUSE, PlaybackState.PAUSED.state)) // #1
+                .addAction(R.mipmap.ic_play, context.getString(R.string.notification_play_btn_title), getPendingIntent(PLAYER_ACTION_PLAY)) // #0
+                .addAction(R.mipmap.ic_pause, context.getString(R.string.notification_pause_btn_title), getPendingIntent(PLAYER_ACTION_PAUSE)) // #1
                 .setStyle(androidx.media.app.NotificationCompat.MediaStyle())
                 .setContentIntent(pendingIntent)
                 .build()
     }
 
-    private fun getPendingIntent(intentAction: String, btnAction: Int): PendingIntent {
-        return PendingIntent.getActivity(context, 0, getPlayerIntent(intentAction, btnAction), 0)
+    private fun getPendingIntent(intentAction: String): PendingIntent {
+        return PendingIntent.getActivity(context, 0, getPlayerIntent(intentAction), 0)
     }
 
-    private fun getPlayerIntent(payerAction: String, btnAction: Int): Intent {
-        return Intent(context, WithoutUIActivity::class.java).apply {
+    private fun getPlayerIntent(payerAction: String): Intent {
+        return Intent().apply {
             action = payerAction
-            putExtra(PLAYER_ACTION, btnAction)
             addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP and Intent.FLAG_ACTIVITY_CLEAR_TOP)
         }
 
