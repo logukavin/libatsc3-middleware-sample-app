@@ -14,12 +14,15 @@ import org.ngbp.jsonrpc4jtestharness.R
 class NotificationHelper {
     private var context: Context
     private var CHANNEL_ID: String = "ForegroundRpcServiceChannel"
-    private val PLAYER_ACTION_PLAY = "player_action_play"
-    private val PLAYER_ACTION_STOP = "player_action_stop"
-    private val PLAYER_ACTION = "player_action"
 
-    private val PLAY = "Play"
-    private val PAUSE = "Pause"
+
+    companion object {
+        private val PLAYER_ACTION_PLAY = "player_action_play"
+        private val PLAYER_ACTION_PAUSE = "player_action_pause"
+        private val PLAYER_ACTION = "player_action"
+        private val PLAY = "Play"
+        private val PAUSE = "Pause"
+    }
 
     constructor(context: Context) {
         this.context = context
@@ -42,19 +45,15 @@ class NotificationHelper {
                 .setContentTitle("Foreground Rpc Service")
                 .setContentText(contentText)
                 .setSmallIcon(R.mipmap.ic_launcher_round)
-                .addAction(R.mipmap.ic_play, PLAY, getPlayIntent()) // #0
-                .addAction(R.mipmap.ic_pause, PAUSE, getPauseIntent()) // #1
+                .addAction(R.mipmap.ic_play, context.getString(R.string.play_btn_title), getPendingIntent(PLAYER_ACTION_PLAY, PLAY)) // #0
+                .addAction(R.mipmap.ic_pause, context.getString(R.string.pause_btn_title), getPendingIntent(PLAYER_ACTION_PAUSE, PAUSE)) // #1
                 .setStyle(androidx.media.app.NotificationCompat.MediaStyle())
                 .setContentIntent(pendingIntent)
                 .build()
     }
 
-    private fun getPauseIntent(): PendingIntent {
-        return PendingIntent.getBroadcast(context, 0, getPlayerIntent(PLAYER_ACTION_PLAY, PAUSE), 0)
-    }
-
-    private fun getPlayIntent(): PendingIntent {
-        return PendingIntent.getBroadcast(context, 0, getPlayerIntent(PLAYER_ACTION_STOP, PLAY), 0)
+    private fun getPendingIntent(intentAction: String, btnAction: String): PendingIntent {
+        return PendingIntent.getBroadcast(context, 0, getPlayerIntent(intentAction, btnAction), 0)
     }
 
     private fun getPlayerIntent(payerAction: String, btnAction: String): Intent {

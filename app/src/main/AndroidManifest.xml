@@ -35,7 +35,10 @@
             android:theme="@style/NoActionBar">
 
         </activity>
-        <receiver android:name=".service.PlayerBroadcast" />
+        <activity
+            android:name=".ActivityWihtoutUI"
+            android:theme="@android:style/Theme.NoDisplay" />
+
         <service
             android:name=".service.ForegroundRpcService"
             android:enabled="true"
