@@ -1,5 +1,5 @@
 <resources>
     <string name="app_name">jsonrpc4j test harness</string>
-    <string name="play_btn_title">Play</string>
-    <string name="pause_btn_title">Pause</string>
+    <string name="notification_play_btn_title">Play</string>
+    <string name="notification_pause_btn_title">Pause</string>
 </resources>

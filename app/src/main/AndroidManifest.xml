@@ -36,8 +36,16 @@
 
         </activity>
         <activity
-            android:name=".WithoutUIActivity"
-            android:theme="@android:style/Theme.NoDisplay" />
+            android:name=".PlayerCallbackActivity"
+            android:theme="@android:style/Theme.NoDisplay">
+            <intent-filter>
+                <action android:name="org.ngbp.jsonrpc4jtestharness.Notification.Play" />
+                <action android:name="org.ngbp.jsonrpc4jtestharness.Notification.Pause" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+
+        </activity>
 
         <service
             android:name=".service.ForegroundRpcService"
