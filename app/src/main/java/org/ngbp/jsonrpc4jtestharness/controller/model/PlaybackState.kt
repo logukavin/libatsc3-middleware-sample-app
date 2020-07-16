@@ -1,4 +1,4 @@
-package org.ngbp.jsonrpc4jtestharness
+package org.ngbp.jsonrpc4jtestharness.controller.model
 
 enum class PlaybackState(val state: Int) {
     PLAYING(0),
