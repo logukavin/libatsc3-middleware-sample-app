@@ -98,6 +98,8 @@ class Atsc3Module(context: Context) : ClientListener {
     }
 
     fun selectService(serviceId: Int): Boolean {
+        clearHeld()
+
         selectedServiceId = serviceId
         selectedServiceSLSProtocol = client.atsc3_slt_selectService(serviceId)
 
@@ -138,12 +140,12 @@ class Atsc3Module(context: Context) : ClientListener {
         setState(State.IDLE)
     }
 
-    fun getSelectedServiceMediaUri(): Uri? {
-        var mediaUri: Uri? = null
+    fun getSelectedServiceMediaUri(): String? {
+        var mediaUri: String? = null
         if (selectedServiceSLSProtocol == 1) {
             val routeMPDFileName = client.atsc3_slt_alc_get_sls_metadata_fragments_content_locations_from_monitor_service_id(selectedServiceId, DASH_CONTENT_TYPE)
             if (routeMPDFileName.isNotEmpty()) {
-                mediaUri = Uri.parse(String.format("%s/%s", client.cacheDir, routeMPDFileName[0]))
+                mediaUri = String.format("%s/%s", client.cacheDir, routeMPDFileName[0])
             } else {
                 log("Unable to resolve Dash MPD path from MBMS envelope, service_id: %d", selectedServiceId)
             }
@@ -165,11 +167,19 @@ class Atsc3Module(context: Context) : ClientListener {
     }
 
     private fun clear() {
-        selectedServiceHeldXml = null
-        selectedServiceHeld = null
+        clearHeld()
+        clearService()
         serviceMap.clear()
+    }
+
+    private fun clearService() {
         selectedServiceId = -1
         selectedServiceSLSProtocol = -1
+    }
+
+    private fun clearHeld() {
+        selectedServiceHeld = null
+        selectedServiceHeldXml = null
     }
 
     override fun onSlsTablePresent(sls_payload_xml: String) {

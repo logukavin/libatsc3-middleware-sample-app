@@ -1,12 +1,12 @@
 package org.ngbp.jsonrpc4jtestharness.controller
 
-import org.ngbp.jsonrpc4jtestharness.PlaybackState
+import org.ngbp.jsonrpc4jtestharness.controller.model.PlaybackState
 
 interface IRPCController {
-    var language: String
-    var queryServiceId: String?
-    var mediaUrl: String?
-    var playbackState: PlaybackState
+    val language: String
+    val queryServiceId: String?
+    val mediaUrl: String?
+    val playbackState: PlaybackState
 
     fun updateViewPosition(scaleFactor: Double?, xPos: Double?, yPos: Double?)
 }
