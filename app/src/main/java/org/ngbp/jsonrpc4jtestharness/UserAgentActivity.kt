@@ -3,6 +3,9 @@ package org.ngbp.jsonrpc4jtestharness
 import android.graphics.Color
 import android.net.http.SslError
 import android.os.Bundle
+import android.view.GestureDetector
+import android.view.KeyEvent
+import android.view.View
 import android.webkit.ClientCertRequest
 import android.webkit.SslErrorHandler
 import android.webkit.WebView
@@ -14,6 +17,7 @@ import androidx.core.view.postDelayed
 import androidx.lifecycle.Observer
 import dagger.android.AndroidInjection
 import kotlinx.android.synthetic.main.activity_user_agent.*
+import org.ngbp.jsonrpc4jtestharness.core.SwipeGestureDetector
 import org.ngbp.jsonrpc4jtestharness.lifecycle.RMPViewModel
 import org.ngbp.jsonrpc4jtestharness.lifecycle.factory.UserAgentViewModelFactory
 import javax.inject.Inject
@@ -34,7 +38,19 @@ class UserAgentActivity : AppCompatActivity() {
 
         setContentView(R.layout.activity_user_agent)
 
+        val swipeGD = GestureDetector(this, object: SwipeGestureDetector() {
+            override fun onClose() {
+                closeBAMenu(user_agent_web_view)
+            }
+
+            override fun onOpen() {
+                openBAMenu(user_agent_web_view)
+            }
+        })
+
         user_agent_web_view.apply {
+            setOnTouchListener { _, motionEvent -> swipeGD.onTouchEvent(motionEvent) }
+
             clearCache(true)
             setInitialScale(150)
             setBackgroundColor(Color.TRANSPARENT)
@@ -84,4 +100,12 @@ class UserAgentActivity : AppCompatActivity() {
             request.proceed(CertificateUtils.privateKey, CertificateUtils.certificates)
         }
     }
+
+    private fun sendKeyPress(view: View, key: Int) {
+        view.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, key))
+        view.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, key))
+    }
+
+    private fun closeBAMenu(view: View) = sendKeyPress(view, KeyEvent.KEYCODE_DPAD_LEFT)
+    private fun openBAMenu(view: View) = sendKeyPress(view, KeyEvent.KEYCODE_DPAD_RIGHT)
 }
