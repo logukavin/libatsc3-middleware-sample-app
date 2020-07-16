@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModelProvider
 import org.ngbp.jsonrpc4jtestharness.controller.IMediaPlayerController
 import org.ngbp.jsonrpc4jtestharness.controller.IUserAgentController
 import org.ngbp.jsonrpc4jtestharness.lifecycle.RMPViewModel
+import org.ngbp.jsonrpc4jtestharness.lifecycle.ReceiverViewModel
 import org.ngbp.jsonrpc4jtestharness.lifecycle.UserAgentViewModel
 import javax.inject.Inject
 
@@ -19,6 +20,8 @@ class UserAgentViewModelFactory @Inject constructor(
             return RMPViewModel(mediaPlayerController) as T
         } else if (modelClass.isAssignableFrom(UserAgentViewModel::class.java)) {
             return UserAgentViewModel(userAgentController) as T
+        } else if (modelClass.isAssignableFrom(ReceiverViewModel::class.java)) {
+            return ReceiverViewModel(userAgentController, mediaPlayerController) as T
         }
 
         throw ClassNotFoundException()
