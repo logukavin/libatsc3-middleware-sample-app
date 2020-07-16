@@ -44,10 +44,8 @@ class NotificationHelper {
                 .setContentTitle("Foreground Rpc Service")
                 .setContentText(contentText)
                 .setSmallIcon(R.mipmap.ic_launcher_round)
-                .addAction(R.mipmap.ic_play, context.getString(R.string.play_btn_title), getPendingIntent(PLAYER_ACTION_PLAY, 0)) // #0
-//                .addAction(R.mipmap.ic_play, context.getString(R.string.play_btn_title), getPendingIntent(PLAYER_ACTION_PLAY, PlaybackState.PLAYING.state)) // #0
-                .addAction(R.mipmap.ic_pause, context.getString(R.string.pause_btn_title), getPendingIntent(PLAYER_ACTION_PAUSE, 1)) // #1
-//                .addAction(R.mipmap.ic_pause, context.getString(R.string.pause_btn_title), getPendingIntent(PLAYER_ACTION_PAUSE, PlaybackState.PAUSED.state)) // #1
+                .addAction(R.mipmap.ic_play, context.getString(R.string.play_btn_title), getPendingIntent(PLAYER_ACTION_PLAY, PlaybackState.PLAYING.state)) // #0
+                .addAction(R.mipmap.ic_pause, context.getString(R.string.pause_btn_title), getPendingIntent(PLAYER_ACTION_PAUSE, PlaybackState.PAUSED.state)) // #1
                 .setStyle(androidx.media.app.NotificationCompat.MediaStyle())
                 .setContentIntent(pendingIntent)
                 .build()
