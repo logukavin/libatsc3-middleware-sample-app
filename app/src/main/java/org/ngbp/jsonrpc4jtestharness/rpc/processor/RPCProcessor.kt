@@ -12,6 +12,7 @@ import com.github.nmuzhichin.jsonrpc.model.response.Response
 import com.github.nmuzhichin.jsonrpc.model.response.ResponseUtils
 import com.github.nmuzhichin.jsonrpc.model.response.errors.Error
 import com.github.nmuzhichin.jsonrpc.module.JsonRpcModule
+import org.ngbp.jsonrpc4jtestharness.controller.IRPCController
 import org.ngbp.jsonrpc4jtestharness.rpc.ERROR_CODES
 import org.ngbp.jsonrpc4jtestharness.rpc.RpcError
 import org.ngbp.jsonrpc4jtestharness.rpc.asynchronousNotificationsofChanges.AsynchronousNotificationsOfChangesImpl
@@ -28,7 +29,6 @@ import org.ngbp.jsonrpc4jtestharness.rpc.filterCodes.FilterCodesImpl
 import org.ngbp.jsonrpc4jtestharness.rpc.filterCodes.IFilterCodes
 import org.ngbp.jsonrpc4jtestharness.rpc.keys.IKeys
 import org.ngbp.jsonrpc4jtestharness.rpc.keys.KeysImpl
-import org.ngbp.jsonrpc4jtestharness.rpc.manager.RPCManager
 import org.ngbp.jsonrpc4jtestharness.rpc.markUnused.IMarkUnused
 import org.ngbp.jsonrpc4jtestharness.rpc.markUnused.MarkUnusedImpl
 import org.ngbp.jsonrpc4jtestharness.rpc.mediaTrackSelection.IMediaTrackSelection
@@ -48,8 +48,9 @@ import org.ngbp.jsonrpc4jtestharness.rpc.xLink.XLinkImpl
 import javax.inject.Inject
 
 class RPCProcessor @Inject constructor(
-        private val rpcManager: RPCManager
+        private val rpcController: IRPCController
 ) : IRPCProcessor {
+
     private val consumer: RpcConsumer
     private val objectMapper: ObjectMapper
 
@@ -75,9 +76,9 @@ class RPCProcessor @Inject constructor(
         processor.process(MarkUnusedImpl(), IMarkUnused::class.java)
         processor.process(MediaTrackSelectionImpl(), IMediaTrackSelection::class.java)
         processor.process(QueryDeviceInfoImpl(), IQueryDeviceInfo::class.java)
-        processor.process(ReceiverQueryApiImpl(rpcManager), IReceiverQueryApi::class.java)
-        processor.process(ReceiverActionImpl(rpcManager), IReceiverAction::class.java)
-        processor.process(RMPContentSynchronizationImpl(rpcManager), IRMPContentSynchronization::class.java)
+        processor.process(ReceiverQueryApiImpl(rpcController), IReceiverQueryApi::class.java)
+        processor.process(ReceiverActionImpl(rpcController), IReceiverAction::class.java)
+        processor.process(RMPContentSynchronizationImpl(rpcController), IRMPContentSynchronization::class.java)
         processor.process(SubscribeUnsubscribeImp(), ISubscribeUnsubscribe::class.java)
         processor.process(XLinkImpl(), IXLink::class.java)
     }
