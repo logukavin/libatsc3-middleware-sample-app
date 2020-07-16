@@ -1,8 +1,8 @@
 package org.ngbp.jsonrpc4jtestharness.controller
 
 import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.Transformations
-import org.ngbp.jsonrpc4jtestharness.PlaybackState
+import org.ngbp.jsonrpc4jtestharness.controller.model.PlaybackState
+import kotlinx.coroutines.*
 import org.ngbp.jsonrpc4jtestharness.controller.model.AppData
 import org.ngbp.jsonrpc4jtestharness.controller.model.RPMParams
 import org.ngbp.jsonrpc4jtestharness.controller.model.SLSService
@@ -17,23 +17,23 @@ class Coordinator @Inject constructor(
         private val atsc3Module: Atsc3Module
 ) : IReceiverController, IUserAgentController, IMediaPlayerController, IRPCController, Atsc3Module.Listener {
 
-    private val _state = MutableLiveData<Atsc3Module.State>()
-    private val _sltServices = MutableLiveData<List<SLSService>>()
-    //private val _serviceMediaUri = MutableLiveData<Uri?>()
+    // Receiver Controller
+    override val receiverState = MutableLiveData<Atsc3Module.State>()
 
-    val _appData = MutableLiveData<AppData?>()
+    // Media Player Controller
+    override val rmpParams = MutableLiveData<RPMParams>()
+    override val rmpMediaUrl = MutableLiveData<String>()
 
-    private val _rpmParams = MutableLiveData<RPMParams>()
-
+    // RPC Controller
     override var language: String = Locale.getDefault().language
     override var queryServiceId: String? =  "tag:sinclairplatform.com,2020:WZTV:2727" //TODO: remove after tests
-    override var mediaUrl: String? = "http://127.0.0.1:8080/10.4/MPD.mpd" //TODO: remove after applying data source
+    override val mediaUrl: String?
+        get() = rmpMediaUrl.value
     override var playbackState: PlaybackState = PlaybackState.IDLE
 
-    override val state = Transformations.distinctUntilChanged(_state)
-    override val sltServices = Transformations.distinctUntilChanged(_sltServices)
-    override val appData = Transformations.distinctUntilChanged(_appData)
-    override val rpmParams = Transformations.distinctUntilChanged(_rpmParams)
+    // User Agent Controller
+    override val sltServices = MutableLiveData<List<SLSService>>()
+    override val appData = MutableLiveData<AppData?>()
 
     init {
         atsc3Module.setListener(this)
@@ -44,21 +44,21 @@ class Coordinator @Inject constructor(
             reset()
         }
 
-        _state.postValue(state)
+        receiverState.postValue(state)
     }
 
     override fun onServicesLoaded(services: List<Service?>) {
         val slsServices = services.filterNotNull()
                 .map { SLSService(it.serviceId, it.shortServiceName, it.globalServiceId) }
-        _sltServices.postValue(slsServices)
+        sltServices.postValue(slsServices)
     }
 
     override fun onCurrentServiceHeldChanged(appContextId: String?, entryPage: String?) {
-        _appData.postValue(AppData(appContextId, entryPage))
+        appData.postValue(AppData(appContextId, entryPage))
     }
 
     override fun updateViewPosition(scaleFactor: Double?, xPos: Double?, yPos: Double?) {
-        _rpmParams.postValue(RPMParams(
+        rmpParams.postValue(RPMParams(
                 scaleFactor ?: 1.0,
                 xPos?.toInt() ?: 0,
                 yPos?.toInt() ?: 0
@@ -83,15 +83,34 @@ class Coordinator @Inject constructor(
             //TODO: should we use globalId or context from HELD?
             queryServiceId = service.globalId
 
-            _appData.postValue(AppData(
+            //TODO: temporary waiter for media. Should use notification instead
+            GlobalScope.launch {
+                var done = false
+                var iterator = 5
+                while (!done && iterator > 0) {
+                    iterator--
+                    delay(200)
+
+                    done = withContext(Dispatchers.Main) {
+                        val media = atsc3Module.getSelectedServiceMediaUri()
+                        if (media != null) {
+                            rmpMediaUrl.value = media
+                        }
+
+                        return@withContext (media != null)
+                    }
+                }
+            }
+
+            appData.value = AppData(
                     atsc3Module.getSelectedServiceAppContextId(),
                     atsc3Module.getSelectedServiceEntryPoint()
-            ))
+            )
         }
     }
 
     override fun rmpReset() {
-        _rpmParams.postValue(RPMParams(100.0, 0, 0))
+        rmpParams.postValue(RPMParams(100.0, 0, 0))
     }
 
     override fun rmpPlaybackChanged(state: PlaybackState) {
@@ -100,8 +119,9 @@ class Coordinator @Inject constructor(
 
     private fun reset() {
         queryServiceId = null
-        _sltServices.postValue(emptyList())
-        _appData.postValue(null)
+        sltServices.postValue(emptyList())
+        appData.postValue(null)
+        rmpMediaUrl.postValue(null)
         rmpReset()
     }
 }
