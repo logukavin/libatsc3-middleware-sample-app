@@ -31,6 +31,7 @@ class UserAgentActivity : AppCompatActivity() {
     lateinit var userAgentViewModelFactory: UserAgentViewModelFactory
 
     private val userAgentViewModel: RMPViewModel by viewModels { userAgentViewModelFactory }
+    private var isOpenBAMenu = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         AndroidInjection.inject(this)
@@ -41,10 +42,12 @@ class UserAgentActivity : AppCompatActivity() {
         val swipeGD = GestureDetector(this, object: SwipeGestureDetector() {
             override fun onClose() {
                 closeBAMenu(user_agent_web_view)
+                isOpenBAMenu = false
             }
 
             override fun onOpen() {
                 openBAMenu(user_agent_web_view)
+                isOpenBAMenu = true
             }
         })
 
@@ -108,4 +111,11 @@ class UserAgentActivity : AppCompatActivity() {
 
     private fun closeBAMenu(view: View) = sendKeyPress(view, KeyEvent.KEYCODE_DPAD_LEFT)
     private fun openBAMenu(view: View) = sendKeyPress(view, KeyEvent.KEYCODE_DPAD_RIGHT)
+
+    override fun onBackPressed() {
+        if (isOpenBAMenu) {
+            closeBAMenu(user_agent_web_view)
+            isOpenBAMenu = false
+        } else super.onBackPressed()
+    }
 }
