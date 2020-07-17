@@ -11,7 +11,7 @@ import org.ngbp.jsonrpc4jtestharness.service.NotificationHelper.Companion.PLAYER
 import org.ngbp.jsonrpc4jtestharness.service.NotificationHelper.Companion.PLAYER_ACTION_PLAY
 import javax.inject.Inject
 
-class PlayerCallbackActivity : AppCompatActivity() {
+class NotificationReceiverActivity : AppCompatActivity() {
     @Inject
     lateinit var userAgentViewModelFactory: UserAgentViewModelFactory
 
@@ -20,7 +20,7 @@ class PlayerCallbackActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         AndroidInjection.inject(this)
         super.onCreate(savedInstanceState)
-        rmpViewModel.setState(parsValue())
+        rmpViewModel.setCurrentPlayerState(parsValue())
         finish()
     }
 
