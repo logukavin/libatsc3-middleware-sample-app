@@ -72,6 +72,10 @@ class Coordinator @Inject constructor(
         ))
     }
 
+    override fun updatePlayerState(state: PlaybackState) {
+        rmpPlayerState.postValue(state)
+    }
+
     override fun openRoute(pcapFile: String): Boolean {
         return atsc3Module.openPcapFile(pcapFile)
     }

@@ -9,4 +9,5 @@ interface IRPCController {
     val playbackState: PlaybackState
 
     fun updateViewPosition(scaleFactor: Double?, xPos: Double?, yPos: Double?)
+    fun updatePlayerState(state: PlaybackState)
 }
