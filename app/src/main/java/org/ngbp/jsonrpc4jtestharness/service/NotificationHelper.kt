@@ -7,6 +7,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import androidx.core.app.NotificationCompat
+import org.ngbp.jsonrpc4jtestharness.BuildConfig
 import org.ngbp.jsonrpc4jtestharness.MainActivity
 import org.ngbp.jsonrpc4jtestharness.R
 
@@ -16,8 +17,8 @@ class NotificationHelper {
 
 
     companion object {
-        const val PLAYER_ACTION_PLAY = "org.ngbp.jsonrpc4jtestharness.Notification.Play"
-        const val PLAYER_ACTION_PAUSE = "org.ngbp.jsonrpc4jtestharness.Notification.Pause"
+        const val PLAYER_ACTION_PLAY = "${BuildConfig.APPLICATION_ID}.intent.action.RMP_PLAY"
+        const val PLAYER_ACTION_PAUSE = "${BuildConfig.APPLICATION_ID}.intent.action.RMP_PAUSE"
     }
 
     constructor(context: Context) {
@@ -55,7 +56,6 @@ class NotificationHelper {
     private fun getPlayerIntent(payerAction: String): Intent {
         return Intent().apply {
             action = payerAction
-            addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP and Intent.FLAG_ACTIVITY_CLEAR_TOP)
         }
 
     }

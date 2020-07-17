@@ -15,8 +15,24 @@ class RMPViewModel(
         playerController.rmpReset()
     }
 
-    fun setState(state: PlaybackState) {
+    fun setCurrentPlayerState(state: PlaybackState) {
+        when (state) {
+            PlaybackState.PAUSED -> {
+                pausePlayback()
+            }
+            PlaybackState.PLAYING -> {
+                restorePlayback()
+            }
+        }
         playerController.rmpPlaybackChanged(state)
+    }
+
+    private fun pausePlayback() {
+
+    }
+
+    private fun restorePlayback() {
+
     }
 }
 
