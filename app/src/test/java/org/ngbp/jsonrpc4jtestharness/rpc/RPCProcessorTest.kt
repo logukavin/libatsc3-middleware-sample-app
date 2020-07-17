@@ -1,4 +1,4 @@
-package org.ngbp.jsonrpc4jtestharness
+package org.ngbp.jsonrpc4jtestharness.rpc
 
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -8,7 +8,8 @@ import com.github.nmuzhichin.jsonrpc.module.JsonRpcModule
 import junit.framework.Assert.*
 import org.junit.Before
 import org.junit.Test
-import org.ngbp.jsonrpc4jtestharness.rpc.manager.RPCManager
+import org.ngbp.jsonrpc4jtestharness.controller.IRPCController
+import org.ngbp.jsonrpc4jtestharness.controller.model.PlaybackState
 import org.ngbp.jsonrpc4jtestharness.rpc.processor.IRPCProcessor
 import org.ngbp.jsonrpc4jtestharness.rpc.processor.RPCProcessor
 import java.util.*
@@ -24,7 +25,20 @@ class RPCProcessorTest {
 
     @Before
     fun initRPCProcessor() {
-        processor = RPCProcessor(RPCManager())
+        processor = RPCProcessor(object : IRPCController {
+            override val language: String
+                get() = "test"
+            override val queryServiceId: String?
+                get() = "test"
+            override val mediaUrl: String?
+                get() = "test"
+            override val playbackState: PlaybackState
+                get() = PlaybackState.IDLE
+
+            override fun updateViewPosition(scaleFactor: Double?, xPos: Double?, yPos: Double?) {
+                TODO("Not yet implemented")
+            }
+        })
     }
 
     private fun getResponse(method: String, params: HashMap<String?, Any?>?): String? {
