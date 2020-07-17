@@ -1,4 +1,4 @@
-package org.ngbp.jsonrpc4jtestharness
+package org.ngbp.jsonrpc4jtestharness.rpc
 
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.ObjectMapper
