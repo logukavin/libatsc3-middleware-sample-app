@@ -58,7 +58,7 @@ class UserAgentActivity : AppCompatActivity() {
 
         setContentView(R.layout.activity_user_agent)
 
-        val swipeGD = GestureDetector(this, object: SwipeGestureDetector() {
+        val swipeGD = GestureDetector(this, object : SwipeGestureDetector() {
             override fun onClose() {
                 closeBAMenu(user_agent_web_view)
             }
@@ -68,7 +68,7 @@ class UserAgentActivity : AppCompatActivity() {
             }
         })
 
-        dashMediaSourceFactory = createMediaSourceFactory();
+        dashMediaSourceFactory = createMediaSourceFactory()
         simpleExoPlayer = createExoPlayer().also {
             receiver_media_player.player = it
         }
@@ -108,17 +108,34 @@ class UserAgentActivity : AppCompatActivity() {
                 Toast.makeText(this, "No media Url provided", Toast.LENGTH_LONG).show()
             }
         }
+        rmpViewModel.playerState.observe(this, Observer {
+            when (it) {
+                PlaybackState.PLAYING -> resumePlayer()
+                PlaybackState.PAUSED -> pausePlayer()
+            }
+        })
+        rmpViewModel.broadcastApplicationPlaybackState.observe(this, Observer {
+            rmpViewModel.playerState.postValue(it)
+        })
+    }
+
+    private fun resumePlayer() {
+        simpleExoPlayer.playWhenReady = true
+        rmpViewModel.setCurrentPlayerState(PlaybackState.PLAYING)
+    }
+
+    private fun pausePlayer() {
+        simpleExoPlayer.playWhenReady = false
+        rmpViewModel.setCurrentPlayerState(PlaybackState.PAUSED)
     }
 
     override fun onStart() {
         super.onStart()
-
         rmpViewModel.setCurrentPlayerState(PlaybackState.PLAYING)
     }
 
     override fun onStop() {
         super.onStop()
-
         with(simpleExoPlayer) {
             stop()
             release()
