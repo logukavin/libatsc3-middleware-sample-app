@@ -111,11 +111,8 @@ class UserAgentActivity : AppCompatActivity() {
         rmpViewModel.playerState.observe(this, Observer {
             when (it) {
                 PlaybackState.PLAYING -> resumePlayer()
-                PlaybackState.PAUSED -> pausePlayer()
+                PlaybackState.PAUSED -> pausePlayer() //Todo when will be clear want will do IDLE add this point
             }
-        })
-        rmpViewModel.broadcastApplicationPlaybackState.observe(this, Observer {
-            rmpViewModel.playerState.postValue(it)
         })
     }
 
@@ -131,6 +128,7 @@ class UserAgentActivity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
+
         rmpViewModel.setCurrentPlayerState(PlaybackState.PLAYING)
     }
 

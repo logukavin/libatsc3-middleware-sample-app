@@ -12,9 +12,8 @@ class RMPViewModel(
 ) : ViewModel() {
     val layoutParams = Transformations.distinctUntilChanged(playerController.rmpParams)
     val mediaUri = Transformations.distinctUntilChanged(playerController.rmpMediaUrl)
-    val broadcastApplicationPlaybackState = Transformations.distinctUntilChanged(playerController.rmpPlayerState)
+    val playerState = Transformations.distinctUntilChanged(playerController.rmpPlayerState)
 
-    val playerState = MutableLiveData<PlaybackState>()
     fun reset() {
         playerController.rmpReset()
     }
@@ -24,11 +23,11 @@ class RMPViewModel(
     }
 
     fun pausePlayback() {
-        playerState.postValue(PlaybackState.PAUSED)
+        playerController.rmpPlayerState.postValue(PlaybackState.PAUSED)
     }
 
     fun restorePlayback() {
-        playerState.postValue(PlaybackState.PLAYING)
+        playerController.rmpPlayerState.postValue(PlaybackState.PLAYING)
     }
 }
 
