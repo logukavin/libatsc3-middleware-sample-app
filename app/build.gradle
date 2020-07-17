@@ -80,6 +80,7 @@ dependencies {
     implementation 'org.eclipse.jetty:jetty-servlet:9.4.30.v20200611'
     implementation group: 'org.eclipse.jetty.websocket', name: 'websocket-server', version: '9.4.30.v20200611'
 
+    implementation "androidx.media:media:1.1.0"
     implementation project(':exoplayer-library-core')
     implementation project(':exoplayer-library-dash')
     implementation project(':exoplayer-library-ui')

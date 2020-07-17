@@ -113,7 +113,7 @@ class UserAgentActivity : AppCompatActivity() {
     override fun onStart() {
         super.onStart()
 
-        rmpViewModel.setState(PlaybackState.PLAYING)
+        rmpViewModel.setCurrentPlayerState(PlaybackState.PLAYING)
     }
 
     override fun onStop() {
@@ -123,7 +123,7 @@ class UserAgentActivity : AppCompatActivity() {
             stop()
             release()
         }
-        rmpViewModel.setState(PlaybackState.PAUSED)
+        rmpViewModel.setCurrentPlayerState(PlaybackState.PAUSED)
     }
 
     private fun updateRMPLayout(x: Float, y: Float, scale: Float) {
