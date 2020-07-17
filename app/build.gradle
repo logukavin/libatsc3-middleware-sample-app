@@ -80,8 +80,12 @@ dependencies {
     implementation 'org.eclipse.jetty:jetty-servlet:9.4.30.v20200611'
     implementation group: 'org.eclipse.jetty.websocket', name: 'websocket-server', version: '9.4.30.v20200611'
 
-    androidTestImplementation 'androidx.test.ext:junit:1.1.1'
+    implementation "androidx.media:media:1.1.0"
+    implementation project(':exoplayer-library-core')
+    implementation project(':exoplayer-library-dash')
+    implementation project(':exoplayer-library-ui')
 
+    androidTestImplementation 'androidx.test.ext:junit:1.1.1'
     testImplementation 'junit:junit:4.12'
     testImplementation 'androidx.test:core:1.2.0'
     testImplementation 'org.mockito:mockito-core:3.4.2'

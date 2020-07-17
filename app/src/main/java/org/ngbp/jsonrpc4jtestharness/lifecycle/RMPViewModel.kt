@@ -2,15 +2,29 @@ package org.ngbp.jsonrpc4jtestharness.lifecycle
 
 import androidx.lifecycle.Transformations
 import androidx.lifecycle.ViewModel
-import org.ngbp.jsonrpc4jtestharness.controller.IReceiverController
+import org.ngbp.jsonrpc4jtestharness.controller.model.PlaybackState
+import org.ngbp.jsonrpc4jtestharness.controller.IMediaPlayerController
 
 class RMPViewModel(
-        private val controller: IReceiverController
+        private val playerController: IMediaPlayerController
 ) : ViewModel() {
-    val rmpParams = Transformations.distinctUntilChanged(controller.rpmParams)
+    val layoutParams = Transformations.distinctUntilChanged(playerController.rmpParams)
+    val mediaUri = Transformations.distinctUntilChanged(playerController.rmpMediaUrl)
 
     fun reset() {
-        controller.resetRMP()
+        playerController.rmpReset()
+    }
+
+    fun setCurrentPlayerState(state: PlaybackState) {
+        playerController.rmpPlaybackChanged(state)
+    }
+
+    fun pausePlayback() {
+
+    }
+
+    fun restorePlayback() {
+
     }
 }
 
