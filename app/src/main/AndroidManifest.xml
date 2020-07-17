@@ -39,8 +39,8 @@
             android:name=".NotificationReceiverActivity"
             android:theme="@android:style/Theme.NoDisplay">
             <intent-filter>
-                <action android:name="org.ngbp.jsonrpc4jtestharness.intent.action.RMP_PLAY" />
-                <action android:name="org.ngbp.jsonrpc4jtestharness.intent.action.RMP_PAUSE" />
+                <action android:name="${applicationId}.intent.action.RMP_PLAY" />
+                <action android:name="${applicationId}.intent.action.RMP_PAUSE" />
 
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
