@@ -30,7 +30,7 @@ import org.ngbp.jsonrpc4jtestharness.controller.model.SLSService
 import org.ngbp.jsonrpc4jtestharness.core.FileUtils
 import org.ngbp.jsonrpc4jtestharness.core.ws.MiddlewareWebSocketClient
 import org.ngbp.jsonrpc4jtestharness.databinding.ActivityMainBinding
-import org.ngbp.jsonrpc4jtestharness.lifecycle.RMPViewModel
+import org.ngbp.jsonrpc4jtestharness.lifecycle.ReceiverViewModel
 import org.ngbp.jsonrpc4jtestharness.lifecycle.UserAgentViewModel
 import org.ngbp.jsonrpc4jtestharness.lifecycle.factory.UserAgentViewModelFactory
 import org.ngbp.jsonrpc4jtestharness.rpc.processor.RPCProcessor
@@ -47,7 +47,7 @@ class MainActivity : AppCompatActivity() {
     @Inject
     lateinit var userAgentViewModelFactory: UserAgentViewModelFactory
 
-    private val rmpViewModel: RMPViewModel by viewModels { userAgentViewModelFactory }
+    private val receiverViewModel: ReceiverViewModel by viewModels { userAgentViewModelFactory }
     private val userAgentViewModel: UserAgentViewModel by viewModels { userAgentViewModelFactory }
 
     private val mapper = ObjectMapper().apply {
@@ -69,6 +69,7 @@ class MainActivity : AppCompatActivity() {
 
         DataBindingUtil.setContentView<ActivityMainBinding>(this, R.layout.activity_main).apply {
             userAgentModel = userAgentViewModel
+            receiverModel = receiverViewModel
             lifecycleOwner = this@MainActivity
         }
 
@@ -174,7 +175,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun initLibAtsc3() {
-        controller.state.observe(this, Observer { state -> updateAssc3Buttons(state) })
+        controller.receiverState.observe(this, Observer { state -> updateAssc3Buttons(state) })
 
         stsc3FilePath = findViewById(R.id.atsc3_file_path)
         stsc3FilePath.addTextChangedListener(object : TextWatcher {
