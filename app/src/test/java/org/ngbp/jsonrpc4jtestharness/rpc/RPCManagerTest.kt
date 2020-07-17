@@ -1,4 +1,4 @@
-package org.ngbp.jsonrpc4jtestharness
+package org.ngbp.jsonrpc4jtestharness.rpc
 
 import junit.framework.Assert.assertEquals
 import org.junit.Before
