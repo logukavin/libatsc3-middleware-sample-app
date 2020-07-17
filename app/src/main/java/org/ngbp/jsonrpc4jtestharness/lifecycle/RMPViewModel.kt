@@ -26,6 +26,7 @@ class RMPViewModel(
     fun pausePlayback() {
         playerState.postValue(PlaybackState.PAUSED)
     }
+
     fun restorePlayback() {
         playerState.postValue(PlaybackState.PLAYING)
     }
