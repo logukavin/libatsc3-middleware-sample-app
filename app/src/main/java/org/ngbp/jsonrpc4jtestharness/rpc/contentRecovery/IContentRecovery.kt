@@ -13,7 +13,4 @@ interface IContentRecovery {
 
     @JsonRpcMethod("org.atsc.query.recoveredComponentInfo")
     fun queryRecoveredComponentInfo(): CecoveredComponentInfo
-
-    @JsonRpcMethod("org.atsc.notify")
-    fun contentRecoveryStateChangeNotification(): CecoveredComponentInfo
 }

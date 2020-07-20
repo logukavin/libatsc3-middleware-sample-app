@@ -1,4 +1,4 @@
-package org.ngbp.jsonrpc4jtestharness.rpc.asynchronousNotificationsofChanges.model
+package org.ngbp.jsonrpc4jtestharness.rpc.notification.model
 
 data class CaptionStateChangeNotification (
     var msgType: String? = null,
