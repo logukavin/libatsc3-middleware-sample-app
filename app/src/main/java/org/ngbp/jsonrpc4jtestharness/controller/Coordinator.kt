@@ -1,9 +1,11 @@
 package org.ngbp.jsonrpc4jtestharness.controller
 
 import androidx.lifecycle.MutableLiveData
-import org.ngbp.jsonrpc4jtestharness.controller.model.PlaybackState
 import kotlinx.coroutines.*
+import org.ngbp.jsonrpc4jtestharness.controller.media.IObservablePlayer
+import org.ngbp.jsonrpc4jtestharness.controller.media.PlayerStateRegistry
 import org.ngbp.jsonrpc4jtestharness.controller.model.AppData
+import org.ngbp.jsonrpc4jtestharness.controller.model.PlaybackState
 import org.ngbp.jsonrpc4jtestharness.controller.model.RPMParams
 import org.ngbp.jsonrpc4jtestharness.controller.model.SLSService
 import org.ngbp.libatsc3.Atsc3Module
@@ -12,6 +14,7 @@ import java.util.*
 import javax.inject.Inject
 import javax.inject.Singleton
 
+//TODO: extract controllers as separate classes
 @Singleton
 class Coordinator @Inject constructor(
         private val atsc3Module: Atsc3Module
@@ -22,6 +25,8 @@ class Coordinator @Inject constructor(
     override val selectedService = MutableLiveData<SLSService>()
 
     // Media Player Controller
+    private var rmpListeners = PlayerStateRegistry()
+
     override val rmpParams = MutableLiveData<RPMParams>(RPMParams())
     override val rmpMediaUrl = MutableLiveData<String>()
     override val rmpState = MutableLiveData<PlaybackState>(PlaybackState.IDLE)
@@ -64,12 +69,20 @@ class Coordinator @Inject constructor(
         appData.postValue(AppData(appContextId, entryPage))
     }
 
-    override fun updateViewPosition(scaleFactor: Double?, xPos: Double?, yPos: Double?) {
+    override fun updateRMPPosition(scaleFactor: Double?, xPos: Double?, yPos: Double?) {
         rmpParams.postValue(RPMParams(
                 scaleFactor ?: 100.0,
                 xPos?.toInt() ?: 0,
                 yPos?.toInt() ?: 0
         ))
+    }
+
+    override fun updateRMPState(state: PlaybackState) {
+        when (state) {
+            PlaybackState.PAUSED -> rmpPause()
+            PlaybackState.PLAYING -> rmpResume()
+            else -> {}
+        }
     }
 
     override fun openRoute(pcapFile: String): Boolean {
@@ -122,6 +135,22 @@ class Coordinator @Inject constructor(
 
     override fun rmpPlaybackChanged(state: PlaybackState) {
         rmpState.postValue(state)
+    }
+
+    override fun rmpPause() {
+        rmpListeners.notifyPause(this)
+    }
+
+    override fun rmpResume() {
+        rmpListeners.notifyResume(this)
+    }
+
+    override fun addOnPlayerSateChangedCallback(callback: IObservablePlayer.IPlayerStateListener) {
+        rmpListeners.add(callback)
+    }
+
+    override fun removeOnPlayerSateChangedCallback(callback: IObservablePlayer.IPlayerStateListener) {
+        rmpListeners.remove(callback)
     }
 
     private fun reset() {

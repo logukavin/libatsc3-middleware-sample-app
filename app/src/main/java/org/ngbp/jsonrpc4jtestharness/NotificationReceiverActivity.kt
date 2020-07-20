@@ -1,18 +1,14 @@
 package org.ngbp.jsonrpc4jtestharness
 
 import android.os.Bundle
-import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import dagger.android.AndroidInjection
-import org.ngbp.jsonrpc4jtestharness.lifecycle.RMPViewModel
-import org.ngbp.jsonrpc4jtestharness.lifecycle.factory.UserAgentViewModelFactory
+import org.ngbp.jsonrpc4jtestharness.controller.IMediaPlayerController
 import javax.inject.Inject
 
 class NotificationReceiverActivity : AppCompatActivity() {
     @Inject
-    lateinit var userAgentViewModelFactory: UserAgentViewModelFactory
-
-    private val rmpViewModel: RMPViewModel by viewModels { userAgentViewModelFactory }
+    lateinit var mediaController: IMediaPlayerController
 
     override fun onCreate(savedInstanceState: Bundle?) {
         AndroidInjection.inject(this)
@@ -25,8 +21,8 @@ class NotificationReceiverActivity : AppCompatActivity() {
 
     private fun parsAction() {
         when (intent.action) {
-            PLAYER_ACTION_PLAY -> rmpViewModel.restorePlayback()
-            PLAYER_ACTION_PAUSE -> rmpViewModel.pausePlayback()
+            PLAYER_ACTION_PLAY -> mediaController.rmpResume()
+            PLAYER_ACTION_PAUSE -> mediaController.rmpPause()
             else -> {
             }
         }
