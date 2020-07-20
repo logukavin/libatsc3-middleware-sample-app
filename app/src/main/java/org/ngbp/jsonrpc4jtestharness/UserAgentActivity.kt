@@ -108,22 +108,9 @@ class UserAgentActivity : AppCompatActivity() {
                 Toast.makeText(this, "No media Url provided", Toast.LENGTH_LONG).show()
             }
         }
-        rmpViewModel.playerState.observe(this, Observer {
-            when (it) {
-                PlaybackState.PLAYING -> resumePlayer()
-                PlaybackState.PAUSED -> pausePlayer() //Todo when will be clear want will do IDLE add this point
-            }
+        rmpViewModel.playWhenReady.observe(this, Observer { playWhenReady ->
+            simpleExoPlayer.playWhenReady = playWhenReady
         })
-    }
-
-    private fun resumePlayer() {
-        simpleExoPlayer.playWhenReady = true
-        rmpViewModel.setCurrentPlayerState(PlaybackState.PLAYING)
-    }
-
-    private fun pausePlayer() {
-        simpleExoPlayer.playWhenReady = false
-        rmpViewModel.setCurrentPlayerState(PlaybackState.PAUSED)
     }
 
     override fun onStart() {
@@ -134,6 +121,7 @@ class UserAgentActivity : AppCompatActivity() {
 
     override fun onStop() {
         super.onStop()
+
         with(simpleExoPlayer) {
             stop()
             release()

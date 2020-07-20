@@ -13,7 +13,7 @@ class ReceiverActionImpl(
     }
 
     override fun videoScalingAndPositioning(scaleFactor: Double?, xPos: Double?, yPos: Double?): RpcResponse {
-        rpcController.updateViewPosition(scaleFactor, xPos, yPos)
+        rpcController.updateRMPPosition(scaleFactor, xPos, yPos)
         return RpcResponse()
     }
 

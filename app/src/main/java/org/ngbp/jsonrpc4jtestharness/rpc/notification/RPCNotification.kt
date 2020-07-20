@@ -31,7 +31,12 @@ class RPCNotification(
             "requestKeyTimeout" -> RpcResponse()
 
             "rmpMediaTimeChange" -> RpcResponse()
-            "rmpPlaybackStateChange" ->  RpcResponse()
+            "rmpPlaybackStateChange" -> {
+                PlaybackState.valueOf(playbackState)?.let { state ->
+                    rpcController.updateRMPState(state)
+                }
+                RpcResponse()
+            }
             "rmpPlaybackRateChange" -> RpcResponse()
 
             "DRM" -> RpcResponse()
