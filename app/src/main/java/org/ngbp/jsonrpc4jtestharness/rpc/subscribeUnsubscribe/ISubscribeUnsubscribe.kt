@@ -12,5 +12,5 @@ interface ISubscribeUnsubscribe {
     fun integratedSubscribe(@JsonRpcParam("msgType") types: List<String>): Subscribe
 
     @JsonRpcMethod("org.atsc.unsubscribe")
-    fun integratedUnsubscribe(): Subscribe
+    fun integratedUnsubscribe(@JsonRpcParam("msgType") types: List<String>): Subscribe
 }
