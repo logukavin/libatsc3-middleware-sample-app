@@ -1,4 +1,4 @@
-package org.ngbp.jsonrpc4jtestharness.rpc.asynchronousNotificationsofChanges.model
+package org.ngbp.jsonrpc4jtestharness.rpc.notification.model
 
 import org.ngbp.jsonrpc4jtestharness.rpc.receiverQueryApi.model.ServiceGuideUrls
 

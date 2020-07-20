@@ -1,7 +1,6 @@
 package org.ngbp.jsonrpc4jtestharness.rpc.rmpContentSynchronization
 
 import org.ngbp.jsonrpc4jtestharness.controller.IRPCController
-import org.ngbp.jsonrpc4jtestharness.rpc.RpcResponse
 import org.ngbp.jsonrpc4jtestharness.rpc.rmpContentSynchronization.model.RmpMediaTime
 import org.ngbp.jsonrpc4jtestharness.rpc.rmpContentSynchronization.model.RmpPlaybackRate
 import org.ngbp.jsonrpc4jtestharness.rpc.rmpContentSynchronization.model.RmpPlaybackState
@@ -24,9 +23,5 @@ class RMPContentSynchronizationImpl(
 
     override fun queryRMPPlaybackRate(): RmpPlaybackRate {
         return RmpPlaybackRate()
-    }
-
-    override fun rMPMediaTimeChangeNotification(): RpcResponse {
-        return RpcResponse()
     }
 }
