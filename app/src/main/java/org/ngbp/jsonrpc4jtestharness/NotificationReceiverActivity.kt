@@ -6,8 +6,6 @@ import androidx.appcompat.app.AppCompatActivity
 import dagger.android.AndroidInjection
 import org.ngbp.jsonrpc4jtestharness.lifecycle.RMPViewModel
 import org.ngbp.jsonrpc4jtestharness.lifecycle.factory.UserAgentViewModelFactory
-import org.ngbp.jsonrpc4jtestharness.service.NotificationHelper.Companion.PLAYER_ACTION_PAUSE
-import org.ngbp.jsonrpc4jtestharness.service.NotificationHelper.Companion.PLAYER_ACTION_PLAY
 import javax.inject.Inject
 
 class NotificationReceiverActivity : AppCompatActivity() {
@@ -19,7 +17,9 @@ class NotificationReceiverActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         AndroidInjection.inject(this)
         super.onCreate(savedInstanceState)
+
         parsAction()
+
         finish()
     }
 
@@ -30,5 +30,10 @@ class NotificationReceiverActivity : AppCompatActivity() {
             else -> {
             }
         }
+    }
+
+    companion object {
+        const val PLAYER_ACTION_PLAY = "${BuildConfig.APPLICATION_ID}.intent.action.RMP_PLAY"
+        const val PLAYER_ACTION_PAUSE = "${BuildConfig.APPLICATION_ID}.intent.action.RMP_PAUSE"
     }
 }

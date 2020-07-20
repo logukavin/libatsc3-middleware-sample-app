@@ -7,6 +7,7 @@ import org.ngbp.jsonrpc4jtestharness.controller.model.RPMParams
 interface IMediaPlayerController {
     val rmpParams: LiveData<RPMParams>
     val rmpMediaUrl: LiveData<String?>
+    val rmpState: LiveData<PlaybackState>
 
     fun rmpReset()
     fun rmpPlaybackChanged(state: PlaybackState)
