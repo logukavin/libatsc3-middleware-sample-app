@@ -65,6 +65,7 @@ dependencies {
     implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:$lifecycle_version"
     implementation "androidx.lifecycle:lifecycle-livedata-ktx:$lifecycle_version"
     implementation "androidx.lifecycle:lifecycle-common-java8:$lifecycle_version"
+    implementation "androidx.lifecycle:lifecycle-service:$lifecycle_version"
 
     implementation "com.google.dagger:dagger:$daggerVersion"
     implementation "com.google.dagger:dagger-android:$daggerVersion"
@@ -80,7 +81,6 @@ dependencies {
     implementation 'org.eclipse.jetty:jetty-servlet:9.4.30.v20200611'
     implementation group: 'org.eclipse.jetty.websocket', name: 'websocket-server', version: '9.4.30.v20200611'
 
-    implementation "androidx.media:media:1.1.0"
     implementation project(':exoplayer-library-core')
     implementation project(':exoplayer-library-dash')
     implementation project(':exoplayer-library-ui')
