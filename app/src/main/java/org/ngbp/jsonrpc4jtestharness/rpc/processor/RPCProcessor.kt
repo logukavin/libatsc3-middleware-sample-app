@@ -15,8 +15,6 @@ import com.github.nmuzhichin.jsonrpc.module.JsonRpcModule
 import org.ngbp.jsonrpc4jtestharness.controller.IRPCController
 import org.ngbp.jsonrpc4jtestharness.rpc.ERROR_CODES
 import org.ngbp.jsonrpc4jtestharness.rpc.RpcError
-import org.ngbp.jsonrpc4jtestharness.rpc.asynchronousNotificationsofChanges.AsynchronousNotificationsOfChangesImpl
-import org.ngbp.jsonrpc4jtestharness.rpc.asynchronousNotificationsofChanges.IAsynchronousNotificationsOfChanges
 import org.ngbp.jsonrpc4jtestharness.rpc.cacheRequest.CacheRequestImpl
 import org.ngbp.jsonrpc4jtestharness.rpc.cacheRequest.ICacheRequest
 import org.ngbp.jsonrpc4jtestharness.rpc.contentRecovery.ContentRecoveryImpl
@@ -33,6 +31,8 @@ import org.ngbp.jsonrpc4jtestharness.rpc.markUnused.IMarkUnused
 import org.ngbp.jsonrpc4jtestharness.rpc.markUnused.MarkUnusedImpl
 import org.ngbp.jsonrpc4jtestharness.rpc.mediaTrackSelection.IMediaTrackSelection
 import org.ngbp.jsonrpc4jtestharness.rpc.mediaTrackSelection.MediaTrackSelectionImpl
+import org.ngbp.jsonrpc4jtestharness.rpc.notification.IRPCNotification
+import org.ngbp.jsonrpc4jtestharness.rpc.notification.RPCNotification
 import org.ngbp.jsonrpc4jtestharness.rpc.queryDeviceInf.IQueryDeviceInfo
 import org.ngbp.jsonrpc4jtestharness.rpc.queryDeviceInf.QueryDeviceInfoImpl
 import org.ngbp.jsonrpc4jtestharness.rpc.receiverQueryApi.IReceiverQueryApi
@@ -67,7 +67,6 @@ class RPCProcessor @Inject constructor(
 
     private fun filRequests(processor: Processor) {
         processor.process(FilterCodesImpl(), IFilterCodes::class.java)
-        processor.process(AsynchronousNotificationsOfChangesImpl(), IAsynchronousNotificationsOfChanges::class.java)
         processor.process(CacheRequestImpl(), ICacheRequest::class.java)
         processor.process(ContentRecoveryImpl(), IContentRecovery::class.java)
         processor.process(DRMImpl(), IDRM::class.java)
@@ -81,6 +80,7 @@ class RPCProcessor @Inject constructor(
         processor.process(RMPContentSynchronizationImpl(rpcController), IRMPContentSynchronization::class.java)
         processor.process(SubscribeUnsubscribeImp(), ISubscribeUnsubscribe::class.java)
         processor.process(XLinkImpl(), IXLink::class.java)
+        processor.process(RPCNotification(rpcController), IRPCNotification::class.java)
     }
 
     override fun processRequest(request: String): String {
