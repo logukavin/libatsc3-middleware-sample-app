@@ -8,5 +8,5 @@ import org.ngbp.jsonrpc4jtestharness.rpc.RpcResponse
 @JsonRpcType
 interface IRPCNotification {
     @JsonRpcMethod("org.atsc.notify")
-    fun rMPNotification(@JsonRpcParam("msgType") msgType: String, @JsonRpcParam("playbackState") playbackState: Int): RpcResponse
+    fun notification(@JsonRpcParam("msgType") msgType: String, @JsonRpcParam("playbackState") playbackState: Int): RpcResponse
 }
