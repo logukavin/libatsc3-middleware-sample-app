@@ -24,6 +24,8 @@ class IRPCControllerTest {
     private val rmpMediaUrl = MutableLiveData<String>()
     private val rmpState = MutableLiveData<PlaybackState>(PlaybackState.IDLE)
     private val rmpParams = MutableLiveData<RPMParams>(RPMParams())
+    private val mockedSLSService: SLSService = SLSService(5003, "WZTV", "tag:sinclairplatform.com,2020:WZTV:2727")
+    private val mockedMediaUrl: String = "htttp://mockedurl.com"
 
     @JvmField
     @Rule
@@ -31,6 +33,8 @@ class IRPCControllerTest {
 
     @Before
     fun initData() {
+        selectedService.value = mockedSLSService
+        rmpMediaUrl.value = mockedMediaUrl
         contorller = object : IRPCController {
             override val language: String
                 get() = Locale.getDefault().language
@@ -65,5 +69,25 @@ class IRPCControllerTest {
         assertEquals(100.0, rmpParams.value?.scale)
         assertEquals(0, rmpParams.value?.x)
         assertEquals(0, rmpParams.value?.y)
+    }
+
+    @Test
+    fun testLanguage() {
+        assertEquals(Locale.getDefault().language, contorller?.language)
+    }
+
+    @Test
+    fun testQueryServiceId() {
+        assertEquals(mockedSLSService.globalId, contorller?.queryServiceId)
+    }
+
+    @Test
+    fun testMediaUrl() {
+        assertEquals(mockedMediaUrl, contorller?.mediaUrl)
+    }
+
+    @Test
+    fun testPlaybackState() {
+        assertEquals(PlaybackState.IDLE, contorller?.playbackState)
     }
 }
