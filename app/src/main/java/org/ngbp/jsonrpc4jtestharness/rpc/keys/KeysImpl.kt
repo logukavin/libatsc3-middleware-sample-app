@@ -13,8 +13,4 @@ class KeysImpl() : IKeys {
     override fun relinquishKeys(listOfKeys: List<String>): RpcResponse {
         return RpcResponse()
     }
-
-    override fun requestKeysTimeout(): RpcResponse {
-        return RpcResponse()
-    }
 }
