@@ -35,7 +35,11 @@ class RPCProcessorTest {
             override val playbackState: PlaybackState
                 get() = PlaybackState.IDLE
 
-            override fun updateViewPosition(scaleFactor: Double?, xPos: Double?, yPos: Double?) {
+            override fun updateRMPPosition(scaleFactor: Double?, xPos: Double?, yPos: Double?) {
+                TODO("Not yet implemented")
+            }
+
+            override fun updateRMPState(state: PlaybackState) {
                 TODO("Not yet implemented")
             }
         })
