@@ -18,6 +18,10 @@ class ReceiverActionImpl(
     }
 
     override fun setRMPURL(): RpcResponse {
+//TODO: implement notification
+//        PlaybackState.valueOf(playbackState)?.let { state ->
+//            rpcController.updateRMPState(state)
+//        }
         return RpcResponse()
     }
 
