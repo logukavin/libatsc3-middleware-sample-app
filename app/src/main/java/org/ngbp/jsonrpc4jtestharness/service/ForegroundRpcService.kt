@@ -1,21 +1,28 @@
 package org.ngbp.jsonrpc4jtestharness.service
 
-import android.app.Service
+import android.app.Notification
 import android.content.Context
 import android.content.Intent
-import android.os.IBinder
 import android.os.PowerManager
 import android.os.PowerManager.WakeLock
+import androidx.lifecycle.LifecycleService
 import dagger.android.AndroidInjection
+import org.ngbp.jsonrpc4jtestharness.controller.IMediaPlayerController
+import org.ngbp.jsonrpc4jtestharness.controller.IReceiverController
+import org.ngbp.jsonrpc4jtestharness.controller.model.PlaybackState
 import org.ngbp.jsonrpc4jtestharness.core.ws.UserAgentSSLContext
 import org.ngbp.jsonrpc4jtestharness.http.servers.MiddlewareWebServer
 import org.ngbp.jsonrpc4jtestharness.rpc.processor.RPCProcessor
 import java.util.*
 import javax.inject.Inject
 
-class ForegroundRpcService : Service() {
+class ForegroundRpcService : LifecycleService() {
     @Inject
     lateinit var rpcProcessor: RPCProcessor
+    @Inject
+    lateinit var receiverController: IReceiverController
+    @Inject
+    lateinit var mediaController: IMediaPlayerController
 
     private lateinit var wakeLock: WakeLock
     private lateinit var notificationHelper: NotificationHelper
@@ -26,32 +33,59 @@ class ForegroundRpcService : Service() {
     override fun onCreate() {
         AndroidInjection.inject(this)
         super.onCreate()
-        notificationHelper = NotificationHelper(this)
-        startForeground(1, notificationHelper.createNotification(""))
+
+        notificationHelper = NotificationHelper(this, NOTIFICATION_CHANNEL_ID).also {
+            it.createNotificationChannel("Foreground Rpc Service Channel")
+        }
+
+        startForeground(NOTIFICATION_ID, createNotification(getServiceName()))
+
+        receiverController.selectedService.observe(this, androidx.lifecycle.Observer {
+            updateNotification()
+        })
+        mediaController.rmpState.observe(this, androidx.lifecycle.Observer {
+            updateNotification()
+        })
     }
 
-    override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
-        val message = intent.getStringExtra("inputExtra")
-        val action = intent.getAction()
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        super.onStartCommand(intent, flags, startId)
+
+        val action = intent?.action
         if (action != null) {
             when (action) {
-                ACTION_START -> startService(message)
+                ACTION_START -> {
+                    val message = intent.getStringExtra("inputExtra") ?: ""
+                    startService(message)
+                }
                 ACTION_STOP -> stopService()
                 else -> {
                 }
             }
         }
+
         return START_NOT_STICKY
     }
+    
+    private fun getServiceName() = receiverController.selectedService.value?.shortName ?: "---"
 
-    private fun startService(message: String?) {
+    private fun startService(message: String) {
         if (isServiceStarted) return
         isServiceStarted = true
         wakeLock = (Objects.requireNonNull(getSystemService(Context.POWER_SERVICE)) as PowerManager).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "ForegroundRpcService::lock").apply {
             acquire()
         }
-        startForeground(1, notificationHelper.createNotification(message))
+        startForeground(NOTIFICATION_ID, createNotification(getServiceName(), message))
         startWebServer()
+    }
+
+    private fun createNotification(title: String, message: String = "", playbackState: PlaybackState = PlaybackState.IDLE): Notification {
+        return notificationHelper.createMediaNotification(title, message, playbackState)
+    }
+
+    private fun updateNotification() {
+        val serviceName = receiverController.selectedService.value?.shortName ?: ""
+        notificationHelper.notify(NOTIFICATION_ID, createNotification(serviceName, "", mediaController.rmpState.value ?: PlaybackState.IDLE))
     }
 
     private fun startWebServer() {
@@ -100,12 +134,11 @@ class ForegroundRpcService : Service() {
         isServiceStarted = false
     }
 
-    override fun onBind(intent: Intent?): IBinder? {
-        return null
-    }
-
     companion object {
-        val ACTION_START: String? = "START"
-        val ACTION_STOP: String? = "STOP"
+        const val ACTION_START: String = "START"
+        const val ACTION_STOP: String = "STOP"
+
+        private const val NOTIFICATION_CHANNEL_ID = "ForegroundRpcServiceChannel"
+        private const val NOTIFICATION_ID = 1
     }
 }

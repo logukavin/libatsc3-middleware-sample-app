@@ -1,7 +1,7 @@
 package org.ngbp.jsonrpc4jtestharness.controller.model
 
 data class RPMParams(
-        val scale: Double,
-        val x: Int,
-        val y: Int
+        var scale: Double = 100.0,
+        var x: Int = 0,
+        var y: Int = 0
 )

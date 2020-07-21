@@ -6,44 +6,62 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import androidx.core.app.NotificationCompat
-import org.ngbp.jsonrpc4jtestharness.MainActivity
+import android.graphics.drawable.Icon
+import androidx.annotation.DrawableRes
+import androidx.annotation.StringRes
+import org.ngbp.jsonrpc4jtestharness.NotificationReceiverActivity
 import org.ngbp.jsonrpc4jtestharness.R
+import org.ngbp.jsonrpc4jtestharness.controller.model.PlaybackState
 
-class NotificationHelper {
-    private var context: Context
-    private var CHANNEL_ID: String = "ForegroundRpcServiceChannel"
+class NotificationHelper(
+        private val context: Context,
+        private val channelID: String
+) {
+    private val notificationManager = context.getSystemService(NotificationManager::class.java)
 
-    constructor(context: Context) {
-        this.context = context
-        createNotificationChannel()
-    }
+    fun createMediaNotification(title: String, text: String, state: PlaybackState): Notification {
+        val notificationIntent = Intent(context, NotificationReceiverActivity::class.java)
 
-    constructor(context: Context, channelID: String) {
-        this.context = context
-        CHANNEL_ID = channelID
-        createNotificationChannel()
-    }
+        val pendingIntent = PendingIntent.getActivity(context, 0, notificationIntent, 0)
 
-    fun createNotification(contentText: String?): Notification? {
-        val notificationIntent = Intent(context, MainActivity::class.java)
-        val pendingIntent = PendingIntent.getActivity(context,
-                0, notificationIntent, 0)
-        return NotificationCompat.Builder(context, CHANNEL_ID)
-                .setContentTitle("Foreground Rpc Service")
-                .setContentText(contentText)
+        val builder = Notification.Builder(context, channelID)
+                .setContentTitle(title)
+                .setContentText(text)
                 .setSmallIcon(R.mipmap.ic_launcher_round)
                 .setContentIntent(pendingIntent)
-                .build()
+
+        when (state) {
+            PlaybackState.PLAYING -> {
+                builder.addAction(createAction(context, android.R.drawable.ic_media_play, R.string.notification_play_btn_title, NotificationReceiverActivity.PLAYER_ACTION_PLAY))
+                builder.style = Notification.MediaStyle().setShowActionsInCompactView(0)
+            }
+            PlaybackState.PAUSED -> {
+                builder.addAction(createAction(context, android.R.drawable.ic_media_pause, R.string.notification_pause_btn_title, NotificationReceiverActivity.PLAYER_ACTION_PAUSE))
+                builder.style = Notification.MediaStyle().setShowActionsInCompactView(0)
+            }
+            else -> {
+            }
+        }
+
+        return builder.build()
     }
 
-    private fun createNotificationChannel() {
-        val serviceChannel = NotificationChannel(
-                CHANNEL_ID,
-                "Foreground Rpc Service Channel",
-                NotificationManager.IMPORTANCE_DEFAULT
-        )
-        val manager = context.getSystemService(NotificationManager::class.java)
-        manager?.createNotificationChannel(serviceChannel)
+    private fun createAction(context: Context, @DrawableRes iconResId: Int, @StringRes titleResId: Int, intentAction: String): Notification.Action {
+        val intent = Intent(context, NotificationReceiverActivity::class.java).apply {
+            action = intentAction
+        }
+        val pendingIntent = PendingIntent.getActivity(context, 0, intent, 0)
+        return Notification.Action.Builder(
+                Icon.createWithResource(context, iconResId),
+                context.getString(titleResId),
+                pendingIntent).build()
+    }
+
+    fun createNotificationChannel(name: String) {
+        notificationManager.createNotificationChannel(NotificationChannel(channelID, name, NotificationManager.IMPORTANCE_DEFAULT))
+    }
+
+    fun notify(id: Int, notification: Notification) {
+        notificationManager.notify(id, notification)
     }
 }

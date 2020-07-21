@@ -5,5 +5,5 @@ import org.ngbp.jsonrpc4jtestharness.rpc.RpcResponse
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class Subscribe(
-        var msgType: MutableList<String?>? = null
+        var msgType: List<String>? = null
 ) : RpcResponse()

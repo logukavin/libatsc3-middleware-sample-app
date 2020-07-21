@@ -64,7 +64,7 @@ class UserAgentActivity : AppCompatActivity() {
 
         setContentView(R.layout.activity_user_agent)
 
-        val swipeGD = GestureDetector(this, object: SwipeGestureDetector() {
+        val swipeGD = GestureDetector(this, object : SwipeGestureDetector() {
             override fun onClose() {
                 closeBAMenu(user_agent_web_view)
             }
@@ -74,7 +74,7 @@ class UserAgentActivity : AppCompatActivity() {
             }
         })
 
-        dashMediaSourceFactory = createMediaSourceFactory();
+        dashMediaSourceFactory = createMediaSourceFactory()
         simpleExoPlayer = createExoPlayer().also {
             receiver_media_player.player = it
         }
@@ -114,6 +114,9 @@ class UserAgentActivity : AppCompatActivity() {
                 Toast.makeText(this, "No media Url provided", Toast.LENGTH_LONG).show()
             }
         }
+        rmpViewModel.playWhenReady.observe(this, Observer { playWhenReady ->
+            simpleExoPlayer.playWhenReady = playWhenReady
+        })
 
         userAgentViewModel.services.observe(this, Observer { services ->
             atsc3_service_spinner.adapter = ServiceAdapter(this, services)
@@ -135,6 +138,22 @@ class UserAgentActivity : AppCompatActivity() {
         })
     }
 
+    override fun onStart() {
+        super.onStart()
+
+        rmpViewModel.setCurrentPlayerState(PlaybackState.PLAYING)
+    }
+
+    override fun onStop() {
+        super.onStop()
+
+        with(simpleExoPlayer) {
+            stop()
+            release()
+        }
+        rmpViewModel.setCurrentPlayerState(PlaybackState.PAUSED)
+    }
+
     private fun switchBA(appData: AppData?) {
         closeBAMenu(user_agent_web_view)
         user_agent_web_view.visibility = View.INVISIBLE
@@ -148,22 +167,6 @@ class UserAgentActivity : AppCompatActivity() {
                 user_agent_web_view.loadUrl("about:blank")
             }
         }
-    }
-
-    override fun onStart() {
-        super.onStart()
-
-        rmpViewModel.setState(PlaybackState.PLAYING)
-    }
-
-    override fun onStop() {
-        super.onStop()
-
-        with(simpleExoPlayer) {
-            stop()
-            release()
-        }
-        rmpViewModel.setState(PlaybackState.PAUSED)
     }
 
     private fun updateRMPLayout(x: Float, y: Float, scale: Float) {
