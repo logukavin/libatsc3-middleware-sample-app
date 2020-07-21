@@ -159,13 +159,12 @@ class UserAgentActivity : AppCompatActivity() {
         user_agent_web_view.visibility = View.INVISIBLE
 
         user_agent_web_view.postDelayed(5000) {
-            user_agent_web_view.visibility = View.VISIBLE
-
             if (appData?.appContextId != null && appData.appEntryPage != null) {
                 loadContent(user_agent_web_view)
             } else {
                 user_agent_web_view.loadUrl("about:blank")
             }
+            user_agent_web_view.visibility = View.VISIBLE
         }
     }
 
