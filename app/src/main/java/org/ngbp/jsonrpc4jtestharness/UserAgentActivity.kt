@@ -21,7 +21,6 @@ import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.view.postDelayed
 import androidx.lifecycle.Observer
 import com.google.android.exoplayer2.ExoPlayerFactory
-import com.google.android.exoplayer2.Player
 import com.google.android.exoplayer2.SimpleExoPlayer
 import com.google.android.exoplayer2.source.dash.DashMediaSource
 import com.google.android.exoplayer2.source.dash.DefaultDashChunkSource
@@ -29,6 +28,7 @@ import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
 import com.google.android.exoplayer2.upstream.DefaultLoadErrorHandlingPolicy
 import dagger.android.AndroidInjection
 import kotlinx.android.synthetic.main.activity_user_agent.*
+import kotlinx.coroutines.*
 import org.ngbp.jsonrpc4jtestharness.controller.model.AppData
 import org.ngbp.jsonrpc4jtestharness.controller.model.PlaybackState
 import org.ngbp.jsonrpc4jtestharness.core.AppUtils
@@ -42,10 +42,6 @@ import java.io.IOException
 import javax.inject.Inject
 
 class UserAgentActivity : AppCompatActivity() {
-    companion object {
-        const val CONTENT_URL = "https://127.0.0.1:8443/index.html?wsURL=ws://127.0.0.1:9998&rev=20180720"
-    }
-
     @Inject
     lateinit var userAgentViewModelFactory: UserAgentViewModelFactory
 
@@ -57,6 +53,8 @@ class UserAgentActivity : AppCompatActivity() {
     private lateinit var simpleExoPlayer: SimpleExoPlayer
     private lateinit var dashMediaSourceFactory: DashMediaSource.Factory
 
+    private var unloadBAJob: Job? = null
+
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         AndroidInjection.inject(this)
@@ -66,11 +64,11 @@ class UserAgentActivity : AppCompatActivity() {
 
         val swipeGD = GestureDetector(this, object : SwipeGestureDetector() {
             override fun onClose() {
-                closeBAMenu(user_agent_web_view)
+                closeBAMenu()
             }
 
             override fun onOpen() {
-                openBAMenu(user_agent_web_view)
+                openBAMenu()
             }
         })
 
@@ -93,7 +91,9 @@ class UserAgentActivity : AppCompatActivity() {
             clearSslPreferences()
             webViewClient = createWebViewClient()
         }.also {
-            loadContent(it)
+            user_agent_web_view.postDelayed(500) {
+                loadBAContent(CONTENT_URL)
+            }
         }
 
         rmpViewModel.reset()
@@ -105,7 +105,7 @@ class UserAgentActivity : AppCompatActivity() {
             )
         })
         rmpViewModel.mediaUri.observe(this, Observer { mediaUri ->
-            playMPD(mediaUri)
+            mediaUri?.let { startPlayback(mediaUri) } ?: stopPlayback()
         })
 
         //TODO: remove after tests
@@ -127,9 +127,7 @@ class UserAgentActivity : AppCompatActivity() {
             }
 
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                if (id > 0) {
-                    userAgentViewModel.selectService(id.toInt())
-                }
+                changeService(id.toInt())
             }
         }
 
@@ -152,20 +150,48 @@ class UserAgentActivity : AppCompatActivity() {
             release()
         }
         rmpViewModel.setCurrentPlayerState(PlaybackState.PAUSED)
+
+        cancelUnloadBAJob()
+    }
+
+    override fun onBackPressed() {
+        if (isBAMenuOpened) {
+            closeBAMenu()
+        } else super.onBackPressed()
+    }
+
+    private fun changeService(serviceId: Int) {
+        stopPlayback()
+        setBAAvailability(false)
+        cancelUnloadBAJob()
+
+        unloadBAJob = GlobalScope.launch {
+            delay(BA_LOADING_TIMEOUT)
+            withContext(Dispatchers.Main) {
+                unloadBAContent()
+                unloadBAJob = null
+            }
+        }
+
+        userAgentViewModel.selectService(serviceId)
+    }
+
+    private fun setBAAvailability(available: Boolean) {
+        user_agent_web_view.visibility = if (available) View.VISIBLE else View.INVISIBLE
     }
 
     private fun switchBA(appData: AppData?) {
-        closeBAMenu(user_agent_web_view)
-        user_agent_web_view.visibility = View.INVISIBLE
-
-        user_agent_web_view.postDelayed(5000) {
-            if (appData?.appContextId != null && appData.appEntryPage != null) {
-                loadContent(user_agent_web_view)
-            } else {
-                user_agent_web_view.loadUrl("about:blank")
-            }
-            user_agent_web_view.visibility = View.VISIBLE
+        val appEntryPage = appData?.appEntryPage
+        val appContextId = appData?.appContextId
+        if (appContextId != null && appEntryPage != null) {
+            cancelUnloadBAJob()
+            loadBAContent(appEntryPage)
         }
+    }
+
+    private fun cancelUnloadBAJob() {
+        unloadBAJob?.cancel()
+        unloadBAJob = null
     }
 
     private fun updateRMPLayout(x: Float, y: Float, scale: Float) {
@@ -178,9 +204,14 @@ class UserAgentActivity : AppCompatActivity() {
         }.applyTo(user_agent_root)
     }
 
-    private fun loadContent(webView: WebView) {
-        webView.postDelayed(500) {
-            webView.loadUrl(CONTENT_URL)
+    private fun loadBAContent(entryPoint: String) {
+        setBAAvailability(true)
+        user_agent_web_view.loadUrl(CONTENT_URL)
+    }
+
+    private fun unloadBAContent() {
+        if (user_agent_web_view != null) {
+            user_agent_web_view.loadUrl("about:blank")
         }
     }
 
@@ -207,18 +238,16 @@ class UserAgentActivity : AppCompatActivity() {
         }
     }
 
-    private fun playMPD(mpdPath: String?) {
-        if (simpleExoPlayer.playbackState != Player.STATE_IDLE) {
-            simpleExoPlayer.stop() //TODO: release?
-        }
+    private fun startPlayback(mpdPath: String) {
+        stopPlayback()
 
-        if (mpdPath != null) {
-            val dashMediaSource = dashMediaSourceFactory.createMediaSource(Uri.parse(mpdPath))
-            simpleExoPlayer.prepare(dashMediaSource)
-            simpleExoPlayer.playWhenReady = true
-        } else {
-            simpleExoPlayer.playWhenReady = false
-        }
+        val dashMediaSource = dashMediaSourceFactory.createMediaSource(Uri.parse(mpdPath))
+        simpleExoPlayer.prepare(dashMediaSource)
+        simpleExoPlayer.playWhenReady = true
+    }
+
+    private fun stopPlayback() {
+        simpleExoPlayer.stop()
     }
 
     private fun sendKeyPress(view: View, key: Int) {
@@ -226,20 +255,14 @@ class UserAgentActivity : AppCompatActivity() {
         view.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, key))
     }
 
-    private fun closeBAMenu(view: View) {
-        sendKeyPress(view, KeyEvent.KEYCODE_DPAD_LEFT)
+    private fun closeBAMenu() {
+        sendKeyPress(user_agent_web_view, KeyEvent.KEYCODE_DPAD_LEFT)
         isBAMenuOpened = false
     }
 
-    private fun openBAMenu(view: View) {
-        sendKeyPress(view, KeyEvent.KEYCODE_DPAD_RIGHT)
+    private fun openBAMenu() {
+        sendKeyPress(user_agent_web_view, KeyEvent.KEYCODE_DPAD_RIGHT)
         isBAMenuOpened = true
-    }
-
-    override fun onBackPressed() {
-        if (isBAMenuOpened) {
-            closeBAMenu(user_agent_web_view)
-        } else super.onBackPressed()
     }
 
     private fun createWebViewClient() = object : WebViewClient() {
@@ -254,5 +277,11 @@ class UserAgentActivity : AppCompatActivity() {
             }
             request.proceed(CertificateUtils.privateKey, CertificateUtils.certificates)
         }
+    }
+
+    companion object {
+        const val CONTENT_URL = "https://127.0.0.1:8443/index.html?wsURL=ws://127.0.0.1:9998&rev=20180720"
+
+        private const val BA_LOADING_TIMEOUT = 5000L
     }
 }
