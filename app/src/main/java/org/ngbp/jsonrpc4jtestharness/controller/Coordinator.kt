@@ -1,9 +1,11 @@
 package org.ngbp.jsonrpc4jtestharness.controller
 
 import androidx.lifecycle.MutableLiveData
-import org.ngbp.jsonrpc4jtestharness.controller.model.PlaybackState
 import kotlinx.coroutines.*
+import org.ngbp.jsonrpc4jtestharness.controller.media.IObservablePlayer
+import org.ngbp.jsonrpc4jtestharness.controller.media.PlayerStateRegistry
 import org.ngbp.jsonrpc4jtestharness.controller.model.AppData
+import org.ngbp.jsonrpc4jtestharness.controller.model.PlaybackState
 import org.ngbp.jsonrpc4jtestharness.controller.model.RPMParams
 import org.ngbp.jsonrpc4jtestharness.controller.model.SLSService
 import org.ngbp.libatsc3.Atsc3Module
@@ -12,6 +14,7 @@ import java.util.*
 import javax.inject.Inject
 import javax.inject.Singleton
 
+//TODO: extract controllers as separate classes
 @Singleton
 class Coordinator @Inject constructor(
         private val atsc3Module: Atsc3Module
@@ -19,17 +22,23 @@ class Coordinator @Inject constructor(
 
     // Receiver Controller
     override val receiverState = MutableLiveData<Atsc3Module.State>()
+    override val selectedService = MutableLiveData<SLSService>()
 
     // Media Player Controller
-    override val rmpParams = MutableLiveData<RPMParams>()
+    private var rmpListeners = PlayerStateRegistry()
+
+    override val rmpParams = MutableLiveData<RPMParams>(RPMParams())
     override val rmpMediaUrl = MutableLiveData<String>()
+    override val rmpState = MutableLiveData<PlaybackState>(PlaybackState.IDLE)
 
     // RPC Controller
     override var language: String = Locale.getDefault().language
-    override var queryServiceId: String? =  "tag:sinclairplatform.com,2020:WZTV:2727" //TODO: remove after tests
+    override val queryServiceId: String?
+        get() = selectedService.value?.globalId
     override val mediaUrl: String?
         get() = rmpMediaUrl.value
-    override var playbackState: PlaybackState = PlaybackState.IDLE
+    override val playbackState: PlaybackState
+        get() = rmpState.value ?: PlaybackState.IDLE
 
     // User Agent Controller
     override val sltServices = MutableLiveData<List<SLSService>>()
@@ -37,6 +46,9 @@ class Coordinator @Inject constructor(
 
     init {
         atsc3Module.setListener(this)
+
+        // TEST DATA
+        selectedService.value = SLSService(5003, "WZTV", "tag:sinclairplatform.com,2020:WZTV:2727") //TODO: remove after tests
     }
 
     override fun onStateChanged(state: Atsc3Module.State?) {
@@ -57,12 +69,20 @@ class Coordinator @Inject constructor(
         appData.postValue(AppData(appContextId, entryPage))
     }
 
-    override fun updateViewPosition(scaleFactor: Double?, xPos: Double?, yPos: Double?) {
+    override fun updateRMPPosition(scaleFactor: Double?, xPos: Double?, yPos: Double?) {
         rmpParams.postValue(RPMParams(
-                scaleFactor ?: 1.0,
+                scaleFactor ?: 100.0,
                 xPos?.toInt() ?: 0,
                 yPos?.toInt() ?: 0
         ))
+    }
+
+    override fun updateRMPState(state: PlaybackState) {
+        when (state) {
+            PlaybackState.PAUSED -> rmpPause()
+            PlaybackState.PLAYING -> rmpResume()
+            else -> {}
+        }
     }
 
     override fun openRoute(pcapFile: String): Boolean {
@@ -81,7 +101,7 @@ class Coordinator @Inject constructor(
         val res = atsc3Module.selectService(service.id)
         if (res) {
             //TODO: should we use globalId or context from HELD?
-            queryServiceId = service.globalId
+            selectedService.postValue(service)
 
             //TODO: temporary waiter for media. Should use notification instead
             GlobalScope.launch {
@@ -110,15 +130,31 @@ class Coordinator @Inject constructor(
     }
 
     override fun rmpReset() {
-        rmpParams.postValue(RPMParams(100.0, 0, 0))
+        rmpParams.postValue(RPMParams())
     }
 
     override fun rmpPlaybackChanged(state: PlaybackState) {
-        playbackState = state
+        rmpState.postValue(state)
+    }
+
+    override fun rmpPause() {
+        rmpListeners.notifyPause(this)
+    }
+
+    override fun rmpResume() {
+        rmpListeners.notifyResume(this)
+    }
+
+    override fun addOnPlayerSateChangedCallback(callback: IObservablePlayer.IPlayerStateListener) {
+        rmpListeners.add(callback)
+    }
+
+    override fun removeOnPlayerSateChangedCallback(callback: IObservablePlayer.IPlayerStateListener) {
+        rmpListeners.remove(callback)
     }
 
     private fun reset() {
-        queryServiceId = null
+        selectedService.postValue(null)
         sltServices.postValue(emptyList())
         appData.postValue(null)
         rmpMediaUrl.postValue(null)
