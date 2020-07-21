@@ -1,14 +1,14 @@
 package org.ngbp.libatsc3
 
 import android.content.Context
-import android.net.Uri
 import android.util.Log
 import org.ngbp.libatsc3.ndk.Atsc3UsbDevice
 import org.ngbp.libatsc3.entities.service.LLSParserSLT
-import org.ngbp.libatsc3.entities.service.Service
+import org.ngbp.libatsc3.entities.service.Atsc3Service
 import org.ngbp.libatsc3.ndk.atsc3NdkClient
 import org.ngbp.libatsc3.ndk.atsc3NdkClient.ClientListener
-import org.ngbp.libatsc3.entities.held.Held
+import org.ngbp.libatsc3.entities.held.Atsc3Held
+import org.ngbp.libatsc3.entities.held.Atsc3HeldPackage
 import org.ngbp.libatsc3.entities.held.HeldXmlParser
 import java.lang.IllegalStateException
 import java.util.*
@@ -22,21 +22,22 @@ class Atsc3Module(context: Context) : ClientListener {
 
     interface Listener {
         fun onStateChanged(state: State?)
-        fun onServicesLoaded(services: List<Service?>)
-        fun onCurrentServiceHeldChanged(appContextId: String?, entryPage: String?)
+        fun onServicesLoaded(services: List<Atsc3Service?>)
+        fun onCurrentServicePackageChanged(pkg: Atsc3HeldPackage?)
     }
 
     private val client: atsc3NdkClient = atsc3NdkClient(context.cacheDir, this)
     private val usbDevice: Atsc3UsbDevice? = null
 
-    private val serviceMap = ConcurrentHashMap<Int, Service>()
+    private val serviceMap = ConcurrentHashMap<Int, Atsc3Service>()
 
     private var isPcapOpened = false
     private var state = State.IDLE
     private var selectedServiceId = -1
     private var selectedServiceSLSProtocol = -1
-    private var selectedServiceHeld: Held? = null
-    private var selectedServiceHeldXml: String? = null
+    private var selectedServiceHeld: Atsc3Held? = null
+    private var selectedServicePackage: Atsc3HeldPackage? = null
+    private var selectedServiceHeldXml: String? = null //TODO: use TOI instead
 
     @Volatile
     private var listener: Listener? = null
@@ -159,11 +160,11 @@ class Atsc3Module(context: Context) : ClientListener {
     }
 
     fun getSelectedServiceAppContextId(): String? {
-        return selectedServiceHeld?.appContextId
+        return selectedServicePackage?.appContextId
     }
 
     fun getSelectedServiceEntryPoint(): String? {
-        return selectedServiceHeld?.bcastEntryPageUrl
+        return selectedServicePackage?.bcastEntryPageUrl
     }
 
     private fun clear() {
@@ -179,6 +180,7 @@ class Atsc3Module(context: Context) : ClientListener {
 
     private fun clearHeld() {
         selectedServiceHeld = null
+        selectedServicePackage = null
         selectedServiceHeldXml = null
     }
 
@@ -194,11 +196,18 @@ class Atsc3Module(context: Context) : ClientListener {
         if (service_id == selectedServiceId) {
             if (held_payload_xml != selectedServiceHeldXml) {
                 selectedServiceHeldXml = held_payload_xml
-                val held = HeldXmlParser().parseXML(held_payload_xml)
-                selectedServiceHeld = held
+
+                val held = HeldXmlParser().parseXML(held_payload_xml).also { held ->
+                    selectedServiceHeld = held
+                }
 
                 if (held != null) {
-                    listener?.onCurrentServiceHeldChanged(held.appContextId, held.bcastEntryPageUrl)
+                    val pkg = held.findActivePackage(service_id)
+
+                    if (pkg != selectedServicePackage) {
+                        selectedServicePackage = pkg
+                        listener?.onCurrentServicePackageChanged(pkg)
+                    }
                 }
             }
         }
