@@ -5,14 +5,15 @@ import android.graphics.Color
 import android.net.Uri
 import android.net.http.SslError
 import android.os.Bundle
+import android.util.Log
 import android.view.GestureDetector
 import android.view.KeyEvent
 import android.view.View
-import android.util.Log
 import android.webkit.ClientCertRequest
 import android.webkit.SslErrorHandler
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.AdapterView
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
@@ -28,11 +29,14 @@ import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
 import com.google.android.exoplayer2.upstream.DefaultLoadErrorHandlingPolicy
 import dagger.android.AndroidInjection
 import kotlinx.android.synthetic.main.activity_user_agent.*
-import org.ngbp.jsonrpc4jtestharness.core.SwipeGestureDetector
+import org.ngbp.jsonrpc4jtestharness.controller.model.AppData
 import org.ngbp.jsonrpc4jtestharness.controller.model.PlaybackState
 import org.ngbp.jsonrpc4jtestharness.core.AppUtils
 import org.ngbp.jsonrpc4jtestharness.core.CertificateUtils
+import org.ngbp.jsonrpc4jtestharness.core.ServiceAdapter
+import org.ngbp.jsonrpc4jtestharness.core.SwipeGestureDetector
 import org.ngbp.jsonrpc4jtestharness.lifecycle.RMPViewModel
+import org.ngbp.jsonrpc4jtestharness.lifecycle.UserAgentViewModel
 import org.ngbp.jsonrpc4jtestharness.lifecycle.factory.UserAgentViewModelFactory
 import java.io.IOException
 import javax.inject.Inject
@@ -46,6 +50,8 @@ class UserAgentActivity : AppCompatActivity() {
     lateinit var userAgentViewModelFactory: UserAgentViewModelFactory
 
     private val rmpViewModel: RMPViewModel by viewModels { userAgentViewModelFactory }
+    private val userAgentViewModel: UserAgentViewModel by viewModels { userAgentViewModelFactory }
+
     private var isBAMenuOpened = false
 
     private lateinit var simpleExoPlayer: SimpleExoPlayer
@@ -106,6 +112,40 @@ class UserAgentActivity : AppCompatActivity() {
         receiver_media_player.postDelayed(500) {
             if (rmpViewModel.mediaUri.value.isNullOrEmpty()) {
                 Toast.makeText(this, "No media Url provided", Toast.LENGTH_LONG).show()
+            }
+        }
+
+        userAgentViewModel.services.observe(this, Observer { services ->
+            atsc3_service_spinner.adapter = ServiceAdapter(this, services)
+        })
+        atsc3_service_spinner.adapter = ServiceAdapter(this, emptyList())
+        atsc3_service_spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onNothingSelected(parent: AdapterView<*>?) {
+            }
+
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                if (id > 0) {
+                    userAgentViewModel.selectService(id.toInt())
+                }
+            }
+        }
+
+        userAgentViewModel.appData.observe(this, Observer { appData ->
+            switchBA(appData)
+        })
+    }
+
+    private fun switchBA(appData: AppData?) {
+        closeBAMenu(user_agent_web_view)
+        user_agent_web_view.visibility = View.INVISIBLE
+
+        user_agent_web_view.postDelayed(5000) {
+            user_agent_web_view.visibility = View.VISIBLE
+
+            if (appData?.appContextId != null && appData.appEntryPage != null) {
+                loadContent(user_agent_web_view)
+            } else {
+                user_agent_web_view.loadUrl("about:blank")
             }
         }
     }

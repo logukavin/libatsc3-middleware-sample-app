@@ -2,7 +2,6 @@ package org.ngbp.jsonrpc4jtestharness
 
 import android.Manifest
 import android.content.ActivityNotFoundException
-import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.text.Editable
@@ -10,7 +9,6 @@ import android.text.TextUtils
 import android.text.TextWatcher
 import android.view.View
 import android.widget.AdapterView
-import android.widget.ArrayAdapter
 import android.widget.EditText
 import android.widget.Toast
 import androidx.activity.viewModels
@@ -26,8 +24,8 @@ import com.github.nmuzhichin.jsonrpc.module.JsonRpcModule
 import dagger.android.AndroidInjection
 import kotlinx.android.synthetic.main.activity_main.*
 import org.ngbp.jsonrpc4jtestharness.controller.IReceiverController
-import org.ngbp.jsonrpc4jtestharness.controller.model.SLSService
 import org.ngbp.jsonrpc4jtestharness.core.FileUtils
+import org.ngbp.jsonrpc4jtestharness.core.ServiceAdapter
 import org.ngbp.jsonrpc4jtestharness.core.ws.MiddlewareWebSocketClient
 import org.ngbp.jsonrpc4jtestharness.databinding.ActivityMainBinding
 import org.ngbp.jsonrpc4jtestharness.lifecycle.ReceiverViewModel
@@ -116,24 +114,6 @@ class MainActivity : AppCompatActivity() {
 
         makeCall_9_7_5_1()
         makeCall()
-    }
-
-    private class ServiceAdapter(
-            context: Context,
-            private val items: List<SLSService>
-    ) : ArrayAdapter<String>(context, android.R.layout.simple_spinner_dropdown_item) {
-
-        init {
-            if (items.isEmpty()) {
-                add("No service available")
-            } else {
-                addAll(items.map { it.shortName })
-            }
-        }
-
-        override fun getItemId(position: Int): Long {
-            return items.getOrNull(position)?.id?.toLong() ?: -1
-        }
     }
 
     private fun startUserAgent() {
