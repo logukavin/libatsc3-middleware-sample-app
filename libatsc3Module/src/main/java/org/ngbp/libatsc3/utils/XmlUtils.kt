@@ -5,8 +5,11 @@ import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserException
 import java.io.ByteArrayInputStream
 import java.io.IOException
+import java.time.ZonedDateTime
+import java.time.format.DateTimeParseException
 
 object XmlUtils {
+
     @Throws(XmlPullParserException::class)
     fun newParser(cmlPayload: String): XmlPullParser {
         return Xml.newPullParser().apply {
@@ -38,5 +41,26 @@ object XmlUtils {
             e.printStackTrace()
         }
         return -1
+    }
+
+    fun strToLong(value: String): Long {
+        try {
+            return value.toLong(16)
+        } catch (e: NumberFormatException) {
+            e.printStackTrace()
+        }
+        return -1
+    }
+
+    fun strToListOfInt(value: String): List<Int> {
+        return value.split(" ").map { strToInt(it) }
+    }
+
+    fun strToDate(value: String): ZonedDateTime? {
+        return try {
+            ZonedDateTime.parse(value)
+        } catch (e: DateTimeParseException) {
+            null
+        }
     }
 }
