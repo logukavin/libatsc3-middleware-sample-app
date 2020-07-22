@@ -1,4 +1,5 @@
 package org.ngbp.jsonrpc4jtestharness.rpc.requestReceiverActions
+
 import org.ngbp.jsonrpc4jtestharness.controller.IRPCController
 import org.ngbp.jsonrpc4jtestharness.controller.model.PlaybackState
 import org.ngbp.jsonrpc4jtestharness.rpc.RpcErrorCode
@@ -60,10 +61,7 @@ class ReceiverActionImpl(
     }
 
     private fun setUpRMPData(rmpurl: String?, rmpSyncTime: Double?, state: PlaybackState) {
-        if (rmpSyncTime == null) {// && rmpSyncTime <= 5.0){
-
-//            throw RuntimeException("ss")
-//            ddd.error = ERROR_CODES.SYNCHRONIZATION_CANNOT_BE_ACHIEVED
+        if (rmpSyncTime != null && rmpSyncTime <= 5.0) {
             throw RpcException(RpcErrorCode.SYNCHRONIZATION_CANNOT_BE_ACHIEVED)
         } else {
             rpcController.rmpUrl = rmpurl

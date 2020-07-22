@@ -42,8 +42,10 @@ import javax.inject.Inject
 class MainActivity : AppCompatActivity() {
     @Inject
     lateinit var callWrapper: RPCProcessor
+
     @Inject
     lateinit var controller: IReceiverController
+
     @Inject
     lateinit var userAgentViewModelFactory: UserAgentViewModelFactory
 
@@ -78,15 +80,13 @@ class MainActivity : AppCompatActivity() {
         findViewById<View>(R.id.stop).setOnClickListener { stopService() }
         findViewById<View>(R.id.start).setOnClickListener { startService() }
         findViewById<View>(R.id.start_user_agent).setOnClickListener {
-//            startUserAgent()
-            makeCall()
+            startUserAgent()
         }
 
         findViewById<View>(R.id.connect_to_ws).setOnClickListener { startWSClient() }
         findViewById<View>(R.id.left).setOnClickListener {
-//            if (xPos > 0) xPos -= 10
-//            makeCall()
-            makeCall_9_7_5_1()
+            if (xPos > 0) xPos -= 10
+            makeCall()
         }
         findViewById<View>(R.id.right).setOnClickListener {
             xPos += 10
