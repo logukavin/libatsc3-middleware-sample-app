@@ -1,7 +1,8 @@
 package org.ngbp.jsonrpc4jtestharness.rpc.requestReceiverActions
 import org.ngbp.jsonrpc4jtestharness.controller.IRPCController
 import org.ngbp.jsonrpc4jtestharness.controller.model.PlaybackState
-import org.ngbp.jsonrpc4jtestharness.rpc.CustomException
+import org.ngbp.jsonrpc4jtestharness.rpc.RpcErrorCode
+import org.ngbp.jsonrpc4jtestharness.rpc.RpcException
 import org.ngbp.jsonrpc4jtestharness.rpc.RpcResponse
 import org.ngbp.jsonrpc4jtestharness.rpc.requestReceiverActions.model.AudioVolume
 
@@ -63,7 +64,7 @@ class ReceiverActionImpl(
 
 //            throw RuntimeException("ss")
 //            ddd.error = ERROR_CODES.SYNCHRONIZATION_CANNOT_BE_ACHIEVED
-            throw CustomException()
+            throw RpcException(RpcErrorCode.SYNCHRONIZATION_CANNOT_BE_ACHIEVED)
         } else {
             rpcController.rmpUrl = rmpurl
             rpcController.rmpSyncTime = rmpSyncTime
