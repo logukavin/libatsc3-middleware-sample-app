@@ -239,11 +239,20 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showFileChooser() {
+        val type = "*/*"
+
+        val samsungIntent = Intent("com.sec.android.app.myfiles.PICK_DATA")
+        samsungIntent.putExtra("CONTENT_TYPE", type)
+        samsungIntent.addCategory(Intent.CATEGORY_DEFAULT)
+
         val intent = Intent(Intent.ACTION_GET_CONTENT)
-        intent.type = "*/*"
+        intent.type = type
         intent.addCategory(Intent.CATEGORY_OPENABLE)
+
+        val chooserIntent = if (packageManager.resolveActivity(samsungIntent, 0) != null) samsungIntent else intent
+
         try {
-            startActivityForResult(Intent.createChooser(intent, "Select a File to Upload"), FILE_REQUEST_CODE)
+            startActivityForResult(Intent.createChooser(chooserIntent, "Select a File to Upload"), FILE_REQUEST_CODE)
         } catch (ex: ActivityNotFoundException) {
             Toast.makeText(this, "There is no one File Manager registered in system.", Toast.LENGTH_SHORT).show()
         }
