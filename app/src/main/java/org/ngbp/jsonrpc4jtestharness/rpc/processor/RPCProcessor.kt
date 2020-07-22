@@ -42,7 +42,7 @@ import org.ngbp.jsonrpc4jtestharness.rpc.requestReceiverActions.ReceiverActionIm
 import org.ngbp.jsonrpc4jtestharness.rpc.rmpContentSynchronization.IRMPContentSynchronization
 import org.ngbp.jsonrpc4jtestharness.rpc.rmpContentSynchronization.RMPContentSynchronizationImpl
 import org.ngbp.jsonrpc4jtestharness.rpc.subscribeUnsubscribe.ISubscribeUnsubscribe
-import org.ngbp.jsonrpc4jtestharness.rpc.subscribeUnsubscribe.SubscribeUnsubscribeImp
+import org.ngbp.jsonrpc4jtestharness.rpc.subscribeUnsubscribe.SubscribeUnsubscribeImpl
 import org.ngbp.jsonrpc4jtestharness.rpc.xLink.IXLink
 import org.ngbp.jsonrpc4jtestharness.rpc.xLink.XLinkImpl
 import javax.inject.Inject
@@ -78,7 +78,7 @@ class RPCProcessor @Inject constructor(
         processor.process(ReceiverQueryApiImpl(rpcController), IReceiverQueryApi::class.java)
         processor.process(ReceiverActionImpl(rpcController), IReceiverAction::class.java)
         processor.process(RMPContentSynchronizationImpl(rpcController), IRMPContentSynchronization::class.java)
-        processor.process(SubscribeUnsubscribeImp(), ISubscribeUnsubscribe::class.java)
+        processor.process(SubscribeUnsubscribeImpl(), ISubscribeUnsubscribe::class.java)
         processor.process(XLinkImpl(), IXLink::class.java)
         processor.process(RPCNotification(rpcController), IRPCNotification::class.java)
     }
