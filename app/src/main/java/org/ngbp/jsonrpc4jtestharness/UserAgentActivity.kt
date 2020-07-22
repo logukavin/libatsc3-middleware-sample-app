@@ -29,6 +29,7 @@ import com.google.android.exoplayer2.upstream.DefaultLoadErrorHandlingPolicy
 import dagger.android.AndroidInjection
 import kotlinx.android.synthetic.main.activity_user_agent.*
 import kotlinx.coroutines.*
+import org.ngbp.jsonrpc4jtestharness.controller.IReceiverController
 import org.ngbp.jsonrpc4jtestharness.controller.model.AppData
 import org.ngbp.jsonrpc4jtestharness.controller.model.PlaybackState
 import org.ngbp.jsonrpc4jtestharness.core.AppUtils
@@ -44,6 +45,8 @@ import javax.inject.Inject
 class UserAgentActivity : AppCompatActivity() {
     @Inject
     lateinit var userAgentViewModelFactory: UserAgentViewModelFactory
+    @Inject
+    lateinit var receiverController: IReceiverController
 
     private val rmpViewModel: RMPViewModel by viewModels { userAgentViewModelFactory }
     private val userAgentViewModel: UserAgentViewModel by viewModels { userAgentViewModelFactory }
@@ -118,11 +121,15 @@ class UserAgentActivity : AppCompatActivity() {
             simpleExoPlayer.playWhenReady = playWhenReady
         })
 
+        val adapter = ServiceAdapter(this, emptyList())
+        service_spinner.adapter = adapter
+
         userAgentViewModel.services.observe(this, Observer { services ->
-            atsc3_service_spinner.adapter = ServiceAdapter(this, services)
+            adapter.setServices(services)
         })
-        atsc3_service_spinner.adapter = ServiceAdapter(this, emptyList())
-        atsc3_service_spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+
+        service_spinner.setSelection(0, false)
+        service_spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onNothingSelected(parent: AdapterView<*>?) {
             }
 
@@ -133,6 +140,11 @@ class UserAgentActivity : AppCompatActivity() {
 
         userAgentViewModel.appData.observe(this, Observer { appData ->
             switchBA(appData)
+        })
+
+        receiverController.selectedService.observe(this, androidx.lifecycle.Observer {
+            val spinnerPosition = adapter.getPosition(it.shortName)
+            service_spinner.setSelection(spinnerPosition)
         })
     }
 
