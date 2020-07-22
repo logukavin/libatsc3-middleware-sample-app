@@ -3,7 +3,7 @@ package org.ngbp.jsonrpc4jtestharness.di.module
 import dagger.Module
 import dagger.android.ContributesAndroidInjector
 import org.ngbp.jsonrpc4jtestharness.MainActivity
-import org.ngbp.jsonrpc4jtestharness.UserAgentActivity
+import org.ngbp.jsonrpc4jtestharness.useragent.UserAgentActivity
 import org.ngbp.jsonrpc4jtestharness.NotificationReceiverActivity
 import org.ngbp.jsonrpc4jtestharness.service.ForegroundRpcService
 

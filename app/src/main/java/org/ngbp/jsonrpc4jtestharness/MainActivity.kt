@@ -2,7 +2,6 @@ package org.ngbp.jsonrpc4jtestharness
 
 import android.Manifest
 import android.content.ActivityNotFoundException
-import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.text.Editable
@@ -10,7 +9,6 @@ import android.text.TextUtils
 import android.text.TextWatcher
 import android.view.View
 import android.widget.AdapterView
-import android.widget.ArrayAdapter
 import android.widget.EditText
 import android.widget.Toast
 import androidx.activity.viewModels
@@ -26,8 +24,8 @@ import com.github.nmuzhichin.jsonrpc.module.JsonRpcModule
 import dagger.android.AndroidInjection
 import kotlinx.android.synthetic.main.activity_main.*
 import org.ngbp.jsonrpc4jtestharness.controller.IReceiverController
-import org.ngbp.jsonrpc4jtestharness.controller.model.SLSService
 import org.ngbp.jsonrpc4jtestharness.core.FileUtils
+import org.ngbp.jsonrpc4jtestharness.useragent.ServiceAdapter
 import org.ngbp.jsonrpc4jtestharness.core.ws.MiddlewareWebSocketClient
 import org.ngbp.jsonrpc4jtestharness.databinding.ActivityMainBinding
 import org.ngbp.jsonrpc4jtestharness.lifecycle.ReceiverViewModel
@@ -35,6 +33,7 @@ import org.ngbp.jsonrpc4jtestharness.lifecycle.UserAgentViewModel
 import org.ngbp.jsonrpc4jtestharness.lifecycle.factory.UserAgentViewModelFactory
 import org.ngbp.jsonrpc4jtestharness.rpc.processor.RPCProcessor
 import org.ngbp.jsonrpc4jtestharness.service.ForegroundRpcService
+import org.ngbp.jsonrpc4jtestharness.useragent.UserAgentActivity
 import org.ngbp.libatsc3.Atsc3Module
 import java.util.*
 import javax.inject.Inject
@@ -98,11 +97,12 @@ class MainActivity : AppCompatActivity() {
         }
 
         initLibAtsc3()
+        val adapter = ServiceAdapter(this)
+        atsc3_service_spinner.adapter = adapter
 
         userAgentViewModel.services.observe(this, Observer { services ->
-            atsc3_service_spinner.adapter = ServiceAdapter(this, services)
+            adapter.setServices(services)
         })
-        atsc3_service_spinner.adapter = ServiceAdapter(this, emptyList())
         atsc3_service_spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onNothingSelected(parent: AdapterView<*>?) {
             }
@@ -116,24 +116,6 @@ class MainActivity : AppCompatActivity() {
 
         makeCall_9_7_5_1()
         makeCall()
-    }
-
-    private class ServiceAdapter(
-            context: Context,
-            private val items: List<SLSService>
-    ) : ArrayAdapter<String>(context, android.R.layout.simple_spinner_dropdown_item) {
-
-        init {
-            if (items.isEmpty()) {
-                add("No service available")
-            } else {
-                addAll(items.map { it.shortName })
-            }
-        }
-
-        override fun getItemId(position: Int): Long {
-            return items.getOrNull(position)?.id?.toLong() ?: -1
-        }
     }
 
     private fun startUserAgent() {
@@ -239,11 +221,20 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showFileChooser() {
+        val type = "*/*"
+
+        val samsungIntent = Intent("com.sec.android.app.myfiles.PICK_DATA")
+        samsungIntent.putExtra("CONTENT_TYPE", type)
+        samsungIntent.addCategory(Intent.CATEGORY_DEFAULT)
+
         val intent = Intent(Intent.ACTION_GET_CONTENT)
-        intent.type = "*/*"
+        intent.type = type
         intent.addCategory(Intent.CATEGORY_OPENABLE)
+
+        val chooserIntent = if (packageManager.resolveActivity(samsungIntent, 0) != null) samsungIntent else intent
+
         try {
-            startActivityForResult(Intent.createChooser(intent, "Select a File to Upload"), FILE_REQUEST_CODE)
+            startActivityForResult(Intent.createChooser(chooserIntent, "Select a File to Upload"), FILE_REQUEST_CODE)
         } catch (ex: ActivityNotFoundException) {
             Toast.makeText(this, "There is no one File Manager registered in system.", Toast.LENGTH_SHORT).show()
         }

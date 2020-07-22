@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/user_agent_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".UserAgentActivity">
+    tools:context=".useragent.UserAgentActivity">
 
     <com.google.android.exoplayer2.ui.PlayerView
         android:id="@+id/receiver_media_player"
@@ -21,4 +21,14 @@
         android:id="@+id/user_agent_web_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
+
+    <androidx.appcompat.widget.AppCompatSpinner
+        android:id="@+id/service_spinner"
+        android:layout_width="@dimen/service_spinner_width"
+        android:layout_height="@dimen/item_spinner_height"
+        android:spinnerMode="dropdown"
+        android:background="@android:color/white"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"/>
+
 </androidx.constraintlayout.widget.ConstraintLayout>
