@@ -33,9 +33,9 @@ class IRPCControllerTest {
     @Mock
     private val atsc3Module: Atsc3Module? = null
 
-    private var RPCController: IRPCController? = null
-    private var coordinator: Coordinator? = null
-    private var mediaPlayerController: IMediaPlayerController? = null
+    private lateinit var RPCController: IRPCController
+    private lateinit var coordinator: Coordinator
+    private lateinit var mediaPlayerController: IMediaPlayerController
     private var scaleFactor: Double = 1.0
     private var xPos: Double = 11.0
     private var yPos: Double = 22.0
@@ -52,18 +52,18 @@ class IRPCControllerTest {
 
     @Test
     fun testCallBackData() {
-        RPCController?.updateViewPosition(scaleFactor, xPos, yPos)
-        assertEquals(scaleFactor, mediaPlayerController!!.rmpParams.value?.scale)
-        assertEquals(xPos.toInt(), mediaPlayerController!!.rmpParams.value?.x)
-        assertEquals(yPos.toInt(), mediaPlayerController!!.rmpParams.value?.y)
+        RPCController.updateViewPosition(scaleFactor, xPos, yPos)
+        assertEquals(scaleFactor, mediaPlayerController.rmpParams.value?.scale)
+        assertEquals(xPos.toInt(), mediaPlayerController.rmpParams.value?.x)
+        assertEquals(yPos.toInt(), mediaPlayerController.rmpParams.value?.y)
     }
 
     @Test
     fun testCallBackNullData() {
-        RPCController?.updateViewPosition(null, null, null)
-        assertEquals(100.0, mediaPlayerController!!.rmpParams.value?.scale)
-        assertEquals(0, mediaPlayerController!!.rmpParams.value?.x)
-        assertEquals(0, mediaPlayerController!!.rmpParams.value?.y)
+        RPCController.updateViewPosition(null, null, null)
+        assertEquals(100.0, mediaPlayerController.rmpParams.value?.scale)
+        assertEquals(0, mediaPlayerController.rmpParams.value?.x)
+        assertEquals(0, mediaPlayerController.rmpParams.value?.y)
     }
 
     @Test
@@ -75,21 +75,21 @@ class IRPCControllerTest {
 
     @Test
     fun testLanguage() {
-        assertEquals(Locale.getDefault().language, RPCController?.language)
+        assertEquals(Locale.getDefault().language, RPCController.language)
     }
 
     @Test
     fun testQueryServiceId() {
-        assertEquals(mockedSLSService.globalId, RPCController?.queryServiceId)
+        assertEquals(mockedSLSService.globalId, RPCController.queryServiceId)
     }
 
     @Test
     fun testMediaUrl() {
-        assertEquals(mockedMediaUrl, RPCController?.mediaUrl)
+        assertEquals(mockedMediaUrl, RPCController.mediaUrl)
     }
 
     @Test
     fun testPlaybackState() {
-        assertEquals(PlaybackState.IDLE, RPCController?.playbackState)
+        assertEquals(PlaybackState.IDLE, RPCController.playbackState)
     }
 }
