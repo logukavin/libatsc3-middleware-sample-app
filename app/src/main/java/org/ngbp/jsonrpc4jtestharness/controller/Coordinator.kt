@@ -8,6 +8,7 @@ import org.ngbp.jsonrpc4jtestharness.controller.model.AppData
 import org.ngbp.jsonrpc4jtestharness.controller.model.PlaybackState
 import org.ngbp.jsonrpc4jtestharness.controller.model.RPMParams
 import org.ngbp.jsonrpc4jtestharness.controller.model.SLSService
+import org.ngbp.jsonrpc4jtestharness.rpc.notification.NotificationType
 import org.ngbp.libatsc3.Atsc3Module
 import org.ngbp.libatsc3.entities.held.Atsc3HeldPackage
 import org.ngbp.libatsc3.entities.service.Atsc3Service
@@ -40,6 +41,7 @@ class Coordinator @Inject constructor(
         get() = rmpMediaUrl.value
     override val playbackState: PlaybackState
         get() = rmpState.value ?: PlaybackState.IDLE
+    override var subscribedINotifications = mutableSetOf<NotificationType>()
 
     // User Agent Controller
     override val sltServices = MutableLiveData<List<SLSService>>()
@@ -160,6 +162,14 @@ class Coordinator @Inject constructor(
 
     override fun removeOnPlayerSateChangedCallback(callback: IObservablePlayer.IPlayerStateListener) {
         rmpListeners.remove(callback)
+    }
+
+    override fun subscribeNotifications(notifications: Set<NotificationType>) {
+        subscribedINotifications.addAll(notifications)
+    }
+
+    override fun unsubscribeNotifications(notifications: Set<NotificationType>) {
+        subscribedINotifications.removeAll(notifications)
     }
 
     private fun reset() {

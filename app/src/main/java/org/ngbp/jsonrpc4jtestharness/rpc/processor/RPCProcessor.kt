@@ -78,7 +78,7 @@ class RPCProcessor @Inject constructor(
         processor.process(ReceiverQueryApiImpl(rpcController), IReceiverQueryApi::class.java)
         processor.process(ReceiverActionImpl(rpcController), IReceiverAction::class.java)
         processor.process(RMPContentSynchronizationImpl(rpcController), IRMPContentSynchronization::class.java)
-        processor.process(SubscribeUnsubscribeImpl(), ISubscribeUnsubscribe::class.java)
+        processor.process(SubscribeUnsubscribeImpl(rpcController), ISubscribeUnsubscribe::class.java)
         processor.process(XLinkImpl(), IXLink::class.java)
         processor.process(RPCNotification(rpcController), IRPCNotification::class.java)
     }
