@@ -13,6 +13,7 @@ import com.github.nmuzhichin.jsonrpc.model.response.ResponseUtils
 import com.github.nmuzhichin.jsonrpc.model.response.errors.Error
 import com.github.nmuzhichin.jsonrpc.module.JsonRpcModule
 import org.ngbp.jsonrpc4jtestharness.controller.IRPCController
+import org.ngbp.jsonrpc4jtestharness.rpc.CustomException
 import org.ngbp.jsonrpc4jtestharness.rpc.ERROR_CODES
 import org.ngbp.jsonrpc4jtestharness.rpc.RpcError
 import org.ngbp.jsonrpc4jtestharness.rpc.cacheRequest.CacheRequestImpl
@@ -95,6 +96,17 @@ class RPCProcessor @Inject constructor(
             responseToJson(response)
         } catch (e: JsonProcessingException) {
             errorResponse(requestId, e)
+        } catch (e: CustomException) {
+            errorCustomResponse(requestId, e)
+        }
+    }
+
+    private fun errorCustomResponse(requestId: Long, e: CustomException): String {
+        return try {
+            responseToJson(ResponseUtils.createResponse(requestId, InternalRpcError(11, "11")))
+        } catch (ex: JsonProcessingException) {
+            // This catch will never been executed during code logic, but it need because objectMapper throw exception
+            ""
         }
     }
 
@@ -118,16 +130,16 @@ class RPCProcessor @Inject constructor(
 
     private fun responseToJson(response: Response) = objectMapper.writeValueAsString(response)
 
-    private fun errorResponse(requestId: Long, e: JsonProcessingException): String {
+    private fun errorResponse(requestId: Long, e: Exception): String {
         return try {
-            responseToJson(ResponseUtils.createResponse(requestId, InternalRpcError(ERROR_CODES.PARSING_ERROR_CODE.value, e.localizedMessage)))
+            responseToJson(ResponseUtils.createResponse(requestId, InternalRpcError(ERROR_CODES.PARSING_ERROR_CODE.code, e.localizedMessage)))
         } catch (ex: JsonProcessingException) {
             // This catch will never been executed during code logic, but it need because objectMapper throw exception
             ""
         }
     }
 
-    internal class InternalRpcError(code: Int, message: String?) : RpcError(code, message), Error {
+    class InternalRpcError(code: Int, message: String?) : RpcError(code, message), Error {
         override fun getData(): Any? {
             return null
         }
