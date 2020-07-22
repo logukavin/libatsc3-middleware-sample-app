@@ -1,4 +1,4 @@
-package org.ngbp.jsonrpc4jtestharness.core
+package org.ngbp.jsonrpc4jtestharness.useragent
 
 import android.content.Context
 import android.view.LayoutInflater
@@ -9,16 +9,19 @@ import android.widget.TextView
 import org.ngbp.jsonrpc4jtestharness.R
 import org.ngbp.jsonrpc4jtestharness.controller.model.SLSService
 
-class ServiceAdapter(context: Context) : ArrayAdapter<SLSService>(context, R.layout.list_item_simple_spinner) {
-    private var inflater: LayoutInflater = LayoutInflater.from(context)
+class ServiceAdapter(context: Context) : ArrayAdapter<SLSService>(context, 0) {
+    private var inflater = LayoutInflater.from(context)
+
+    override fun getItem(position: Int): SLSService? {
+        return if (isEmptyState()) null else super.getItem(position)
+    }
 
     override fun getItemId(position: Int): Long {
         return getItem(position)?.id?.toLong() ?: -1
     }
 
     override fun getCount(): Int {
-        val count = super.getCount()
-        return if (count == 0) -1 else count
+        return if (isEmptyState()) 1 else super.getCount()
     }
 
     override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
@@ -29,15 +32,16 @@ class ServiceAdapter(context: Context) : ArrayAdapter<SLSService>(context, R.lay
         return createView(convertView, parent, position)
     }
 
+    private fun isEmptyState() = super.getCount() == 0
+
     private fun createView(convertView: View?, parent: ViewGroup, position: Int): View {
-        val view = convertView ?: inflater.inflate(R.layout.list_item_simple_spinner, parent, false)
+        val view = (convertView ?: inflater.inflate(R.layout.service_list_item, parent, false)) as TextView
 
-        val serviceName: TextView = view.findViewById<View>(R.id.service_name) as TextView
-
-        if (count > 0) {
-            val slsServiceName = getItem(position)?.shortName
-            serviceName.text = slsServiceName
-        } else serviceName.text = context.getString(R.string.no_service_available)
+        view.text = if (!isEmptyState()) {
+            getItem(position)?.shortName
+        } else {
+            context.getString(R.string.no_service_available)
+        }
 
         return view
     }

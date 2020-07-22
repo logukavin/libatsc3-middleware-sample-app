@@ -25,7 +25,7 @@ import dagger.android.AndroidInjection
 import kotlinx.android.synthetic.main.activity_main.*
 import org.ngbp.jsonrpc4jtestharness.controller.IReceiverController
 import org.ngbp.jsonrpc4jtestharness.core.FileUtils
-import org.ngbp.jsonrpc4jtestharness.core.ServiceAdapter
+import org.ngbp.jsonrpc4jtestharness.useragent.ServiceAdapter
 import org.ngbp.jsonrpc4jtestharness.core.ws.MiddlewareWebSocketClient
 import org.ngbp.jsonrpc4jtestharness.databinding.ActivityMainBinding
 import org.ngbp.jsonrpc4jtestharness.lifecycle.ReceiverViewModel
@@ -33,6 +33,7 @@ import org.ngbp.jsonrpc4jtestharness.lifecycle.UserAgentViewModel
 import org.ngbp.jsonrpc4jtestharness.lifecycle.factory.UserAgentViewModelFactory
 import org.ngbp.jsonrpc4jtestharness.rpc.processor.RPCProcessor
 import org.ngbp.jsonrpc4jtestharness.service.ForegroundRpcService
+import org.ngbp.jsonrpc4jtestharness.useragent.UserAgentActivity
 import org.ngbp.libatsc3.Atsc3Module
 import java.util.*
 import javax.inject.Inject

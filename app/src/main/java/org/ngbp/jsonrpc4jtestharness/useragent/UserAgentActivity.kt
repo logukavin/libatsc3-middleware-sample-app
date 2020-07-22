@@ -1,4 +1,4 @@
-package org.ngbp.jsonrpc4jtestharness
+package org.ngbp.jsonrpc4jtestharness.useragent
 
 import android.annotation.SuppressLint
 import android.graphics.Color
@@ -30,12 +30,11 @@ import com.google.android.exoplayer2.upstream.DefaultLoadErrorHandlingPolicy
 import dagger.android.AndroidInjection
 import kotlinx.android.synthetic.main.activity_user_agent.*
 import kotlinx.coroutines.*
-import org.ngbp.jsonrpc4jtestharness.controller.IReceiverController
+import org.ngbp.jsonrpc4jtestharness.R
 import org.ngbp.jsonrpc4jtestharness.controller.model.AppData
 import org.ngbp.jsonrpc4jtestharness.controller.model.PlaybackState
 import org.ngbp.jsonrpc4jtestharness.core.AppUtils
 import org.ngbp.jsonrpc4jtestharness.core.CertificateUtils
-import org.ngbp.jsonrpc4jtestharness.core.ServiceAdapter
 import org.ngbp.jsonrpc4jtestharness.core.SwipeGestureDetector
 import org.ngbp.jsonrpc4jtestharness.lifecycle.RMPViewModel
 import org.ngbp.jsonrpc4jtestharness.lifecycle.UserAgentViewModel
@@ -46,8 +45,6 @@ import javax.inject.Inject
 class UserAgentActivity : AppCompatActivity() {
     @Inject
     lateinit var userAgentViewModelFactory: UserAgentViewModelFactory
-    @Inject
-    lateinit var receiverController: IReceiverController
 
     private val rmpViewModel: RMPViewModel by viewModels { userAgentViewModelFactory }
     private val userAgentViewModel: UserAgentViewModel by viewModels { userAgentViewModelFactory }

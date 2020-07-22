@@ -5,7 +5,7 @@
     android:id="@+id/user_agent_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".UserAgentActivity">
+    tools:context=".useragent.UserAgentActivity">
 
     <com.google.android.exoplayer2.ui.PlayerView
         android:id="@+id/receiver_media_player"
