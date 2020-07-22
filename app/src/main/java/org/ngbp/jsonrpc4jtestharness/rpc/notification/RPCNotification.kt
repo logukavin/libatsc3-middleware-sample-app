@@ -2,7 +2,7 @@ package org.ngbp.jsonrpc4jtestharness.rpc.notification
 
 import org.ngbp.jsonrpc4jtestharness.controller.IRPCController
 import org.ngbp.jsonrpc4jtestharness.rpc.RpcResponse
-import org.ngbp.jsonrpc4jtestharness.rpc.contentRecovery.model.CecoveredComponentInfo
+import org.ngbp.jsonrpc4jtestharness.rpc.contentRecovery.model.RecoveredComponentInfo
 
 class RPCNotification(
         private val rpcController: IRPCController
@@ -23,7 +23,7 @@ class RPCNotification(
             "alertingChange" -> RpcResponse()
             "contentChange" -> RpcResponse()
             "serviceGuideChange" -> RpcResponse()
-            "contentRecoveryStateChange" -> CecoveredComponentInfo()
+            "contentRecoveryStateChange" -> RecoveredComponentInfo()
             "displayOverrideChange" -> RpcResponse()
             "recoveredComponentInfoChange" -> RpcResponse()
 
