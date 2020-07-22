@@ -1,93 +1,95 @@
 package org.ngbp.jsonrpc4jtestharness.rpc
 
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
-import androidx.lifecycle.MutableLiveData
 import junit.framework.Assert.assertEquals
+import junit.framework.TestCase
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TestRule
+import org.junit.runner.RunWith
+import org.mockito.Mock
+import org.ngbp.jsonrpc4jtestharness.controller.Coordinator
+import org.ngbp.jsonrpc4jtestharness.controller.IMediaPlayerController
 import org.ngbp.jsonrpc4jtestharness.controller.IRPCController
 import org.ngbp.jsonrpc4jtestharness.controller.model.PlaybackState
-import org.ngbp.jsonrpc4jtestharness.controller.model.RPMParams
 import org.ngbp.jsonrpc4jtestharness.controller.model.SLSService
+import org.ngbp.libatsc3.Atsc3Module
+import org.powermock.core.classloader.annotations.PrepareForTest
+import org.powermock.modules.junit4.PowerMockRunner
 import java.util.*
 
-
+@RunWith(PowerMockRunner::class)
+@PrepareForTest(Coordinator::class, Atsc3Module::class)
 class IRPCControllerTest {
-
-    private var scaleFactor: Double = 1.0
-    private var xPos: Double = 11.0
-    private var yPos: Double = 22.0
-    private var contorller: IRPCController? = null
-    private val selectedService = MutableLiveData<SLSService>()
-    private val rmpMediaUrl = MutableLiveData<String>()
-    private val rmpState = MutableLiveData<PlaybackState>(PlaybackState.IDLE)
-    private val rmpParams = MutableLiveData<RPMParams>(RPMParams())
-    private val mockedSLSService: SLSService = SLSService(5003, "WZTV", "tag:sinclairplatform.com,2020:WZTV:2727")
-    private val mockedMediaUrl: String = "htttp://mockedurl.com"
 
     @JvmField
     @Rule
     var rule: TestRule = InstantTaskExecutorRule()
 
-    @Before
-    fun initData() {
-        selectedService.value = mockedSLSService
-        rmpMediaUrl.value = mockedMediaUrl
-        contorller = object : IRPCController {
-            override val language: String
-                get() = Locale.getDefault().language
-            override val queryServiceId: String?
-                get() = selectedService.value?.globalId
-            override val mediaUrl: String?
-                get() = rmpMediaUrl.value
-            override val playbackState: PlaybackState
-                get() = rmpState.value ?: PlaybackState.IDLE
+    @Rule
+    var instantTaskExecutorRule = InstantTaskExecutorRule()
 
-            override fun updateViewPosition(scaleFactor: Double?, xPos: Double?, yPos: Double?) {
-                rmpParams.value = RPMParams(
-                        scaleFactor ?: 100.0,
-                        xPos?.toInt() ?: 0,
-                        yPos?.toInt() ?: 0
-                )
-            }
-        }
+    @Mock
+    private val atsc3Module: Atsc3Module? = null
+
+    private var RPCController: IRPCController? = null
+    private var coordinator: Coordinator? = null
+    private var mediaPlayerController: IMediaPlayerController? = null
+    private var scaleFactor: Double = 1.0
+    private var xPos: Double = 11.0
+    private var yPos: Double = 22.0
+    private val mockedSLSService: SLSService = SLSService(5003, "WZTV", "tag:sinclairplatform.com,2020:WZTV:2727")
+    private val mockedMediaUrl: String? = null
+
+    @Before
+    fun initCoordinator() {
+        coordinator = Coordinator(atsc3Module!!)
+        mediaPlayerController = coordinator
+        RPCController = coordinator
+
     }
 
     @Test
     fun testCallBackData() {
-        contorller?.updateViewPosition(scaleFactor, xPos, yPos)
-        assertEquals(scaleFactor, rmpParams.value?.scale)
-        assertEquals(xPos.toInt(), rmpParams.value?.x)
-        assertEquals(yPos.toInt(), rmpParams.value?.y)
+        RPCController?.updateViewPosition(scaleFactor, xPos, yPos)
+        assertEquals(scaleFactor, mediaPlayerController!!.rmpParams.value?.scale)
+        assertEquals(xPos.toInt(), mediaPlayerController!!.rmpParams.value?.x)
+        assertEquals(yPos.toInt(), mediaPlayerController!!.rmpParams.value?.y)
     }
 
     @Test
     fun testCallBackNullData() {
-        contorller?.updateViewPosition(null, null, null)
-        assertEquals(100.0, rmpParams.value?.scale)
-        assertEquals(0, rmpParams.value?.x)
-        assertEquals(0, rmpParams.value?.y)
+        RPCController?.updateViewPosition(null, null, null)
+        assertEquals(100.0, mediaPlayerController!!.rmpParams.value?.scale)
+        assertEquals(0, mediaPlayerController!!.rmpParams.value?.x)
+        assertEquals(0, mediaPlayerController!!.rmpParams.value?.y)
+    }
+
+    @Test
+    fun testNonNullObjects() {
+        TestCase.assertNotNull(coordinator)
+        TestCase.assertNotNull(mediaPlayerController)
+        TestCase.assertNotNull(RPCController)
     }
 
     @Test
     fun testLanguage() {
-        assertEquals(Locale.getDefault().language, contorller?.language)
+        assertEquals(Locale.getDefault().language, RPCController?.language)
     }
 
     @Test
     fun testQueryServiceId() {
-        assertEquals(mockedSLSService.globalId, contorller?.queryServiceId)
+        assertEquals(mockedSLSService.globalId, RPCController?.queryServiceId)
     }
 
     @Test
     fun testMediaUrl() {
-        assertEquals(mockedMediaUrl, contorller?.mediaUrl)
+        assertEquals(mockedMediaUrl, RPCController?.mediaUrl)
     }
 
     @Test
     fun testPlaybackState() {
-        assertEquals(PlaybackState.IDLE, contorller?.playbackState)
+        assertEquals(PlaybackState.IDLE, RPCController?.playbackState)
     }
 }
