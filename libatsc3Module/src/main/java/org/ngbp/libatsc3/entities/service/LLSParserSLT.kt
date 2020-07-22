@@ -8,8 +8,8 @@ import java.io.IOException
 import java.util.*
 
 class LLSParserSLT {
-    fun parseXML(xmlPayload: String): ArrayList<Service> {
-        val services = ArrayList<Service>()
+    fun parseXML(xmlPayload: String): ArrayList<Atsc3Service> {
+        val services = ArrayList<Atsc3Service>()
         try {
             val parser = XmlUtils.newParser(xmlPayload)
             parser.nextTag()
@@ -35,8 +35,8 @@ class LLSParserSLT {
     }
 
     @Throws(IOException::class, XmlPullParserException::class)
-    private fun readService(parser: XmlPullParser): Service {
-        val currentService = Service()
+    private fun readService(parser: XmlPullParser): Atsc3Service {
+        val currentService = Atsc3Service()
 
         val attrCount = parser.attributeCount
         for (i in 0 until attrCount) {
@@ -74,13 +74,14 @@ class LLSParserSLT {
 
         val attrCount = parser.attributeCount
         for (i in 0 until attrCount) {
+            val value = parser.getAttributeValue(i)
             when (parser.getAttributeName(i)) {
-                "slsProtocol" -> broadcastSvcSignaling.slsProtocol = XmlUtils.strToInt(parser.getAttributeValue(i))
-                "slsMajorProtocolVersion" -> broadcastSvcSignaling.slsMajorProtocolVersion = XmlUtils.strToInt(parser.getAttributeValue(i))
-                "slsMinorProtocolVersion" -> broadcastSvcSignaling.slsMinorProtocolVersion = XmlUtils.strToInt(parser.getAttributeValue(i))
-                "slsDestinationIpAddress" -> broadcastSvcSignaling.slsDestinationIpAddress = parser.getAttributeValue(i)
-                "slsDestinationUdpPort" -> broadcastSvcSignaling.slsDestinationUdpPort = parser.getAttributeValue(i)
-                "slsSourceIpAddress" -> broadcastSvcSignaling.slsSourceIpAddress = parser.getAttributeValue(i)
+                "slsProtocol" -> broadcastSvcSignaling.slsProtocol = XmlUtils.strToInt(value)
+                "slsMajorProtocolVersion" -> broadcastSvcSignaling.slsMajorProtocolVersion = XmlUtils.strToInt(value)
+                "slsMinorProtocolVersion" -> broadcastSvcSignaling.slsMinorProtocolVersion = XmlUtils.strToInt(value)
+                "slsDestinationIpAddress" -> broadcastSvcSignaling.slsDestinationIpAddress = value
+                "slsDestinationUdpPort" -> broadcastSvcSignaling.slsDestinationUdpPort = value
+                "slsSourceIpAddress" -> broadcastSvcSignaling.slsSourceIpAddress = value
                 else -> {
                     // skip attribute
                 }

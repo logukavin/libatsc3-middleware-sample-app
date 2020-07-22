@@ -9,7 +9,8 @@ import org.ngbp.jsonrpc4jtestharness.controller.model.PlaybackState
 import org.ngbp.jsonrpc4jtestharness.controller.model.RPMParams
 import org.ngbp.jsonrpc4jtestharness.controller.model.SLSService
 import org.ngbp.libatsc3.Atsc3Module
-import org.ngbp.libatsc3.entities.service.Service
+import org.ngbp.libatsc3.entities.held.Atsc3HeldPackage
+import org.ngbp.libatsc3.entities.service.Atsc3Service
 import java.util.*
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -59,14 +60,18 @@ class Coordinator @Inject constructor(
         receiverState.postValue(state)
     }
 
-    override fun onServicesLoaded(services: List<Service?>) {
+    override fun onServicesLoaded(services: List<Atsc3Service?>) {
         val slsServices = services.filterNotNull()
                 .map { SLSService(it.serviceId, it.shortServiceName, it.globalServiceId) }
         sltServices.postValue(slsServices)
     }
 
-    override fun onCurrentServiceHeldChanged(appContextId: String?, entryPage: String?) {
-        appData.postValue(AppData(appContextId, entryPage))
+    override fun onCurrentServicePackageChanged(pkg: Atsc3HeldPackage?) {
+        //TODO: fire load/unload events instead
+        val data = pkg?.let {
+            AppData(it.appContextId, it.bcastEntryPageUrl ?: it.bbandEntryPageUrl)
+        }
+        appData.postValue(data)
     }
 
     override fun updateRMPPosition(scaleFactor: Double?, xPos: Double?, yPos: Double?) {
