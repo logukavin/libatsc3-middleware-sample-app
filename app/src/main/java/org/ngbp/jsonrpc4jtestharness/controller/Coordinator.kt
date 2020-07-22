@@ -103,6 +103,8 @@ class Coordinator @Inject constructor(
     }
 
     override fun selectService(service: SLSService) {
+        rmpReset()
+
         val res = atsc3Module.selectService(service.id)
         if (res) {
             //TODO: should we use globalId or context from HELD?
@@ -131,6 +133,8 @@ class Coordinator @Inject constructor(
                     atsc3Module.getSelectedServiceAppContextId(),
                     atsc3Module.getSelectedServiceEntryPoint()
             )
+        } else {
+            appData.value = null
         }
     }
 
