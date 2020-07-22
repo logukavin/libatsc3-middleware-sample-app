@@ -77,12 +77,16 @@ class MainActivity : AppCompatActivity() {
 
         findViewById<View>(R.id.stop).setOnClickListener { stopService() }
         findViewById<View>(R.id.start).setOnClickListener { startService() }
-        findViewById<View>(R.id.start_user_agent).setOnClickListener { startUserAgent() }
+        findViewById<View>(R.id.start_user_agent).setOnClickListener {
+//            startUserAgent()
+            makeCall()
+        }
 
         findViewById<View>(R.id.connect_to_ws).setOnClickListener { startWSClient() }
         findViewById<View>(R.id.left).setOnClickListener {
-            if (xPos > 0) xPos -= 10
-            makeCall()
+//            if (xPos > 0) xPos -= 10
+//            makeCall()
+            makeCall_9_7_5_1()
         }
         findViewById<View>(R.id.right).setOnClickListener {
             xPos += 10
@@ -114,7 +118,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        makeCall_9_7_5_1()
+//        makeCall_9_7_5_1()
         makeCall()
     }
 
@@ -159,10 +163,10 @@ class MainActivity : AppCompatActivity() {
 
     private fun makeCall() {
         val propertioes = HashMap<String?, Any?>()
-        propertioes["scaleFactor"] = 10
-        propertioes["xPos"] = xPos
-        propertioes["yPos"] = yPos
-        val request: Request = CompleteRequest("2.0", 1L, "org.atsc.scale-position", propertioes)
+        propertioes["operation"] = "startRmp"
+        propertioes["rmpurl"] = "111"
+//        propertioes["rmpSyncTime"] = 1.0
+        val request: Request = CompleteRequest("2.0", 1L, "org.atsc.setRMPURL", propertioes)
         var json: String? = ""
         try {
             json = mapper.writeValueAsString(request)

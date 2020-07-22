@@ -40,6 +40,11 @@ class Coordinator @Inject constructor(
     override val playbackState: PlaybackState
         get() = rmpState.value ?: PlaybackState.IDLE
 
+    override var rmpUrl: String? = null
+    override var rmpOperation: String? = null
+    override var currentMPD: String? = null
+    override var rmpSyncTime: Double? = null
+
     // User Agent Controller
     override val sltServices = MutableLiveData<List<SLSService>>()
     override val appData = MutableLiveData<AppData?>()
@@ -81,7 +86,8 @@ class Coordinator @Inject constructor(
         when (state) {
             PlaybackState.PAUSED -> rmpPause()
             PlaybackState.PLAYING -> rmpResume()
-            else -> {}
+            else -> {
+            }
         }
     }
 
