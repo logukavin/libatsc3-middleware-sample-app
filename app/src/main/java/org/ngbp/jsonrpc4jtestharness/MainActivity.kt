@@ -249,8 +249,7 @@ class MainActivity : AppCompatActivity() {
         intent.type = type
         intent.addCategory(Intent.CATEGORY_OPENABLE)
 
-        val chooserIntent: Intent
-        chooserIntent = if (packageManager.resolveActivity(samsungIntent, 0) != null) samsungIntent else intent
+        val chooserIntent = if (packageManager.resolveActivity(samsungIntent, 0) != null) samsungIntent else intent
 
         try {
             startActivityForResult(Intent.createChooser(chooserIntent, "Select a File to Upload"), FILE_REQUEST_CODE)
