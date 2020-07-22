@@ -113,12 +113,6 @@ class UserAgentActivity : AppCompatActivity() {
         })
     }
 
-    override fun onStart() {
-        super.onStart()
-
-        rmpViewModel.setCurrentPlayerState(PlaybackState.PLAYING)
-    }
-
     override fun onStop() {
         super.onStop()
 
@@ -126,7 +120,6 @@ class UserAgentActivity : AppCompatActivity() {
             stop()
             release()
         }
-        rmpViewModel.setCurrentPlayerState(PlaybackState.PAUSED)
     }
 
     private fun updateRMPLayout(x: Float, y: Float, scale: Float) {
@@ -146,7 +139,22 @@ class UserAgentActivity : AppCompatActivity() {
     }
 
     private fun createExoPlayer(): SimpleExoPlayer {
-        return ExoPlayerFactory.newSimpleInstance(applicationContext)
+        return ExoPlayerFactory.newSimpleInstance(applicationContext).apply {
+            addListener(object : Player.EventListener {
+                override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
+                    val state = when (playbackState) {
+                        Player.STATE_BUFFERING, Player.STATE_READY -> {
+                            if (playWhenReady) PlaybackState.PLAYING else PlaybackState.PAUSED
+                        }
+                        Player.STATE_IDLE, Player.STATE_ENDED -> {
+                            PlaybackState.IDLE
+                        }
+                        else -> return
+                    }
+                    rmpViewModel.setCurrentPlayerState(state)
+                }
+            })
+        }
     }
 
     private fun createMediaSourceFactory(): DashMediaSource.Factory {
