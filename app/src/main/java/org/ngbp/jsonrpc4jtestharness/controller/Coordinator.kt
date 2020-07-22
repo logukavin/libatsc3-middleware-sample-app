@@ -8,6 +8,8 @@ import org.ngbp.jsonrpc4jtestharness.controller.model.AppData
 import org.ngbp.jsonrpc4jtestharness.controller.model.PlaybackState
 import org.ngbp.jsonrpc4jtestharness.controller.model.RPMParams
 import org.ngbp.jsonrpc4jtestharness.controller.model.SLSService
+import org.ngbp.jsonrpc4jtestharness.rpc.RpcErrorCode
+import org.ngbp.jsonrpc4jtestharness.rpc.RpcException
 import org.ngbp.libatsc3.Atsc3Module
 import org.ngbp.libatsc3.entities.service.Service
 import java.util.*
@@ -40,10 +42,10 @@ class Coordinator @Inject constructor(
     override val playbackState: PlaybackState
         get() = rmpState.value ?: PlaybackState.IDLE
 
-    override var rmpUrl: String? = null
-    override var rmpOperation: String? = null
-    override var currentMPD: String? = null
-    override var rmpSyncTime: Double? = null
+    private var rmpUrl: String? = null
+    private var rmpOperation: String? = null
+    private var currentMPD: String? = null
+    private var rmpSyncTime: Double? = null
 
     // User Agent Controller
     override val sltServices = MutableLiveData<List<SLSService>>()
@@ -89,6 +91,56 @@ class Coordinator @Inject constructor(
             else -> {
             }
         }
+    }
+
+    override fun setRMPUrlData(operation: String, rmpurl: String?, rmpSyncTime: Double?) {
+        when (operation) {
+            "startRmp" -> {
+                if (rmpSyncTime == null) {
+                    setUpRMPData(rmpurl, rmpSyncTime, PlaybackState.PLAYING)
+                } else {
+                    if (playbackState == PlaybackState.PLAYING) {
+                        setUpRMPData(rmpurl, rmpSyncTime, PlaybackState.PLAYING)
+                    } else if (playbackState == PlaybackState.PLAYING && (rmpUrl.equals(rmpurl) && rmpSyncTime.equals(-1.0))) {
+                        setUpRMPData(rmpurl, rmpSyncTime, PlaybackState.PLAYING)
+                    }
+                }
+                rmpOperation = null
+            }
+            "stopRmp" -> {
+                if (playbackState == PlaybackState.PLAYING && rmpSyncTime == null) {
+                    setUpRMPData(rmpurl, rmpSyncTime, PlaybackState.PAUSED)
+                    rmpOperation = operation
+                } else {
+                    if (playbackState == PlaybackState.PLAYING && rmpSyncTime != null) {
+                        setUpRMPData(rmpurl, rmpSyncTime, PlaybackState.PLAYING)
+                        rmpOperation = operation
+
+                    }
+                }
+            }
+            "resumeService" -> {
+                if ((playbackState == PlaybackState.PLAYING && (rmpUrl == currentMPD)) ||
+                        rmpOperation == "stopRmp" && rmpSyncTime == null) {
+                    setUpRMPData(null, null, PlaybackState.PLAYING)
+                }
+                if ((playbackState == PlaybackState.PLAYING && (rmpUrl == currentMPD)) && rmpSyncTime != null) {
+                    setUpRMPData(null, rmpSyncTime, PlaybackState.PLAYING)
+                }
+                rmpOperation = null
+            }
+        }
+    }
+
+    private fun setUpRMPData(rmpurl: String?, rmpSyncTime: Double?, state: PlaybackState) {
+        if (rmpSyncTime != null && rmpSyncTime <= 5.0) {
+            throw RpcException(RpcErrorCode.SYNCHRONIZATION_CANNOT_BE_ACHIEVED)
+        } else {
+            rmpUrl = rmpurl
+            this.rmpSyncTime = rmpSyncTime
+            updateRMPState(state)
+        }
+
     }
 
     override fun openRoute(pcapFile: String): Boolean {
