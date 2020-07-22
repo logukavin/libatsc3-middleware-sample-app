@@ -122,14 +122,13 @@ class UserAgentActivity : AppCompatActivity() {
             simpleExoPlayer.playWhenReady = playWhenReady
         })
 
-        val adapter = ServiceAdapter(this, emptyList())
+        val adapter = ServiceAdapter(this)
         service_spinner.adapter = adapter
 
         userAgentViewModel.services.observe(this, Observer { services ->
             adapter.setServices(services)
         })
 
-        service_spinner.setSelection(0, false)
         service_spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onNothingSelected(parent: AdapterView<*>?) {
             }
@@ -141,11 +140,6 @@ class UserAgentActivity : AppCompatActivity() {
 
         userAgentViewModel.appData.observe(this, Observer { appData ->
             switchBA(appData)
-        })
-
-        receiverController.selectedService.observe(this, androidx.lifecycle.Observer {
-            val spinnerPosition = adapter.getPosition(it.shortName)
-            service_spinner.setSelection(spinnerPosition)
         })
     }
 

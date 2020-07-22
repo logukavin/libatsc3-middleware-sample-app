@@ -25,7 +25,7 @@
     <androidx.appcompat.widget.AppCompatSpinner
         android:id="@+id/service_spinner"
         android:layout_width="@dimen/service_spinner_width"
-        android:layout_height="wrap_content"
+        android:layout_height="@dimen/item_spinner_height"
         android:spinnerMode="dropdown"
         android:background="@android:color/white"
         app:layout_constraintEnd_toEndOf="parent"

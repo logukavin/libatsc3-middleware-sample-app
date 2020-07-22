@@ -9,56 +9,41 @@ import android.widget.TextView
 import org.ngbp.jsonrpc4jtestharness.R
 import org.ngbp.jsonrpc4jtestharness.controller.model.SLSService
 
-class ServiceAdapter(
-        context: Context,
-        services: List<SLSService>
-) : ArrayAdapter<String>(context, R.layout.list_item_simple_spinner) {
-
-    private var items: List<SLSService> = services
+class ServiceAdapter(context: Context) : ArrayAdapter<SLSService>(context, R.layout.list_item_simple_spinner) {
     private var inflater: LayoutInflater = LayoutInflater.from(context)
 
-    init {
-        setData(items)
+    override fun getItemId(position: Int): Long {
+        return getItem(position)?.id?.toLong() ?: -1
     }
 
-    override fun getItemId(position: Int): Long {
-        return items.getOrNull(position)?.id?.toLong() ?: -1
+    override fun getCount(): Int {
+        val count = super.getCount()
+        return if (count == 0) -1 else count
     }
 
     override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
-        val view: View
-        val viewHolder: ViewHolder
+        return createView(convertView, parent, position)
+    }
 
-        if (convertView == null) {
-            view = inflater.inflate(R.layout.list_item_simple_spinner, parent, false)
-            viewHolder = ViewHolder(view)
-            view.tag = viewHolder
-        } else {
-            viewHolder = convertView.tag as ViewHolder
-            view = convertView
-        }
+    override fun getDropDownView(position: Int, convertView: View?, parent: ViewGroup): View {
+        return createView(convertView, parent, position)
+    }
 
-        val slsServiceName = getItem(position)
-        viewHolder.serviceName.text = slsServiceName
+    private fun createView(convertView: View?, parent: ViewGroup, position: Int): View {
+        val view = convertView ?: inflater.inflate(R.layout.list_item_simple_spinner, parent, false)
+
+        val serviceName: TextView = view.findViewById<View>(R.id.service_name) as TextView
+
+        if (count > 0) {
+            val slsServiceName = getItem(position)?.shortName
+            serviceName.text = slsServiceName
+        } else serviceName.text = context.getString(R.string.no_service_available)
 
         return view
     }
 
-    private class ViewHolder internal constructor(view: View?) {
-        val serviceName: TextView = view?.findViewById<View>(R.id.service_name) as TextView
-    }
-
-    fun setServices(services: List<SLSService>) {
+    fun setServices(data: List<SLSService>) {
         clear()
-        items = services
-        setData(items)
-    }
-
-    private fun setData(data: List<SLSService>) {
-        if (data.isEmpty()) {
-            add(context.getString(R.string.no_service_available))
-        } else {
-            addAll(data.map { it.shortName })
-        }
+        addAll(data)
     }
 }

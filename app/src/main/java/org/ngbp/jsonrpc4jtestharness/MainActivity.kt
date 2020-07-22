@@ -96,11 +96,12 @@ class MainActivity : AppCompatActivity() {
         }
 
         initLibAtsc3()
+        val adapter = ServiceAdapter(this)
+        atsc3_service_spinner.adapter = adapter
 
         userAgentViewModel.services.observe(this, Observer { services ->
-            atsc3_service_spinner.adapter = ServiceAdapter(this, services)
+            adapter.setServices(services)
         })
-        atsc3_service_spinner.adapter = ServiceAdapter(this, emptyList())
         atsc3_service_spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onNothingSelected(parent: AdapterView<*>?) {
             }
