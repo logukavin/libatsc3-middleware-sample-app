@@ -6,26 +6,24 @@ import org.ngbp.jsonrpc4jtestharness.rpc.subscribeUnsubscribe.model.Subscribe
 
 class SubscribeUnsubscribeImpl(private val rpcController: IRPCController) : ISubscribeUnsubscribe {
     override fun integratedSubscribe(msgType: List<String>): Subscribe {
-
         val notifications = convertMsgTypeToNotifications(msgType)
-        rpcController.subscribeNotifications(notifications)
+        val subscribedNotifications = rpcController.subscribeNotifications(notifications)
 
-        return Subscribe(notifications.map { it.value })
+        return Subscribe(subscribedNotifications.toList())
     }
 
     override fun integratedUnsubscribe(msgType: List<String>): Subscribe {
-
         val notifications = convertMsgTypeToNotifications(msgType)
-        rpcController.unsubscribeNotifications(notifications)
+        val unsubscribedNotifications = rpcController.subscribeNotifications(notifications)
 
-        return Subscribe(notifications.map { it.value })
+        return Subscribe(unsubscribedNotifications.toList())
     }
 
     private fun convertMsgTypeToNotifications(msgType: List<String>): Set<NotificationType> {
         return when {
             msgType.isEmpty() -> emptySet()
-            msgType.first() == "All" -> NotificationType.values().map { it }.toSet()
-            else -> NotificationType.values().map { it }.filter{ msgType.contains(it.value) }.toSet()
+            msgType.first() == "All" -> NotificationType.values().toSet()
+            else -> NotificationType.values().filter{ msgType.contains(it.value) }.toSet()
         }
     }
 }

@@ -8,11 +8,10 @@ interface IRPCController {
     val queryServiceId: String?
     val mediaUrl: String?
     val playbackState: PlaybackState
-    val subscribedINotifications: Set<NotificationType>
 
     fun updateRMPPosition(scaleFactor: Double?, xPos: Double?, yPos: Double?)
     fun updateRMPState(state: PlaybackState)
 
-    fun subscribeNotifications(notifications: Set<NotificationType>)
-    fun unsubscribeNotifications(notifications: Set<NotificationType>)
+    fun subscribeNotifications(notifications: Set<NotificationType>): Set<String>
+    fun unsubscribeNotifications(notifications: Set<NotificationType>): Set<String>
 }

@@ -31,8 +31,6 @@ import org.ngbp.jsonrpc4jtestharness.rpc.markUnused.IMarkUnused
 import org.ngbp.jsonrpc4jtestharness.rpc.markUnused.MarkUnusedImpl
 import org.ngbp.jsonrpc4jtestharness.rpc.mediaTrackSelection.IMediaTrackSelection
 import org.ngbp.jsonrpc4jtestharness.rpc.mediaTrackSelection.MediaTrackSelectionImpl
-import org.ngbp.jsonrpc4jtestharness.rpc.notification.IRPCNotification
-import org.ngbp.jsonrpc4jtestharness.rpc.notification.RPCNotification
 import org.ngbp.jsonrpc4jtestharness.rpc.queryDeviceInf.IQueryDeviceInfo
 import org.ngbp.jsonrpc4jtestharness.rpc.queryDeviceInf.QueryDeviceInfoImpl
 import org.ngbp.jsonrpc4jtestharness.rpc.receiverQueryApi.IReceiverQueryApi
@@ -80,7 +78,6 @@ class RPCProcessor @Inject constructor(
         processor.process(RMPContentSynchronizationImpl(rpcController), IRMPContentSynchronization::class.java)
         processor.process(SubscribeUnsubscribeImpl(rpcController), ISubscribeUnsubscribe::class.java)
         processor.process(XLinkImpl(), IXLink::class.java)
-        processor.process(RPCNotification(rpcController), IRPCNotification::class.java)
     }
 
     override fun processRequest(request: String): String {
