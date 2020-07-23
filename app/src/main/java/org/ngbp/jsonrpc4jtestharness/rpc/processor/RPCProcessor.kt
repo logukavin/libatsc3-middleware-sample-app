@@ -1,6 +1,8 @@
 package org.ngbp.jsonrpc4jtestharness.rpc.processor
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect
+import com.fasterxml.jackson.annotation.JsonIgnoreType
+import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.PropertyAccessor
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -13,7 +15,7 @@ import com.github.nmuzhichin.jsonrpc.model.response.ResponseUtils
 import com.github.nmuzhichin.jsonrpc.model.response.errors.Error
 import com.github.nmuzhichin.jsonrpc.module.JsonRpcModule
 import org.ngbp.jsonrpc4jtestharness.controller.IRPCController
-import org.ngbp.jsonrpc4jtestharness.rpc.ERROR_CODES
+import org.ngbp.jsonrpc4jtestharness.rpc.RpcErrorCode
 import org.ngbp.jsonrpc4jtestharness.rpc.RpcError
 import org.ngbp.jsonrpc4jtestharness.rpc.cacheRequest.CacheRequestImpl
 import org.ngbp.jsonrpc4jtestharness.rpc.cacheRequest.ICacheRequest
@@ -45,6 +47,7 @@ import org.ngbp.jsonrpc4jtestharness.rpc.subscribeUnsubscribe.ISubscribeUnsubscr
 import org.ngbp.jsonrpc4jtestharness.rpc.subscribeUnsubscribe.SubscribeUnsubscribeImp
 import org.ngbp.jsonrpc4jtestharness.rpc.xLink.IXLink
 import org.ngbp.jsonrpc4jtestharness.rpc.xLink.XLinkImpl
+import java.lang.Exception
 import javax.inject.Inject
 
 class RPCProcessor @Inject constructor(
@@ -54,6 +57,9 @@ class RPCProcessor @Inject constructor(
     private val consumer: RpcConsumer
     private val objectMapper: ObjectMapper
 
+    @JsonIgnoreType
+    private class MixInForIgnoreType
+
     init {
         consumer = ConsumerBuilder().build().also {
             filRequests(it.processor)
@@ -61,6 +67,8 @@ class RPCProcessor @Inject constructor(
 
         objectMapper = ObjectMapper().apply {
             setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY)
+            setSerializationInclusion(JsonInclude.Include.NON_NULL)
+            addMixIn(Throwable::class.java, MixInForIgnoreType::class.java)
             registerModule(JsonRpcModule())
         }
     }
@@ -118,9 +126,9 @@ class RPCProcessor @Inject constructor(
 
     private fun responseToJson(response: Response) = objectMapper.writeValueAsString(response)
 
-    private fun errorResponse(requestId: Long, e: JsonProcessingException): String {
+    private fun errorResponse(requestId: Long, e: Exception): String {
         return try {
-            responseToJson(ResponseUtils.createResponse(requestId, InternalRpcError(ERROR_CODES.PARSING_ERROR_CODE.value, e.localizedMessage)))
+            responseToJson(ResponseUtils.createResponse(requestId, InternalRpcError(RpcErrorCode.PARSING_ERROR_CODE.code, e.localizedMessage)))
         } catch (ex: JsonProcessingException) {
             // This catch will never been executed during code logic, but it need because objectMapper throw exception
             ""
