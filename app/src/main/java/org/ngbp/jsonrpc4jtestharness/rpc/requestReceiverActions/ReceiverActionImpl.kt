@@ -25,21 +25,21 @@ class ReceiverActionImpl(
     override fun setRMPURL(operation: String, rmpUrl: String?, rmpSyncTime: Double?): RpcResponse {
         when (operation) {
             "startRmp" -> {
-                timeValidation(rmpSyncTime)
-                rpcController.startMediaReceiver(rmpSyncTime.toMilliSec(), rmpUrl)
+                assertTime(rmpSyncTime)
+                rpcController.requestMediaPlay(rmpSyncTime.toMilliSec(), rmpUrl)
             }
             "stopRmp" -> {
-                rpcController.stopMediaReceiver(rmpSyncTime.toMilliSec(), rmpUrl)
+                rpcController.requestMediaStop(rmpSyncTime.toMilliSec())
             }
             "resumeService" -> {
-                timeValidation(rmpSyncTime)
-                rpcController.startMediaReceiver(rmpSyncTime.toMilliSec(), rmpUrl)
+                assertTime(rmpSyncTime)
+                rpcController.requestMediaPlay(rmpSyncTime.toMilliSec(), null)
             }
         }
         return RpcResponse()
     }
 
-    private fun timeValidation(rmpSyncTime: Double?) {
+    private fun assertTime(rmpSyncTime: Double?) {
         if (rmpSyncTime != null && rmpSyncTime <= MIN_SYNCHRONIZATION_TIME) {
             throw RpcException(RpcErrorCode.SYNCHRONIZATION_CANNOT_BE_ACHIEVED)
         }

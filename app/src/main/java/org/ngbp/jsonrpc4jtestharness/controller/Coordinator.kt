@@ -86,16 +86,18 @@ class Coordinator @Inject constructor(
         }
     }
 
-    override fun startMediaReceiver(syncTime: Double?, url: String?) {
+    override fun requestMediaPlay(syncTime: Double?, url: String?) {
         applyRMPStateChanges(syncTime, url, PlaybackState.PLAYING)
     }
 
-    override fun stopMediaReceiver(syncTime: Double?, url: String?) {
-        applyRMPStateChanges(syncTime, url, PlaybackState.PAUSED)
+    override fun requestMediaStop(syncTime: Double?) {
+        applyRMPStateChanges(syncTime, null, PlaybackState.PAUSED)
     }
 
     private fun applyRMPStateChanges(syncTime: Double?, url: String?, state: PlaybackState) {
-        rmpMediaUrl.value = url
+        url?.let {
+            rmpMediaUrl.value = url
+        }
         if (syncTime != null) {
             GlobalScope.launch {
                 updateWithDelay(syncTime.toLong(), state)
