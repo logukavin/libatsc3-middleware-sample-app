@@ -28,19 +28,19 @@ class ReceiverActionImpl(
                 rpcController.requestMediaPlay(rmpUrl, convertSecToMilliSec(rmpSyncTime))
             }
             "stopRmp" -> {
-                rpcController.requestMediaStop(syncTime = convertSecToMilliSec(rmpSyncTime))
+                rpcController.requestMediaStop(delay = convertSecToMilliSec(rmpSyncTime))
             }
             "resumeService" -> {
                 assertTime(rmpSyncTime)
-                rpcController.requestMediaPlay(syncTime = convertSecToMilliSec(rmpSyncTime))
+                rpcController.requestMediaPlay(delay = convertSecToMilliSec(rmpSyncTime))
             }
         }
         return RpcResponse()
     }
 
-    private fun convertSecToMilliSec(rmpSyncTime: Double?): Long? {
+    private fun convertSecToMilliSec(rmpSyncTime: Double?): Long {
         return if (rmpSyncTime == null) {
-            rmpSyncTime
+            0
         } else {
             (rmpSyncTime * 1000).toLong()
         }
