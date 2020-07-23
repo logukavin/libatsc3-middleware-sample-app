@@ -11,6 +11,6 @@ interface IRPCController {
     fun updateRMPPosition(scaleFactor: Double?, xPos: Double?, yPos: Double?)
     fun updateRMPState(state: PlaybackState)
 
-    fun startMediaReceiver(syncTime: Double?, url: String?)
-    fun stopMediaReceiver(syncTime: Double?, url: String?)
+    fun requestMediaPlay(syncTime: Double?, url: String?)
+    fun requestMediaStop(syncTime: Double?)
 }
