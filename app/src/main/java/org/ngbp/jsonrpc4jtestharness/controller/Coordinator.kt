@@ -76,20 +76,31 @@ class Coordinator @Inject constructor(
         appData.postValue(data)
     }
 
-    override fun updateRMPPosition(scaleFactor: Double?, xPos: Double?, yPos: Double?) {
-        rmpParams.postValue(RPMParams(
-                scaleFactor ?: 100.0,
-                xPos?.toInt() ?: 0,
-                yPos?.toInt() ?: 0
-        ))
+    override fun updateRMPPosition(scaleFactor: Double, xPos: Double, yPos: Double) {
+        rmpParams.postValue(RPMParams(scaleFactor, xPos.toInt(), yPos.toInt()))
     }
 
     override fun updateRMPState(state: PlaybackState) {
         when (state) {
             PlaybackState.PAUSED -> rmpPause()
             PlaybackState.PLAYING -> rmpResume()
-            else -> {}
+            else -> {
+            }
         }
+    }
+
+    //TODO: currently delay not supported and blocked on RPC level
+    override fun requestMediaPlay(mediaUrl: String?, delay: Long) {
+        if (mediaUrl != null) {
+            rmpMediaUrl.postValue(mediaUrl)
+        } else {
+            rmpMediaUrl.postValue(getServiceMediaUrl())
+        }
+    }
+
+    //TODO: currently delay not supported and blocked on RPC level
+    override fun requestMediaStop(delay: Long) {
+        updateRMPState(PlaybackState.PAUSED)
     }
 
     override fun openRoute(pcapFile: String): Boolean {
@@ -121,7 +132,7 @@ class Coordinator @Inject constructor(
                     delay(200)
 
                     done = withContext(Dispatchers.Main) {
-                        val media = atsc3Module.getSelectedServiceMediaUri()
+                        val media = getServiceMediaUrl()
                         if (media != null) {
                             rmpMediaUrl.value = media
                         }
@@ -139,6 +150,8 @@ class Coordinator @Inject constructor(
             appData.value = null
         }
     }
+
+    private fun getServiceMediaUrl() = atsc3Module.getSelectedServiceMediaUri()
 
     override fun rmpReset() {
         rmpParams.postValue(RPMParams())
