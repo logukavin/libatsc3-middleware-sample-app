@@ -41,7 +41,7 @@ class Coordinator @Inject constructor(
         get() = rmpMediaUrl.value
     override val playbackState: PlaybackState
         get() = rmpState.value ?: PlaybackState.IDLE
-    override var subscribedINotifications = mutableSetOf<NotificationType>()
+    private var subscribedINotifications = mutableSetOf<NotificationType>()
 
     // User Agent Controller
     override val sltServices = MutableLiveData<List<SLSService>>()
@@ -164,12 +164,20 @@ class Coordinator @Inject constructor(
         rmpListeners.remove(callback)
     }
 
-    override fun subscribeNotifications(notifications: Set<NotificationType>) {
+    override fun subscribeNotifications(notifications: Set<NotificationType>): Set<String> {
         subscribedINotifications.addAll(notifications)
+        return getAvailableNotifications(notifications)
     }
 
-    override fun unsubscribeNotifications(notifications: Set<NotificationType>) {
+    override fun unsubscribeNotifications(notifications: Set<NotificationType>): Set<String> {
         subscribedINotifications.removeAll(notifications)
+        return getAvailableNotifications(notifications)
+    }
+
+    private fun getAvailableNotifications(requested: Set<NotificationType>): Set<String> {
+        val available = supportedNotifications.toMutableSet()
+        available.retainAll(requested.map { it.value })
+        return available
     }
 
     private fun reset() {
@@ -178,5 +186,14 @@ class Coordinator @Inject constructor(
         appData.postValue(null)
         rmpMediaUrl.postValue(null)
         rmpReset()
+    }
+
+    companion object {
+        private val supportedNotifications = setOf(
+                "serviceChange",
+                "serviceGuideChange",
+                "ratingChange",
+                "ratingBlock"
+        )
     }
 }
