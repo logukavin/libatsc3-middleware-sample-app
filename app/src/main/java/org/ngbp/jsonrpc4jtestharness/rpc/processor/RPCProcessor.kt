@@ -1,6 +1,7 @@
 package org.ngbp.jsonrpc4jtestharness.rpc.processor
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect
+import com.fasterxml.jackson.annotation.JsonIgnoreType
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.PropertyAccessor
 import com.fasterxml.jackson.core.JsonProcessingException
@@ -14,7 +15,6 @@ import com.github.nmuzhichin.jsonrpc.model.response.ResponseUtils
 import com.github.nmuzhichin.jsonrpc.model.response.errors.Error
 import com.github.nmuzhichin.jsonrpc.module.JsonRpcModule
 import org.ngbp.jsonrpc4jtestharness.controller.IRPCController
-import org.ngbp.jsonrpc4jtestharness.rpc.RpcException
 import org.ngbp.jsonrpc4jtestharness.rpc.RpcErrorCode
 import org.ngbp.jsonrpc4jtestharness.rpc.RpcError
 import org.ngbp.jsonrpc4jtestharness.rpc.cacheRequest.CacheRequestImpl
@@ -57,6 +57,9 @@ class RPCProcessor @Inject constructor(
     private val consumer: RpcConsumer
     private val objectMapper: ObjectMapper
 
+    @JsonIgnoreType
+    private class MixInForIgnoreType
+
     init {
         consumer = ConsumerBuilder().build().also {
             filRequests(it.processor)
@@ -65,6 +68,7 @@ class RPCProcessor @Inject constructor(
         objectMapper = ObjectMapper().apply {
             setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY)
             setSerializationInclusion(JsonInclude.Include.NON_NULL)
+            addMixIn(Throwable::class.java, MixInForIgnoreType::class.java)
             registerModule(JsonRpcModule())
         }
     }
@@ -94,19 +98,7 @@ class RPCProcessor @Inject constructor(
                 requestId = it.id
             }
 
-            val response = consumer.execution(req).let { response ->
-                var result = response
-                if (response.isError) {
-                    val error = response.error.get()
-                    if (error.data is RpcException) {
-                        RpcException.getRpcErrorCode(error.message)?.let { errorCode ->
-                            result = ResponseUtils.createResponse(requestId, InternalRpcError(errorCode.code, errorCode.message))
-                        }
-                    }
-                }
-
-                result
-            }
+            val response = consumer.execution(req)
 
             responseToJson(response)
         } catch (e: JsonProcessingException) {
