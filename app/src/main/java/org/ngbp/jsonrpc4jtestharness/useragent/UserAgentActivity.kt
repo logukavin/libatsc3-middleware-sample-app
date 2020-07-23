@@ -1,14 +1,17 @@
 package org.ngbp.jsonrpc4jtestharness.useragent
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.graphics.Color
 import android.net.Uri
 import android.net.http.SslError
 import android.os.Bundle
+import android.os.PowerManager
 import android.util.Log
 import android.view.GestureDetector
 import android.view.KeyEvent
 import android.view.View
+import android.view.WindowManager
 import android.webkit.ClientCertRequest
 import android.webkit.SslErrorHandler
 import android.webkit.WebView
@@ -55,6 +58,7 @@ class UserAgentActivity : AppCompatActivity() {
     private lateinit var dashMediaSourceFactory: DashMediaSource.Factory
 
     private var unloadBAJob: Job? = null
+    private lateinit var wakeLock: PowerManager.WakeLock
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -137,6 +141,18 @@ class UserAgentActivity : AppCompatActivity() {
 
         userAgentViewModel.appData.observe(this, Observer { appData ->
             switchBA(appData)
+        })
+        wakeLock = (getSystemService(Context.POWER_SERVICE) as PowerManager).run {
+            newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "MyApp::MyWakelockTag")
+        }
+        rmpViewModel.playerState.observe(this, Observer {
+            when (it) {
+                PlaybackState.PAUSED -> disableLockScreen()
+                PlaybackState.PLAYING -> enableLockScreen()
+                else -> {
+                    enableLockScreen()
+                }
+            }
         })
     }
 
@@ -253,7 +269,6 @@ class UserAgentActivity : AppCompatActivity() {
 
     private fun startPlayback(mpdPath: String) {
         stopPlayback()
-
         val dashMediaSource = dashMediaSourceFactory.createMediaSource(Uri.parse(mpdPath))
         simpleExoPlayer.prepare(dashMediaSource)
         simpleExoPlayer.playWhenReady = true
@@ -290,6 +305,16 @@ class UserAgentActivity : AppCompatActivity() {
             }
             request.proceed(CertificateUtils.privateKey, CertificateUtils.certificates)
         }
+    }
+
+    private fun disableLockScreen() {
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        wakeLock.acquire()
+    }
+
+    private fun enableLockScreen() {
+        window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        wakeLock.release()
     }
 
     companion object {
