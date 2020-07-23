@@ -1,19 +1,8 @@
 package org.ngbp.jsonrpc4jtestharness.rpc
 
-import java.lang.NumberFormatException
+import com.github.nmuzhichin.jsonrpc.internal.exceptions.CustomProcedureException
 
-class RpcException : RuntimeException {
+class RpcException : CustomProcedureException {
     constructor(): super()
-    constructor(error: RpcErrorCode) : super(error.code.toString())
-
-    companion object {
-        fun getRpcErrorCode(msg: String): RpcErrorCode? {
-            val code = try {
-                msg.toInt()
-            } catch (e: NumberFormatException) {
-                return null
-            }
-            return RpcErrorCode.values().firstOrNull { it.code == code }
-        }
-    }
+    constructor(error: RpcErrorCode) : super(error.code, error.message)
 }
