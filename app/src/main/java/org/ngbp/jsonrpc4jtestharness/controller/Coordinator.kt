@@ -74,12 +74,8 @@ class Coordinator @Inject constructor(
         appData.postValue(data)
     }
 
-    override fun updateRMPPosition(scaleFactor: Double?, xPos: Double?, yPos: Double?) {
-        rmpParams.postValue(RPMParams(
-                scaleFactor ?: 100.0,
-                xPos?.toInt() ?: 0,
-                yPos?.toInt() ?: 0
-        ))
+    override fun updateRMPPosition(scaleFactor: Double, xPos: Double, yPos: Double) {
+        rmpParams.postValue(RPMParams(scaleFactor, xPos.toInt(), yPos.toInt()))
     }
 
     override fun updateRMPState(state: PlaybackState) {
