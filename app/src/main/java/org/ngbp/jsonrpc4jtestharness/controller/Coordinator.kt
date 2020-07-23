@@ -86,27 +86,27 @@ class Coordinator @Inject constructor(
         }
     }
 
-    override fun requestMediaPlay(mediaUrl: String?, syncTime: Long?) {
-        applyRMPStateChanges(syncTime, mediaUrl, PlaybackState.PLAYING)
+    override fun requestMediaPlay(mediaUrl: String?, delay: Long) {
+        applyRMPStateChanges(delay, mediaUrl, PlaybackState.PLAYING)
     }
 
-    override fun requestMediaStop(syncTime: Long?) {
-        applyRMPStateChanges(syncTime, null, PlaybackState.PAUSED)
+    override fun requestMediaStop(delay: Long) {
+        applyRMPStateChanges(delay, null, PlaybackState.PAUSED)
     }
 
-    private fun applyRMPStateChanges(syncTime: Long?, url: String?, state: PlaybackState) {
+    private fun applyRMPStateChanges(delay: Long, url: String?, state: PlaybackState) {
         url?.let {
             rmpMediaUrl.value = url
         }
-        if (syncTime != null) {
-            updateWithDelay(syncTime, state)
+        if (delay != 0L) {
+            updateWithDelay(delay, state)
         } else {
             updateRMPState(state)
         }
     }
 
     //ToDo need to add threading logic for delay
-    private fun updateWithDelay(syncTime: Long, paused: PlaybackState) {
+    private fun updateWithDelay(delay: Long, paused: PlaybackState) {
         updateRMPState(paused)
     }
 
