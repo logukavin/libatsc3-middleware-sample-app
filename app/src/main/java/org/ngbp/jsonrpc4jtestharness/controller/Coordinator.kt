@@ -86,28 +86,18 @@ class Coordinator @Inject constructor(
         }
     }
 
+    //TODO: currently delay not supported and blocked on RPC level
     override fun requestMediaPlay(mediaUrl: String?, delay: Long) {
-        applyRMPStateChanges(delay, mediaUrl, PlaybackState.PLAYING)
-    }
-
-    override fun requestMediaStop(delay: Long) {
-        applyRMPStateChanges(delay, null, PlaybackState.PAUSED)
-    }
-
-    private fun applyRMPStateChanges(delay: Long, url: String?, state: PlaybackState) {
-        url?.let {
-            rmpMediaUrl.value = url
-        }
-        if (delay != 0L) {
-            updateWithDelay(delay, state)
+        if (mediaUrl != null) {
+            rmpMediaUrl.postValue(mediaUrl)
         } else {
-            updateRMPState(state)
+            rmpMediaUrl.postValue(getServiceMediaUrl())
         }
     }
 
-    //ToDo need to add threading logic for delay
-    private fun updateWithDelay(delay: Long, paused: PlaybackState) {
-        updateRMPState(paused)
+    //TODO: currently delay not supported and blocked on RPC level
+    override fun requestMediaStop(delay: Long) {
+        updateRMPState(PlaybackState.PAUSED)
     }
 
     override fun openRoute(pcapFile: String): Boolean {
@@ -137,7 +127,7 @@ class Coordinator @Inject constructor(
                     delay(200)
 
                     done = withContext(Dispatchers.Main) {
-                        val media = atsc3Module.getSelectedServiceMediaUri()
+                        val media = getServiceMediaUrl()
                         if (media != null) {
                             rmpMediaUrl.value = media
                         }
@@ -153,6 +143,8 @@ class Coordinator @Inject constructor(
             )
         }
     }
+
+    private fun getServiceMediaUrl() = atsc3Module.getSelectedServiceMediaUri()
 
     override fun rmpReset() {
         rmpParams.postValue(RPMParams())

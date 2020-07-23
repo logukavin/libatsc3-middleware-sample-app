@@ -10,8 +10,6 @@ class ReceiverActionImpl(
         private val rpcController: IRPCController
 ) : IReceiverAction {
 
-    private val MIN_SYNCHRONIZATION_TIME = 5.0
-
     override fun acquireService(): RpcResponse {
         return RpcResponse()
     }
@@ -22,34 +20,34 @@ class ReceiverActionImpl(
     }
 
     override fun setRMPURL(operation: String, rmpUrl: String?, rmpSyncTime: Double?): RpcResponse {
+        //TODO: currently we do not support delays
+        if (rmpSyncTime != null) {
+            throw RpcException(RpcErrorCode.SYNCHRONIZATION_CANNOT_BE_ACHIEVED)
+        }
+
         when (operation) {
             "startRmp" -> {
-                assertTime(rmpSyncTime)
                 rpcController.requestMediaPlay(rmpUrl, convertSecToMilliSec(rmpSyncTime))
             }
             "stopRmp" -> {
                 rpcController.requestMediaStop(delay = convertSecToMilliSec(rmpSyncTime))
             }
             "resumeService" -> {
-                assertTime(rmpSyncTime)
                 rpcController.requestMediaPlay(delay = convertSecToMilliSec(rmpSyncTime))
             }
         }
+
         return RpcResponse()
     }
 
     private fun convertSecToMilliSec(rmpSyncTime: Double?): Long {
-        return if (rmpSyncTime == null) {
-            0
-        } else {
-            (rmpSyncTime * 1000).toLong()
-        }
-    }
-
-    private fun assertTime(rmpSyncTime: Double?) {
-        if (rmpSyncTime != null && rmpSyncTime <= MIN_SYNCHRONIZATION_TIME) {
-            throw RpcException(RpcErrorCode.SYNCHRONIZATION_CANNOT_BE_ACHIEVED)
-        }
+        return rmpSyncTime?.let {
+            if (rmpSyncTime == -1.0) {
+                Long.MAX_VALUE
+            } else {
+                (rmpSyncTime * 1000).toLong()
+            }
+        } ?: 0
     }
 
     override fun audioVolume(): AudioVolume {
