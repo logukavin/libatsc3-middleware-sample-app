@@ -18,7 +18,7 @@ interface IReceiverAction {
 
     @JsonRpcError(RpcException::class)
     @JsonRpcMethod("org.atsc.setRMPURL")
-    fun setRMPURL(@JsonRpcParam("operation") operation: String, @JsonRpcParam(value = "rmpurl", nullable = true) rmpurl: String?, @JsonRpcParam(value = "rmpSyncTime", nullable = true) rmpSyncTime: Double?): RpcResponse
+    fun setRMPURL(@JsonRpcParam("operation") operation: String, @JsonRpcParam(value = "rmpurl", nullable = true) rmpUrl: String?, @JsonRpcParam(value = "rmpSyncTime", nullable = true) rmpSyncTime: Double?): RpcResponse
 
     @JsonRpcMethod("org.atsc.audioVolume")
     fun audioVolume(): AudioVolume
