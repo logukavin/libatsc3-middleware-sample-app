@@ -15,6 +15,6 @@ interface IRPCController {
     fun requestMediaPlay(mediaUrl: String? = null, delay: Long)
     fun requestMediaStop(delay: Long)
 
-    fun subscribeNotifications(notifications: Set<NotificationType>): Set<String>
-    fun unsubscribeNotifications(notifications: Set<NotificationType>): Set<String>
+    fun subscribeNotifications(notifications: Set<NotificationType>): Set<NotificationType>
+    fun unsubscribeNotifications(notifications: Set<NotificationType>): Set<NotificationType>
 }
