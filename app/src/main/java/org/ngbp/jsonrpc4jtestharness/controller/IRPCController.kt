@@ -2,7 +2,6 @@ package org.ngbp.jsonrpc4jtestharness.controller
 
 import org.ngbp.jsonrpc4jtestharness.controller.model.PlaybackState
 import org.ngbp.jsonrpc4jtestharness.rpc.notification.NotificationType
-import org.ngbp.jsonrpc4jtestharness.rpc.notification.NotificationType
 
 interface IRPCController {
     val language: String
