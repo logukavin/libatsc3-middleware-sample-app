@@ -5,7 +5,6 @@ import org.ngbp.jsonrpc4jtestharness.rpc.RpcErrorCode
 import org.ngbp.jsonrpc4jtestharness.rpc.RpcException
 import org.ngbp.jsonrpc4jtestharness.rpc.RpcResponse
 import org.ngbp.jsonrpc4jtestharness.rpc.requestReceiverActions.model.AudioVolume
-import org.ngbp.jsonrpc4jtestharness.utils.toMilliSec
 
 class ReceiverActionImpl(
         private val rpcController: IRPCController
@@ -26,17 +25,25 @@ class ReceiverActionImpl(
         when (operation) {
             "startRmp" -> {
                 assertTime(rmpSyncTime)
-                rpcController.requestMediaPlay(rmpSyncTime.toMilliSec(), rmpUrl)
+                rpcController.requestMediaPlay(rmpUrl, convertSecToMilliSec(rmpSyncTime))
             }
             "stopRmp" -> {
-                rpcController.requestMediaStop(rmpSyncTime.toMilliSec())
+                rpcController.requestMediaStop(syncTime = convertSecToMilliSec(rmpSyncTime))
             }
             "resumeService" -> {
                 assertTime(rmpSyncTime)
-                rpcController.requestMediaPlay(rmpSyncTime.toMilliSec(), null)
+                rpcController.requestMediaPlay(syncTime = convertSecToMilliSec(rmpSyncTime))
             }
         }
         return RpcResponse()
+    }
+
+    private fun convertSecToMilliSec(rmpSyncTime: Double?): Long? {
+        return if (rmpSyncTime == null) {
+            rmpSyncTime
+        } else {
+            (rmpSyncTime * 1000).toLong()
+        }
     }
 
     private fun assertTime(rmpSyncTime: Double?) {
