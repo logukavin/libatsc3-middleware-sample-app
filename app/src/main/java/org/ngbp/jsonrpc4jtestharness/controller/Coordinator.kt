@@ -8,6 +8,7 @@ import org.ngbp.jsonrpc4jtestharness.controller.model.AppData
 import org.ngbp.jsonrpc4jtestharness.controller.model.PlaybackState
 import org.ngbp.jsonrpc4jtestharness.controller.model.RPMParams
 import org.ngbp.jsonrpc4jtestharness.controller.model.SLSService
+import org.ngbp.jsonrpc4jtestharness.rpc.notification.NotificationType
 import org.ngbp.libatsc3.Atsc3Module
 import org.ngbp.libatsc3.entities.held.Atsc3HeldPackage
 import org.ngbp.libatsc3.entities.service.Atsc3Service
@@ -40,6 +41,7 @@ class Coordinator @Inject constructor(
         get() = rmpMediaUrl.value
     override val playbackState: PlaybackState
         get() = rmpState.value ?: PlaybackState.IDLE
+    private var subscribedINotifications = mutableSetOf<NotificationType>()
 
     // User Agent Controller
     override val sltServices = MutableLiveData<List<SLSService>>()
@@ -175,11 +177,38 @@ class Coordinator @Inject constructor(
         rmpListeners.remove(callback)
     }
 
+    override fun subscribeNotifications(notifications: Set<NotificationType>): Set<NotificationType> {
+        val available = getAvailableNotifications(notifications)
+        subscribedINotifications.addAll(available)
+        return available
+    }
+
+    override fun unsubscribeNotifications(notifications: Set<NotificationType>): Set<NotificationType> {
+        val available = getAvailableNotifications(notifications)
+        subscribedINotifications.removeAll(available)
+        return available
+    }
+
+    private fun getAvailableNotifications(requested: Set<NotificationType>): Set<NotificationType> {
+        val available = supportedNotifications.toMutableSet()
+        available.retainAll(requested.map { it })
+        return available
+    }
+
     private fun reset() {
         selectedService.postValue(null)
         sltServices.postValue(emptyList())
         appData.postValue(null)
         rmpMediaUrl.postValue(null)
         rmpReset()
+    }
+
+    companion object {
+        private val supportedNotifications = setOf(
+                NotificationType.SERVICE_CHANGE,
+                NotificationType.SERVICE_GUIDE_CHANGE,
+                NotificationType.ALERT_CHANGE,
+                NotificationType.MPD_CHANGE
+        )
     }
 }

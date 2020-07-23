@@ -3,14 +3,13 @@ package org.ngbp.jsonrpc4jtestharness.rpc.subscribeUnsubscribe
 import com.github.nmuzhichin.jsonrpc.annotation.JsonRpcMethod
 import com.github.nmuzhichin.jsonrpc.annotation.JsonRpcParam
 import com.github.nmuzhichin.jsonrpc.annotation.JsonRpcType
-import org.ngbp.jsonrpc4jtestharness.rpc.RpcResponse
 import org.ngbp.jsonrpc4jtestharness.rpc.subscribeUnsubscribe.model.Subscribe
 
 @JsonRpcType
 interface ISubscribeUnsubscribe {
     @JsonRpcMethod("org.atsc.subscribe")
-    fun integratedSubscribe(@JsonRpcParam("msgType") types: List<String>): Subscribe
+    fun integratedSubscribe(@JsonRpcParam("msgType") msgType: List<String>): Subscribe
 
     @JsonRpcMethod("org.atsc.unsubscribe")
-    fun integratedUnsubscribe(@JsonRpcParam("msgType") types: List<String>): Subscribe
+    fun integratedUnsubscribe(@JsonRpcParam("msgType") msgType: List<String>): Subscribe
 }

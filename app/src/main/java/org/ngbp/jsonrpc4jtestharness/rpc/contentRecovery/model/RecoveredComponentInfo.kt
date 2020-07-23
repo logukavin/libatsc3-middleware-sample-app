@@ -2,7 +2,7 @@ package org.ngbp.jsonrpc4jtestharness.rpc.contentRecovery.model
 
 import org.ngbp.jsonrpc4jtestharness.rpc.RpcResponse
 
-data class CecoveredComponentInfo(
+data class RecoveredComponentInfo(
         var component: MutableList<Component?>? = null
 ) : RpcResponse()
 
