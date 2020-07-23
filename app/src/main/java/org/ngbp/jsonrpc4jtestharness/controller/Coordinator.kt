@@ -178,13 +178,15 @@ class Coordinator @Inject constructor(
     }
 
     override fun subscribeNotifications(notifications: Set<NotificationType>): Set<NotificationType> {
-        subscribedINotifications.addAll(notifications)
-        return getAvailableNotifications(notifications)
+        val available = getAvailableNotifications(notifications)
+        subscribedINotifications.addAll(available)
+        return available
     }
 
     override fun unsubscribeNotifications(notifications: Set<NotificationType>): Set<NotificationType> {
-        subscribedINotifications.removeAll(notifications)
-        return getAvailableNotifications(notifications)
+        val available = getAvailableNotifications(notifications)
+        subscribedINotifications.removeAll(available)
+        return getAvailableNotifications(available)
     }
 
     private fun getAvailableNotifications(requested: Set<NotificationType>): Set<NotificationType> {
