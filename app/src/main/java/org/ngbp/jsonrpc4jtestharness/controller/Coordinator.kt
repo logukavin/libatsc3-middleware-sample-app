@@ -177,19 +177,19 @@ class Coordinator @Inject constructor(
         rmpListeners.remove(callback)
     }
 
-    override fun subscribeNotifications(notifications: Set<NotificationType>): Set<String> {
+    override fun subscribeNotifications(notifications: Set<NotificationType>): Set<NotificationType> {
         subscribedINotifications.addAll(notifications)
         return getAvailableNotifications(notifications)
     }
 
-    override fun unsubscribeNotifications(notifications: Set<NotificationType>): Set<String> {
+    override fun unsubscribeNotifications(notifications: Set<NotificationType>): Set<NotificationType> {
         subscribedINotifications.removeAll(notifications)
         return getAvailableNotifications(notifications)
     }
 
-    private fun getAvailableNotifications(requested: Set<NotificationType>): Set<String> {
+    private fun getAvailableNotifications(requested: Set<NotificationType>): Set<NotificationType> {
         val available = supportedNotifications.toMutableSet()
-        available.retainAll(requested.map { it.value })
+        available.retainAll(requested.map { it })
         return available
     }
 
@@ -203,10 +203,10 @@ class Coordinator @Inject constructor(
 
     companion object {
         private val supportedNotifications = setOf(
-                "serviceChange",
-                "serviceGuideChange",
-                "ratingChange",
-                "ratingBlock"
+                NotificationType.SERVICE_CHANGE,
+                NotificationType.SERVICE_GUIDE_CHANGE,
+                NotificationType.ALERT_CHANGE,
+                NotificationType.MPD_CHANGE
         )
     }
 }
