@@ -12,7 +12,7 @@ interface IReceiverAction {
     fun acquireService(): RpcResponse
 
     @JsonRpcMethod("org.atsc.scale-position")
-    fun videoScalingAndPositioning(@JsonRpcParam("scaleFactor") scaleFactor: Double?, @JsonRpcParam("xPos") xPos: Double?, @JsonRpcParam("yPos") yPos: Double?): RpcResponse
+    fun videoScalingAndPositioning(@JsonRpcParam("scaleFactor") scaleFactor: Double, @JsonRpcParam("xPos") xPos: Double, @JsonRpcParam("yPos") yPos: Double): RpcResponse
 
     @JsonRpcMethod("org.atsc.setRMPURL")
     fun setRMPURL(): RpcResponse

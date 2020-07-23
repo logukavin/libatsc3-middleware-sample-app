@@ -8,6 +8,6 @@ interface IRPCController {
     val mediaUrl: String?
     val playbackState: PlaybackState
 
-    fun updateRMPPosition(scaleFactor: Double?, xPos: Double?, yPos: Double?)
+    fun updateRMPPosition(scaleFactor: Double, xPos: Double, yPos: Double)
     fun updateRMPState(state: PlaybackState)
 }
