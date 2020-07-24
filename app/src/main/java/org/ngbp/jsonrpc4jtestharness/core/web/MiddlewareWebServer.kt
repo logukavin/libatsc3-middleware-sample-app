@@ -1,4 +1,4 @@
-package org.ngbp.jsonrpc4jtestharness.http.servers
+package org.ngbp.jsonrpc4jtestharness.core.web
 
 import org.eclipse.jetty.http.HttpVersion
 import org.eclipse.jetty.server.*
