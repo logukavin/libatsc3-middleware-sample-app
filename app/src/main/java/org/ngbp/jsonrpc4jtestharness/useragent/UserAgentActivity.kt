@@ -9,6 +9,7 @@ import android.util.Log
 import android.view.GestureDetector
 import android.view.KeyEvent
 import android.view.View
+import android.view.WindowManager
 import android.webkit.ClientCertRequest
 import android.webkit.SslErrorHandler
 import android.webkit.WebView
@@ -149,7 +150,6 @@ class UserAgentActivity : AppCompatActivity() {
             stop()
             release()
         }
-        rmpViewModel.setCurrentPlayerState(PlaybackState.PAUSED)
 
         cancelUnloadBAJob()
     }
@@ -228,9 +228,19 @@ class UserAgentActivity : AppCompatActivity() {
                         }
                         else -> return
                     }
-                    rmpViewModel.setCurrentPlayerState(state)
+                    onPlayerStateChanged(state)
                 }
             })
+        }
+    }
+
+    private fun onPlayerStateChanged(state: PlaybackState) {
+        rmpViewModel.setCurrentPlayerState(state)
+
+        if (state == PlaybackState.PLAYING) {
+            window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        } else {
+            window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         }
     }
 
@@ -255,7 +265,6 @@ class UserAgentActivity : AppCompatActivity() {
 
     private fun startPlayback(mpdPath: String) {
         stopPlayback()
-
         val dashMediaSource = dashMediaSourceFactory.createMediaSource(Uri.parse(mpdPath))
         simpleExoPlayer.prepare(dashMediaSource)
         simpleExoPlayer.playWhenReady = true
