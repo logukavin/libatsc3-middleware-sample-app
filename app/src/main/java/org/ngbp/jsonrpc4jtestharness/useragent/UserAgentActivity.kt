@@ -141,16 +141,6 @@ class UserAgentActivity : AppCompatActivity() {
         userAgentViewModel.appData.observe(this, Observer { appData ->
             switchBA(appData)
         })
-
-        rmpViewModel.playerState.observe(this, Observer {
-            when (it) {
-                PlaybackState.PAUSED -> disableLockScreen()
-                PlaybackState.PLAYING -> enableLockScreen()
-                else -> {
-                    enableLockScreen()
-                }
-            }
-        })
     }
 
     override fun onStop() {
@@ -161,7 +151,7 @@ class UserAgentActivity : AppCompatActivity() {
             release()
         }
         rmpViewModel.setCurrentPlayerState(PlaybackState.PAUSED)
-
+        enableLockScreen()
         cancelUnloadBAJob()
     }
 
@@ -240,6 +230,13 @@ class UserAgentActivity : AppCompatActivity() {
                         else -> return
                     }
                     rmpViewModel.setCurrentPlayerState(state)
+                    when (state) {
+                        PlaybackState.PAUSED -> enableLockScreen()
+                        PlaybackState.PLAYING -> disableLockScreen()
+                        else -> {
+                            enableLockScreen()
+                        }
+                    }
                 }
             })
         }
