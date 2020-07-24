@@ -58,7 +58,6 @@ class UserAgentActivity : AppCompatActivity() {
     private lateinit var dashMediaSourceFactory: DashMediaSource.Factory
 
     private var unloadBAJob: Job? = null
-    private lateinit var wakeLock: PowerManager.WakeLock
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -142,9 +141,7 @@ class UserAgentActivity : AppCompatActivity() {
         userAgentViewModel.appData.observe(this, Observer { appData ->
             switchBA(appData)
         })
-        wakeLock = (getSystemService(Context.POWER_SERVICE) as PowerManager).run {
-            newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "MyApp::MyWakelockTag")
-        }
+
         rmpViewModel.playerState.observe(this, Observer {
             when (it) {
                 PlaybackState.PAUSED -> disableLockScreen()
@@ -309,12 +306,10 @@ class UserAgentActivity : AppCompatActivity() {
 
     private fun disableLockScreen() {
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        wakeLock.acquire()
     }
 
     private fun enableLockScreen() {
         window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        wakeLock.release()
     }
 
     companion object {
