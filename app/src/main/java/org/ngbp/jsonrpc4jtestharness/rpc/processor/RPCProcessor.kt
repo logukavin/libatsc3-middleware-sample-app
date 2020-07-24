@@ -33,8 +33,6 @@ import org.ngbp.jsonrpc4jtestharness.rpc.markUnused.IMarkUnused
 import org.ngbp.jsonrpc4jtestharness.rpc.markUnused.MarkUnusedImpl
 import org.ngbp.jsonrpc4jtestharness.rpc.mediaTrackSelection.IMediaTrackSelection
 import org.ngbp.jsonrpc4jtestharness.rpc.mediaTrackSelection.MediaTrackSelectionImpl
-import org.ngbp.jsonrpc4jtestharness.rpc.notification.IRPCNotification
-import org.ngbp.jsonrpc4jtestharness.rpc.notification.RPCNotification
 import org.ngbp.jsonrpc4jtestharness.rpc.queryDeviceInf.IQueryDeviceInfo
 import org.ngbp.jsonrpc4jtestharness.rpc.queryDeviceInf.QueryDeviceInfoImpl
 import org.ngbp.jsonrpc4jtestharness.rpc.receiverQueryApi.IReceiverQueryApi
@@ -44,7 +42,7 @@ import org.ngbp.jsonrpc4jtestharness.rpc.requestReceiverActions.ReceiverActionIm
 import org.ngbp.jsonrpc4jtestharness.rpc.rmpContentSynchronization.IRMPContentSynchronization
 import org.ngbp.jsonrpc4jtestharness.rpc.rmpContentSynchronization.RMPContentSynchronizationImpl
 import org.ngbp.jsonrpc4jtestharness.rpc.subscribeUnsubscribe.ISubscribeUnsubscribe
-import org.ngbp.jsonrpc4jtestharness.rpc.subscribeUnsubscribe.SubscribeUnsubscribeImp
+import org.ngbp.jsonrpc4jtestharness.rpc.subscribeUnsubscribe.SubscribeUnsubscribeImpl
 import org.ngbp.jsonrpc4jtestharness.rpc.xLink.IXLink
 import org.ngbp.jsonrpc4jtestharness.rpc.xLink.XLinkImpl
 import java.lang.Exception
@@ -86,9 +84,8 @@ class RPCProcessor @Inject constructor(
         processor.process(ReceiverQueryApiImpl(rpcController), IReceiverQueryApi::class.java)
         processor.process(ReceiverActionImpl(rpcController), IReceiverAction::class.java)
         processor.process(RMPContentSynchronizationImpl(rpcController), IRMPContentSynchronization::class.java)
-        processor.process(SubscribeUnsubscribeImp(), ISubscribeUnsubscribe::class.java)
+        processor.process(SubscribeUnsubscribeImpl(rpcController), ISubscribeUnsubscribe::class.java)
         processor.process(XLinkImpl(), IXLink::class.java)
-        processor.process(RPCNotification(rpcController), IRPCNotification::class.java)
     }
 
     override fun processRequest(request: String): String {
