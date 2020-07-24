@@ -1,12 +1,10 @@
 package org.ngbp.jsonrpc4jtestharness.useragent
 
 import android.annotation.SuppressLint
-import android.content.Context
 import android.graphics.Color
 import android.net.Uri
 import android.net.http.SslError
 import android.os.Bundle
-import android.os.PowerManager
 import android.util.Log
 import android.view.GestureDetector
 import android.view.KeyEvent
@@ -150,8 +148,7 @@ class UserAgentActivity : AppCompatActivity() {
             stop()
             release()
         }
-        rmpViewModel.setCurrentPlayerState(PlaybackState.PAUSED)
-        enableLockScreen()
+
         cancelUnloadBAJob()
     }
 
@@ -229,16 +226,19 @@ class UserAgentActivity : AppCompatActivity() {
                         }
                         else -> return
                     }
-                    rmpViewModel.setCurrentPlayerState(state)
-                    when (state) {
-                        PlaybackState.PAUSED -> enableLockScreen()
-                        PlaybackState.PLAYING -> disableLockScreen()
-                        else -> {
-                            enableLockScreen()
-                        }
-                    }
+                    onPlayerStateChanged(state)
                 }
             })
+        }
+    }
+
+    private fun onPlayerStateChanged(state: PlaybackState) {
+        rmpViewModel.setCurrentPlayerState(state)
+
+        if (state == PlaybackState.PLAYING) {
+            window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        } else {
+            window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         }
     }
 
@@ -299,14 +299,6 @@ class UserAgentActivity : AppCompatActivity() {
             }
             request.proceed(CertificateUtils.privateKey, CertificateUtils.certificates)
         }
-    }
-
-    private fun disableLockScreen() {
-        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-    }
-
-    private fun enableLockScreen() {
-        window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
     }
 
     companion object {
