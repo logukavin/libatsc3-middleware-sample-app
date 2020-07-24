@@ -13,8 +13,11 @@ interface IReceiverAction {
     @JsonRpcMethod("org.atsc.acquire.service")
     fun acquireService(): RpcResponse
 
+    // This RPC send incorrect data: Integer instead of Double
+    // Using of java.lang.Double allows us avoid cast exception
+    // Migrate to kotlin types when RPC will be fixed
     @JsonRpcMethod("org.atsc.scale-position")
-    fun videoScalingAndPositioning(@JsonRpcParam("scaleFactor") scaleFactor: Double, @JsonRpcParam("xPos") xPos: Double, @JsonRpcParam("yPos") yPos: Double): RpcResponse
+    fun videoScalingAndPositioning(@JsonRpcParam("scaleFactor") scaleFactor: java.lang.Double, @JsonRpcParam("xPos") xPos: java.lang.Double, @JsonRpcParam("yPos") yPos: java.lang.Double): RpcResponse
 
     @JsonRpcError(RpcException::class)
     @JsonRpcMethod("org.atsc.setRMPURL")

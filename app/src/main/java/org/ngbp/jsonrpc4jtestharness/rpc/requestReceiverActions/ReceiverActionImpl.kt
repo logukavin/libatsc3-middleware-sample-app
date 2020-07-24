@@ -1,21 +1,21 @@
 package org.ngbp.jsonrpc4jtestharness.rpc.requestReceiverActions
 
-import org.ngbp.jsonrpc4jtestharness.controller.IRPCController
+import org.ngbp.jsonrpc4jtestharness.gateway.rpc.IRPCGateway
 import org.ngbp.jsonrpc4jtestharness.rpc.RpcErrorCode
 import org.ngbp.jsonrpc4jtestharness.rpc.RpcException
 import org.ngbp.jsonrpc4jtestharness.rpc.RpcResponse
 import org.ngbp.jsonrpc4jtestharness.rpc.requestReceiverActions.model.AudioVolume
 
 class ReceiverActionImpl(
-        private val rpcController: IRPCController
+        private val gateway: IRPCGateway
 ) : IReceiverAction {
 
     override fun acquireService(): RpcResponse {
         return RpcResponse()
     }
 
-    override fun videoScalingAndPositioning(scaleFactor: Double, xPos: Double, yPos: Double): RpcResponse {
-        rpcController.updateRMPPosition(scaleFactor, xPos, yPos)
+    override fun videoScalingAndPositioning(scaleFactor: java.lang.Double, xPos: java.lang.Double, yPos: java.lang.Double): RpcResponse {
+        gateway.updateRMPPosition(scaleFactor.toDouble(), xPos.toDouble(), yPos.toDouble())
         return RpcResponse()
     }
 
@@ -27,13 +27,13 @@ class ReceiverActionImpl(
 
         when (operation) {
             "startRmp" -> {
-                rpcController.requestMediaPlay(rmpUrl, convertSecToMilliSec(rmpSyncTime))
+                gateway.requestMediaPlay(rmpUrl, convertSecToMilliSec(rmpSyncTime))
             }
             "stopRmp" -> {
-                rpcController.requestMediaStop(delay = convertSecToMilliSec(rmpSyncTime))
+                gateway.requestMediaStop(delay = convertSecToMilliSec(rmpSyncTime))
             }
             "resumeService" -> {
-                rpcController.requestMediaPlay(delay = convertSecToMilliSec(rmpSyncTime))
+                gateway.requestMediaPlay(delay = convertSecToMilliSec(rmpSyncTime))
             }
         }
 

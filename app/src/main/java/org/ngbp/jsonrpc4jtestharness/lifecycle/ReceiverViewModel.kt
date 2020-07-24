@@ -3,24 +3,24 @@ package org.ngbp.jsonrpc4jtestharness.lifecycle
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.ViewModel
-import org.ngbp.jsonrpc4jtestharness.controller.IMediaPlayerController
-import org.ngbp.jsonrpc4jtestharness.controller.IUserAgentController
-import org.ngbp.jsonrpc4jtestharness.controller.model.AppData
+import org.ngbp.jsonrpc4jtestharness.presentation.IMediaPlayerPresenter
+import org.ngbp.jsonrpc4jtestharness.presentation.IUserAgentPresenter
+import org.ngbp.jsonrpc4jtestharness.core.model.AppData
 
 class ReceiverViewModel(
-        private val agentController: IUserAgentController,
-        private val mediaController: IMediaPlayerController
+        private val agentPresenter: IUserAgentPresenter,
+        private val playerPresenter: IMediaPlayerPresenter
 ) : ViewModel() {
     private val _appDataLog = MediatorLiveData<String>()
 
     val appDataLog: LiveData<String> = _appDataLog
 
     init {
-        _appDataLog.addSource(agentController.appData) { data ->
-            _appDataLog.value = formatLog(data, mediaController.rmpMediaUrl.value)
+        _appDataLog.addSource(agentPresenter.appData) { data ->
+            _appDataLog.value = formatLog(data, playerPresenter.rmpMediaUrl.value)
         }
-        _appDataLog.addSource(mediaController.rmpMediaUrl) { url ->
-            _appDataLog.value = formatLog(agentController.appData.value, url)
+        _appDataLog.addSource(playerPresenter.rmpMediaUrl) { url ->
+            _appDataLog.value = formatLog(agentPresenter.appData.value, url)
         }
     }
 
