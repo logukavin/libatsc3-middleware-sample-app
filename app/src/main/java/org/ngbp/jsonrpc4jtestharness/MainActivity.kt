@@ -23,18 +23,19 @@ import com.github.nmuzhichin.jsonrpc.model.request.Request
 import com.github.nmuzhichin.jsonrpc.module.JsonRpcModule
 import dagger.android.AndroidInjection
 import kotlinx.android.synthetic.main.activity_main.*
-import org.ngbp.jsonrpc4jtestharness.controller.IReceiverController
+import org.ngbp.jsonrpc4jtestharness.core.model.ReceiverState
+import org.ngbp.jsonrpc4jtestharness.presentation.IReceiverPresenter
 import org.ngbp.jsonrpc4jtestharness.core.FileUtils
 import org.ngbp.jsonrpc4jtestharness.useragent.ServiceAdapter
 import org.ngbp.jsonrpc4jtestharness.core.ws.MiddlewareWebSocketClient
 import org.ngbp.jsonrpc4jtestharness.databinding.ActivityMainBinding
 import org.ngbp.jsonrpc4jtestharness.lifecycle.ReceiverViewModel
+import org.ngbp.jsonrpc4jtestharness.lifecycle.SelectorViewModel
 import org.ngbp.jsonrpc4jtestharness.lifecycle.UserAgentViewModel
 import org.ngbp.jsonrpc4jtestharness.lifecycle.factory.UserAgentViewModelFactory
 import org.ngbp.jsonrpc4jtestharness.rpc.processor.RPCProcessor
 import org.ngbp.jsonrpc4jtestharness.service.ForegroundRpcService
 import org.ngbp.jsonrpc4jtestharness.useragent.UserAgentActivity
-import org.ngbp.libatsc3.Atsc3Module
 import java.util.*
 import javax.inject.Inject
 
@@ -43,13 +44,14 @@ class MainActivity : AppCompatActivity() {
     lateinit var callWrapper: RPCProcessor
 
     @Inject
-    lateinit var controller: IReceiverController
+    lateinit var controller: IReceiverPresenter
 
     @Inject
     lateinit var userAgentViewModelFactory: UserAgentViewModelFactory
 
     private val receiverViewModel: ReceiverViewModel by viewModels { userAgentViewModelFactory }
     private val userAgentViewModel: UserAgentViewModel by viewModels { userAgentViewModelFactory }
+    private val selectorViewModel: SelectorViewModel by viewModels { userAgentViewModelFactory }
 
     private val mapper = ObjectMapper().apply {
         registerModule(JsonRpcModule())
@@ -104,7 +106,7 @@ class MainActivity : AppCompatActivity() {
         val adapter = ServiceAdapter(this)
         atsc3_service_spinner.adapter = adapter
 
-        userAgentViewModel.services.observe(this, Observer { services ->
+        selectorViewModel.services.observe(this, Observer { services ->
             adapter.setServices(services)
         })
         atsc3_service_spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
@@ -113,13 +115,13 @@ class MainActivity : AppCompatActivity() {
 
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
                 if (id > 0) {
-                    userAgentViewModel.selectService(id.toInt())
+                    selectorViewModel.selectService(id.toInt())
                 }
             }
         }
 
 //        makeCall_9_7_5_1()
-        makeCall()
+//        makeCall()
     }
 
     private fun startUserAgent() {
@@ -168,7 +170,7 @@ class MainActivity : AppCompatActivity() {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
             override fun afterTextChanged(s: Editable?) {
-                updateAssc3Buttons(if (TextUtils.isEmpty(s)) null else Atsc3Module.State.IDLE)
+                updateAssc3Buttons(if (TextUtils.isEmpty(s)) null else ReceiverState.IDLE)
             }
         })
 
@@ -189,11 +191,11 @@ class MainActivity : AppCompatActivity() {
         updateAssc3Buttons(null)
     }
 
-    private fun updateAssc3Buttons(state: Atsc3Module.State?) {
-        stsc3Open.isEnabled = state == Atsc3Module.State.IDLE
-        stsc3Start.isEnabled = state == Atsc3Module.State.OPENED || state == Atsc3Module.State.PAUSED
-        stsc3Stop.isEnabled = state == Atsc3Module.State.OPENED
-        stsc3Close.isEnabled = state == Atsc3Module.State.OPENED || state == Atsc3Module.State.PAUSED
+    private fun updateAssc3Buttons(state: ReceiverState?) {
+        stsc3Open.isEnabled = state == ReceiverState.IDLE
+        stsc3Start.isEnabled = state == ReceiverState.OPENED || state == ReceiverState.PAUSED
+        stsc3Stop.isEnabled = state == ReceiverState.OPENED
+        stsc3Close.isEnabled = state == ReceiverState.OPENED || state == ReceiverState.PAUSED
     }
 
     private fun startService() {

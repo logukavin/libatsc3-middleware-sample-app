@@ -2,14 +2,14 @@ package org.ngbp.jsonrpc4jtestharness.server
 
 import org.eclipse.jetty.websocket.client.WebSocketClient
 import org.junit.*
-import org.mockito.Mock
-import org.ngbp.jsonrpc4jtestharness.controller.IRPCController
-import org.ngbp.jsonrpc4jtestharness.controller.model.PlaybackState
+import org.ngbp.jsonrpc4jtestharness.gateway.rpc.IRPCGateway
+import org.ngbp.jsonrpc4jtestharness.core.model.PlaybackState
 
 import org.ngbp.jsonrpc4jtestharness.core.ws.MiddlewareWebSocket
 
-import org.ngbp.jsonrpc4jtestharness.http.servers.MiddlewareWebServer
-import org.ngbp.jsonrpc4jtestharness.http.servers.MiddlewareWebServerError
+import org.ngbp.jsonrpc4jtestharness.core.web.MiddlewareWebServer
+import org.ngbp.jsonrpc4jtestharness.core.web.MiddlewareWebServerError
+import org.ngbp.jsonrpc4jtestharness.rpc.notification.NotificationType
 
 import org.ngbp.jsonrpc4jtestharness.rpc.processor.RPCProcessor
 import java.net.URI
@@ -31,7 +31,7 @@ class WebServerTests {
         @BeforeClass
         @JvmStatic
         fun setup() {
-            rpcProcessor = RPCProcessor(object : IRPCController {
+            rpcProcessor = RPCProcessor(object : IRPCGateway {
                 override val language: String
                     get() = "test"
                 override val queryServiceId: String?
@@ -41,11 +41,23 @@ class WebServerTests {
                 override val playbackState: PlaybackState
                     get() = PlaybackState.IDLE
 
-                override fun updateRMPPosition(scaleFactor: Double?, xPos: Double?, yPos: Double?) {
+                override fun updateRMPPosition(scaleFactor: Double, xPos: Double, yPos: Double) {
                     TODO("Not yet implemented")
                 }
 
-                override fun updateRMPState(state: PlaybackState) {
+                override fun requestMediaPlay(mediaUrl: String?, delay: Long) {
+                    TODO("Not yet implemented")
+                }
+
+                override fun requestMediaStop(delay: Long) {
+                    TODO("Not yet implemented")
+                }
+
+                override fun subscribeNotifications(notifications: Set<NotificationType>): Set<NotificationType> {
+                    TODO("Not yet implemented")
+                }
+
+                override fun unsubscribeNotifications(notifications: Set<NotificationType>): Set<NotificationType> {
                     TODO("Not yet implemented")
                 }
             })

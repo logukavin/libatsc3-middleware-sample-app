@@ -1,4 +1,4 @@
-package org.ngbp.jsonrpc4jtestharness.controller.model
+package org.ngbp.jsonrpc4jtestharness.core.model
 
 data class AppData(
     var appContextId: String? = null,
