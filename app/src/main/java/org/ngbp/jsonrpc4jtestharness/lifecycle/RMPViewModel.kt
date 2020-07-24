@@ -4,45 +4,45 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Transformations
 import androidx.lifecycle.ViewModel
-import org.ngbp.jsonrpc4jtestharness.controller.model.PlaybackState
-import org.ngbp.jsonrpc4jtestharness.controller.IMediaPlayerController
-import org.ngbp.jsonrpc4jtestharness.controller.media.IObservablePlayer
+import org.ngbp.jsonrpc4jtestharness.core.model.PlaybackState
+import org.ngbp.jsonrpc4jtestharness.presentation.IMediaPlayerPresenter
+import org.ngbp.jsonrpc4jtestharness.core.media.IObservablePlayer
 
 class RMPViewModel(
-        private val playerController: IMediaPlayerController
+        private val presenter: IMediaPlayerPresenter
 ) : ViewModel(), IObservablePlayer.IPlayerStateListener {
     private val _playWhenReady = MutableLiveData<Boolean>(true)
 
-    val layoutParams = Transformations.distinctUntilChanged(playerController.rmpParams)
-    val mediaUri = Transformations.distinctUntilChanged(playerController.rmpMediaUrl)
+    val layoutParams = Transformations.distinctUntilChanged(presenter.rmpLayoutParams)
+    val mediaUri = Transformations.distinctUntilChanged(presenter.rmpMediaUrl)
 
     val playWhenReady: LiveData<Boolean> = _playWhenReady
 
     init {
-        playerController.addOnPlayerSateChangedCallback(this)
+        presenter.addOnPlayerSateChangedCallback(this)
     }
 
     override fun onCleared() {
         super.onCleared()
 
-        playerController.removeOnPlayerSateChangedCallback(this)
+        presenter.removeOnPlayerSateChangedCallback(this)
     }
 
-    override fun onPause(mediaController: IMediaPlayerController) {
+    override fun onPause(mediaController: IMediaPlayerPresenter) {
         _playWhenReady.value = false
     }
 
-    override fun onResume(mediaController: IMediaPlayerController) {
+    override fun onResume(mediaController: IMediaPlayerPresenter) {
         _playWhenReady.value = true
     }
 
     fun reset() {
-        playerController.rmpReset()
+        presenter.rmpReset()
         _playWhenReady.value = true
     }
 
     fun setCurrentPlayerState(state: PlaybackState) {
-        playerController.rmpPlaybackChanged(state)
+        presenter.rmpPlaybackChanged(state)
     }
 }
 

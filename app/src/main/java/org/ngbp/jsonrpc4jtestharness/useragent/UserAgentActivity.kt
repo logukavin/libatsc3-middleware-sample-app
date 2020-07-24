@@ -32,12 +32,13 @@ import dagger.android.AndroidInjection
 import kotlinx.android.synthetic.main.activity_user_agent.*
 import kotlinx.coroutines.*
 import org.ngbp.jsonrpc4jtestharness.R
-import org.ngbp.jsonrpc4jtestharness.controller.model.AppData
-import org.ngbp.jsonrpc4jtestharness.controller.model.PlaybackState
+import org.ngbp.jsonrpc4jtestharness.core.model.AppData
+import org.ngbp.jsonrpc4jtestharness.core.model.PlaybackState
 import org.ngbp.jsonrpc4jtestharness.core.AppUtils
 import org.ngbp.jsonrpc4jtestharness.core.CertificateUtils
 import org.ngbp.jsonrpc4jtestharness.core.SwipeGestureDetector
 import org.ngbp.jsonrpc4jtestharness.lifecycle.RMPViewModel
+import org.ngbp.jsonrpc4jtestharness.lifecycle.SelectorViewModel
 import org.ngbp.jsonrpc4jtestharness.lifecycle.UserAgentViewModel
 import org.ngbp.jsonrpc4jtestharness.lifecycle.factory.UserAgentViewModelFactory
 import java.io.IOException
@@ -45,10 +46,11 @@ import javax.inject.Inject
 
 class UserAgentActivity : AppCompatActivity() {
     @Inject
-    lateinit var userAgentViewModelFactory: UserAgentViewModelFactory
+    lateinit var viewModelFactory: UserAgentViewModelFactory
 
-    private val rmpViewModel: RMPViewModel by viewModels { userAgentViewModelFactory }
-    private val userAgentViewModel: UserAgentViewModel by viewModels { userAgentViewModelFactory }
+    private val rmpViewModel: RMPViewModel by viewModels { viewModelFactory }
+    private val userAgentViewModel: UserAgentViewModel by viewModels { viewModelFactory }
+    private val selectorViewModel: SelectorViewModel by viewModels { viewModelFactory }
 
     private var isBAMenuOpened = false
 
@@ -123,7 +125,7 @@ class UserAgentActivity : AppCompatActivity() {
         val adapter = ServiceAdapter(this)
         service_spinner.adapter = adapter
 
-        userAgentViewModel.services.observe(this, Observer { services ->
+        selectorViewModel.services.observe(this, Observer { services ->
             adapter.setServices(services)
         })
 
@@ -171,7 +173,7 @@ class UserAgentActivity : AppCompatActivity() {
             }
         }
 
-        userAgentViewModel.selectService(serviceId)
+        selectorViewModel.selectService(serviceId)
     }
 
     private fun setBAAvailability(available: Boolean) {

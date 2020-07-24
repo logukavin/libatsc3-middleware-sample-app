@@ -1,20 +1,23 @@
 package org.ngbp.jsonrpc4jtestharness.rpc.subscribeUnsubscribe
 
-import org.ngbp.jsonrpc4jtestharness.controller.IRPCController
+import org.ngbp.jsonrpc4jtestharness.gateway.rpc.IRPCGateway
 import org.ngbp.jsonrpc4jtestharness.rpc.notification.NotificationType
 import org.ngbp.jsonrpc4jtestharness.rpc.subscribeUnsubscribe.model.Subscribe
 
-class SubscribeUnsubscribeImpl(private val rpcController: IRPCController) : ISubscribeUnsubscribe {
+class SubscribeUnsubscribeImpl(
+        private val gateway: IRPCGateway
+) : ISubscribeUnsubscribe {
+
     override fun integratedSubscribe(msgType: List<String>): Subscribe {
         val notifications = convertMsgTypeToNotifications(msgType)
-        val subscribedNotifications = rpcController.subscribeNotifications(notifications)
+        val subscribedNotifications = gateway.subscribeNotifications(notifications)
 
         return Subscribe(subscribedNotifications.map { it.value })
     }
 
     override fun integratedUnsubscribe(msgType: List<String>): Subscribe {
         val notifications = convertMsgTypeToNotifications(msgType)
-        val unsubscribedNotifications = rpcController.subscribeNotifications(notifications)
+        val unsubscribedNotifications = gateway.subscribeNotifications(notifications)
 
         return Subscribe(unsubscribedNotifications.map { it.value })
     }
