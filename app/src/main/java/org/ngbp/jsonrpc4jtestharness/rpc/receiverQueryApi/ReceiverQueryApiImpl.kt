@@ -1,10 +1,10 @@
 package org.ngbp.jsonrpc4jtestharness.rpc.receiverQueryApi
 
-import org.ngbp.jsonrpc4jtestharness.controller.IRPCController
+import org.ngbp.jsonrpc4jtestharness.gateway.rpc.IRPCGateway
 import org.ngbp.jsonrpc4jtestharness.rpc.receiverQueryApi.model.*
 
 class ReceiverQueryApiImpl(
-        private val rpcController: IRPCController
+        private val gateway: IRPCGateway
 ) : IReceiverQueryApi {
 
     override fun queryContentAdvisoryRating(): RatingLevel {
@@ -17,13 +17,13 @@ class ReceiverQueryApiImpl(
 
     override fun queryServiceID(): Service {
         return Service().apply {
-            this.service = rpcController.queryServiceId
+            this.service = gateway.queryServiceId
         }
     }
 
     override fun queryLanguagePreferences(): Languages {
         return Languages().apply {
-            rpcController.language.let { language ->
+            gateway.language.let { language ->
                 preferredAudioLang = language
                 preferredCaptionSubtitleLang = language
                 preferredUiLang = language
@@ -40,7 +40,7 @@ class ReceiverQueryApiImpl(
     }
 
     override fun queryMPDUrl(): MPDUrl {
-        return MPDUrl(rpcController.mediaUrl)
+        return MPDUrl(gateway.mediaUrl)
     }
 
     override fun queryReceiverWebServerURI(): BaseURI {

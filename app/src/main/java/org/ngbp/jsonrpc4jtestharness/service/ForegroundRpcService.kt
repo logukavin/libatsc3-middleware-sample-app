@@ -7,11 +7,11 @@ import android.os.PowerManager
 import android.os.PowerManager.WakeLock
 import androidx.lifecycle.LifecycleService
 import dagger.android.AndroidInjection
-import org.ngbp.jsonrpc4jtestharness.controller.IMediaPlayerController
-import org.ngbp.jsonrpc4jtestharness.controller.IReceiverController
-import org.ngbp.jsonrpc4jtestharness.controller.model.PlaybackState
+import org.ngbp.jsonrpc4jtestharness.controller.service.IServiceController
+import org.ngbp.jsonrpc4jtestharness.controller.view.IViewController
+import org.ngbp.jsonrpc4jtestharness.core.model.PlaybackState
 import org.ngbp.jsonrpc4jtestharness.core.ws.UserAgentSSLContext
-import org.ngbp.jsonrpc4jtestharness.http.servers.MiddlewareWebServer
+import org.ngbp.jsonrpc4jtestharness.core.web.MiddlewareWebServer
 import org.ngbp.jsonrpc4jtestharness.rpc.processor.RPCProcessor
 import java.util.*
 import javax.inject.Inject
@@ -20,9 +20,9 @@ class ForegroundRpcService : LifecycleService() {
     @Inject
     lateinit var rpcProcessor: RPCProcessor
     @Inject
-    lateinit var receiverController: IReceiverController
+    lateinit var serviceController: IServiceController
     @Inject
-    lateinit var mediaController: IMediaPlayerController
+    lateinit var viewController: IViewController
 
     private lateinit var wakeLock: WakeLock
     private lateinit var notificationHelper: NotificationHelper
@@ -40,10 +40,10 @@ class ForegroundRpcService : LifecycleService() {
 
         startForeground(NOTIFICATION_ID, createNotification(getServiceName()))
 
-        receiverController.selectedService.observe(this, androidx.lifecycle.Observer {
+        serviceController.selectedService.observe(this, androidx.lifecycle.Observer {
             updateNotification()
         })
-        mediaController.rmpState.observe(this, androidx.lifecycle.Observer {
+        viewController.rmpState.observe(this, androidx.lifecycle.Observer {
             updateNotification()
         })
     }
@@ -67,7 +67,7 @@ class ForegroundRpcService : LifecycleService() {
         return START_NOT_STICKY
     }
     
-    private fun getServiceName() = receiverController.selectedService.value?.shortName ?: "---"
+    private fun getServiceName() = serviceController.selectedService.value?.shortName ?: "---"
 
     private fun startService(message: String) {
         if (isServiceStarted) return
@@ -84,8 +84,8 @@ class ForegroundRpcService : LifecycleService() {
     }
 
     private fun updateNotification() {
-        val serviceName = receiverController.selectedService.value?.shortName ?: ""
-        notificationHelper.notify(NOTIFICATION_ID, createNotification(serviceName, "", mediaController.rmpState.value ?: PlaybackState.IDLE))
+        val serviceName = serviceController.selectedService.value?.shortName ?: ""
+        notificationHelper.notify(NOTIFICATION_ID, createNotification(serviceName, "", viewController.rmpState.value ?: PlaybackState.IDLE))
     }
 
     private fun startWebServer() {

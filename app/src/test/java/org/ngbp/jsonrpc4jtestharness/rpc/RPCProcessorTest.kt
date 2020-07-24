@@ -8,8 +8,9 @@ import com.github.nmuzhichin.jsonrpc.module.JsonRpcModule
 import junit.framework.Assert.*
 import org.junit.Before
 import org.junit.Test
-import org.ngbp.jsonrpc4jtestharness.controller.IRPCController
-import org.ngbp.jsonrpc4jtestharness.controller.model.PlaybackState
+import org.ngbp.jsonrpc4jtestharness.core.model.PlaybackState
+import org.ngbp.jsonrpc4jtestharness.gateway.rpc.IRPCGateway
+import org.ngbp.jsonrpc4jtestharness.rpc.notification.NotificationType
 import org.ngbp.jsonrpc4jtestharness.rpc.processor.IRPCProcessor
 import org.ngbp.jsonrpc4jtestharness.rpc.processor.RPCProcessor
 import java.util.*
@@ -25,7 +26,7 @@ class RPCProcessorTest {
 
     @Before
     fun initRPCProcessor() {
-        processor = RPCProcessor(object : IRPCController {
+        processor = RPCProcessor(object : IRPCGateway {
             override val language: String
                 get() = "test"
             override val queryServiceId: String?
@@ -35,11 +36,23 @@ class RPCProcessorTest {
             override val playbackState: PlaybackState
                 get() = PlaybackState.IDLE
 
-            override fun updateRMPPosition(scaleFactor: Double?, xPos: Double?, yPos: Double?) {
+            override fun updateRMPPosition(scaleFactor: Double, xPos: Double, yPos: Double) {
                 TODO("Not yet implemented")
             }
 
-            override fun updateRMPState(state: PlaybackState) {
+            override fun requestMediaPlay(mediaUrl: String?, delay: Long) {
+                TODO("Not yet implemented")
+            }
+
+            override fun requestMediaStop(delay: Long) {
+                TODO("Not yet implemented")
+            }
+
+            override fun subscribeNotifications(notifications: Set<NotificationType>): Set<NotificationType> {
+                TODO("Not yet implemented")
+            }
+
+            override fun unsubscribeNotifications(notifications: Set<NotificationType>): Set<NotificationType> {
                 TODO("Not yet implemented")
             }
         })
