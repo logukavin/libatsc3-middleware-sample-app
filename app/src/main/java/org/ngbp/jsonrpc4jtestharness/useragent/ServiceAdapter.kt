@@ -7,7 +7,7 @@ import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.TextView
 import org.ngbp.jsonrpc4jtestharness.R
-import org.ngbp.jsonrpc4jtestharness.controller.model.SLSService
+import org.ngbp.jsonrpc4jtestharness.core.model.SLSService
 
 class ServiceAdapter(context: Context) : ArrayAdapter<SLSService>(context, 0) {
     private var inflater = LayoutInflater.from(context)

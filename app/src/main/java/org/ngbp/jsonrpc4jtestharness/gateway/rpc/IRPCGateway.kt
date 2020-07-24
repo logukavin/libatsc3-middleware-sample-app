@@ -1,16 +1,15 @@
-package org.ngbp.jsonrpc4jtestharness.controller
+package org.ngbp.jsonrpc4jtestharness.gateway.rpc
 
-import org.ngbp.jsonrpc4jtestharness.controller.model.PlaybackState
+import org.ngbp.jsonrpc4jtestharness.core.model.PlaybackState
 import org.ngbp.jsonrpc4jtestharness.rpc.notification.NotificationType
 
-interface IRPCController {
+interface IRPCGateway {
     val language: String
     val queryServiceId: String?
     val mediaUrl: String?
     val playbackState: PlaybackState
 
     fun updateRMPPosition(scaleFactor: Double, xPos: Double, yPos: Double)
-    fun updateRMPState(state: PlaybackState)
 
     fun requestMediaPlay(mediaUrl: String? = null, delay: Long)
     fun requestMediaStop(delay: Long)

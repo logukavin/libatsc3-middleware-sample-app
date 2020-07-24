@@ -14,7 +14,7 @@ import com.github.nmuzhichin.jsonrpc.model.response.Response
 import com.github.nmuzhichin.jsonrpc.model.response.ResponseUtils
 import com.github.nmuzhichin.jsonrpc.model.response.errors.Error
 import com.github.nmuzhichin.jsonrpc.module.JsonRpcModule
-import org.ngbp.jsonrpc4jtestharness.controller.IRPCController
+import org.ngbp.jsonrpc4jtestharness.gateway.rpc.IRPCGateway
 import org.ngbp.jsonrpc4jtestharness.rpc.RpcErrorCode
 import org.ngbp.jsonrpc4jtestharness.rpc.RpcError
 import org.ngbp.jsonrpc4jtestharness.rpc.cacheRequest.CacheRequestImpl
@@ -47,9 +47,11 @@ import org.ngbp.jsonrpc4jtestharness.rpc.xLink.IXLink
 import org.ngbp.jsonrpc4jtestharness.rpc.xLink.XLinkImpl
 import java.lang.Exception
 import javax.inject.Inject
+import javax.inject.Singleton
 
+@Singleton
 class RPCProcessor @Inject constructor(
-        private val rpcController: IRPCController
+        private val gateway: IRPCGateway
 ) : IRPCProcessor {
 
     private val consumer: RpcConsumer
@@ -81,10 +83,10 @@ class RPCProcessor @Inject constructor(
         processor.process(MarkUnusedImpl(), IMarkUnused::class.java)
         processor.process(MediaTrackSelectionImpl(), IMediaTrackSelection::class.java)
         processor.process(QueryDeviceInfoImpl(), IQueryDeviceInfo::class.java)
-        processor.process(ReceiverQueryApiImpl(rpcController), IReceiverQueryApi::class.java)
-        processor.process(ReceiverActionImpl(rpcController), IReceiverAction::class.java)
-        processor.process(RMPContentSynchronizationImpl(rpcController), IRMPContentSynchronization::class.java)
-        processor.process(SubscribeUnsubscribeImpl(rpcController), ISubscribeUnsubscribe::class.java)
+        processor.process(ReceiverQueryApiImpl(gateway), IReceiverQueryApi::class.java)
+        processor.process(ReceiverActionImpl(gateway), IReceiverAction::class.java)
+        processor.process(RMPContentSynchronizationImpl(gateway), IRMPContentSynchronization::class.java)
+        processor.process(SubscribeUnsubscribeImpl(gateway), ISubscribeUnsubscribe::class.java)
         processor.process(XLinkImpl(), IXLink::class.java)
     }
 
