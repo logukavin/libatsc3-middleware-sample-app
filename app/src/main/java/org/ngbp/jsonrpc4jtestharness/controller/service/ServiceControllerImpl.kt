@@ -18,6 +18,8 @@ class ServiceControllerImpl @Inject constructor(
         private val atsc3Module: Atsc3Module
 ) : IServiceController, Atsc3Module.Listener {
 
+    private var unloadBAJob: Job? = null
+
     override val receiverState = MutableLiveData<ReceiverState>()
 
     override val selectedService = repository.selectedService
@@ -45,11 +47,24 @@ class ServiceControllerImpl @Inject constructor(
     }
 
     override fun onCurrentServicePackageChanged(pkg: Atsc3HeldPackage?) {
-        //TODO: fire load/unload events instead
-        val data = pkg?.let {
-            AppData(it.appContextId, it.bcastEntryPageUrl ?: it.bbandEntryPageUrl)
+        cancelUnloadBAJob()
+
+        val newAppData = pkg?.let {
+            val appContextId = it.appContextId ?: return@let null
+            val appEntryPage = it.bcastEntryPageUrl ?: it.bbandEntryPageUrl ?: return@let null
+            val compatibleServiceIds = it.coupledServices ?: emptyList()
+            AppData(appContextId, appEntryPage, compatibleServiceIds)
         }
-        repository.setAppEntryPoint(data)
+
+        val prevAppData = repository.appData.value
+
+        repository.setAppEntryPoint(newAppData)
+
+        prevAppData?.let {
+            if (prevAppData.isAppEquals(newAppData)) {
+                //TODO: notify BA service changed
+            }
+        }
     }
 
     override fun openRoute(pcapFile: String): Boolean {
@@ -67,8 +82,17 @@ class ServiceControllerImpl @Inject constructor(
     override fun selectService(service: SLSService) {
         val res = atsc3Module.selectService(service.id)
         if (res) {
-            //TODO: should we use globalId or context from HELD?
+            // this will reset RMP
             repository.setSelectedService(service)
+
+            // force reset BA if it's not compatible with current or start delayed reset
+            repository.appData.value?.let { currentApp ->
+                if (!currentApp.compatibleServiceIds.contains(service.id)) {
+                    repository.setAppEntryPoint(null)
+                } else {
+                    startUnloadBAJob()
+                }
+            }
 
             //TODO: temporary waiter for media. Should use notification instead
             GlobalScope.launch {
@@ -88,15 +112,33 @@ class ServiceControllerImpl @Inject constructor(
                     }
                 }
             }
-
-            repository.setAppEntryPoint(AppData(
-                    atsc3Module.getSelectedServiceAppContextId(),
-                    atsc3Module.getSelectedServiceEntryPoint()
-            ))
         } else {
             repository.setAppEntryPoint(null)
+            repository.setSelectedService(null)
         }
     }
 
     private fun getServiceMediaUrl() = atsc3Module.getSelectedServiceMediaUri()
+
+    private fun startUnloadBAJob() {
+        cancelUnloadBAJob()
+        unloadBAJob = GlobalScope.launch {
+            delay(BA_LOADING_TIMEOUT)
+            withContext(Dispatchers.Main) {
+                repository.setAppEntryPoint(null)
+                unloadBAJob = null
+            }
+        }
+    }
+
+    private fun cancelUnloadBAJob() {
+        unloadBAJob?.let {
+            it.cancel()
+            unloadBAJob = null
+        }
+    }
+
+    companion object {
+        private const val BA_LOADING_TIMEOUT = 5000L
+    }
 }
