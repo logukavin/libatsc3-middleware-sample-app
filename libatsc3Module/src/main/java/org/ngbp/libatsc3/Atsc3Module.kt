@@ -159,14 +159,6 @@ class Atsc3Module(context: Context) : ClientListener {
         return mediaUri
     }
 
-    fun getSelectedServiceAppContextId(): String? {
-        return selectedServicePackage?.appContextId
-    }
-
-    fun getSelectedServiceEntryPoint(): String? {
-        return selectedServicePackage?.bcastEntryPageUrl
-    }
-
     private fun clear() {
         clearHeld()
         clearService()
