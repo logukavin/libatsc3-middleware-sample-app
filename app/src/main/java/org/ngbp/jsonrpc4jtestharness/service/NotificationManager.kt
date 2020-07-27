@@ -1,32 +1,26 @@
 package org.ngbp.jsonrpc4jtestharness.service
 
 import android.os.Handler
+import android.os.Looper
 
 class NotificationManager(private val notificationHelper: NotificationHelper) : INotificationManager {
 
     private val ACTION_DELAY = 500L
-    private val notificationHandler = Handler()
+    private val notificationHandler = Handler(Looper.getMainLooper())
 
-    @Volatile
     var currentNotification: NotificationContainer? = null
 
-    @Volatile
     var newNotification: NotificationContainer? = null
 
     private val notificationRunnable = Runnable {
-        val localCurrentNotification = currentNotification
         val localNewNotification = newNotification
         if (localNewNotification != null) {
-            if (localCurrentNotification == null) {
-                currentNotification = localNewNotification
-                notificationHelper.notify(localNewNotification.id, notificationHelper.createMediaNotification(localNewNotification))
-            } else if (localCurrentNotification != localNewNotification) {
+            if (currentNotification != localNewNotification) {
                 currentNotification = localNewNotification
                 notificationHelper.notify(localNewNotification.id, notificationHelper.createMediaNotification(localNewNotification))
             }
         }
     }
-
 
     override fun addNotification(notification: NotificationContainer) {
         newNotification = notification
