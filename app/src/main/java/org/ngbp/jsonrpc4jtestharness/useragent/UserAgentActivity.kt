@@ -7,13 +7,9 @@ import android.net.http.SslError
 import android.os.Bundle
 import android.util.Log
 import android.view.GestureDetector
-import android.view.KeyEvent
 import android.view.View
 import android.view.WindowManager
-import android.webkit.ClientCertRequest
-import android.webkit.SslErrorHandler
-import android.webkit.WebView
-import android.webkit.WebViewClient
+import android.webkit.*
 import android.widget.AdapterView
 import android.widget.Toast
 import androidx.activity.viewModels
@@ -274,18 +270,13 @@ class UserAgentActivity : AppCompatActivity() {
         simpleExoPlayer.stop()
     }
 
-    private fun sendKeyPress(view: View, key: Int) {
-        view.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, key))
-        view.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, key))
-    }
-
     private fun closeBAMenu() {
-        sendKeyPress(user_agent_web_view, KeyEvent.KEYCODE_DPAD_LEFT)
+        BANavController.navigateExit(user_agent_web_view)
         isBAMenuOpened = false
     }
 
     private fun openBAMenu() {
-        sendKeyPress(user_agent_web_view, KeyEvent.KEYCODE_DPAD_RIGHT)
+        BANavController.navigateNext(user_agent_web_view)
         isBAMenuOpened = true
     }
 
