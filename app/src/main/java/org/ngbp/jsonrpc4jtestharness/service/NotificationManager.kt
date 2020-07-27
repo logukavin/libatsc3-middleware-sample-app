@@ -6,6 +6,11 @@ import androidx.core.app.NotificationManagerCompat
 import java.util.concurrent.*
 
 class NotificationManager(val context: Context) : INotificationManager {
+
+    private val notificationHelper = NotificationHelper(context, NOTIFICATION_CHANNEL_ID).also {
+        it.createNotificationChannel("Foreground Rpc Service Channel")
+    }
+
     private var notificationManager: NotificationManagerCompat = NotificationManagerCompat.from(context)
     private val ACTION_DELAY = 500L
     private var notificationMap = ConcurrentHashMap<Int, Notification>()
@@ -14,10 +19,11 @@ class NotificationManager(val context: Context) : INotificationManager {
 
     @Volatile
     var currentNotification: NotificationContainer? = null
+
     @Volatile
     var newNotification: NotificationContainer? = null
     override fun addNotification(notification: NotificationContainer) {
-        newNotification = notification.copyObject()
+        newNotification = notification
         showNotification()
     }
 
@@ -37,15 +43,18 @@ class NotificationManager(val context: Context) : INotificationManager {
     private fun showAllPendingNotification() {
         if (currentNotification == null) {
             newNotification?.let {
-                currentNotification = it.copyObject()
-                notificationManager.notify(it.id, it.notification)
+                currentNotification = it
+                notificationManager.notify(it.id, notificationHelper.createMediaNotification(it))
             }
-        } else
-            if (currentNotification?.equals(newNotification) == false) {
-                newNotification?.let {
-                    notificationManager.notify(it.id, it.notification)
+        } else {
+            currentNotification?.let {
+                if (it != newNotification) {
+                    newNotification?.let { container ->
+                        notificationManager.notify(container.id, notificationHelper.createMediaNotification(container))
+                    }
                 }
             }
+        }
         pendingNotificationScheduler = null
     }
 
@@ -63,5 +72,9 @@ class NotificationManager(val context: Context) : INotificationManager {
         pendingNotificationScheduler = service.schedule({
             showAllPendingNotification()
         }, ACTION_DELAY, TimeUnit.MILLISECONDS)
+    }
+
+    companion object {
+        private const val NOTIFICATION_CHANNEL_ID = "ForegroundRpcServiceChannel"
     }
 }
