@@ -49,19 +49,34 @@ class UserAgentActivity : AppCompatActivity() {
     private val selectorViewModel: SelectorViewModel by viewModels { viewModelFactory }
 
     private var isBAMenuOpened = false
+    private var currentAppData: AppData? = null
 
     private lateinit var simpleExoPlayer: SimpleExoPlayer
     private lateinit var dashMediaSourceFactory: DashMediaSource.Factory
+    private lateinit var selectorAdapter: ServiceAdapter
 
-    private var unloadBAJob: Job? = null
-
-    @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         AndroidInjection.inject(this)
         super.onCreate(savedInstanceState)
 
         setContentView(R.layout.activity_user_agent)
 
+        simpleExoPlayer = createExoPlayer().also {
+            receiver_media_player.player = it
+        }
+        dashMediaSourceFactory = createMediaSourceFactory()
+        selectorAdapter = ServiceAdapter(this)
+
+        initWebView()
+        initSelector()
+
+        bindMediaPlayer()
+        bindSelector()
+        bindUserAgent()
+    }
+
+    @SuppressLint("SetJavaScriptEnabled")
+    private fun initWebView() {
         val swipeGD = GestureDetector(this, object : SwipeGestureDetector() {
             override fun onClose() {
                 closeBAMenu()
@@ -71,11 +86,6 @@ class UserAgentActivity : AppCompatActivity() {
                 openBAMenu()
             }
         })
-
-        dashMediaSourceFactory = createMediaSourceFactory()
-        simpleExoPlayer = createExoPlayer().also {
-            receiver_media_player.player = it
-        }
 
         user_agent_web_view.apply {
             setOnTouchListener { _, motionEvent -> swipeGD.onTouchEvent(motionEvent) }
@@ -95,36 +105,10 @@ class UserAgentActivity : AppCompatActivity() {
                 loadBAContent(CONTENT_URL)
             }
         }
+    }
 
-        rmpViewModel.reset()
-        rmpViewModel.layoutParams.observe(this, Observer { params ->
-            updateRMPLayout(
-                    params.x.toFloat() / 100,
-                    params.y.toFloat() / 100,
-                    params.scale.toFloat() / 100
-            )
-        })
-        rmpViewModel.mediaUri.observe(this, Observer { mediaUri ->
-            mediaUri?.let { startPlayback(mediaUri) } ?: stopPlayback()
-        })
-
-        //TODO: remove after tests
-        receiver_media_player.postDelayed(500) {
-            if (rmpViewModel.mediaUri.value.isNullOrEmpty()) {
-                Toast.makeText(this, "No media Url provided", Toast.LENGTH_LONG).show()
-            }
-        }
-        rmpViewModel.playWhenReady.observe(this, Observer { playWhenReady ->
-            simpleExoPlayer.playWhenReady = playWhenReady
-        })
-
-        val adapter = ServiceAdapter(this)
-        service_spinner.adapter = adapter
-
-        selectorViewModel.services.observe(this, Observer { services ->
-            adapter.setServices(services)
-        })
-
+    private fun initSelector() {
+        service_spinner.adapter = selectorAdapter
         service_spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onNothingSelected(parent: AdapterView<*>?) {
             }
@@ -133,7 +117,41 @@ class UserAgentActivity : AppCompatActivity() {
                 changeService(id.toInt())
             }
         }
+    }
 
+    private fun bindMediaPlayer() {
+        with (rmpViewModel) {
+            reset()
+            layoutParams.observe(this@UserAgentActivity, Observer { params ->
+                updateRMPLayout(
+                        params.x.toFloat() / 100,
+                        params.y.toFloat() / 100,
+                        params.scale.toFloat() / 100
+                )
+            })
+            mediaUri.observe(this@UserAgentActivity, Observer { mediaUri ->
+                mediaUri?.let { startPlayback(mediaUri) } ?: stopPlayback()
+            })
+            playWhenReady.observe(this@UserAgentActivity, Observer { playWhenReady ->
+                simpleExoPlayer.playWhenReady = playWhenReady
+            })
+        }
+
+        //TODO: remove after tests
+        receiver_media_player.postDelayed(500) {
+            if (rmpViewModel.mediaUri.value.isNullOrEmpty()) {
+                Toast.makeText(this, "No media Url provided", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    private fun bindSelector() {
+        selectorViewModel.services.observe(this, Observer { services ->
+            selectorAdapter.setServices(services)
+        })
+    }
+
+    private fun bindUserAgent() {
         userAgentViewModel.appData.observe(this, Observer { appData ->
             switchBA(appData)
         })
@@ -146,8 +164,6 @@ class UserAgentActivity : AppCompatActivity() {
             stop()
             release()
         }
-
-        cancelUnloadBAJob()
     }
 
     override fun onBackPressed() {
@@ -159,15 +175,6 @@ class UserAgentActivity : AppCompatActivity() {
     private fun changeService(serviceId: Int) {
         stopPlayback()
         setBAAvailability(false)
-        cancelUnloadBAJob()
-
-        unloadBAJob = GlobalScope.launch {
-            delay(BA_LOADING_TIMEOUT)
-            withContext(Dispatchers.Main) {
-                unloadBAContent()
-                unloadBAJob = null
-            }
-        }
 
         selectorViewModel.selectService(serviceId)
     }
@@ -177,17 +184,16 @@ class UserAgentActivity : AppCompatActivity() {
     }
 
     private fun switchBA(appData: AppData?) {
-        val appEntryPage = appData?.appEntryPage
-        val appContextId = appData?.appContextId
-        if (appContextId != null && appEntryPage != null) {
-            cancelUnloadBAJob()
-            loadBAContent(appEntryPage)
+        if (appData != null) {
+            setBAAvailability(true)
+            if (!appData.isAppEquals(currentAppData)) {
+                loadBAContent(appData.appEntryPage)
+            }
+        } else {
+            unloadBAContent()
         }
-    }
-
-    private fun cancelUnloadBAJob() {
-        unloadBAJob?.cancel()
-        unloadBAJob = null
+        currentAppData = appData
+        isBAMenuOpened = false
     }
 
     private fun updateRMPLayout(x: Float, y: Float, scale: Float) {
@@ -201,7 +207,6 @@ class UserAgentActivity : AppCompatActivity() {
     }
 
     private fun loadBAContent(entryPoint: String) {
-        setBAAvailability(true)
         user_agent_web_view.loadUrl(CONTENT_URL)
     }
 
@@ -296,7 +301,5 @@ class UserAgentActivity : AppCompatActivity() {
 
     companion object {
         const val CONTENT_URL = "https://127.0.0.1:8443/index.html?wsURL=ws://127.0.0.1:9998&rev=20180720"
-
-        private const val BA_LOADING_TIMEOUT = 5000L
     }
 }
