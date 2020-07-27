@@ -69,7 +69,7 @@ class WebServerTests {
                     .wsPort(WS_PORT)
                     .wssPort(WSS_PORT)
                     .enableConnectors(MiddlewareWebServer.Connectors.values())
-                    .addRPCProcessor(rpcProcessor)
+                    .rpcProcessing(rpcProcessor)
                     .build()
 
             webSocketClient = WebSocketClient()

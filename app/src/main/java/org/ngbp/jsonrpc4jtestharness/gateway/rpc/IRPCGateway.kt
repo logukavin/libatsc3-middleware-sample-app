@@ -1,5 +1,6 @@
 package org.ngbp.jsonrpc4jtestharness.gateway.rpc
 
+import com.github.nmuzhichin.jsonrpc.model.request.Notification
 import org.ngbp.jsonrpc4jtestharness.core.model.PlaybackState
 import org.ngbp.jsonrpc4jtestharness.rpc.notification.NotificationType
 
@@ -16,4 +17,6 @@ interface IRPCGateway {
 
     fun subscribeNotifications(notifications: Set<NotificationType>): Set<NotificationType>
     fun unsubscribeNotifications(notifications: Set<NotificationType>): Set<NotificationType>
+
+    fun sendNotification(notification: Notification)
 }

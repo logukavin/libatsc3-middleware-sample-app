@@ -17,7 +17,7 @@ class MiddlewareWebSocketClient(private var rpcProcessor: IRPCProcessor) {
             try {
                 client.start()
                 // The socket that receives events
-                val socket = MiddlewareWebSocket(rpcProcessor)
+                val socket = MiddlewareWebSocket(rpcProcessor, null)
                 // Attempt Connect
                 val fut = client.connect(socket, uri)
                 // Wait for Connect

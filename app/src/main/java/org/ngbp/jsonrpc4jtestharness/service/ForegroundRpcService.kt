@@ -10,8 +10,9 @@ import dagger.android.AndroidInjection
 import org.ngbp.jsonrpc4jtestharness.controller.service.IServiceController
 import org.ngbp.jsonrpc4jtestharness.controller.view.IViewController
 import org.ngbp.jsonrpc4jtestharness.core.model.PlaybackState
-import org.ngbp.jsonrpc4jtestharness.core.ws.UserAgentSSLContext
+import org.ngbp.jsonrpc4jtestharness.core.cert.UserAgentSSLContext
 import org.ngbp.jsonrpc4jtestharness.core.web.MiddlewareWebServer
+import org.ngbp.jsonrpc4jtestharness.core.ws.SocketHolder
 import org.ngbp.jsonrpc4jtestharness.rpc.processor.RPCProcessor
 import java.util.*
 import javax.inject.Inject
@@ -19,6 +20,8 @@ import javax.inject.Inject
 class ForegroundRpcService : LifecycleService() {
     @Inject
     lateinit var rpcProcessor: RPCProcessor
+    @Inject
+    lateinit var socketHolder: SocketHolder
     @Inject
     lateinit var serviceController: IServiceController
     @Inject
@@ -98,7 +101,7 @@ class ForegroundRpcService : LifecycleService() {
                         .httpPort(8080)
                         .wssPort(9999)
                         .wsPort(9998)
-                        .addRPCProcessor(rpcProcessor)
+                        .rpcProcessing(processor = rpcProcessor, holder = socketHolder)
                         .sslContext(UserAgentSSLContext(applicationContext))
                         .enableConnectors(
                                 arrayOf(
