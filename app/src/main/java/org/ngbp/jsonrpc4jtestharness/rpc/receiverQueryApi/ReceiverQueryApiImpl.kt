@@ -52,6 +52,6 @@ class ReceiverQueryApiImpl(
     }
 
     override fun queryServiceGuideURLs(): ServiceGuideUrls {
-        return ServiceGuideUrls()
+        return ServiceGuideUrls(gateway.serviceGuideUrls)
     }
 }
