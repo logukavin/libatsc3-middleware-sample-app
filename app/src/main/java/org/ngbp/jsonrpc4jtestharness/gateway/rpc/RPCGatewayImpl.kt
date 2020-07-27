@@ -1,6 +1,5 @@
 package org.ngbp.jsonrpc4jtestharness.gateway.rpc
 
-import androidx.lifecycle.Observer
 import com.github.nmuzhichin.jsonrpc.model.request.Notification
 import org.ngbp.jsonrpc4jtestharness.controller.service.IServiceController
 import org.ngbp.jsonrpc4jtestharness.controller.view.IViewController
@@ -25,12 +24,6 @@ class RPCGatewayImpl @Inject constructor(
         get() = viewController.rmpMediaUrl.value
     override val playbackState: PlaybackState
         get() = viewController.rmpState.value ?: PlaybackState.IDLE
-
-    init {
-        serviceController.selectedService.observeForever(Observer {
-            sendNotification(Notification("test.test"))
-        })
-    }
 
     override fun updateRMPPosition(scaleFactor: Double, xPos: Double, yPos: Double) {
         viewController.updateRMPPosition(scaleFactor, xPos, yPos)
