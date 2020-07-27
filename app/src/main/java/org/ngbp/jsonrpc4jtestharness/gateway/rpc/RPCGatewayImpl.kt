@@ -7,6 +7,8 @@ import org.ngbp.jsonrpc4jtestharness.controller.view.IViewController
 import org.ngbp.jsonrpc4jtestharness.core.model.PlaybackState
 import org.ngbp.jsonrpc4jtestharness.core.ws.SocketHolder
 import org.ngbp.jsonrpc4jtestharness.rpc.notification.NotificationType
+import org.ngbp.jsonrpc4jtestharness.rpc.notification.model.ServiceChangeNotification
+import org.ngbp.jsonrpc4jtestharness.rpc.processor.RPCObjectMapperUtils
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -28,7 +30,11 @@ class RPCGatewayImpl @Inject constructor(
 
     init {
         serviceController.selectedService.observeForever(Observer {
-            sendNotification(Notification("test.test"))
+
+            if (subscribedINotifications.contains(NotificationType.SERVICE_CHANGE)) {
+                val notification = ServiceChangeNotification(service = it?.globalId).create()
+                sendNotification(notification)
+            }
         })
     }
 
@@ -57,22 +63,19 @@ class RPCGatewayImpl @Inject constructor(
     }
 
     private fun getAvailableNotifications(requested: Set<NotificationType>): Set<NotificationType> {
-        val available = SUPPORTEN_NOTIFICATIONS.toMutableSet()
+        val available = SUPPORTED_NOTIFICATIONS.toMutableSet()
         available.retainAll(requested)
         return available
     }
 
     override fun sendNotification(notification: Notification) {
-        //TODO: add mapping
-        socketHolder.broadcastMessage(notification.toString())
+        socketHolder.broadcastMessage(RPCObjectMapperUtils.objectToJson(notification))
     }
 
     companion object {
-        private val SUPPORTEN_NOTIFICATIONS = setOf(
+        private val SUPPORTED_NOTIFICATIONS = setOf(
                 NotificationType.SERVICE_CHANGE,
-                NotificationType.SERVICE_GUIDE_CHANGE,
-                NotificationType.ALERT_CHANGE,
-                NotificationType.MPD_CHANGE
+                NotificationType.SERVICE_GUIDE_CHANGE
         )
     }
 }
