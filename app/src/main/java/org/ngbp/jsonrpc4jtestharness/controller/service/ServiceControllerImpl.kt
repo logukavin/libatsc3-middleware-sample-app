@@ -56,15 +56,7 @@ class ServiceControllerImpl @Inject constructor(
             AppData(appContextId, appEntryPage, compatibleServiceIds)
         }
 
-        val prevAppData = repository.appData.value
-
         repository.setAppEntryPoint(newAppData)
-
-        prevAppData?.let {
-            if (prevAppData.isAppEquals(newAppData)) {
-                //TODO: notify BA service changed
-            }
-        }
     }
 
     override fun openRoute(pcapFile: String): Boolean {
