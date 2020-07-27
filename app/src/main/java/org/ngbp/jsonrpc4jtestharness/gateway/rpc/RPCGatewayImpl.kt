@@ -5,7 +5,9 @@ import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import org.ngbp.jsonrpc4jtestharness.controller.service.IServiceController
 import org.ngbp.jsonrpc4jtestharness.controller.view.IViewController
+import org.ngbp.jsonrpc4jtestharness.core.model.AppData
 import org.ngbp.jsonrpc4jtestharness.core.model.PlaybackState
+import org.ngbp.jsonrpc4jtestharness.core.repository.IRepository
 import org.ngbp.jsonrpc4jtestharness.core.ws.SocketHolder
 import org.ngbp.jsonrpc4jtestharness.rpc.notification.NotificationType
 import javax.inject.Inject
@@ -15,10 +17,13 @@ import javax.inject.Singleton
 class RPCGatewayImpl @Inject constructor(
         private val serviceController: IServiceController,
         private val viewController: IViewController,
+        private val repository: IRepository,
         private val socketHolder: SocketHolder
 ) : IRPCGateway {
     private val mainScope = MainScope()
-    private var subscribedINotifications = mutableSetOf<NotificationType>()
+    private val subscribedINotifications = mutableSetOf<NotificationType>()
+
+    private var currentAppData: AppData? = null;
 
     override val language: String = java.util.Locale.getDefault().language
     override val queryServiceId: String?
@@ -27,6 +32,12 @@ class RPCGatewayImpl @Inject constructor(
         get() = viewController.rmpMediaUrl.value
     override val playbackState: PlaybackState
         get() = viewController.rmpState.value ?: PlaybackState.IDLE
+
+    init {
+        repository.appData.observeForever{ appData ->
+            onAppDataUpdated(appData)
+        }
+    }
 
     override fun updateRMPPosition(scaleFactor: Double, xPos: Double, yPos: Double) {
         mainScope.launch {
@@ -67,6 +78,15 @@ class RPCGatewayImpl @Inject constructor(
     override fun sendNotification(notification: Notification) {
         //TODO: add mapping
         socketHolder.broadcastMessage(notification.toString())
+    }
+
+    private fun onAppDataUpdated(appData: AppData?) {
+        appData?.let {
+            if (appData.isAppEquals(currentAppData)) {
+                //TODO: notify BA service changed
+            }
+        }
+        currentAppData = appData
     }
 
     companion object {
