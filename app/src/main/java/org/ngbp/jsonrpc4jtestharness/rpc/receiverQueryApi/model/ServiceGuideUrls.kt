@@ -10,3 +10,9 @@ data class Urls(
         var sgType: String? = null,
         var sgUrl: String? = null
 )
+
+enum class ServiceGuideType(val value: String) {
+    SERVICE("Service"),
+    SCHEDULE("Schedule"),
+    CONTENT("Content")
+}

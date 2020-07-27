@@ -1,8 +1,9 @@
 package org.ngbp.jsonrpc4jtestharness.rpc.notification.model
 
-import org.ngbp.jsonrpc4jtestharness.rpc.receiverQueryApi.model.ServiceGuideUrls
+import org.ngbp.jsonrpc4jtestharness.rpc.notification.NotificationType
+import org.ngbp.jsonrpc4jtestharness.rpc.receiverQueryApi.model.Urls
 
 data class ServiceGuideChangeNotification (
-    var msgType: String? = null,
-    var urlList: MutableList<ServiceGuideUrls?>? = null
-)
+        var msgType: String = NotificationType.SERVICE_GUIDE_CHANGE.value,
+        var urlList: MutableList<Urls?>? = null
+): BaseNotification()
