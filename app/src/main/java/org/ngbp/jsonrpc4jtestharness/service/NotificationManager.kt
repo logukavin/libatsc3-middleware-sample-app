@@ -2,18 +2,19 @@ package org.ngbp.jsonrpc4jtestharness.service
 
 import android.app.Notification
 import android.content.Context
-import android.util.Log
 import androidx.core.app.NotificationManagerCompat
 import java.util.concurrent.*
 
 class NotificationManager(val context: Context) : INotificationManager {
     private var notificationManager: NotificationManagerCompat = NotificationManagerCompat.from(context)
-    private val ACTION_DELAY = 2000L
+    private val ACTION_DELAY = 500L
     private var notificationMap = ConcurrentHashMap<Int, Notification>()
     private val service: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor()
-    private var run: ScheduledFuture<*>? = null
+    private var pendingNotificationScheduler: ScheduledFuture<*>? = null
 
+    @Volatile
     var currentNotification: NotificationContainer? = null
+    @Volatile
     var newNotification: NotificationContainer? = null
     override fun addNotification(notification: NotificationContainer) {
         newNotification = notification.copyObject()
@@ -26,8 +27,8 @@ class NotificationManager(val context: Context) : INotificationManager {
     }
 
     override fun removeAllPendingNotifications() {
-        run?.cancel(true)
-        run = null
+        pendingNotificationScheduler?.cancel(true)
+        pendingNotificationScheduler = null
         notificationManager.cancelAll()
     }
 
@@ -45,21 +46,21 @@ class NotificationManager(val context: Context) : INotificationManager {
                     notificationManager.notify(it.id, it.notification)
                 }
             }
-        run = null
+        pendingNotificationScheduler = null
     }
 
     private fun showNotification() {
-        if (run == null) {
+        if (pendingNotificationScheduler == null) {
             startExecution()
         } else {
-            run?.cancel(true)
-            run = null
+            pendingNotificationScheduler?.cancel(true)
+            pendingNotificationScheduler = null
             showNotification()
         }
     }
 
     private fun startExecution() {
-        run = service.schedule({
+        pendingNotificationScheduler = service.schedule({
             showAllPendingNotification()
         }, ACTION_DELAY, TimeUnit.MILLISECONDS)
     }
