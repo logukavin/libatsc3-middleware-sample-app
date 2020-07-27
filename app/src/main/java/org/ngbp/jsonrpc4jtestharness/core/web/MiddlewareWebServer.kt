@@ -11,8 +11,9 @@ import org.eclipse.jetty.websocket.servlet.ServletUpgradeRequest
 import org.eclipse.jetty.websocket.servlet.ServletUpgradeResponse
 import org.eclipse.jetty.websocket.servlet.WebSocketCreator
 import org.eclipse.jetty.websocket.servlet.WebSocketServletFactory
-import org.ngbp.jsonrpc4jtestharness.core.ws.IUserAgentSSLContext
+import org.ngbp.jsonrpc4jtestharness.core.cert.IUserAgentSSLContext
 import org.ngbp.jsonrpc4jtestharness.core.ws.MiddlewareWebSocket
+import org.ngbp.jsonrpc4jtestharness.core.ws.SocketHolder
 import org.ngbp.jsonrpc4jtestharness.rpc.processor.RPCProcessor
 import java.io.IOException
 import java.security.GeneralSecurityException
@@ -28,6 +29,7 @@ class MiddlewareWebServer private constructor(builder: Builder) : AutoCloseable 
     private val hostName: String?
     private val resourcePath: String?
     private val rpcProcessor: RPCProcessor?
+    private val sockteHolder: SocketHolder?
     private val connectors: Array<Connectors>
     private val generatedSSLContext: IUserAgentSSLContext?
 
@@ -50,6 +52,7 @@ class MiddlewareWebServer private constructor(builder: Builder) : AutoCloseable 
         var hostName: String? = null
         var resourcePath: String? = null
         var rpcProcessor: RPCProcessor? = null
+        var sockteHolder: SocketHolder? = null
         var connectors: Array<Connectors> = arrayOf()
         var generatedSSLContext: IUserAgentSSLContext? = null
 
@@ -65,7 +68,10 @@ class MiddlewareWebServer private constructor(builder: Builder) : AutoCloseable 
 
         fun resourcePath(value : String?) = apply { resourcePath = value }
 
-        fun addRPCProcessor(value: RPCProcessor) = apply { rpcProcessor = value }
+        fun rpcProcessing(processor: RPCProcessor, holder: SocketHolder?) = apply {
+            rpcProcessor = processor
+            sockteHolder = holder
+        }
 
         fun enableConnectors(value : Array<Connectors>) = apply { connectors = value }
 
@@ -115,6 +121,7 @@ class MiddlewareWebServer private constructor(builder: Builder) : AutoCloseable 
             val wsConnector = getServerConnector(wsPort)
             enabledConnectors.add(wsConnector)
         }
+
         if (sslContextFactory != null) {
             // HTTPS configuration
             if (connectors.contains(Connectors.HTTPS_CONNECTOR)) {
@@ -135,65 +142,63 @@ class MiddlewareWebServer private constructor(builder: Builder) : AutoCloseable 
         }
     }
 
-    inner class MiddlewareWebSocketCreator : WebSocketCreator {
+    class MiddlewareWebSocketCreator(
+            private val processor: RPCProcessor,
+            private val sockteHolder: SocketHolder?
+    ) : WebSocketCreator {
         override fun createWebSocket(req: ServletUpgradeRequest, resp: ServletUpgradeResponse): Any? {
-            return rpcProcessor?.let { MiddlewareWebSocket(it) }
+            return MiddlewareWebSocket(processor, sockteHolder)
         }
     }
 
     private fun configureHandlers() {
-        val handlerArray: MutableList<Handler> = ArrayList()
+        val handlerArray = ArrayList<Handler>()
 
         if(resourcePath != null) {
-            val resourceHandler = ResourceHandler()
-            resourceHandler.isDirectoriesListed = true
-            resourceHandler.welcomeFiles = arrayOf("index.html")
-            resourceHandler.baseResource = Resource.newResource(resourcePath)
-            handlerArray.add(resourceHandler)
+            handlerArray.add(ResourceHandler().apply {
+                isDirectoriesListed = true
+                welcomeFiles = arrayOf("index.html")
+                baseResource = Resource.newResource(resourcePath)
+            })
         }
 
         if (rpcProcessor != null) {
-            val webSocketHandler: WebSocketHandler = object : WebSocketHandler() {
+            handlerArray.add(object : WebSocketHandler() {
                 override fun configure(factory: WebSocketServletFactory) {
-                    factory.creator = MiddlewareWebSocketCreator()
+                    factory.creator = MiddlewareWebSocketCreator(rpcProcessor, sockteHolder)
                 }
-            }
-            handlerArray.add(webSocketHandler)
+            })
         }
 
         if (handlerArray.isNotEmpty()) {
-            val handlers = HandlerList()
-            handlers.handlers = handlerArray.toTypedArray()
-            server.handler = handlers
-        }
-    }
-
-    private fun getServerConnector(port: Int): ServerConnector {
-        val connector = ServerConnector(server)
-        connector.port = port
-
-        if (hostName != null) {
-            if (hostName.isEmpty()) {
-                connector.host = hostName
+            server.handler = HandlerList().apply {
+                handlers = handlerArray.toTypedArray()
             }
         }
-        return connector
     }
 
-    private fun getSecureServerConnector(sslContextFactory: SslContextFactory?, securePort: Int): ServerConnector {
-        val config = HttpConfiguration()
-        config.addCustomizer(SecureRequestCustomizer())
-        config.securePort = securePort
+    private fun getServerConnector(serverPort: Int): ServerConnector {
+        return ServerConnector(server).apply {
+            port = serverPort
+            if (!hostName.isNullOrEmpty()) {
+                host = hostName
+            }
+        }
+    }
+
+    private fun getSecureServerConnector(sslContextFactory: SslContextFactory?, serverPort: Int): ServerConnector {
+        val config = HttpConfiguration().apply {
+            addCustomizer(SecureRequestCustomizer())
+            securePort = serverPort
+        }
 
         // Configuring the secure connector
-        val connector = ServerConnector(server, SslConnectionFactory(sslContextFactory, HttpVersion.HTTP_1_1.toString()), HttpConnectionFactory(config))
-        connector.port = securePort
-        if (hostName != null) {
-            if (hostName.isEmpty()) {
-                connector.host = hostName
+        return ServerConnector(server, SslConnectionFactory(sslContextFactory, HttpVersion.HTTP_1_1.toString()), HttpConnectionFactory(config)).apply {
+            port = serverPort
+            if (!hostName.isNullOrEmpty()) {
+                host = hostName
             }
         }
-        return connector
     }
 
     fun isRunning() = server.isRunning
@@ -221,6 +226,7 @@ class MiddlewareWebServer private constructor(builder: Builder) : AutoCloseable 
         hostName = builder.hostName
         resourcePath = builder.resourcePath
         rpcProcessor = builder.rpcProcessor
+        sockteHolder = builder.sockteHolder
         connectors = builder.connectors
         generatedSSLContext = builder.generatedSSLContext
 
