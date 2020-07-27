@@ -64,4 +64,8 @@ class NotificationHelper(
     fun notify(id: Int, notification: Notification) {
         notificationManager.notify(id, notification)
     }
+
+    fun createMediaNotification(container: NotificationContainer): Notification {
+        return createMediaNotification(container.title, container.message, container.state)
+    }
 }
