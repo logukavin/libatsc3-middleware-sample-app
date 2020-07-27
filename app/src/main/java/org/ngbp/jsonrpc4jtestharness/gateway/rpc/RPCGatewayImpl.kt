@@ -1,6 +1,8 @@
 package org.ngbp.jsonrpc4jtestharness.gateway.rpc
 
 import com.github.nmuzhichin.jsonrpc.model.request.Notification
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.launch
 import org.ngbp.jsonrpc4jtestharness.controller.service.IServiceController
 import org.ngbp.jsonrpc4jtestharness.controller.view.IViewController
 import org.ngbp.jsonrpc4jtestharness.core.model.PlaybackState
@@ -15,6 +17,7 @@ class RPCGatewayImpl @Inject constructor(
         private val viewController: IViewController,
         private val socketHolder: SocketHolder
 ) : IRPCGateway {
+    private val mainScope = MainScope()
     private var subscribedINotifications = mutableSetOf<NotificationType>()
 
     override val language: String = java.util.Locale.getDefault().language
@@ -26,15 +29,21 @@ class RPCGatewayImpl @Inject constructor(
         get() = viewController.rmpState.value ?: PlaybackState.IDLE
 
     override fun updateRMPPosition(scaleFactor: Double, xPos: Double, yPos: Double) {
-        viewController.updateRMPPosition(scaleFactor, xPos, yPos)
+        mainScope.launch {
+            viewController.updateRMPPosition(scaleFactor, xPos, yPos)
+        }
     }
 
     override fun requestMediaPlay(mediaUrl: String?, delay: Long) {
-        viewController.requestMediaPlay(mediaUrl, delay)
+        mainScope.launch {
+            viewController.requestMediaPlay(mediaUrl, delay)
+        }
     }
 
     override fun requestMediaStop(delay: Long) {
-        viewController.requestMediaStop(delay)
+        mainScope.launch {
+            viewController.requestMediaStop(delay)
+        }
     }
 
     override fun subscribeNotifications(notifications: Set<NotificationType>): Set<NotificationType> {
