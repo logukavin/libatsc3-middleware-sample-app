@@ -1,12 +1,16 @@
 package org.ngbp.jsonrpc4jtestharness.gateway.rpc
 
-import androidx.lifecycle.Observer
 import com.github.nmuzhichin.jsonrpc.model.request.Notification
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.launch
 import org.ngbp.jsonrpc4jtestharness.controller.service.IServiceController
 import org.ngbp.jsonrpc4jtestharness.controller.view.IViewController
+import org.ngbp.jsonrpc4jtestharness.core.model.AppData
 import org.ngbp.jsonrpc4jtestharness.core.model.PlaybackState
+import org.ngbp.jsonrpc4jtestharness.core.repository.IRepository
 import org.ngbp.jsonrpc4jtestharness.core.ws.SocketHolder
 import org.ngbp.jsonrpc4jtestharness.rpc.notification.NotificationType
+import org.ngbp.jsonrpc4jtestharness.rpc.notification.model.ServiceChangeNotification
 import org.ngbp.jsonrpc4jtestharness.rpc.notification.model.ServiceChangeNotification
 import org.ngbp.jsonrpc4jtestharness.rpc.processor.RPCObjectMapperUtils
 import javax.inject.Inject
@@ -16,9 +20,13 @@ import javax.inject.Singleton
 class RPCGatewayImpl @Inject constructor(
         private val serviceController: IServiceController,
         private val viewController: IViewController,
+        private val repository: IRepository,
         private val socketHolder: SocketHolder
 ) : IRPCGateway {
-    private var subscribedINotifications = mutableSetOf<NotificationType>()
+    private val mainScope = MainScope()
+    private val subscribedINotifications = mutableSetOf<NotificationType>()
+
+    private var currentAppData: AppData? = null;
 
     override val language: String = java.util.Locale.getDefault().language
     override val queryServiceId: String?
@@ -29,6 +37,10 @@ class RPCGatewayImpl @Inject constructor(
         get() = viewController.rmpState.value ?: PlaybackState.IDLE
 
     init {
+        repository.appData.observeForever{ appData ->
+            onAppDataUpdated(appData)
+        }
+
         serviceController.selectedService.observeForever(Observer {
 
             if (subscribedINotifications.contains(NotificationType.SERVICE_CHANGE)) {
@@ -39,15 +51,21 @@ class RPCGatewayImpl @Inject constructor(
     }
 
     override fun updateRMPPosition(scaleFactor: Double, xPos: Double, yPos: Double) {
-        viewController.updateRMPPosition(scaleFactor, xPos, yPos)
+        mainScope.launch {
+            viewController.updateRMPPosition(scaleFactor, xPos, yPos)
+        }
     }
 
     override fun requestMediaPlay(mediaUrl: String?, delay: Long) {
-        viewController.requestMediaPlay(mediaUrl, delay)
+        mainScope.launch {
+            viewController.requestMediaPlay(mediaUrl, delay)
+        }
     }
 
     override fun requestMediaStop(delay: Long) {
-        viewController.requestMediaStop(delay)
+        mainScope.launch {
+            viewController.requestMediaStop(delay)
+        }
     }
 
     override fun subscribeNotifications(notifications: Set<NotificationType>): Set<NotificationType> {
@@ -70,6 +88,15 @@ class RPCGatewayImpl @Inject constructor(
 
     override fun sendNotification(notification: Notification) {
         socketHolder.broadcastMessage(RPCObjectMapperUtils.objectToJson(notification))
+    }
+
+    private fun onAppDataUpdated(appData: AppData?) {
+        appData?.let {
+            if (appData.isAppEquals(currentAppData)) {
+                //TODO: notify BA service changed
+            }
+        }
+        currentAppData = appData
     }
 
     companion object {
