@@ -1,4 +1,4 @@
-package org.ngbp.jsonrpc4jtestharness.core.ws
+package org.ngbp.jsonrpc4jtestharness.core.cert
 
 import java.io.IOException
 import java.security.GeneralSecurityException
