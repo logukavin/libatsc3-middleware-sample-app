@@ -11,7 +11,9 @@ import org.ngbp.jsonrpc4jtestharness.core.repository.IRepository
 import org.ngbp.jsonrpc4jtestharness.core.ws.SocketHolder
 import org.ngbp.jsonrpc4jtestharness.rpc.notification.NotificationType
 import org.ngbp.jsonrpc4jtestharness.rpc.notification.model.ServiceChangeNotification
+import org.ngbp.jsonrpc4jtestharness.rpc.notification.model.ServiceGuideChangeNotification
 import org.ngbp.jsonrpc4jtestharness.rpc.processor.RPCObjectMapperUtils
+import org.ngbp.jsonrpc4jtestharness.rpc.receiverQueryApi.model.Urls
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -25,7 +27,7 @@ class RPCGatewayImpl @Inject constructor(
     private val mainScope = MainScope()
     private val subscribedINotifications = mutableSetOf<NotificationType>()
 
-    private var currentAppData: AppData? = null;
+    private var currentAppData: AppData? = null
 
     override val language: String = java.util.Locale.getDefault().language
     override val queryServiceId: String?
@@ -34,10 +36,19 @@ class RPCGatewayImpl @Inject constructor(
         get() = viewController.rmpMediaUrl.value
     override val playbackState: PlaybackState
         get() = viewController.rmpState.value ?: PlaybackState.IDLE
+    override val serviceGuideUrls: List<Urls>
+        get() = serviceController.serviceGuidUrls.value as List<Urls>
 
     init {
         repository.appData.observeForever{ appData ->
             onAppDataUpdated(appData)
+        }
+
+        serviceController.serviceGuidUrls.observeForever {
+            if (subscribedINotifications.contains(NotificationType.SERVICE_GUIDE_CHANGE)) {
+                val notification = ServiceGuideChangeNotification(urlList = it).create()
+                sendNotification(notification)
+            }
         }
     }
 
