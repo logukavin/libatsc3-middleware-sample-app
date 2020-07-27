@@ -1,8 +1,11 @@
 package org.ngbp.jsonrpc4jtestharness.gateway.rpc
 
+import androidx.lifecycle.Observer
+import com.github.nmuzhichin.jsonrpc.model.request.Notification
 import org.ngbp.jsonrpc4jtestharness.controller.service.IServiceController
 import org.ngbp.jsonrpc4jtestharness.controller.view.IViewController
 import org.ngbp.jsonrpc4jtestharness.core.model.PlaybackState
+import org.ngbp.jsonrpc4jtestharness.core.ws.SocketHolder
 import org.ngbp.jsonrpc4jtestharness.rpc.notification.NotificationType
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -10,7 +13,8 @@ import javax.inject.Singleton
 @Singleton
 class RPCGatewayImpl @Inject constructor(
         private val serviceController: IServiceController,
-        private val viewController: IViewController
+        private val viewController: IViewController,
+        private val socketHolder: SocketHolder
 ) : IRPCGateway {
     private var subscribedINotifications = mutableSetOf<NotificationType>()
 
@@ -21,6 +25,12 @@ class RPCGatewayImpl @Inject constructor(
         get() = viewController.rmpMediaUrl.value
     override val playbackState: PlaybackState
         get() = viewController.rmpState.value ?: PlaybackState.IDLE
+
+    init {
+        serviceController.selectedService.observeForever(Observer {
+            sendNotification(Notification("test.test"))
+        })
+    }
 
     override fun updateRMPPosition(scaleFactor: Double, xPos: Double, yPos: Double) {
         viewController.updateRMPPosition(scaleFactor, xPos, yPos)
@@ -50,6 +60,11 @@ class RPCGatewayImpl @Inject constructor(
         val available = SUPPORTEN_NOTIFICATIONS.toMutableSet()
         available.retainAll(requested)
         return available
+    }
+
+    override fun sendNotification(notification: Notification) {
+        //TODO: add mapping
+        socketHolder.broadcastMessage(notification.toString())
     }
 
     companion object {

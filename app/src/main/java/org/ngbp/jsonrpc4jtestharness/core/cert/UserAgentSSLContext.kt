@@ -1,4 +1,4 @@
-package org.ngbp.jsonrpc4jtestharness.core.ws
+package org.ngbp.jsonrpc4jtestharness.core.cert
 
 import android.content.Context
 import org.ngbp.jsonrpc4jtestharness.R
