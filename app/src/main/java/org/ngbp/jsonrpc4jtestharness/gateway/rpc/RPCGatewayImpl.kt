@@ -11,7 +11,6 @@ import org.ngbp.jsonrpc4jtestharness.core.repository.IRepository
 import org.ngbp.jsonrpc4jtestharness.core.ws.SocketHolder
 import org.ngbp.jsonrpc4jtestharness.rpc.notification.NotificationType
 import org.ngbp.jsonrpc4jtestharness.rpc.notification.model.ServiceChangeNotification
-import org.ngbp.jsonrpc4jtestharness.rpc.notification.model.ServiceChangeNotification
 import org.ngbp.jsonrpc4jtestharness.rpc.processor.RPCObjectMapperUtils
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -40,14 +39,6 @@ class RPCGatewayImpl @Inject constructor(
         repository.appData.observeForever{ appData ->
             onAppDataUpdated(appData)
         }
-
-        serviceController.selectedService.observeForever(Observer {
-
-            if (subscribedINotifications.contains(NotificationType.SERVICE_CHANGE)) {
-                val notification = ServiceChangeNotification(service = it?.globalId).create()
-                sendNotification(notification)
-            }
-        })
     }
 
     override fun updateRMPPosition(scaleFactor: Double, xPos: Double, yPos: Double) {
@@ -93,7 +84,10 @@ class RPCGatewayImpl @Inject constructor(
     private fun onAppDataUpdated(appData: AppData?) {
         appData?.let {
             if (appData.isAppEquals(currentAppData)) {
-                //TODO: notify BA service changed
+                if (subscribedINotifications.contains(NotificationType.SERVICE_CHANGE)) {
+                    val notification = ServiceChangeNotification(service = appData.appContextId).create()
+                    sendNotification(notification)
+                }
             }
         }
         currentAppData = appData
