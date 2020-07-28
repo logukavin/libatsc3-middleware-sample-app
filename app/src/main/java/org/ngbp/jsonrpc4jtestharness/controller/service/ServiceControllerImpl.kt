@@ -19,6 +19,7 @@ class ServiceControllerImpl @Inject constructor(
 ) : IServiceController, Atsc3Module.Listener {
 
     private var unloadBAJob: Job? = null
+    private var mpdUpdateJob: Job? = null
 
     override val receiverState = MutableLiveData<ReceiverState>()
 
@@ -60,6 +61,10 @@ class ServiceControllerImpl @Inject constructor(
         repository.setAppEntryPoint(newAppData)
     }
 
+    override fun onCurrentServiceDashPatched(mpdPath: String) {
+        startMPDUpdateJob(mpdPath)
+    }
+
     override fun openRoute(pcapFile: String): Boolean {
         return atsc3Module.openPcapFile(pcapFile)
     }
@@ -73,6 +78,9 @@ class ServiceControllerImpl @Inject constructor(
     }
 
     override fun selectService(service: SLSService) {
+        cancelMPDUpdateJob()
+        repository.setMediaUrl(null)
+
         val res = atsc3Module.selectService(service.id)
         if (res) {
             // this will reset RMP
@@ -86,32 +94,11 @@ class ServiceControllerImpl @Inject constructor(
                     startUnloadBAJob()
                 }
             }
-
-            //TODO: temporary waiter for media. Should use notification instead
-            GlobalScope.launch {
-                var done = false
-                var iterator = 5
-                while (!done && iterator > 0) {
-                    iterator--
-                    delay(200)
-
-                    done = withContext(Dispatchers.Main) {
-                        val media = getServiceMediaUrl()
-                        if (media != null) {
-                            repository.setMediaUrl(media)
-                        }
-
-                        return@withContext (media != null)
-                    }
-                }
-            }
         } else {
             repository.setAppEntryPoint(null)
             repository.setSelectedService(null)
         }
     }
-
-    private fun getServiceMediaUrl() = atsc3Module.getSelectedServiceMediaUri()
 
     private fun startUnloadBAJob() {
         cancelUnloadBAJob()
@@ -131,7 +118,26 @@ class ServiceControllerImpl @Inject constructor(
         }
     }
 
+    private fun startMPDUpdateJob(mpdPath: String) {
+        cancelMPDUpdateJob()
+        mpdUpdateJob = GlobalScope.launch {
+            delay(MPD_UPDATE_DELAY)
+            withContext(Dispatchers.Main) {
+                repository.setMediaUrl(mpdPath)
+                mpdUpdateJob = null
+            }
+        }
+    }
+
+    private fun cancelMPDUpdateJob() {
+        mpdUpdateJob?.let {
+            it.cancel()
+            mpdUpdateJob = null
+        }
+    }
+
     companion object {
         private const val BA_LOADING_TIMEOUT = 5000L
+        private const val MPD_UPDATE_DELAY = 2000L
     }
 }
