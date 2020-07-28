@@ -1,5 +1,6 @@
 package org.ngbp.jsonrpc4jtestharness.server
 
+import com.github.nmuzhichin.jsonrpc.model.request.Notification
 import org.eclipse.jetty.websocket.client.WebSocketClient
 import org.junit.*
 import org.ngbp.jsonrpc4jtestharness.gateway.rpc.IRPCGateway
@@ -60,6 +61,10 @@ class WebServerTests {
                 override fun unsubscribeNotifications(notifications: Set<NotificationType>): Set<NotificationType> {
                     TODO("Not yet implemented")
                 }
+
+                override fun sendNotification(notification: Notification) {
+                    TODO("Not yet implemented")
+                }
             })
             //Server without ContentProviderServlet(applicationContext) and UserAgentSSLContext(applicationContext)
             webServer = MiddlewareWebServer.Builder()
@@ -69,7 +74,7 @@ class WebServerTests {
                     .wsPort(WS_PORT)
                     .wssPort(WSS_PORT)
                     .enableConnectors(MiddlewareWebServer.Connectors.values())
-                    .rpcProcessing(rpcProcessor)
+                    .rpcProcessing(rpcProcessor, null)
                     .build()
 
             webSocketClient = WebSocketClient()
@@ -101,7 +106,7 @@ class WebServerTests {
     @Test
     fun testWSConnection() {
         webSocketClient.start()
-        val session = webSocketClient.connect(MiddlewareWebSocket(rpcProcessor), URI(wsUrl)).get()
+        val session = webSocketClient.connect(MiddlewareWebSocket(rpcProcessor, null), URI(wsUrl)).get()
 
         Assert.assertTrue(session.isOpen)
     }
