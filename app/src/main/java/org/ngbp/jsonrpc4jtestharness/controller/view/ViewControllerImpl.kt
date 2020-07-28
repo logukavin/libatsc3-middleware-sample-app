@@ -36,6 +36,8 @@ class ViewControllerImpl @Inject constructor(
     }
 
     override val rmpState = MutableLiveData<PlaybackState>(PlaybackState.IDLE)
+    override val rmpMediaTime = MutableLiveData<Double>()
+    override val rmpPlaybackRate = MutableLiveData<Float>()
 
     init {
         selectedService.observeForever {
@@ -69,6 +71,10 @@ class ViewControllerImpl @Inject constructor(
 
     override fun updateRMPPosition(scaleFactor: Double, xPos: Double, yPos: Double) {
         rmpLayoutParams.postValue(RPMParams(scaleFactor, xPos.toInt(), yPos.toInt()))
+    }
+
+    override fun rmpPlaybackRateChanged(speed: Float) {
+        rmpPlaybackRate.postValue(speed)
     }
 
     //TODO: currently delay not supported and blocked on RPC level

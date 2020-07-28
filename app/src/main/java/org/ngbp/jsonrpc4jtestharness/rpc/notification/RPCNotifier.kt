@@ -1,10 +1,9 @@
 package org.ngbp.jsonrpc4jtestharness.rpc.notification
 
 import com.github.nmuzhichin.jsonrpc.model.request.Notification
+import org.ngbp.jsonrpc4jtestharness.core.model.PlaybackState
 import org.ngbp.jsonrpc4jtestharness.gateway.rpc.IRPCGateway
-import org.ngbp.jsonrpc4jtestharness.rpc.notification.model.RPCNotification
-import org.ngbp.jsonrpc4jtestharness.rpc.notification.model.ServiceChangeNotification
-import org.ngbp.jsonrpc4jtestharness.rpc.notification.model.ServiceGuideChangeNotification
+import org.ngbp.jsonrpc4jtestharness.rpc.notification.model.*
 import org.ngbp.jsonrpc4jtestharness.rpc.processor.RPCObjectMapper
 import org.ngbp.jsonrpc4jtestharness.rpc.receiverQueryApi.model.Urls
 
@@ -16,6 +15,22 @@ class RPCNotifier (private val gateway: IRPCGateway) {
 
     fun notifyServiceGuideChange(urlList: List<Urls>) {
         sendNotification(ServiceGuideChangeNotification(urlList = urlList))
+    }
+
+    fun notifyMPDChange() {
+        sendNotification(MPDChangeNotification())
+    }
+
+    fun notifyRmpPlaybackStateChange(playbackState: PlaybackState) {
+        sendNotification(RmpPlaybackStateChangeNotification(playbackState = playbackState))
+    }
+
+    fun notifyRmpMediaTimeChange(currentTime: Double) {
+        sendNotification(RmpMediaTimeChangeNotification(currentTime = currentTime))
+    }
+
+    fun notifyRmpPlaybackRateChange(playbackRate: Float?) {
+        sendNotification(RmpPlaybackRateChangeNotification(playbackRate = playbackRate))
     }
 
     private fun sendNotification(rpcNotification: RPCNotification) {

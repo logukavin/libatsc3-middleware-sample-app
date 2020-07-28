@@ -36,6 +36,10 @@ class RPCGatewayImpl @Inject constructor(
         get() = viewController.rmpState.value ?: PlaybackState.IDLE
     override val serviceGuideUrls: List<Urls>
         get() = serviceController.serviceGuidUrls.value ?: emptyList()
+    override val playbackRate: Float
+        get() = viewController.rmpPlaybackRate.value ?: 1F
+    override val mediaTime: Double
+        get() = viewController.rmpMediaTime.value ?: 0.0
 
     init {
         repository.appData.observeForever{ appData ->
@@ -44,6 +48,20 @@ class RPCGatewayImpl @Inject constructor(
 
         serviceController.serviceGuidUrls.observeForever { urls ->
             onServiceGuidUrls(urls)
+        }
+
+        viewController.rmpMediaUrl.observeForever { onMediaUrlUpdated() }
+
+        viewController.rmpState.observeForever { playbackState ->
+            onRMPPlaybackStateChanged(playbackState)
+        }
+
+        viewController.rmpPlaybackRate.observeForever { playbackRate ->
+            onRMPPlaybackRateChanged(playbackRate)
+        }
+
+        viewController.rmpMediaTime.observeForever { mediaTime ->
+            onMediaTimeChanged(mediaTime)
         }
     }
 
@@ -104,10 +122,38 @@ class RPCGatewayImpl @Inject constructor(
         }
     }
 
+    private fun onMediaUrlUpdated() {
+        if (subscribedINotifications.contains(NotificationType.MPD_CHANGE)) {
+            rpcNotifier.notifyMPDChange()
+        }
+    }
+
+    private fun onRMPPlaybackStateChanged(playbackState: PlaybackState) {
+        if (subscribedINotifications.contains(NotificationType.RMP_PLAYBACK_STATE_CHANGE)) {
+            rpcNotifier.notifyRmpPlaybackStateChange(playbackState)
+        }
+    }
+
+    private fun onRMPPlaybackRateChanged(playbackRate: Float) {
+        if (subscribedINotifications.contains(NotificationType.RMP_PLAYBACK_RATE_CHANGE)) {
+            rpcNotifier.notifyRmpPlaybackRateChange(playbackRate)
+        }
+    }
+
+    private fun onMediaTimeChanged(mediaTime: Double) {
+        if (subscribedINotifications.contains(NotificationType.RMP_MEDIA_TIME_CHANGE)) {
+            rpcNotifier.notifyRmpMediaTimeChange(currentTime = mediaTime)
+        }
+    }
+
     companion object {
         private val SUPPORTED_NOTIFICATIONS = setOf(
                 NotificationType.SERVICE_CHANGE,
-                NotificationType.SERVICE_GUIDE_CHANGE
+                NotificationType.SERVICE_GUIDE_CHANGE,
+                NotificationType.MPD_CHANGE,
+                NotificationType.RMP_PLAYBACK_STATE_CHANGE,
+                NotificationType.RMP_PLAYBACK_RATE_CHANGE,
+                NotificationType.RMP_MEDIA_TIME_CHANGE
         )
     }
 }

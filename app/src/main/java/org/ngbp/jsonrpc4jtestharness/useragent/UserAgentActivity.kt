@@ -9,7 +9,10 @@ import android.util.Log
 import android.view.GestureDetector
 import android.view.View
 import android.view.WindowManager
-import android.webkit.*
+import android.webkit.ClientCertRequest
+import android.webkit.SslErrorHandler
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import android.widget.AdapterView
 import android.widget.Toast
 import androidx.activity.viewModels
@@ -18,6 +21,7 @@ import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.view.postDelayed
 import androidx.lifecycle.Observer
 import com.google.android.exoplayer2.ExoPlayerFactory
+import com.google.android.exoplayer2.PlaybackParameters
 import com.google.android.exoplayer2.Player
 import com.google.android.exoplayer2.SimpleExoPlayer
 import com.google.android.exoplayer2.source.dash.DashMediaSource
@@ -26,13 +30,12 @@ import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
 import com.google.android.exoplayer2.upstream.DefaultLoadErrorHandlingPolicy
 import dagger.android.AndroidInjection
 import kotlinx.android.synthetic.main.activity_user_agent.*
-import kotlinx.coroutines.*
 import org.ngbp.jsonrpc4jtestharness.R
-import org.ngbp.jsonrpc4jtestharness.core.model.AppData
-import org.ngbp.jsonrpc4jtestharness.core.model.PlaybackState
 import org.ngbp.jsonrpc4jtestharness.core.AppUtils
 import org.ngbp.jsonrpc4jtestharness.core.CertificateUtils
 import org.ngbp.jsonrpc4jtestharness.core.SwipeGestureDetector
+import org.ngbp.jsonrpc4jtestharness.core.model.AppData
+import org.ngbp.jsonrpc4jtestharness.core.model.PlaybackState
 import org.ngbp.jsonrpc4jtestharness.lifecycle.RMPViewModel
 import org.ngbp.jsonrpc4jtestharness.lifecycle.SelectorViewModel
 import org.ngbp.jsonrpc4jtestharness.lifecycle.UserAgentViewModel
@@ -230,6 +233,12 @@ class UserAgentActivity : AppCompatActivity() {
                         else -> return
                     }
                     onPlayerStateChanged(state)
+                }
+
+                override fun onPlaybackParametersChanged(playbackParameters: PlaybackParameters?) {
+                    super.onPlaybackParametersChanged(playbackParameters)
+
+                    playbackParameters?.speed?.let { rmpViewModel.setCurrentPlaybackRate(it) }
                 }
             })
         }
