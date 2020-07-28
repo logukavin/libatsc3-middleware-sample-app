@@ -14,16 +14,15 @@ class ProgressView @JvmOverloads constructor(
 
     init {
         View.inflate(context, R.layout.progress_view, this)
+        progress_view_root.visibility = View.GONE
     }
 
 
     fun show() {
         progress_view_root.visibility = View.VISIBLE
-        invalidate()
     }
 
     fun hide() {
         progress_view_root.visibility = View.GONE
-        invalidate()
     }
 }

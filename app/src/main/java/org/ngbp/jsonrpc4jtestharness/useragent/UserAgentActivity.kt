@@ -128,6 +128,11 @@ class UserAgentActivity : AppCompatActivity() {
                 )
             })
             mediaUri.observe(this@UserAgentActivity, Observer { mediaUri ->
+                if (mediaUri == null) {
+                    progress_view.show()
+                } else {
+                    progress_view.hide()
+                }
                 mediaUri?.let { startPlayback(mediaUri) } ?: stopPlayback()
             })
             playWhenReady.observe(this@UserAgentActivity, Observer { playWhenReady ->
