@@ -243,10 +243,10 @@ class UserAgentActivity : AppCompatActivity() {
                     Log.d(TAG, error?.message ?: "Unknown player error")
                 }
 
-                override fun onPlaybackParametersChanged(playbackParameters: PlaybackParameters?) {
+                override fun onPlaybackParametersChanged(playbackParameters: PlaybackParameters) {
                     super.onPlaybackParametersChanged(playbackParameters)
 
-                    playbackParameters?.speed?.let { rmpViewModel.setCurrentPlaybackRate(it) }
+                   rmpViewModel.setCurrentPlaybackRate(playbackParameters.speed)
                 }
             })
         }
