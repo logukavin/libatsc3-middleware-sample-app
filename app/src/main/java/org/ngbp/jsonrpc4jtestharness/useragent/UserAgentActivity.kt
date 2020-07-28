@@ -6,11 +6,6 @@ import android.net.Uri
 import android.net.http.SslError
 import android.os.Bundle
 import android.util.Log
-import android.view.*
-import android.webkit.ClientCertRequest
-import android.webkit.SslErrorHandler
-import android.webkit.WebView
-import android.webkit.WebViewClient
 import android.view.GestureDetector
 import android.view.View
 import android.view.WindowManager
@@ -26,10 +21,6 @@ import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.view.postDelayed
 import androidx.lifecycle.Observer
 import com.google.android.exoplayer2.*
-import com.google.android.exoplayer2.ExoPlayerFactory
-import com.google.android.exoplayer2.PlaybackParameters
-import com.google.android.exoplayer2.Player
-import com.google.android.exoplayer2.SimpleExoPlayer
 import com.google.android.exoplayer2.source.dash.DashMediaSource
 import com.google.android.exoplayer2.source.dash.DefaultDashChunkSource
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
