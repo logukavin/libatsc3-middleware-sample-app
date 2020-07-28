@@ -18,4 +18,8 @@ class SelectorViewModel(
             }
         }
     }
+
+    fun getSelectedServiceId(): Int? {
+        return presenter.selectedService.value?.id
+    }
 }
