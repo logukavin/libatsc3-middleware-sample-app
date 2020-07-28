@@ -21,11 +21,11 @@ class RPCNotifier (private val gateway: IRPCGateway) {
     }
 
     private fun mapRPCNotificationToMessage(rpcNotification: RPCNotification): String {
-        val notification = createNotificationWIthParams(rpcNotification)
+        val notification = createNotificationWithParams(rpcNotification)
         return RPCObjectMapperUtils().objectToJson(notification)
     }
 
-    private fun createNotificationWIthParams(rpcNotification: RPCNotification): Notification {
+    private fun createNotificationWithParams(rpcNotification: RPCNotification): Notification {
         val params = RPCObjectMapperUtils().objectToMap(rpcNotification)
         return Notification(NOTIFICATION_METHOD_NAME, params as Map<String, Any>)
     }
