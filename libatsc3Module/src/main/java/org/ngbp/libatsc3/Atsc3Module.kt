@@ -10,6 +10,7 @@ import org.ngbp.libatsc3.ndk.atsc3NdkClient.ClientListener
 import org.ngbp.libatsc3.entities.held.Atsc3Held
 import org.ngbp.libatsc3.entities.held.Atsc3HeldPackage
 import org.ngbp.libatsc3.entities.held.HeldXmlParser
+import org.ngbp.libatsc3.ndk.data.PackageExtractEnvelopeMetadataAndPayload
 import java.lang.IllegalStateException
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -207,6 +208,10 @@ class Atsc3Module(context: Context) : ClientListener {
 
     override fun onAlcObjectStatusMessage(alc_object_status_message: String) {
         //TODO: notify value changed
+    }
+
+    override fun onPackageExtractCompleted(packageExtractEnvelopeMetadataAndPayload: PackageExtractEnvelopeMetadataAndPayload?) {
+        //TODO: add new route to WebServer
     }
 
     private fun setState(newState: State) {

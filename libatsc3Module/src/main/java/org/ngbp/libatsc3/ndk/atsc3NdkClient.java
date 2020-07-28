@@ -5,6 +5,7 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 
+import org.ngbp.libatsc3.ndk.data.PackageExtractEnvelopeMetadataAndPayload;
 import org.ngbp.libatsc3.ndk.media.ATSC3PlayerFlags;
 import org.ngbp.libatsc3.ndk.media.sync.mmt.MfuByteBufferFragment;
 import org.ngbp.libatsc3.ndk.media.sync.mmt.MmtPacketIdContext;
@@ -22,6 +23,7 @@ public class atsc3NdkClient {
         void onSlsTablePresent(String sls_payload_xml);
         void onSlsHeldReceived(int service_id, String held_payload_xml);
         void onAlcObjectStatusMessage(String alc_object_status_message);
+        void onPackageExtractCompleted(PackageExtractEnvelopeMetadataAndPayload packageExtractEnvelopeMetadataAndPayload);
     }
 
     public interface MediaListener {
@@ -160,6 +162,11 @@ public class atsc3NdkClient {
 
     int atsc3_on_alc_object_status_message(String alc_object_status_message) {
         clientListener.onAlcObjectStatusMessage(alc_object_status_message);
+        return 0;
+    }
+
+    int atsc3_lls_sls_alc_on_package_extract_completed(PackageExtractEnvelopeMetadataAndPayload packageExtractEnvelopeMetadataAndPayload) {
+        clientListener.onPackageExtractCompleted(packageExtractEnvelopeMetadataAndPayload);
         return 0;
     }
 
