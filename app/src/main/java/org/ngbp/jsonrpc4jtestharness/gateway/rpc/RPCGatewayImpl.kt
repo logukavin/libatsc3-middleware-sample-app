@@ -1,6 +1,5 @@
 package org.ngbp.jsonrpc4jtestharness.gateway.rpc
 
-import com.github.nmuzhichin.jsonrpc.model.request.Notification
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import org.ngbp.jsonrpc4jtestharness.controller.service.IServiceController
@@ -10,6 +9,8 @@ import org.ngbp.jsonrpc4jtestharness.core.model.PlaybackState
 import org.ngbp.jsonrpc4jtestharness.core.repository.IRepository
 import org.ngbp.jsonrpc4jtestharness.core.ws.SocketHolder
 import org.ngbp.jsonrpc4jtestharness.rpc.notification.NotificationType
+import org.ngbp.jsonrpc4jtestharness.rpc.notification.RPCNotifier
+import org.ngbp.jsonrpc4jtestharness.rpc.receiverQueryApi.model.Urls
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -22,8 +23,9 @@ class RPCGatewayImpl @Inject constructor(
 ) : IRPCGateway {
     private val mainScope = MainScope()
     private val subscribedINotifications = mutableSetOf<NotificationType>()
+    private val rpcNotifier = RPCNotifier(this)
 
-    private var currentAppData: AppData? = null;
+    private var currentAppData: AppData? = null
 
     override val language: String = java.util.Locale.getDefault().language
     override val queryServiceId: String?
@@ -32,10 +34,16 @@ class RPCGatewayImpl @Inject constructor(
         get() = viewController.rmpMediaUrl.value
     override val playbackState: PlaybackState
         get() = viewController.rmpState.value ?: PlaybackState.IDLE
+    override val serviceGuideUrls: List<Urls>
+        get() = serviceController.serviceGuidUrls.value ?: emptyList()
 
     init {
         repository.appData.observeForever{ appData ->
             onAppDataUpdated(appData)
+        }
+
+        serviceController.serviceGuidUrls.observeForever { urls ->
+            onServiceGuidUrls(urls)
         }
     }
 
@@ -70,31 +78,36 @@ class RPCGatewayImpl @Inject constructor(
     }
 
     private fun getAvailableNotifications(requested: Set<NotificationType>): Set<NotificationType> {
-        val available = SUPPORTEN_NOTIFICATIONS.toMutableSet()
+        val available = SUPPORTED_NOTIFICATIONS.toMutableSet()
         available.retainAll(requested)
         return available
     }
 
-    override fun sendNotification(notification: Notification) {
-        //TODO: add mapping
-        socketHolder.broadcastMessage(notification.toString())
+    override fun sendNotification(message: String) {
+        socketHolder.broadcastMessage(message)
     }
 
     private fun onAppDataUpdated(appData: AppData?) {
         appData?.let {
             if (appData.isAppEquals(currentAppData)) {
-                //TODO: notify BA service changed
+                if (subscribedINotifications.contains(NotificationType.SERVICE_CHANGE)) {
+                    rpcNotifier.notifyServiceChange(serviceId = it.appContextId)
+                }
             }
         }
         currentAppData = appData
     }
 
+    private fun onServiceGuidUrls(urls: List<Urls>?) {
+        if (subscribedINotifications.contains(NotificationType.SERVICE_GUIDE_CHANGE)) {
+            urls?.let { it -> rpcNotifier.notifyServiceGuideChange(urlList = it) }
+        }
+    }
+
     companion object {
-        private val SUPPORTEN_NOTIFICATIONS = setOf(
+        private val SUPPORTED_NOTIFICATIONS = setOf(
                 NotificationType.SERVICE_CHANGE,
-                NotificationType.SERVICE_GUIDE_CHANGE,
-                NotificationType.ALERT_CHANGE,
-                NotificationType.MPD_CHANGE
+                NotificationType.SERVICE_GUIDE_CHANGE
         )
     }
 }

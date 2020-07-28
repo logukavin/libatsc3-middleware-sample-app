@@ -23,6 +23,7 @@ class ServiceControllerImpl @Inject constructor(
     override val receiverState = MutableLiveData<ReceiverState>()
 
     override val selectedService = repository.selectedService
+    override val serviceGuidUrls = repository.serviceGuideUrls
 
     override val sltServices = repository.availableServices
 

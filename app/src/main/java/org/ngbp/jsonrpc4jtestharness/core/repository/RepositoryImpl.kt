@@ -3,12 +3,14 @@ package org.ngbp.jsonrpc4jtestharness.core.repository
 import androidx.lifecycle.MutableLiveData
 import org.ngbp.jsonrpc4jtestharness.core.model.AppData
 import org.ngbp.jsonrpc4jtestharness.core.model.SLSService
+import org.ngbp.jsonrpc4jtestharness.rpc.receiverQueryApi.model.Urls
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class RepositoryImpl @Inject constructor() : IRepository {
     override val selectedService = MutableLiveData<SLSService>()
+    override val serviceGuideUrls = MutableLiveData<List<Urls>>()
 
     override val routeMediaUrl = MutableLiveData<String>()
 
@@ -38,6 +40,7 @@ class RepositoryImpl @Inject constructor() : IRepository {
 
     override fun reset() {
         selectedService.postValue(null)
+        serviceGuideUrls.postValue(emptyList())
         availableServices.postValue(emptyList())
         appData.postValue(null)
         routeMediaUrl.postValue(null)
