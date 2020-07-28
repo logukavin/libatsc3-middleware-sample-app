@@ -25,9 +25,10 @@ class Atsc3Module(context: Context) : ClientListener {
         fun onStateChanged(state: State?)
         fun onServicesLoaded(services: List<Atsc3Service?>)
         fun onCurrentServicePackageChanged(pkg: Atsc3HeldPackage?)
+        fun onCurrentServiceDashPatched(mpdPath: String)
     }
 
-    private val client: atsc3NdkClient = atsc3NdkClient(context.cacheDir, this)
+    private val client = atsc3NdkClient(context.cacheDir, this)
     private val usbDevice: Atsc3UsbDevice? = null
 
     private val serviceMap = ConcurrentHashMap<Int, Atsc3Service>()
@@ -44,9 +45,11 @@ class Atsc3Module(context: Context) : ClientListener {
     private var listener: Listener? = null
 
     init {
-        client.ApiInit(client)
-        if (BuildConfig.DEBUG) {
-            client.setLogListener { s: String -> log("Client log: %s", s) }
+        with(client) {
+            ApiInit(client)
+            if (BuildConfig.DEBUG) {
+                setLogListener { s: String -> log("Client log: %s", s) }
+            }
         }
     }
 
@@ -142,7 +145,7 @@ class Atsc3Module(context: Context) : ClientListener {
         setState(State.IDLE)
     }
 
-    fun getSelectedServiceMediaUri(): String? {
+    private fun getSelectedServiceMediaUri(): String? {
         var mediaUri: String? = null
         if (selectedServiceSLSProtocol == 1) {
             val routeMPDFileName = client.atsc3_slt_alc_get_sls_metadata_fragments_content_locations_from_monitor_service_id(selectedServiceId, DASH_CONTENT_TYPE)
@@ -212,6 +215,14 @@ class Atsc3Module(context: Context) : ClientListener {
 
     override fun onPackageExtractCompleted(packageExtractEnvelopeMetadataAndPayload: PackageExtractEnvelopeMetadataAndPayload?) {
         //TODO: add new route to WebServer
+    }
+
+    override fun onRouteDashUpdated(service_id: Int) {
+        if (service_id == selectedServiceId) {
+            getSelectedServiceMediaUri()?.let { mpdPath ->
+                listener?.onCurrentServiceDashPatched(mpdPath)
+            }
+        }
     }
 
     private fun setState(newState: State) {
