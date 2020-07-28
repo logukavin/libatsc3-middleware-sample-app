@@ -4,10 +4,11 @@ import com.fasterxml.jackson.annotation.JsonAutoDetect
 import com.fasterxml.jackson.annotation.JsonIgnoreType
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.PropertyAccessor
+import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.github.nmuzhichin.jsonrpc.module.JsonRpcModule
 
-class RPCObjectMapperUtils {
+class RPCObjectMapper {
     @JsonIgnoreType
     private class MixInForIgnoreType
 
@@ -22,5 +23,5 @@ class RPCObjectMapperUtils {
 
     fun <T> objectToJson(any: T): String = objectMapper.writeValueAsString(any)
 
-    fun <T> objectToMap(any: T): Map<*, *> = objectMapper.convertValue(any, Map::class.java)
+    fun <T, R> objectToMap(any: T): R = objectMapper.convertValue(any, object : TypeReference<R>() {})
 }

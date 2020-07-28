@@ -5,29 +5,25 @@ import org.ngbp.jsonrpc4jtestharness.gateway.rpc.IRPCGateway
 import org.ngbp.jsonrpc4jtestharness.rpc.notification.model.RPCNotification
 import org.ngbp.jsonrpc4jtestharness.rpc.notification.model.ServiceChangeNotification
 import org.ngbp.jsonrpc4jtestharness.rpc.notification.model.ServiceGuideChangeNotification
-import org.ngbp.jsonrpc4jtestharness.rpc.processor.RPCObjectMapperUtils
+import org.ngbp.jsonrpc4jtestharness.rpc.processor.RPCObjectMapper
 import org.ngbp.jsonrpc4jtestharness.rpc.receiverQueryApi.model.Urls
 
 class RPCNotifier (private val gateway: IRPCGateway) {
 
     fun notifyServiceChange(serviceId: String) {
-        val message = mapRPCNotificationToMessage(ServiceChangeNotification(service = serviceId))
-        gateway.sendNotification(message)
+        sendNotification(ServiceChangeNotification(service = serviceId))
     }
 
     fun notifyServiceGuideChange(urlList: List<Urls>) {
-        val message = mapRPCNotificationToMessage(ServiceGuideChangeNotification(urlList = urlList))
+        sendNotification(ServiceGuideChangeNotification(urlList = urlList))
+    }
+
+    private fun sendNotification(rpcNotification: RPCNotification) {
+        val rpcObjectMapper = RPCObjectMapper()
+        val params: Map<String, Any> = rpcObjectMapper.objectToMap(rpcNotification)
+        val notification = Notification(NOTIFICATION_METHOD_NAME, params)
+        val message = rpcObjectMapper.objectToJson(notification)
         gateway.sendNotification(message)
-    }
-
-    private fun mapRPCNotificationToMessage(rpcNotification: RPCNotification): String {
-        val notification = createNotificationWithParams(rpcNotification)
-        return RPCObjectMapperUtils().objectToJson(notification)
-    }
-
-    private fun createNotificationWithParams(rpcNotification: RPCNotification): Notification {
-        val params = RPCObjectMapperUtils().objectToMap(rpcNotification)
-        return Notification(NOTIFICATION_METHOD_NAME, params as Map<String, Any>)
     }
 
     companion object {

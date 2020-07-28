@@ -47,6 +47,7 @@ class RPCProcessor @Inject constructor(
 ) : IRPCProcessor {
 
     private val consumer: RpcConsumer
+    private val rpcObjectMapper = RPCObjectMapper()
 
     init {
         consumer = ConsumerBuilder().build().also {
@@ -74,13 +75,13 @@ class RPCProcessor @Inject constructor(
     override fun processRequest(request: String): String {
         var requestId: Long = -1L
         return try {
-            val req = RPCObjectMapperUtils().jsonToObject(request, Request::class.java).also {
+            val req = rpcObjectMapper.jsonToObject(request, Request::class.java).also {
                 requestId = it.id
             }
 
             val response = consumer.execution(req)
 
-            RPCObjectMapperUtils().objectToJson(response)
+            rpcObjectMapper.objectToJson(response)
         } catch (e: JsonProcessingException) {
             errorResponse(requestId, e)
         }
@@ -88,11 +89,11 @@ class RPCProcessor @Inject constructor(
 
     override fun processRequest(requests: List<String>): List<String> {
         return try {
-            val requestList = requests.map { RPCObjectMapperUtils().jsonToObject(it, Request::class.java) }
+            val requestList = requests.map { rpcObjectMapper.jsonToObject(it, Request::class.java) }
 
             val responseList = consumer.execution(requestList)
 
-            responseList.map { RPCObjectMapperUtils().objectToJson(it) }
+            responseList.map { rpcObjectMapper.objectToJson(it) }
         } catch (e: JsonProcessingException) {
             e.printStackTrace()
             ArrayList<String>(requests.size).apply {
@@ -104,7 +105,7 @@ class RPCProcessor @Inject constructor(
 
     private fun errorResponse(requestId: Long, e: Exception): String {
         return try {
-            RPCObjectMapperUtils().objectToJson(ResponseUtils.createResponse(requestId, InternalRpcError(RpcErrorCode.PARSING_ERROR_CODE.code, e.localizedMessage)))
+            rpcObjectMapper.objectToJson(ResponseUtils.createResponse(requestId, InternalRpcError(RpcErrorCode.PARSING_ERROR_CODE.code, e.localizedMessage)))
         } catch (ex: JsonProcessingException) {
             // This catch will never been executed during code logic, but it need because objectMapper throw exception
             ""
