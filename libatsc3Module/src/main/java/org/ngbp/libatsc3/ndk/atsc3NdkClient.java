@@ -24,6 +24,7 @@ public class atsc3NdkClient {
         void onSlsHeldReceived(int service_id, String held_payload_xml);
         void onAlcObjectStatusMessage(String alc_object_status_message);
         void onPackageExtractCompleted(PackageExtractEnvelopeMetadataAndPayload packageExtractEnvelopeMetadataAndPayload);
+        void onRouteDashUpdated(int service_id);
     }
 
     public interface MediaListener {
@@ -31,8 +32,6 @@ public class atsc3NdkClient {
         void pushMpuMetadata_HEVC_NAL_Payload(MpuMetadata_HEVC_NAL_Payload mpuMetadata_hevc_nal_payload);
         void pushRfPhyStatisticsUpdate(RfPhyStatistics rfPhyStatistics);
         void pushBwPhyStatistics(BwPhyStatistics bwPhyStatistics);
-
-        void routeDash_force_player_reload_mpd(int service_id);
     }
 
     public interface LogListener {
@@ -288,8 +287,8 @@ public class atsc3NdkClient {
     }
 
     int atsc3_lls_sls_alc_on_route_mpd_patched(int service_id) {
-        if (mediaListener != null) {
-            mediaListener.routeDash_force_player_reload_mpd(service_id);
+        if (clientListener != null) {
+            clientListener.onRouteDashUpdated(service_id);
         }
         return 0;
     }
