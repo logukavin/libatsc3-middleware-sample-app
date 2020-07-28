@@ -1,7 +1,7 @@
 package org.ngbp.jsonrpc4jtestharness.rpc
 
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
-import junit.framework.Assert.assertEquals
+import org.junit.Assert.*
 import junit.framework.TestCase
 import org.junit.Before
 import org.junit.Rule
@@ -9,18 +9,23 @@ import org.junit.Test
 import org.junit.rules.TestRule
 import org.junit.runner.RunWith
 import org.mockito.Mock
-import org.ngbp.jsonrpc4jtestharness.controller.Coordinator
-import org.ngbp.jsonrpc4jtestharness.controller.IMediaPlayerController
-import org.ngbp.jsonrpc4jtestharness.controller.IRPCController
-import org.ngbp.jsonrpc4jtestharness.controller.model.PlaybackState
-import org.ngbp.jsonrpc4jtestharness.controller.model.SLSService
+import org.ngbp.jsonrpc4jtestharness.controller.service.IServiceController
+import org.ngbp.jsonrpc4jtestharness.controller.view.IViewController
+import org.ngbp.jsonrpc4jtestharness.controller.view.ViewControllerImpl
+
+import org.ngbp.jsonrpc4jtestharness.core.model.PlaybackState
+import org.ngbp.jsonrpc4jtestharness.core.model.SLSService
+import org.ngbp.jsonrpc4jtestharness.core.repository.IRepository
+import org.ngbp.jsonrpc4jtestharness.core.ws.SocketHolder
+import org.ngbp.jsonrpc4jtestharness.gateway.rpc.IRPCGateway
+import org.ngbp.jsonrpc4jtestharness.gateway.rpc.RPCGatewayImpl
 import org.ngbp.libatsc3.Atsc3Module
 import org.powermock.core.classloader.annotations.PrepareForTest
 import org.powermock.modules.junit4.PowerMockRunner
 import java.util.*
 
 @RunWith(PowerMockRunner::class)
-@PrepareForTest(Coordinator::class, Atsc3Module::class)
+@PrepareForTest(RPCGatewayImpl::class, Atsc3Module::class)
 class IRPCControllerTest {
 
     @JvmField
@@ -31,11 +36,19 @@ class IRPCControllerTest {
     var instantTaskExecutorRule = InstantTaskExecutorRule()
 
     @Mock
-    private val atsc3Module: Atsc3Module? = null
+    private val serviceController: IServiceController? = null
 
-    private lateinit var RPCController: IRPCController
-    private lateinit var coordinator: Coordinator
-    private lateinit var mediaPlayerController: IMediaPlayerController
+    @Mock
+    private val viewController: IViewController? = null
+
+    @Mock
+    private val repository: IRepository? = null
+
+    @Mock
+    private val socketHolder: SocketHolder? = null
+    private lateinit var iRPCGateway: IRPCGateway
+    private lateinit var coordinator: RPCGatewayImpl
+    private lateinit var mediaPlayerController: ViewControllerImpl
     private var scaleFactor: Double = 1.0
     private var xPos: Double = 11.0
     private var yPos: Double = 22.0
@@ -44,52 +57,45 @@ class IRPCControllerTest {
 
     @Before
     fun initCoordinator() {
-        coordinator = Coordinator(atsc3Module!!)
-        mediaPlayerController = coordinator
-        RPCController = coordinator
+        coordinator = RPCGatewayImpl(serviceController!!, viewController!!, repository!!, socketHolder!!)
+        mediaPlayerController = ViewControllerImpl(repository!!)
+        iRPCGateway = coordinator
 
     }
 
     @Test
     fun testCallBackData() {
-        RPCController.updateViewPosition(scaleFactor, xPos, yPos)
-        assertEquals(scaleFactor, mediaPlayerController.rmpParams.value?.scale)
-        assertEquals(xPos.toInt(), mediaPlayerController.rmpParams.value?.x)
-        assertEquals(yPos.toInt(), mediaPlayerController.rmpParams.value?.y)
+        iRPCGateway.updateRMPPosition(scaleFactor, xPos, yPos)
+        assertEquals(scaleFactor, mediaPlayerController.rmpLayoutParams.value?.scale)
+        assertEquals(xPos.toInt(), mediaPlayerController.rmpLayoutParams.value?.x)
+        assertEquals(yPos.toInt(), mediaPlayerController.rmpLayoutParams.value?.y)
     }
 
-    @Test
-    fun testCallBackNullData() {
-        RPCController.updateViewPosition(null, null, null)
-        assertEquals(100.0, mediaPlayerController.rmpParams.value?.scale)
-        assertEquals(0, mediaPlayerController.rmpParams.value?.x)
-        assertEquals(0, mediaPlayerController.rmpParams.value?.y)
-    }
 
     @Test
     fun testNonNullObjects() {
         TestCase.assertNotNull(coordinator)
         TestCase.assertNotNull(mediaPlayerController)
-        TestCase.assertNotNull(RPCController)
+        TestCase.assertNotNull(iRPCGateway)
     }
 
     @Test
     fun testLanguage() {
-        assertEquals(Locale.getDefault().language, RPCController.language)
+        assertEquals(Locale.getDefault().language, iRPCGateway.language)
     }
 
     @Test
     fun testQueryServiceId() {
-        assertEquals(mockedSLSService.globalId, RPCController.queryServiceId)
+        assertEquals(mockedSLSService.globalId, iRPCGateway.queryServiceId)
     }
 
     @Test
     fun testMediaUrl() {
-        assertEquals(mockedMediaUrl, RPCController.mediaUrl)
+        assertEquals(mockedMediaUrl, iRPCGateway.mediaUrl)
     }
 
     @Test
     fun testPlaybackState() {
-        assertEquals(PlaybackState.IDLE, RPCController.playbackState)
+        assertEquals(PlaybackState.IDLE, iRPCGateway.playbackState)
     }
 }
