@@ -12,6 +12,8 @@
 #include <queue>
 #include <mutex>
 #include <semaphore.h>
+#include <list>
+
 using namespace std;
 
 #include <android/log.h>
@@ -20,15 +22,15 @@ using namespace std;
 #include <android/asset_manager_jni.h>
 
 
-//#include "at3drv_api.h"
-
 #define DEBUG 1
 
 #include "android/log.h"
 #define MODULE_NAME "intf"
 
+// libatsc3 type imports here
 #include <atsc3_utils.h>
 #include <atsc3_pcap_type.h>
+#include <atsc3_route_package_utils.h>
 
 /*
  * : public libatsc3_Iphy_mockable
@@ -64,14 +66,14 @@ public:
 };
 
 class Iatsc3NdkClient {
-    public:
-        virtual int Init() = 0;
-        virtual int Open(int fd, int bus, int addr) = 0;
-        virtual int Tune(int freqKhz, int plp) = 0;
-        virtual int Stop()  = 0;
-        virtual int Close()  = 0;
+public:
+    virtual int Init() = 0;
+    virtual int Open(int fd, int bus, int addr) = 0;
+    virtual int Tune(int freqKhz, int plp) = 0;
+    virtual int Stop()  = 0;
+    virtual int Close()  = 0;
 
-        virtual ~Iatsc3NdkClient() {};
+    virtual ~Iatsc3NdkClient() {};
 
 };
 
@@ -121,6 +123,7 @@ public:
     void atsc3_signallingContext_notify_video_packet_id_and_mpu_timestamp_descriptor(uint16_t video_packet_id, uint32_t mpu_sequence_number, uint64_t mpu_presentation_time_ntp64, uint32_t mpu_presentation_time_seconds, uint32_t mpu_presentation_time_microseconds);
     void atsc3_signallingContext_notify_audio_packet_id_and_mpu_timestamp_descriptor(uint16_t audio_packet_id, uint32_t mpu_sequence_number, uint64_t mpu_presentation_time_ntp64, uint32_t mpu_presentation_time_seconds, uint32_t mpu_presentation_time_microsecond);
     void atsc3_signallingContext_notify_stpp_packet_id_and_mpu_timestamp_descriptor(uint16_t stpp_packet_id, uint32_t mpu_sequence_number, uint64_t mpu_presentation_time_ntp64, uint32_t mpu_presentation_time_seconds, uint32_t mpu_presentation_time_microseconds);
+    void atsc3_lls_sls_alc_on_package_extract_completed_callback_jni(atsc3_route_package_extracted_envelope_metadata_and_payload_t* atsc3_route_package_extracted_envelope_metadata_and_payload_t);
 
     int pinFromRxCaptureThread();
     int pinFromRxProcessingThread();
@@ -158,7 +161,7 @@ public:
 
     void atsc3_onAlcObjectStatusMessage(const char *fmt, ...);
 
-    void atsc3_sls_on_held_trigger_received_callback_jni(uint16_t service_id, const char* held_payload_xml);
+    void atsc3_sls_on_held_trigger_received_callback_jni(uint16_t service_id, const char *held_payload_xml);
 
 
 private:
@@ -255,6 +258,24 @@ public:
     jmethodID atsc3_on_alc_object_status_message_ID = nullptr;
 
     jmethodID atsc3_onSlsHeldReceived_ID = nullptr;
+
+    jmethodID atsc3_lls_sls_alc_on_package_extract_completed_ID = nullptr;
+
+    jclass packageExtractEnvelopeMetadataAndPayload_jclass_init_env = nullptr;
+    jclass packageExtractEnvelopeMetadataAndPayload_jclass_global_ref = nullptr;
+
+    jclass packageExtractEnvelopeMetadataAndPayload_MultipartRelatedPayload_jclass_init_env = nullptr;
+    jclass packageExtractEnvelopeMetadataAndPayload_MultipartRelatedPayload_jclass_global_ref = nullptr;
+
+
+    //todo: refactor this out - ala https://gist.github.com/qiao-tw/6e43fb2311ee3c31752e11a4415deeb1
+
+    jclass      jni_java_util_ArrayList = nullptr;
+    jmethodID   jni_java_util_ArrayList_cctor = nullptr;
+    jmethodID   jni_java_util_ArrayList_add = nullptr;
+
+
+
 
     void atsc3_onMfuSampleMissing(uint16_t i, uint32_t i1, uint32_t i2);
 
