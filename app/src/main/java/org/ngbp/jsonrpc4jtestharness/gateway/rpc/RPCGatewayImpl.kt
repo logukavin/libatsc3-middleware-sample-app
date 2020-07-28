@@ -35,7 +35,7 @@ class RPCGatewayImpl @Inject constructor(
     override val playbackState: PlaybackState
         get() = viewController.rmpState.value ?: PlaybackState.IDLE
     override val serviceGuideUrls: List<Urls>
-        get() = serviceController.serviceGuidUrls.value as List<Urls>
+        get() = serviceController.serviceGuidUrls.value ?: emptyList()
 
     init {
         repository.appData.observeForever{ appData ->
