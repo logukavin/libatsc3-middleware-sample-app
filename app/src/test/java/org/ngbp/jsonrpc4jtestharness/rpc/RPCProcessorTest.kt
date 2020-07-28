@@ -1,6 +1,5 @@
 package org.ngbp.jsonrpc4jtestharness.rpc
 
-import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.github.nmuzhichin.jsonrpc.model.request.CompleteRequest
@@ -9,9 +8,7 @@ import com.github.nmuzhichin.jsonrpc.model.request.Request
 import com.github.nmuzhichin.jsonrpc.module.JsonRpcModule
 import org.junit.Assert.*
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
-import org.junit.rules.TestRule
 import org.ngbp.jsonrpc4jtestharness.core.model.PlaybackState
 import org.ngbp.jsonrpc4jtestharness.gateway.rpc.IRPCGateway
 import org.ngbp.jsonrpc4jtestharness.rpc.notification.NotificationType
