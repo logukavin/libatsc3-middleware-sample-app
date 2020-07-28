@@ -22,7 +22,7 @@ class RPCGatewayImpl @Inject constructor(
         private val socketHolder: SocketHolder
 ) : IRPCGateway {
     private val mainScope = MainScope()
-    private val subscribedINotifications = mutableSetOf<NotificationType>()
+    private val subscribedNotifications = mutableSetOf<NotificationType>()
     private val rpcNotifier = RPCNotifier(this)
 
     private var currentAppData: AppData? = null
@@ -85,13 +85,13 @@ class RPCGatewayImpl @Inject constructor(
 
     override fun subscribeNotifications(notifications: Set<NotificationType>): Set<NotificationType> {
         val available = getAvailableNotifications(notifications)
-        subscribedINotifications.addAll(available)
+        subscribedNotifications.addAll(available)
         return available
     }
 
     override fun unsubscribeNotifications(notifications: Set<NotificationType>): Set<NotificationType> {
         val available = getAvailableNotifications(notifications)
-        subscribedINotifications.removeAll(available)
+        subscribedNotifications.removeAll(available)
         return available
     }
 
@@ -108,7 +108,7 @@ class RPCGatewayImpl @Inject constructor(
     private fun onAppDataUpdated(appData: AppData?) {
         appData?.let {
             if (appData.isAppEquals(currentAppData)) {
-                if (subscribedINotifications.contains(NotificationType.SERVICE_CHANGE)) {
+                if (subscribedNotifications.contains(NotificationType.SERVICE_CHANGE)) {
                     rpcNotifier.notifyServiceChange(serviceId = it.appContextId)
                 }
             }
@@ -117,31 +117,31 @@ class RPCGatewayImpl @Inject constructor(
     }
 
     private fun onServiceGuidUrls(urls: List<Urls>?) {
-        if (subscribedINotifications.contains(NotificationType.SERVICE_GUIDE_CHANGE)) {
+        if (subscribedNotifications.contains(NotificationType.SERVICE_GUIDE_CHANGE)) {
             urls?.let { it -> rpcNotifier.notifyServiceGuideChange(urlList = it) }
         }
     }
 
     private fun onMediaUrlUpdated() {
-        if (subscribedINotifications.contains(NotificationType.MPD_CHANGE)) {
+        if (subscribedNotifications.contains(NotificationType.MPD_CHANGE)) {
             rpcNotifier.notifyMPDChange()
         }
     }
 
     private fun onRMPPlaybackStateChanged(playbackState: PlaybackState) {
-        if (subscribedINotifications.contains(NotificationType.RMP_PLAYBACK_STATE_CHANGE)) {
+        if (subscribedNotifications.contains(NotificationType.RMP_PLAYBACK_STATE_CHANGE)) {
             rpcNotifier.notifyRmpPlaybackStateChange(playbackState)
         }
     }
 
     private fun onRMPPlaybackRateChanged(playbackRate: Float) {
-        if (subscribedINotifications.contains(NotificationType.RMP_PLAYBACK_RATE_CHANGE)) {
+        if (subscribedNotifications.contains(NotificationType.RMP_PLAYBACK_RATE_CHANGE)) {
             rpcNotifier.notifyRmpPlaybackRateChange(playbackRate)
         }
     }
 
     private fun onMediaTimeChanged(mediaTime: Double) {
-        if (subscribedINotifications.contains(NotificationType.RMP_MEDIA_TIME_CHANGE)) {
+        if (subscribedNotifications.contains(NotificationType.RMP_MEDIA_TIME_CHANGE)) {
             rpcNotifier.notifyRmpMediaTimeChange(currentTime = mediaTime)
         }
     }
