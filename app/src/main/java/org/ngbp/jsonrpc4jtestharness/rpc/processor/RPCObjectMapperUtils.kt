@@ -7,7 +7,7 @@ import com.fasterxml.jackson.annotation.PropertyAccessor
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.github.nmuzhichin.jsonrpc.module.JsonRpcModule
 
-object RPCObjectMapperUtils {
+class RPCObjectMapperUtils {
     @JsonIgnoreType
     private class MixInForIgnoreType
 

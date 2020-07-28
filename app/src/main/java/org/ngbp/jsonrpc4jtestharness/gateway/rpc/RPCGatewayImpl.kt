@@ -1,6 +1,5 @@
 package org.ngbp.jsonrpc4jtestharness.gateway.rpc
 
-import com.github.nmuzhichin.jsonrpc.model.request.Notification
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import org.ngbp.jsonrpc4jtestharness.controller.service.IServiceController
@@ -10,9 +9,7 @@ import org.ngbp.jsonrpc4jtestharness.core.model.PlaybackState
 import org.ngbp.jsonrpc4jtestharness.core.repository.IRepository
 import org.ngbp.jsonrpc4jtestharness.core.ws.SocketHolder
 import org.ngbp.jsonrpc4jtestharness.rpc.notification.NotificationType
-import org.ngbp.jsonrpc4jtestharness.rpc.notification.model.ServiceChangeNotification
-import org.ngbp.jsonrpc4jtestharness.rpc.notification.model.ServiceGuideChangeNotification
-import org.ngbp.jsonrpc4jtestharness.rpc.processor.RPCObjectMapperUtils
+import org.ngbp.jsonrpc4jtestharness.rpc.notification.RPCNotifier
 import org.ngbp.jsonrpc4jtestharness.rpc.receiverQueryApi.model.Urls
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -26,6 +23,7 @@ class RPCGatewayImpl @Inject constructor(
 ) : IRPCGateway {
     private val mainScope = MainScope()
     private val subscribedINotifications = mutableSetOf<NotificationType>()
+    private val rpcNotifier = RPCNotifier(this)
 
     private var currentAppData: AppData? = null
 
@@ -44,11 +42,8 @@ class RPCGatewayImpl @Inject constructor(
             onAppDataUpdated(appData)
         }
 
-        serviceController.serviceGuidUrls.observeForever {
-            if (subscribedINotifications.contains(NotificationType.SERVICE_GUIDE_CHANGE)) {
-                val notification = ServiceGuideChangeNotification(urlList = it).create()
-                sendNotification(notification)
-            }
+        serviceController.serviceGuidUrls.observeForever { urls ->
+            onServiceGuidUrls(urls)
         }
     }
 
@@ -88,20 +83,25 @@ class RPCGatewayImpl @Inject constructor(
         return available
     }
 
-    override fun sendNotification(notification: Notification) {
-        socketHolder.broadcastMessage(RPCObjectMapperUtils.objectToJson(notification))
+    override fun sendNotification(message: String) {
+        socketHolder.broadcastMessage(message)
     }
 
     private fun onAppDataUpdated(appData: AppData?) {
         appData?.let {
             if (appData.isAppEquals(currentAppData)) {
                 if (subscribedINotifications.contains(NotificationType.SERVICE_CHANGE)) {
-                    val notification = ServiceChangeNotification(service = appData.appContextId).create()
-                    sendNotification(notification)
+                    rpcNotifier.notifyServiceChange(serviceId = it.appContextId)
                 }
             }
         }
         currentAppData = appData
+    }
+
+    private fun onServiceGuidUrls(urls: List<Urls>?) {
+        if (subscribedINotifications.contains(NotificationType.SERVICE_GUIDE_CHANGE)) {
+            urls?.let { it -> rpcNotifier.notifyServiceGuideChange(urlList = it) }
+        }
     }
 
     companion object {
