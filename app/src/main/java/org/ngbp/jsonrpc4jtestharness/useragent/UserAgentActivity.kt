@@ -6,10 +6,11 @@ import android.net.Uri
 import android.net.http.SslError
 import android.os.Bundle
 import android.util.Log
-import android.view.GestureDetector
-import android.view.View
-import android.view.WindowManager
-import android.webkit.*
+import android.view.*
+import android.webkit.ClientCertRequest
+import android.webkit.SslErrorHandler
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import android.widget.AdapterView
 import android.widget.Toast
 import androidx.activity.viewModels
@@ -17,22 +18,19 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.view.postDelayed
 import androidx.lifecycle.Observer
-import com.google.android.exoplayer2.ExoPlayerFactory
-import com.google.android.exoplayer2.Player
-import com.google.android.exoplayer2.SimpleExoPlayer
+import com.google.android.exoplayer2.*
 import com.google.android.exoplayer2.source.dash.DashMediaSource
 import com.google.android.exoplayer2.source.dash.DefaultDashChunkSource
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
 import com.google.android.exoplayer2.upstream.DefaultLoadErrorHandlingPolicy
 import dagger.android.AndroidInjection
 import kotlinx.android.synthetic.main.activity_user_agent.*
-import kotlinx.coroutines.*
 import org.ngbp.jsonrpc4jtestharness.R
-import org.ngbp.jsonrpc4jtestharness.core.model.AppData
-import org.ngbp.jsonrpc4jtestharness.core.model.PlaybackState
 import org.ngbp.jsonrpc4jtestharness.core.AppUtils
 import org.ngbp.jsonrpc4jtestharness.core.CertificateUtils
 import org.ngbp.jsonrpc4jtestharness.core.SwipeGestureDetector
+import org.ngbp.jsonrpc4jtestharness.core.model.AppData
+import org.ngbp.jsonrpc4jtestharness.core.model.PlaybackState
 import org.ngbp.jsonrpc4jtestharness.lifecycle.RMPViewModel
 import org.ngbp.jsonrpc4jtestharness.lifecycle.SelectorViewModel
 import org.ngbp.jsonrpc4jtestharness.lifecycle.UserAgentViewModel
@@ -146,8 +144,12 @@ class UserAgentActivity : AppCompatActivity() {
     }
 
     private fun bindSelector() {
+        val selectedServiceId = selectorViewModel.getSelectedServiceId()
         selectorViewModel.services.observe(this, Observer { services ->
             selectorAdapter.setServices(services)
+
+            val position = services.indexOfFirst { it.id == selectedServiceId }
+            service_spinner.setSelection(if (position >= 0) position else 0)
         })
     }
 
@@ -173,6 +175,8 @@ class UserAgentActivity : AppCompatActivity() {
     }
 
     private fun changeService(serviceId: Int) {
+        if (selectorViewModel.getSelectedServiceId() == serviceId) return
+
         stopPlayback()
         setBAAvailability(false)
 
@@ -231,6 +235,11 @@ class UserAgentActivity : AppCompatActivity() {
                     }
                     onPlayerStateChanged(state)
                 }
+
+                override fun onPlayerError(error: ExoPlaybackException?) {
+                    super.onPlayerError(error)
+                    Log.d(TAG, error?.message ?: "Unknown player error")
+                }
             })
         }
     }
@@ -265,14 +274,15 @@ class UserAgentActivity : AppCompatActivity() {
     }
 
     private fun startPlayback(mpdPath: String) {
-        stopPlayback()
         val dashMediaSource = dashMediaSourceFactory.createMediaSource(Uri.parse(mpdPath))
+        receiver_media_player.player = simpleExoPlayer
         simpleExoPlayer.prepare(dashMediaSource)
         simpleExoPlayer.playWhenReady = true
     }
 
     private fun stopPlayback() {
         simpleExoPlayer.stop()
+        receiver_media_player.player = null
     }
 
     private fun closeBAMenu() {
@@ -300,6 +310,8 @@ class UserAgentActivity : AppCompatActivity() {
     }
 
     companion object {
+        val TAG: String = UserAgentActivity::class.java.simpleName
+
         const val CONTENT_URL = "https://127.0.0.1:8443/index.html?wsURL=ws://127.0.0.1:9998&rev=20180720"
     }
 }
