@@ -1,6 +1,7 @@
 package org.ngbp.jsonrpc4jtestharness.gateway.rpc
 
 import org.ngbp.jsonrpc4jtestharness.core.model.PlaybackState
+import org.ngbp.jsonrpc4jtestharness.core.ws.MiddlewareWebSocket
 import org.ngbp.jsonrpc4jtestharness.rpc.notification.NotificationType
 import org.ngbp.jsonrpc4jtestharness.rpc.receiverQueryApi.model.Urls
 
@@ -10,6 +11,9 @@ interface IRPCGateway {
     val mediaUrl: String?
     val playbackState: PlaybackState
     val serviceGuideUrls: List<Urls>
+
+    fun onSocketOpened(socket: MiddlewareWebSocket)
+    fun onSocketClosed(socket: MiddlewareWebSocket)
 
     fun updateRMPPosition(scaleFactor: Double, xPos: Double, yPos: Double)
 

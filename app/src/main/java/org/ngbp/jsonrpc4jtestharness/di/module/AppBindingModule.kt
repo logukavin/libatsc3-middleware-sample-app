@@ -14,6 +14,8 @@ import org.ngbp.jsonrpc4jtestharness.presentation.ISelectorPresenter
 import org.ngbp.jsonrpc4jtestharness.presentation.IUserAgentPresenter
 import org.ngbp.jsonrpc4jtestharness.core.repository.IRepository
 import org.ngbp.jsonrpc4jtestharness.core.repository.RepositoryImpl
+import org.ngbp.jsonrpc4jtestharness.gateway.web.IWebGateway
+import org.ngbp.jsonrpc4jtestharness.gateway.web.WebGatewayImpl
 
 @Module
 abstract class AppBindingModule {
@@ -40,5 +42,8 @@ abstract class AppBindingModule {
 
     @Binds
     abstract fun rpcGatewayBinder(obj: RPCGatewayImpl): IRPCGateway
+
+    @Binds
+    abstract fun webGatewayBinder(obj: WebGatewayImpl): IWebGateway
 
 }

@@ -5,6 +5,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import junit.framework.TestCase
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestCoroutineDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runBlockingTest
@@ -25,7 +26,6 @@ import org.ngbp.jsonrpc4jtestharness.core.model.AppData
 import org.ngbp.jsonrpc4jtestharness.core.model.PlaybackState
 import org.ngbp.jsonrpc4jtestharness.core.model.SLSService
 import org.ngbp.jsonrpc4jtestharness.core.repository.IRepository
-import org.ngbp.jsonrpc4jtestharness.core.ws.SocketHolder
 import org.ngbp.jsonrpc4jtestharness.gateway.rpc.IRPCGateway
 import org.ngbp.jsonrpc4jtestharness.gateway.rpc.RPCGatewayImpl
 import org.ngbp.jsonrpc4jtestharness.rpc.receiverQueryApi.model.Urls
@@ -34,7 +34,7 @@ import org.powermock.modules.junit4.PowerMockRunner
 import java.util.*
 
 @RunWith(PowerMockRunner::class)
-@PrepareForTest(RPCGatewayImpl::class, ViewControllerImpl::class, IServiceController::class, IViewController::class, IRepository::class, SocketHolder::class)
+@PrepareForTest(RPCGatewayImpl::class, ViewControllerImpl::class, IServiceController::class, IViewController::class, IRepository::class)
 class IRPCControllerTest {
 
     @JvmField
@@ -54,7 +54,6 @@ class IRPCControllerTest {
     private val repository: IRepository? = null
 
     @Mock
-    private val socketHolder: SocketHolder? = null
     private lateinit var iRPCGateway: IRPCGateway
     private lateinit var coordinator: RPCGatewayImpl
     private lateinit var mediaPlayerController: ViewControllerImpl
@@ -69,8 +68,11 @@ class IRPCControllerTest {
     var selectedService: MutableLiveData<SLSService?> = MutableLiveData()
     val rmpState: LiveData<PlaybackState> = MutableLiveData()
     val rmpMediaUrl: LiveData<String?> = MutableLiveData()
+
+    @ExperimentalCoroutinesApi
     private val testDispatcher = TestCoroutineDispatcher()
 
+    @ExperimentalCoroutinesApi
     @Before
     fun initCoordinator() {
         selectedService.value = mockedSLSService
@@ -83,12 +85,12 @@ class IRPCControllerTest {
         Mockito.`when`(viewController?.rmpState).thenReturn(rmpState)
 
         mediaPlayerController = ViewControllerImpl(repository!!)
-        coordinator = RPCGatewayImpl(serviceController!!, mediaPlayerController, repository!!, socketHolder!!)
+        coordinator = RPCGatewayImpl(serviceController!!, mediaPlayerController, repository)
         iRPCGateway = coordinator
         Dispatchers.setMain(testDispatcher)
-
     }
 
+    @ExperimentalCoroutinesApi
     @Test
     fun testCallBackData() = testDispatcher.runBlockingTest {
         iRPCGateway.updateRMPPosition(scaleFactor, xPos, yPos)
@@ -125,6 +127,7 @@ class IRPCControllerTest {
         assertEquals(PlaybackState.IDLE, iRPCGateway.playbackState)
     }
 
+    @ExperimentalCoroutinesApi
     @After
     fun cleanUp() {
         Dispatchers.resetMain()
