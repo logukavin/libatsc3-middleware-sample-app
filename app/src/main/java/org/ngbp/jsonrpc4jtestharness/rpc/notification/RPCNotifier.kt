@@ -25,7 +25,7 @@ class RPCNotifier (private val gateway: IRPCGateway) {
         sendNotification(RmpPlaybackStateChangeNotification(playbackState))
     }
 
-    fun notifyRmpMediaTimeChange(currentTime: Double) {
+    fun notifyRmpMediaTimeChange(currentTime: String) {
         sendNotification(RmpMediaTimeChangeNotification(currentTime))
     }
 

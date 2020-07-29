@@ -41,6 +41,8 @@ import org.ngbp.jsonrpc4jtestharness.lifecycle.SelectorViewModel
 import org.ngbp.jsonrpc4jtestharness.lifecycle.UserAgentViewModel
 import org.ngbp.jsonrpc4jtestharness.lifecycle.factory.UserAgentViewModelFactory
 import java.io.IOException
+import java.text.DecimalFormat
+import java.text.DecimalFormatSymbols
 import javax.inject.Inject
 
 class UserAgentActivity : AppCompatActivity() {
@@ -325,7 +327,14 @@ class UserAgentActivity : AppCompatActivity() {
     }
 
     private fun updateMediaTime() {
-        rmpViewModel.setCurrentMediaTime(simpleExoPlayer.currentPosition.toDouble())
+        val currentTime = simpleExoPlayer.currentPosition.toDouble() / 1000
+
+        val symbols = DecimalFormatSymbols.getInstance()
+        symbols.decimalSeparator = '.'
+        val decimalFormat =  DecimalFormat("#.###", symbols)
+        val formattedTime = decimalFormat.format(currentTime)
+
+        rmpViewModel.setCurrentMediaTime(formattedTime)
 
         updateMediaTimeHandler.postDelayed(updateMediaTimeRunnable, MEDIA_TIME_UPDATE_DELAY)
     }

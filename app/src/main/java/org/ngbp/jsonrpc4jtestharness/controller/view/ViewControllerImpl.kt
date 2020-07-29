@@ -36,7 +36,7 @@ class ViewControllerImpl @Inject constructor(
     }
 
     override val rmpState = MutableLiveData<PlaybackState>(PlaybackState.IDLE)
-    override val rmpMediaTime = MutableLiveData<Double>()
+    override val rmpMediaTime = MutableLiveData<String>()
     override val rmpPlaybackRate = MutableLiveData<Float>()
 
     init {
@@ -77,7 +77,7 @@ class ViewControllerImpl @Inject constructor(
         rmpPlaybackRate.postValue(speed)
     }
 
-    override fun rmpMediaTimeChanged(currentTime: Double) {
+    override fun rmpMediaTimeChanged(currentTime: String) {
         rmpMediaTime.postValue(currentTime)
     }
 
