@@ -129,10 +129,10 @@ class UserAgentActivity : AppCompatActivity() {
             })
             mediaUri.observe(this@UserAgentActivity, Observer { mediaUri ->
                 mediaUri?.let {
-                    progress_view.hide()
+                    progress_bar.visibility = View.GONE
                     startPlayback(mediaUri)
                 } ?: run {
-                    progress_view.show()
+                    progress_bar.visibility = View.VISIBLE
                     stopPlayback()
                 }
             })
