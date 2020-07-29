@@ -4,6 +4,12 @@ import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import junit.framework.TestCase
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.test.TestCoroutineDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runBlockingTest
+import kotlinx.coroutines.test.setMain
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Rule
@@ -60,12 +66,14 @@ class IRPCControllerTest {
 
     val appData: LiveData<AppData?> = MutableLiveData()
     val serviceGuidUrls: LiveData<List<Urls>?> = MutableLiveData()
-    val selectedService: LiveData<SLSService?> = MutableLiveData()
+    var selectedService: MutableLiveData<SLSService?> = MutableLiveData()
     val rmpState: LiveData<PlaybackState> = MutableLiveData()
     val rmpMediaUrl: LiveData<String?> = MutableLiveData()
+    private val testDispatcher = TestCoroutineDispatcher()
 
     @Before
     fun initCoordinator() {
+        selectedService.value = mockedSLSService
         Mockito.`when`(repository?.appData).thenReturn(appData)
         Mockito.`when`(serviceController?.serviceGuidUrls).thenReturn(serviceGuidUrls)
         Mockito.`when`(serviceController?.selectedService).thenReturn(selectedService)
@@ -73,14 +81,16 @@ class IRPCControllerTest {
         Mockito.`when`(repository?.selectedService).thenReturn(selectedService)
         Mockito.`when`(viewController?.rmpMediaUrl).thenReturn(rmpMediaUrl)
         Mockito.`when`(viewController?.rmpState).thenReturn(rmpState)
+
         mediaPlayerController = ViewControllerImpl(repository!!)
         coordinator = RPCGatewayImpl(serviceController!!, mediaPlayerController, repository!!, socketHolder!!)
         iRPCGateway = coordinator
+        Dispatchers.setMain(testDispatcher)
 
     }
 
     @Test
-    fun testCallBackData() {
+    fun testCallBackData() = testDispatcher.runBlockingTest {
         iRPCGateway.updateRMPPosition(scaleFactor, xPos, yPos)
         assertEquals(scaleFactor, mediaPlayerController.rmpLayoutParams.value?.scale)
         assertEquals(xPos.toInt(), mediaPlayerController.rmpLayoutParams.value?.x)
@@ -114,4 +124,11 @@ class IRPCControllerTest {
     fun testPlaybackState() {
         assertEquals(PlaybackState.IDLE, iRPCGateway.playbackState)
     }
+
+    @After
+    fun cleanUp() {
+        Dispatchers.resetMain()
+        testDispatcher.cleanupTestCoroutines()
+    }
+
 }
