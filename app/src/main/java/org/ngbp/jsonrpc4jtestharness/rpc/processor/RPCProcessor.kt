@@ -38,11 +38,8 @@ import org.ngbp.jsonrpc4jtestharness.rpc.subscribeUnsubscribe.ISubscribeUnsubscr
 import org.ngbp.jsonrpc4jtestharness.rpc.subscribeUnsubscribe.SubscribeUnsubscribeImpl
 import org.ngbp.jsonrpc4jtestharness.rpc.xLink.IXLink
 import org.ngbp.jsonrpc4jtestharness.rpc.xLink.XLinkImpl
-import javax.inject.Inject
-import javax.inject.Singleton
 
-@Singleton
-class RPCProcessor @Inject constructor(
+class RPCProcessor (
         private val gateway: IRPCGateway
 ) : IRPCProcessor {
 

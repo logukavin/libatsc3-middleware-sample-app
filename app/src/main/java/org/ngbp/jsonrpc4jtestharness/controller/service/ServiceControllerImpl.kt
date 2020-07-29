@@ -7,6 +7,7 @@ import org.ngbp.jsonrpc4jtestharness.core.model.ReceiverState
 import org.ngbp.jsonrpc4jtestharness.core.model.SLSService
 import org.ngbp.jsonrpc4jtestharness.core.repository.IRepository
 import org.ngbp.libatsc3.Atsc3Module
+import org.ngbp.libatsc3.entities.app.Atsc3Application
 import org.ngbp.libatsc3.entities.held.Atsc3HeldPackage
 import org.ngbp.libatsc3.entities.service.Atsc3Service
 import javax.inject.Inject
@@ -18,6 +19,8 @@ class ServiceControllerImpl @Inject constructor(
         private val atsc3Module: Atsc3Module
 ) : IServiceController, Atsc3Module.Listener {
 
+    private val ioScope = CoroutineScope(Dispatchers.IO)
+
     private var unloadBAJob: Job? = null
     private var mpdUpdateJob: Job? = null
 
@@ -26,7 +29,7 @@ class ServiceControllerImpl @Inject constructor(
     override val selectedService = repository.selectedService
     override val serviceGuidUrls = repository.serviceGuideUrls
 
-    override val sltServices = repository.availableServices
+    override val sltServices = repository.services
 
     init {
         atsc3Module.setListener(this)
@@ -46,6 +49,11 @@ class ServiceControllerImpl @Inject constructor(
         val slsServices = services.filterNotNull()
                 .map { SLSService(it.serviceId, it.shortServiceName, it.globalServiceId) }
         repository.setServices(slsServices)
+    }
+
+    override fun onPackageReceived(appPackage: Atsc3Application) {
+        //TODO: check package contains entry point, than report
+        repository.addOrUpdateApplication(appPackage)
     }
 
     override fun onCurrentServicePackageChanged(pkg: Atsc3HeldPackage?) {
@@ -102,7 +110,7 @@ class ServiceControllerImpl @Inject constructor(
 
     private fun startUnloadBAJob() {
         cancelUnloadBAJob()
-        unloadBAJob = GlobalScope.launch {
+        unloadBAJob = ioScope.launch {
             delay(BA_LOADING_TIMEOUT)
             withContext(Dispatchers.Main) {
                 repository.setAppEntryPoint(null)
@@ -120,7 +128,7 @@ class ServiceControllerImpl @Inject constructor(
 
     private fun startMPDUpdateJob(mpdPath: String) {
         cancelMPDUpdateJob()
-        mpdUpdateJob = GlobalScope.launch {
+        mpdUpdateJob = ioScope.launch {
             delay(MPD_UPDATE_DELAY)
             withContext(Dispatchers.Main) {
                 repository.setMediaUrl(mpdPath)

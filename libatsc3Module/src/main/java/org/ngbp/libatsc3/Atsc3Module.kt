@@ -2,6 +2,8 @@ package org.ngbp.libatsc3
 
 import android.content.Context
 import android.util.Log
+import org.ngbp.libatsc3.entities.app.Atsc3Application
+import org.ngbp.libatsc3.entities.app.Atsc3ApplicationFile
 import org.ngbp.libatsc3.ndk.Atsc3UsbDevice
 import org.ngbp.libatsc3.entities.service.LLSParserSLT
 import org.ngbp.libatsc3.entities.service.Atsc3Service
@@ -24,6 +26,7 @@ class Atsc3Module(context: Context) : ClientListener {
     interface Listener {
         fun onStateChanged(state: State?)
         fun onServicesLoaded(services: List<Atsc3Service?>)
+        fun onPackageReceived(appPackage: Atsc3Application)
         fun onCurrentServicePackageChanged(pkg: Atsc3HeldPackage?)
         fun onCurrentServiceDashPatched(mpdPath: String)
     }
@@ -32,6 +35,7 @@ class Atsc3Module(context: Context) : ClientListener {
     private val usbDevice: Atsc3UsbDevice? = null
 
     private val serviceMap = ConcurrentHashMap<Int, Atsc3Service>()
+    private val packageMap = HashMap<String, Atsc3Application>()
 
     private var isPcapOpened = false
     private var state = State.IDLE
@@ -213,8 +217,39 @@ class Atsc3Module(context: Context) : ClientListener {
         //TODO: notify value changed
     }
 
-    override fun onPackageExtractCompleted(packageExtractEnvelopeMetadataAndPayload: PackageExtractEnvelopeMetadataAndPayload?) {
-        //TODO: add new route to WebServer
+    override fun onPackageExtractCompleted(packageMetadata: PackageExtractEnvelopeMetadataAndPayload) {
+        val appPackage = packageMap[packageMetadata.appContextIdList]
+        if (appPackage == null) {
+            val pkg = metadataToPackage(packageMetadata).also {
+                packageMap[packageMetadata.appContextIdList] = it
+            }
+            listener?.onPackageReceived(pkg)
+        } else {
+            val changedFiles = packageMetadata.multipartRelatedPayloadList.filter { file ->
+                appPackage.files[file.contentLocation]?.version != file.version
+            }.map { file ->
+                Atsc3ApplicationFile(file.contentLocation, file.contentType, file.version)
+            }
+
+            if (changedFiles.isNotEmpty()) {
+                val pkg = appPackage.updateFiles(changedFiles).also {
+                    packageMap[packageMetadata.appContextIdList] = it
+                }
+                listener?.onPackageReceived(pkg)
+            }
+        }
+    }
+
+    private fun metadataToPackage(packageMetadata: PackageExtractEnvelopeMetadataAndPayload): Atsc3Application {
+        val files = packageMetadata.multipartRelatedPayloadList?.map { file ->
+            file.contentLocation to Atsc3ApplicationFile(file.contentLocation, file.contentType, file.version)
+        }?.toMap() ?: emptyMap<String, Atsc3ApplicationFile>()
+
+        return Atsc3Application(
+                packageMetadata.appContextIdList.split(" "),
+                String.format("%s/%s", client.cacheDir, packageMetadata.packageExtractPath),
+                files
+        )
     }
 
     override fun onRouteDashUpdated(service_id: Int) {
