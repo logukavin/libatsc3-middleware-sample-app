@@ -39,13 +39,7 @@ class RPCNotifier (private val gateway: IRPCGateway) {
         val notification = Notification(NOTIFICATION_METHOD_NAME, params)
         val message = rpcObjectMapper.objectToJson(notification)
 
-//        Just test solution
-        val notificationThread: Thread = object : Thread() {
-            override fun run() {
-                gateway.sendNotification(message)
-            }
-        }
-        notificationThread.start()
+        gateway.sendNotification(message)
     }
 
     companion object {
