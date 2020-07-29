@@ -29,7 +29,7 @@ class RPCGatewayImpl @Inject constructor(
 
     override val language: String = java.util.Locale.getDefault().language
     override val queryServiceId: String?
-        get() = serviceController.selectedService.value?.globalId
+            get() = serviceController.selectedService.value?.globalId
     override val mediaUrl: String?
         get() = viewController.rmpMediaUrl.value
     override val playbackState: PlaybackState

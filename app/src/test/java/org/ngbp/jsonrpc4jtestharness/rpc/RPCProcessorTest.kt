@@ -14,6 +14,7 @@ import org.ngbp.jsonrpc4jtestharness.gateway.rpc.IRPCGateway
 import org.ngbp.jsonrpc4jtestharness.rpc.notification.NotificationType
 import org.ngbp.jsonrpc4jtestharness.rpc.processor.IRPCProcessor
 import org.ngbp.jsonrpc4jtestharness.rpc.processor.RPCProcessor
+import org.ngbp.jsonrpc4jtestharness.rpc.receiverQueryApi.model.Urls
 import java.util.*
 
 
@@ -36,6 +37,8 @@ class RPCProcessorTest {
                 get() = "test"
             override val playbackState: PlaybackState
                 get() = PlaybackState.IDLE
+            override val serviceGuideUrls: List<Urls>
+                get() = listOf()
 
             override fun updateRMPPosition(scaleFactor: Double, xPos: Double, yPos: Double) {
 
@@ -58,9 +61,10 @@ class RPCProcessorTest {
                 TODO("Not yet implemented")
             }
 
-            override fun sendNotification(notification: Notification) {
+            override fun sendNotification(message: String) {
                 TODO("Not yet implemented")
             }
+
         })
     }
 
