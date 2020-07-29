@@ -118,7 +118,7 @@ class UserAgentActivity : AppCompatActivity() {
     }
 
     private fun bindMediaPlayer() {
-        with (rmpViewModel) {
+        with(rmpViewModel) {
             reset()
             layoutParams.observe(this@UserAgentActivity, Observer { params ->
                 updateRMPLayout(
@@ -128,12 +128,13 @@ class UserAgentActivity : AppCompatActivity() {
                 )
             })
             mediaUri.observe(this@UserAgentActivity, Observer { mediaUri ->
-                if (mediaUri == null) {
-                    progress_view.show()
-                } else {
+                mediaUri?.let {
                     progress_view.hide()
+                    startPlayback(mediaUri)
+                } ?: run {
+                    progress_view.show()
+                    stopPlayback()
                 }
-                mediaUri?.let { startPlayback(mediaUri) } ?: stopPlayback()
             })
             playWhenReady.observe(this@UserAgentActivity, Observer { playWhenReady ->
                 simpleExoPlayer.playWhenReady = playWhenReady
