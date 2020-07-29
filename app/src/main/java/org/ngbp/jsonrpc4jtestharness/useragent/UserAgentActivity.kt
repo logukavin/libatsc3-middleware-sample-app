@@ -80,6 +80,8 @@ class UserAgentActivity : AppCompatActivity() {
         bindMediaPlayer()
         bindSelector()
         bindUserAgent()
+
+        startMediaTimeUpdate()
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -170,6 +172,8 @@ class UserAgentActivity : AppCompatActivity() {
 
     override fun onStop() {
         super.onStop()
+
+        cancelMediaTimeUpdate()
 
         with(simpleExoPlayer) {
             stop()
@@ -264,10 +268,8 @@ class UserAgentActivity : AppCompatActivity() {
 
         if (state == PlaybackState.PLAYING) {
             window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-            startMediaTimeUpdate()
         } else {
             window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-            cancelMediaTimeUpdate()
         }
     }
 
@@ -291,6 +293,8 @@ class UserAgentActivity : AppCompatActivity() {
     }
 
     private fun startPlayback(mpdPath: String) {
+        startMediaTimeUpdate()
+
         val dashMediaSource = dashMediaSourceFactory.createMediaSource(Uri.parse(mpdPath))
         receiver_media_player.player = simpleExoPlayer
         simpleExoPlayer.prepare(dashMediaSource)
@@ -298,6 +302,8 @@ class UserAgentActivity : AppCompatActivity() {
     }
 
     private fun stopPlayback() {
+        cancelMediaTimeUpdate()
+
         simpleExoPlayer.stop()
         receiver_media_player.player = null
     }
@@ -335,12 +341,14 @@ class UserAgentActivity : AppCompatActivity() {
         val formattedTime = decimalFormat.format(currentTime)
 
         rmpViewModel.setCurrentMediaTime(formattedTime)
-
-        updateMediaTimeHandler.postDelayed(updateMediaTimeRunnable, MEDIA_TIME_UPDATE_DELAY)
     }
 
-    private val updateMediaTimeRunnable = Runnable {
-        updateMediaTime()
+    private val updateMediaTimeRunnable = object : Runnable {
+        override fun run() {
+            updateMediaTime()
+
+            updateMediaTimeHandler.postDelayed(this, MEDIA_TIME_UPDATE_DELAY)
+        }
     }
 
     private fun startMediaTimeUpdate() {

@@ -1,7 +1,6 @@
 package org.ngbp.jsonrpc4jtestharness.gateway.rpc
 
-import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 import org.ngbp.jsonrpc4jtestharness.controller.service.IServiceController
 import org.ngbp.jsonrpc4jtestharness.controller.view.IViewController
 import org.ngbp.jsonrpc4jtestharness.core.model.AppData
@@ -26,6 +25,9 @@ class RPCGatewayImpl @Inject constructor(
     private val rpcNotifier = RPCNotifier(this)
 
     private var currentAppData: AppData? = null
+    private var mediaTimeUpdateJob: Job? = null
+    private var currentMediaTime = ""
+
 
     override val language: String = java.util.Locale.getDefault().language
     override val queryServiceId: String?
@@ -50,14 +52,19 @@ class RPCGatewayImpl @Inject constructor(
 
         viewController.rmpState.observeForever { playbackState ->
             onRMPPlaybackStateChanged(playbackState)
+
+            when(playbackState) {
+                PlaybackState.PLAYING -> {
+                    startMediaTimeUpdateJob()
+                }
+                else -> {
+                    cancelMediaTimeUpdateJob()
+                }
+            }
         }
 
         viewController.rmpPlaybackRate.observeForever { playbackRate ->
             onRMPPlaybackRateChanged(playbackRate)
-        }
-
-        viewController.rmpMediaTime.observeForever { mediaTime ->
-            onMediaTimeChanged(mediaTime)
         }
     }
 
@@ -142,6 +149,32 @@ class RPCGatewayImpl @Inject constructor(
         }
     }
 
+    private fun startMediaTimeUpdateJob() {
+        cancelMediaTimeUpdateJob()
+        mediaTimeUpdateJob = GlobalScope.launch {
+            delay(MEDIA_TIME_UPDATE_DELAY)
+            withContext(Dispatchers.Main) {
+                val newMediaTime = viewController.rmpMediaTime.value.toString()
+
+                if (newMediaTime != currentMediaTime) {
+                    onMediaTimeChanged(newMediaTime)
+                    currentMediaTime = newMediaTime
+                }
+                mediaTimeUpdateJob = null
+
+                startMediaTimeUpdateJob()
+            }
+        }
+    }
+
+    private fun cancelMediaTimeUpdateJob() {
+        mediaTimeUpdateJob?.let {
+            it.cancel()
+            mediaTimeUpdateJob = null
+        }
+    }
+
+
     companion object {
         private val SUPPORTED_NOTIFICATIONS = setOf(
                 NotificationType.SERVICE_CHANGE,
@@ -151,5 +184,7 @@ class RPCGatewayImpl @Inject constructor(
                 NotificationType.RMP_PLAYBACK_RATE_CHANGE,
                 NotificationType.RMP_MEDIA_TIME_CHANGE
         )
+
+        private const val MEDIA_TIME_UPDATE_DELAY = 500L
     }
 }
