@@ -46,7 +46,11 @@ class RMPViewModel(
     }
 
     fun setCurrentPlaybackRate(speed: Float) {
-        presenter.rmpPlaybackRateChanged(speed = speed)
+        presenter.rmpPlaybackRateChanged(speed)
+    }
+
+    fun setCurrentMediaTime( currentTime: Double) {
+        presenter.rmpMediaTimeChanged(currentTime)
     }
 }
 

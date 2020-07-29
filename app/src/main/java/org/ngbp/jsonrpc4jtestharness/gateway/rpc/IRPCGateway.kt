@@ -10,8 +10,6 @@ interface IRPCGateway {
     val mediaUrl: String?
     val playbackState: PlaybackState
     val serviceGuideUrls: List<Urls>
-    val playbackRate: Float
-    val mediaTime: Double
 
     fun updateRMPPosition(scaleFactor: Double, xPos: Double, yPos: Double)
 

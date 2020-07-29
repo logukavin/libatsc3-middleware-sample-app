@@ -77,6 +77,10 @@ class ViewControllerImpl @Inject constructor(
         rmpPlaybackRate.postValue(speed)
     }
 
+    override fun rmpMediaTimeChanged(currentTime: Double) {
+        rmpMediaTime.postValue(currentTime)
+    }
+
     //TODO: currently delay not supported and blocked on RPC level
     override fun requestMediaPlay(mediaUrl: String?, delay: Long) {
         rmpPause()

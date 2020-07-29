@@ -10,11 +10,11 @@ import org.ngbp.jsonrpc4jtestharness.rpc.receiverQueryApi.model.Urls
 class RPCNotifier (private val gateway: IRPCGateway) {
 
     fun notifyServiceChange(serviceId: String) {
-        sendNotification(ServiceChangeNotification(service = serviceId))
+        sendNotification(ServiceChangeNotification(serviceId))
     }
 
     fun notifyServiceGuideChange(urlList: List<Urls>) {
-        sendNotification(ServiceGuideChangeNotification(urlList = urlList))
+        sendNotification(ServiceGuideChangeNotification(urlList))
     }
 
     fun notifyMPDChange() {
@@ -22,15 +22,15 @@ class RPCNotifier (private val gateway: IRPCGateway) {
     }
 
     fun notifyRmpPlaybackStateChange(playbackState: PlaybackState) {
-        sendNotification(RmpPlaybackStateChangeNotification(playbackState = playbackState))
+        sendNotification(RmpPlaybackStateChangeNotification(playbackState))
     }
 
     fun notifyRmpMediaTimeChange(currentTime: Double) {
-        sendNotification(RmpMediaTimeChangeNotification(currentTime = currentTime))
+        sendNotification(RmpMediaTimeChangeNotification(currentTime))
     }
 
-    fun notifyRmpPlaybackRateChange(playbackRate: Float?) {
-        sendNotification(RmpPlaybackRateChangeNotification(playbackRate = playbackRate))
+    fun notifyRmpPlaybackRateChange(playbackRate: Float) {
+        sendNotification(RmpPlaybackRateChangeNotification(playbackRate))
     }
 
     private fun sendNotification(rpcNotification: RPCNotification) {
@@ -38,7 +38,14 @@ class RPCNotifier (private val gateway: IRPCGateway) {
         val params: Map<String, Any> = rpcObjectMapper.objectToMap(rpcNotification)
         val notification = Notification(NOTIFICATION_METHOD_NAME, params)
         val message = rpcObjectMapper.objectToJson(notification)
-        gateway.sendNotification(message)
+
+//        Just test solution
+        val notificationThread: Thread = object : Thread() {
+            override fun run() {
+                gateway.sendNotification(message)
+            }
+        }
+        notificationThread.start()
     }
 
     companion object {

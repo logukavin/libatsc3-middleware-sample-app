@@ -36,10 +36,6 @@ class RPCGatewayImpl @Inject constructor(
         get() = viewController.rmpState.value ?: PlaybackState.IDLE
     override val serviceGuideUrls: List<Urls>
         get() = serviceController.serviceGuidUrls.value ?: emptyList()
-    override val playbackRate: Float
-        get() = viewController.rmpPlaybackRate.value ?: 1F
-    override val mediaTime: Double
-        get() = viewController.rmpMediaTime.value ?: 0.0
 
     init {
         repository.appData.observeForever{ appData ->
@@ -109,7 +105,7 @@ class RPCGatewayImpl @Inject constructor(
         appData?.let {
             if (appData.isAppEquals(currentAppData)) {
                 if (subscribedNotifications.contains(NotificationType.SERVICE_CHANGE)) {
-                    rpcNotifier.notifyServiceChange(serviceId = it.appContextId)
+                    rpcNotifier.notifyServiceChange(it.appContextId)
                 }
             }
         }
@@ -118,7 +114,7 @@ class RPCGatewayImpl @Inject constructor(
 
     private fun onServiceGuidUrls(urls: List<Urls>?) {
         if (subscribedNotifications.contains(NotificationType.SERVICE_GUIDE_CHANGE)) {
-            urls?.let { it -> rpcNotifier.notifyServiceGuideChange(urlList = it) }
+            urls?.let { it -> rpcNotifier.notifyServiceGuideChange(it) }
         }
     }
 
@@ -142,7 +138,7 @@ class RPCGatewayImpl @Inject constructor(
 
     private fun onMediaTimeChanged(mediaTime: Double) {
         if (subscribedNotifications.contains(NotificationType.RMP_MEDIA_TIME_CHANGE)) {
-            rpcNotifier.notifyRmpMediaTimeChange(currentTime = mediaTime)
+            rpcNotifier.notifyRmpMediaTimeChange(mediaTime)
         }
     }
 
