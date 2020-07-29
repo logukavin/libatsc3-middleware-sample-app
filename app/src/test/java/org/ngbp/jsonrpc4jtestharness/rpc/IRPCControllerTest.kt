@@ -1,31 +1,34 @@
 package org.ngbp.jsonrpc4jtestharness.rpc
 
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
-import org.junit.Assert.*
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import junit.framework.TestCase
+import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TestRule
 import org.junit.runner.RunWith
 import org.mockito.Mock
+import org.mockito.Mockito
 import org.ngbp.jsonrpc4jtestharness.controller.service.IServiceController
 import org.ngbp.jsonrpc4jtestharness.controller.view.IViewController
 import org.ngbp.jsonrpc4jtestharness.controller.view.ViewControllerImpl
-
+import org.ngbp.jsonrpc4jtestharness.core.model.AppData
 import org.ngbp.jsonrpc4jtestharness.core.model.PlaybackState
 import org.ngbp.jsonrpc4jtestharness.core.model.SLSService
 import org.ngbp.jsonrpc4jtestharness.core.repository.IRepository
 import org.ngbp.jsonrpc4jtestharness.core.ws.SocketHolder
 import org.ngbp.jsonrpc4jtestharness.gateway.rpc.IRPCGateway
 import org.ngbp.jsonrpc4jtestharness.gateway.rpc.RPCGatewayImpl
-import org.ngbp.libatsc3.Atsc3Module
+import org.ngbp.jsonrpc4jtestharness.rpc.receiverQueryApi.model.Urls
 import org.powermock.core.classloader.annotations.PrepareForTest
 import org.powermock.modules.junit4.PowerMockRunner
 import java.util.*
 
 @RunWith(PowerMockRunner::class)
-@PrepareForTest(RPCGatewayImpl::class, Atsc3Module::class)
+@PrepareForTest(RPCGatewayImpl::class, ViewControllerImpl::class, IServiceController::class, IViewController::class, IRepository::class, SocketHolder::class)
 class IRPCControllerTest {
 
     @JvmField
@@ -55,10 +58,23 @@ class IRPCControllerTest {
     private val mockedSLSService: SLSService = SLSService(5003, "WZTV", "tag:sinclairplatform.com,2020:WZTV:2727")
     private val mockedMediaUrl: String? = null
 
+    val appData: LiveData<AppData?> = MutableLiveData()
+    val serviceGuidUrls: LiveData<List<Urls>?> = MutableLiveData()
+    val selectedService: LiveData<SLSService?> = MutableLiveData()
+    val rmpState: LiveData<PlaybackState> = MutableLiveData()
+    val rmpMediaUrl: LiveData<String?> = MutableLiveData()
+
     @Before
     fun initCoordinator() {
-        coordinator = RPCGatewayImpl(serviceController!!, viewController!!, repository!!, socketHolder!!)
+        Mockito.`when`(repository?.appData).thenReturn(appData)
+        Mockito.`when`(serviceController?.serviceGuidUrls).thenReturn(serviceGuidUrls)
+        Mockito.`when`(serviceController?.selectedService).thenReturn(selectedService)
+        Mockito.`when`(serviceController?.serviceGuidUrls).thenReturn(serviceGuidUrls)
+        Mockito.`when`(repository?.selectedService).thenReturn(selectedService)
+        Mockito.`when`(viewController?.rmpMediaUrl).thenReturn(rmpMediaUrl)
+        Mockito.`when`(viewController?.rmpState).thenReturn(rmpState)
         mediaPlayerController = ViewControllerImpl(repository!!)
+        coordinator = RPCGatewayImpl(serviceController!!, mediaPlayerController, repository!!, socketHolder!!)
         iRPCGateway = coordinator
 
     }
