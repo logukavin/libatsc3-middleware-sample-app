@@ -13,6 +13,7 @@ import org.ngbp.jsonrpc4jtestharness.core.web.MiddlewareWebServerError
 import org.ngbp.jsonrpc4jtestharness.rpc.notification.NotificationType
 
 import org.ngbp.jsonrpc4jtestharness.rpc.processor.RPCProcessor
+import org.ngbp.jsonrpc4jtestharness.rpc.receiverQueryApi.model.Urls
 import java.net.URI
 
 class WebServerTests {
@@ -41,6 +42,8 @@ class WebServerTests {
                     get() = "test"
                 override val playbackState: PlaybackState
                     get() = PlaybackState.IDLE
+                override val serviceGuideUrls: List<Urls>
+                    get() = TODO("Not yet implemented")
 
                 override fun updateRMPPosition(scaleFactor: Double, xPos: Double, yPos: Double) {
                     TODO("Not yet implemented")
@@ -62,9 +65,10 @@ class WebServerTests {
                     TODO("Not yet implemented")
                 }
 
-                override fun sendNotification(notification: Notification) {
+                override fun sendNotification(message: String) {
                     TODO("Not yet implemented")
                 }
+
             })
             //Server without ContentProviderServlet(applicationContext) and UserAgentSSLContext(applicationContext)
             webServer = MiddlewareWebServer.Builder()
