@@ -136,7 +136,7 @@ class RPCGatewayImpl @Inject constructor(
         }
     }
 
-    private fun onMediaTimeChanged(mediaTime: Double) {
+    private fun onMediaTimeChanged(mediaTime: String) {
         if (subscribedNotifications.contains(NotificationType.RMP_MEDIA_TIME_CHANGE)) {
             rpcNotifier.notifyRmpMediaTimeChange(mediaTime)
         }
