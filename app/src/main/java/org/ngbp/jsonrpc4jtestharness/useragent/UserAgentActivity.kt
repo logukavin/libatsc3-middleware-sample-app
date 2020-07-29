@@ -5,6 +5,8 @@ import android.graphics.Color
 import android.net.Uri
 import android.net.http.SslError
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.view.GestureDetector
 import android.view.View
@@ -27,6 +29,7 @@ import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
 import com.google.android.exoplayer2.upstream.DefaultLoadErrorHandlingPolicy
 import dagger.android.AndroidInjection
 import kotlinx.android.synthetic.main.activity_user_agent.*
+import kotlinx.coroutines.Runnable
 import org.ngbp.jsonrpc4jtestharness.R
 import org.ngbp.jsonrpc4jtestharness.core.AppUtils
 import org.ngbp.jsonrpc4jtestharness.core.CertificateUtils
@@ -54,6 +57,8 @@ class UserAgentActivity : AppCompatActivity() {
     private lateinit var simpleExoPlayer: SimpleExoPlayer
     private lateinit var dashMediaSourceFactory: DashMediaSource.Factory
     private lateinit var selectorAdapter: ServiceAdapter
+
+    private val updateMediaTimeHandler = Handler(Looper.getMainLooper())
 
     override fun onCreate(savedInstanceState: Bundle?) {
         AndroidInjection.inject(this)
@@ -246,7 +251,7 @@ class UserAgentActivity : AppCompatActivity() {
                 override fun onPlaybackParametersChanged(playbackParameters: PlaybackParameters) {
                     super.onPlaybackParametersChanged(playbackParameters)
 
-                   rmpViewModel.setCurrentPlaybackRate(playbackParameters.speed)
+                    rmpViewModel.setCurrentPlaybackRate(playbackParameters.speed)
                 }
             })
         }
@@ -257,8 +262,10 @@ class UserAgentActivity : AppCompatActivity() {
 
         if (state == PlaybackState.PLAYING) {
             window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            startMediaTimeUpdate()
         } else {
             window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            cancelMediaTimeUpdate()
         }
     }
 
@@ -317,9 +324,30 @@ class UserAgentActivity : AppCompatActivity() {
         }
     }
 
+    private fun updateMediaTime() {
+        rmpViewModel.setCurrentMediaTime(simpleExoPlayer.currentPosition.toDouble())
+
+        updateMediaTimeHandler.postDelayed(updateMediaTimeRunnable, MEDIA_TIME_UPDATE_DELAY)
+    }
+
+    private val updateMediaTimeRunnable = Runnable {
+        updateMediaTime()
+    }
+
+    private fun startMediaTimeUpdate() {
+        updateMediaTimeHandler.removeCallbacks(updateMediaTimeRunnable)
+        updateMediaTimeHandler.postDelayed(updateMediaTimeRunnable, MEDIA_TIME_UPDATE_DELAY)
+    }
+
+    private fun cancelMediaTimeUpdate() {
+        updateMediaTimeHandler.removeCallbacks(updateMediaTimeRunnable)
+    }
+
     companion object {
         val TAG: String = UserAgentActivity::class.java.simpleName
 
         const val CONTENT_URL = "https://127.0.0.1:8443/index.html?wsURL=ws://127.0.0.1:9998&rev=20180720"
+
+        private const val MEDIA_TIME_UPDATE_DELAY = 500L
     }
 }

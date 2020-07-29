@@ -12,4 +12,5 @@ interface IMediaPlayerPresenter: IObservablePlayer {
     fun rmpReset()
     fun rmpPlaybackChanged(state: PlaybackState)
     fun rmpPlaybackRateChanged(speed: Float)
+    fun rmpMediaTimeChanged(currentTime: Double)
 }
