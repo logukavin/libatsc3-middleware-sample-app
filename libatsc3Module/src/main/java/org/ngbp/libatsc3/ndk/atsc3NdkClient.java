@@ -23,7 +23,7 @@ public class atsc3NdkClient {
         void onSlsTablePresent(String sls_payload_xml);
         void onSlsHeldReceived(int service_id, String held_payload_xml);
         void onAlcObjectStatusMessage(String alc_object_status_message);
-        void onPackageExtractCompleted(PackageExtractEnvelopeMetadataAndPayload packageExtractEnvelopeMetadataAndPayload);
+        void onPackageExtractCompleted(PackageExtractEnvelopeMetadataAndPayload packageMetadata);
         void onRouteDashUpdated(int service_id);
     }
 

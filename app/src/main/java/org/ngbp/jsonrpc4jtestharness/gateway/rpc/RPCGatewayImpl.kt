@@ -1,16 +1,18 @@
 package org.ngbp.jsonrpc4jtestharness.gateway.rpc
 
 import androidx.lifecycle.distinctUntilChanged
+import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.*
 import org.ngbp.jsonrpc4jtestharness.controller.service.IServiceController
 import org.ngbp.jsonrpc4jtestharness.controller.view.IViewController
 import org.ngbp.jsonrpc4jtestharness.core.model.AppData
 import org.ngbp.jsonrpc4jtestharness.core.model.PlaybackState
 import org.ngbp.jsonrpc4jtestharness.core.repository.IRepository
-import org.ngbp.jsonrpc4jtestharness.core.ws.SocketHolder
+import org.ngbp.jsonrpc4jtestharness.core.ws.MiddlewareWebSocket
 import org.ngbp.jsonrpc4jtestharness.rpc.notification.NotificationType
 import org.ngbp.jsonrpc4jtestharness.rpc.notification.RPCNotifier
 import org.ngbp.jsonrpc4jtestharness.rpc.receiverQueryApi.model.Urls
+import java.util.concurrent.CopyOnWriteArrayList
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -18,10 +20,11 @@ import javax.inject.Singleton
 class RPCGatewayImpl @Inject constructor(
         private val serviceController: IServiceController,
         private val viewController: IViewController,
-        private val repository: IRepository,
-        private val socketHolder: SocketHolder
+        repository: IRepository
 ) : IRPCGateway {
     private val mainScope = MainScope()
+
+    private val sessions = CopyOnWriteArrayList<MiddlewareWebSocket>()
     private val subscribedNotifications = mutableSetOf<NotificationType>()
     private val rpcNotifier = RPCNotifier(this)
 
@@ -61,6 +64,14 @@ class RPCGatewayImpl @Inject constructor(
         viewController.rmpPlaybackRate.distinctUntilChanged().observeForever { playbackRate ->
             onRMPPlaybackRateChanged(playbackRate)
         }
+    }
+
+    override fun onSocketOpened(socket: MiddlewareWebSocket) {
+        sessions.add(socket)
+    }
+
+    override fun onSocketClosed(socket: MiddlewareWebSocket) {
+        sessions.remove(socket)
     }
 
     override fun updateRMPPosition(scaleFactor: Double, xPos: Double, yPos: Double) {
@@ -112,7 +123,9 @@ class RPCGatewayImpl @Inject constructor(
     }
 
     override fun sendNotification(message: String) {
-        socketHolder.broadcastMessage(message)
+        sessions.forEach { socket ->
+            socket.sendMessage(message)
+        }
     }
 
     private fun onAppDataUpdated(appData: AppData?) {
