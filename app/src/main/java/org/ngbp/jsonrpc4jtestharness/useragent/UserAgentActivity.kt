@@ -118,7 +118,7 @@ class UserAgentActivity : AppCompatActivity() {
     }
 
     private fun bindMediaPlayer() {
-        with (rmpViewModel) {
+        with(rmpViewModel) {
             reset()
             layoutParams.observe(this@UserAgentActivity, Observer { params ->
                 updateRMPLayout(
@@ -278,11 +278,15 @@ class UserAgentActivity : AppCompatActivity() {
         receiver_media_player.player = simpleExoPlayer
         simpleExoPlayer.prepare(dashMediaSource)
         simpleExoPlayer.playWhenReady = true
+
+        progress_bar.visibility = View.GONE
     }
 
     private fun stopPlayback() {
         simpleExoPlayer.stop()
         receiver_media_player.player = null
+
+        progress_bar.visibility = View.VISIBLE
     }
 
     private fun closeBAMenu() {
