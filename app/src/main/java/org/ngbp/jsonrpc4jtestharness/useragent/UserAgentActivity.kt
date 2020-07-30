@@ -128,13 +128,7 @@ class UserAgentActivity : AppCompatActivity() {
                 )
             })
             mediaUri.observe(this@UserAgentActivity, Observer { mediaUri ->
-                mediaUri?.let {
-                    progress_bar.visibility = View.GONE
-                    startPlayback(mediaUri)
-                } ?: run {
-                    progress_bar.visibility = View.VISIBLE
-                    stopPlayback()
-                }
+                mediaUri?.let { startPlayback(mediaUri) } ?: stopPlayback()
             })
             playWhenReady.observe(this@UserAgentActivity, Observer { playWhenReady ->
                 simpleExoPlayer.playWhenReady = playWhenReady
@@ -284,11 +278,15 @@ class UserAgentActivity : AppCompatActivity() {
         receiver_media_player.player = simpleExoPlayer
         simpleExoPlayer.prepare(dashMediaSource)
         simpleExoPlayer.playWhenReady = true
+
+        progress_bar.visibility = View.GONE
     }
 
     private fun stopPlayback() {
         simpleExoPlayer.stop()
         receiver_media_player.player = null
+
+        progress_bar.visibility = View.VISIBLE
     }
 
     private fun closeBAMenu() {
