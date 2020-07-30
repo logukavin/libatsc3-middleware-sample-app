@@ -198,7 +198,7 @@ class RPCGatewayImpl @Inject constructor(
     }
 
     companion object {
-        private val SUPPORTED_NOTIFICATIONS = setOf(
+        val SUPPORTED_NOTIFICATIONS = setOf(
                 NotificationType.SERVICE_CHANGE,
                 NotificationType.SERVICE_GUIDE_CHANGE,
                 NotificationType.MPD_CHANGE,
