@@ -55,6 +55,7 @@ class UserAgentActivity : AppCompatActivity() {
 
     private var isBAMenuOpened = false
     private var currentAppData: AppData? = null
+    private var rmpState: PlaybackState? = null
 
     private lateinit var simpleExoPlayer: SimpleExoPlayer
     private lateinit var dashMediaSourceFactory: DashMediaSource.Factory
@@ -80,8 +81,6 @@ class UserAgentActivity : AppCompatActivity() {
         bindMediaPlayer()
         bindSelector()
         bindUserAgent()
-
-        startMediaTimeUpdate()
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -173,8 +172,6 @@ class UserAgentActivity : AppCompatActivity() {
     override fun onStop() {
         super.onStop()
 
-        cancelMediaTimeUpdate()
-
         with(simpleExoPlayer) {
             stop()
             release()
@@ -246,7 +243,11 @@ class UserAgentActivity : AppCompatActivity() {
                         }
                         else -> return
                     }
-                    onPlayerStateChanged(state)
+
+                    if (rmpState != state) {
+                        rmpState = state
+                        onPlayerStateChanged(state)
+                    }
                 }
 
                 override fun onPlayerError(error: ExoPlaybackException?) {
@@ -268,8 +269,10 @@ class UserAgentActivity : AppCompatActivity() {
 
         if (state == PlaybackState.PLAYING) {
             window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            startMediaTimeUpdate()
         } else {
             window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            cancelMediaTimeUpdate()
         }
     }
 
@@ -293,8 +296,6 @@ class UserAgentActivity : AppCompatActivity() {
     }
 
     private fun startPlayback(mpdPath: String) {
-        startMediaTimeUpdate()
-
         val dashMediaSource = dashMediaSourceFactory.createMediaSource(Uri.parse(mpdPath))
         receiver_media_player.player = simpleExoPlayer
         simpleExoPlayer.prepare(dashMediaSource)
@@ -302,8 +303,6 @@ class UserAgentActivity : AppCompatActivity() {
     }
 
     private fun stopPlayback() {
-        cancelMediaTimeUpdate()
-
         simpleExoPlayer.stop()
         receiver_media_player.player = null
     }
@@ -332,20 +331,9 @@ class UserAgentActivity : AppCompatActivity() {
         }
     }
 
-    private fun updateMediaTime() {
-        val currentTime = simpleExoPlayer.currentPosition.toDouble() / 1000
-
-        val symbols = DecimalFormatSymbols.getInstance()
-        symbols.decimalSeparator = '.'
-        val decimalFormat =  DecimalFormat("#.###", symbols)
-        val formattedTime = decimalFormat.format(currentTime)
-
-        rmpViewModel.setCurrentMediaTime(formattedTime)
-    }
-
     private val updateMediaTimeRunnable = object : Runnable {
         override fun run() {
-            updateMediaTime()
+            rmpViewModel.setCurrentMediaTime(simpleExoPlayer.currentPosition)
 
             updateMediaTimeHandler.postDelayed(this, MEDIA_TIME_UPDATE_DELAY)
         }

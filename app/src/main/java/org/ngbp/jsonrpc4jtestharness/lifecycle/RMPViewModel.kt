@@ -49,7 +49,7 @@ class RMPViewModel(
         presenter.rmpPlaybackRateChanged(speed)
     }
 
-    fun setCurrentMediaTime(currentTime: String) {
+    fun setCurrentMediaTime(currentTime: Long) {
         presenter.rmpMediaTimeChanged(currentTime)
     }
 }

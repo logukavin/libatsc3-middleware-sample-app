@@ -25,8 +25,11 @@ class RPCNotifier (private val gateway: IRPCGateway) {
         sendNotification(RmpPlaybackStateChangeNotification(playbackState))
     }
 
-    fun notifyRmpMediaTimeChange(currentTime: String) {
-        sendNotification(RmpMediaTimeChangeNotification(currentTime))
+    fun notifyRmpMediaTimeChange(currentTime: Long) {
+        if (currentTime <= 0) return
+
+        val seconds = currentTime.toDouble() / 1000
+        sendNotification(RmpMediaTimeChangeNotification(String.format("%.2f", seconds)))
     }
 
     fun notifyRmpPlaybackRateChange(playbackRate: Float) {
