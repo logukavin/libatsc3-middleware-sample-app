@@ -7,6 +7,8 @@ import org.ngbp.jsonrpc4jtestharness.presentation.IUserAgentPresenter
 
 interface IViewController : IUserAgentPresenter, IMediaPlayerPresenter {
     val rmpState: LiveData<PlaybackState>
+    val rmpMediaTime: LiveData<Long>
+    val rmpPlaybackRate: LiveData<Float>
 
     fun updateRMPPosition(scaleFactor: Double, xPos: Double, yPos: Double)
 

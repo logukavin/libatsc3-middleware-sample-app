@@ -6,6 +6,7 @@ import android.content.Intent
 import android.os.PowerManager
 import android.os.PowerManager.WakeLock
 import androidx.lifecycle.LifecycleService
+import androidx.lifecycle.distinctUntilChanged
 import dagger.android.AndroidInjection
 import org.ngbp.jsonrpc4jtestharness.controller.service.IServiceController
 import org.ngbp.jsonrpc4jtestharness.controller.view.IViewController
@@ -46,7 +47,7 @@ class ForegroundRpcService : LifecycleService() {
         serviceController.selectedService.observe(this, androidx.lifecycle.Observer {
             updateNotification()
         })
-        viewController.rmpState.observe(this, androidx.lifecycle.Observer {
+        viewController.rmpState.distinctUntilChanged().observe(this, androidx.lifecycle.Observer {
             updateNotification()
         })
     }

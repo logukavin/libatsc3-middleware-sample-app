@@ -17,7 +17,7 @@ class SubscribeUnsubscribeImpl(
 
     override fun integratedUnsubscribe(msgType: List<String>): Subscribe {
         val notifications = convertMsgTypeToNotifications(msgType)
-        val unsubscribedNotifications = gateway.subscribeNotifications(notifications)
+        val unsubscribedNotifications = gateway.unsubscribeNotifications(notifications)
 
         return Subscribe(unsubscribedNotifications.map { it.value })
     }
