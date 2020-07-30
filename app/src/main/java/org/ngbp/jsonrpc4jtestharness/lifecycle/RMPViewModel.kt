@@ -4,9 +4,9 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Transformations
 import androidx.lifecycle.ViewModel
+import org.ngbp.jsonrpc4jtestharness.core.media.IObservablePlayer
 import org.ngbp.jsonrpc4jtestharness.core.model.PlaybackState
 import org.ngbp.jsonrpc4jtestharness.presentation.IMediaPlayerPresenter
-import org.ngbp.jsonrpc4jtestharness.core.media.IObservablePlayer
 
 class RMPViewModel(
         private val presenter: IMediaPlayerPresenter
@@ -43,6 +43,14 @@ class RMPViewModel(
 
     fun setCurrentPlayerState(state: PlaybackState) {
         presenter.rmpPlaybackChanged(state)
+    }
+
+    fun setCurrentPlaybackRate(speed: Float) {
+        presenter.rmpPlaybackRateChanged(speed)
+    }
+
+    fun setCurrentMediaTime(currentTime: Long) {
+        presenter.rmpMediaTimeChanged(currentTime)
     }
 }
 

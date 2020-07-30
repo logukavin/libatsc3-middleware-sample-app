@@ -1,3 +1,7 @@
 package org.ngbp.jsonrpc4jtestharness.rpc.notification.model
 
-interface RPCNotification
+import org.ngbp.jsonrpc4jtestharness.rpc.notification.NotificationType
+
+open class RPCNotification(notificationType: NotificationType) {
+    private val msgType: String = notificationType.value
+}

@@ -1,21 +1,39 @@
 package org.ngbp.jsonrpc4jtestharness.rpc.notification
 
 import com.github.nmuzhichin.jsonrpc.model.request.Notification
+import org.ngbp.jsonrpc4jtestharness.core.model.PlaybackState
 import org.ngbp.jsonrpc4jtestharness.gateway.rpc.IRPCGateway
-import org.ngbp.jsonrpc4jtestharness.rpc.notification.model.RPCNotification
-import org.ngbp.jsonrpc4jtestharness.rpc.notification.model.ServiceChangeNotification
-import org.ngbp.jsonrpc4jtestharness.rpc.notification.model.ServiceGuideChangeNotification
+import org.ngbp.jsonrpc4jtestharness.rpc.notification.model.*
 import org.ngbp.jsonrpc4jtestharness.rpc.processor.RPCObjectMapper
 import org.ngbp.jsonrpc4jtestharness.rpc.receiverQueryApi.model.Urls
 
 class RPCNotifier (private val gateway: IRPCGateway) {
 
     fun notifyServiceChange(serviceId: String) {
-        sendNotification(ServiceChangeNotification(service = serviceId))
+        sendNotification(ServiceChangeNotification(serviceId))
     }
 
     fun notifyServiceGuideChange(urlList: List<Urls>) {
-        sendNotification(ServiceGuideChangeNotification(urlList = urlList))
+        sendNotification(ServiceGuideChangeNotification(urlList))
+    }
+
+    fun notifyMPDChange() {
+        sendNotification(MPDChangeNotification())
+    }
+
+    fun notifyRmpPlaybackStateChange(playbackState: PlaybackState) {
+        sendNotification(RmpPlaybackStateChangeNotification(playbackState))
+    }
+
+    fun notifyRmpMediaTimeChange(currentTime: Long) {
+        if (currentTime <= 0) return
+
+        val seconds = currentTime.toDouble() / 1000
+        sendNotification(RmpMediaTimeChangeNotification(String.format("%.3f", seconds)))
+    }
+
+    fun notifyRmpPlaybackRateChange(playbackRate: Float) {
+        sendNotification(RmpPlaybackRateChangeNotification(playbackRate))
     }
 
     private fun sendNotification(rpcNotification: RPCNotification) {
@@ -23,6 +41,7 @@ class RPCNotifier (private val gateway: IRPCGateway) {
         val params: Map<String, Any> = rpcObjectMapper.objectToMap(rpcNotification)
         val notification = Notification(NOTIFICATION_METHOD_NAME, params)
         val message = rpcObjectMapper.objectToJson(notification)
+
         gateway.sendNotification(message)
     }
 
