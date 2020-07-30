@@ -3,12 +3,14 @@ package org.ngbp.jsonrpc4jtestharness.core.ws
 import android.util.Log
 import org.eclipse.jetty.websocket.api.Session
 import org.eclipse.jetty.websocket.api.WebSocketAdapter
-import org.ngbp.jsonrpc4jtestharness.rpc.processor.IRPCProcessor
+import org.ngbp.jsonrpc4jtestharness.gateway.rpc.IRPCGateway
+import org.ngbp.jsonrpc4jtestharness.rpc.processor.RPCProcessor
 
 class MiddlewareWebSocket(
-        private val rpcProcessor: IRPCProcessor,
-        private val holder: SocketHolder?
+        private val rpcGateway: IRPCGateway
 ) : WebSocketAdapter() {
+
+    private val rpcProcessor = RPCProcessor(rpcGateway)
 
     private var outbound: Session? = null
 
@@ -27,7 +29,7 @@ class MiddlewareWebSocket(
         super.onWebSocketClose(statusCode, reason)
         Log.d("WSServer: ", "onWebSocketClose reason: $reason , statusCode: $statusCode")
 
-        holder?.onClose(this)
+        rpcGateway.onSocketClosed(this)
 
         outbound = null
     }
@@ -38,7 +40,7 @@ class MiddlewareWebSocket(
 
         outbound = session
 
-        holder?.onOpen(this)
+        rpcGateway.onSocketOpened(this)
     }
 
     override fun onWebSocketError(cause: Throwable) {

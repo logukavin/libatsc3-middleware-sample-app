@@ -10,6 +10,7 @@ import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 import org.ngbp.jsonrpc4jtestharness.core.model.PlaybackState
+import org.ngbp.jsonrpc4jtestharness.core.ws.MiddlewareWebSocket
 import org.ngbp.jsonrpc4jtestharness.gateway.rpc.IRPCGateway
 import org.ngbp.jsonrpc4jtestharness.rpc.notification.NotificationType
 import org.ngbp.jsonrpc4jtestharness.rpc.processor.IRPCProcessor
@@ -65,6 +66,13 @@ class RPCProcessorTest {
                 TODO("Not yet implemented")
             }
 
+            override fun onSocketOpened(socket: MiddlewareWebSocket) {
+                TODO("Not yet implemented")
+            }
+
+            override fun onSocketClosed(socket: MiddlewareWebSocket) {
+                TODO("Not yet implemented")
+            }
         })
     }
 

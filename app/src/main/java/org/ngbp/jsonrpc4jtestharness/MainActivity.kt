@@ -16,33 +16,22 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.databinding.DataBindingUtil
 import androidx.lifecycle.Observer
-import com.fasterxml.jackson.core.JsonProcessingException
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.github.nmuzhichin.jsonrpc.model.request.CompleteRequest
-import com.github.nmuzhichin.jsonrpc.model.request.Request
-import com.github.nmuzhichin.jsonrpc.module.JsonRpcModule
 import dagger.android.AndroidInjection
 import kotlinx.android.synthetic.main.activity_main.*
 import org.ngbp.jsonrpc4jtestharness.core.model.ReceiverState
 import org.ngbp.jsonrpc4jtestharness.presentation.IReceiverPresenter
 import org.ngbp.jsonrpc4jtestharness.core.FileUtils
 import org.ngbp.jsonrpc4jtestharness.useragent.ServiceAdapter
-import org.ngbp.jsonrpc4jtestharness.core.ws.MiddlewareWebSocketClient
 import org.ngbp.jsonrpc4jtestharness.databinding.ActivityMainBinding
 import org.ngbp.jsonrpc4jtestharness.lifecycle.ReceiverViewModel
 import org.ngbp.jsonrpc4jtestharness.lifecycle.SelectorViewModel
 import org.ngbp.jsonrpc4jtestharness.lifecycle.UserAgentViewModel
 import org.ngbp.jsonrpc4jtestharness.lifecycle.factory.UserAgentViewModelFactory
-import org.ngbp.jsonrpc4jtestharness.rpc.processor.RPCProcessor
 import org.ngbp.jsonrpc4jtestharness.service.ForegroundRpcService
 import org.ngbp.jsonrpc4jtestharness.useragent.UserAgentActivity
-import java.util.*
 import javax.inject.Inject
 
 class MainActivity : AppCompatActivity() {
-    @Inject
-    lateinit var callWrapper: RPCProcessor
-
     @Inject
     lateinit var controller: IReceiverPresenter
 
@@ -52,13 +41,6 @@ class MainActivity : AppCompatActivity() {
     private val receiverViewModel: ReceiverViewModel by viewModels { userAgentViewModelFactory }
     private val userAgentViewModel: UserAgentViewModel by viewModels { userAgentViewModelFactory }
     private val selectorViewModel: SelectorViewModel by viewModels { userAgentViewModelFactory }
-
-    private val mapper = ObjectMapper().apply {
-        registerModule(JsonRpcModule())
-    }
-
-    private var xPos: Double = java.lang.Double.valueOf(50.0)
-    private var yPos: Double = java.lang.Double.valueOf(50.0)
 
     private lateinit var stsc3FilePath: EditText
     private lateinit var stsc3Open: View
@@ -82,24 +64,6 @@ class MainActivity : AppCompatActivity() {
         findViewById<View>(R.id.start).setOnClickListener { startService() }
         findViewById<View>(R.id.start_user_agent).setOnClickListener {
             startUserAgent()
-        }
-
-        findViewById<View>(R.id.connect_to_ws).setOnClickListener { startWSClient() }
-        findViewById<View>(R.id.left).setOnClickListener {
-            if (xPos > 0) xPos -= 10
-            makeCall()
-        }
-        findViewById<View>(R.id.right).setOnClickListener {
-            xPos += 10
-            makeCall()
-        }
-        findViewById<View>(R.id.top).setOnClickListener {
-            if (xPos > 0) yPos -= 10
-            makeCall()
-        }
-        findViewById<View>(R.id.bottom).setOnClickListener {
-            yPos += 10
-            makeCall()
         }
 
         initLibAtsc3()
@@ -127,39 +91,6 @@ class MainActivity : AppCompatActivity() {
     private fun startUserAgent() {
         val intent = Intent(this, UserAgentActivity::class.java)
         startActivity(intent)
-    }
-
-    private fun makeCall_9_7_5_1() {
-        val propertioes = HashMap<String?, Any?>()
-        val deviceInfoProperties = listOf("Numeric", "ChannelUp")
-        propertioes["keys"] = deviceInfoProperties
-        val request: Request = CompleteRequest("2.0", 1L, "org.atsc.query.languages", null)
-        var json: String? = ""
-        try {
-            json = mapper.writeValueAsString(request)
-        } catch (e: JsonProcessingException) {
-            e.printStackTrace()
-        }
-        json?.let {
-            callWrapper.processRequest(json)
-        }
-    }
-
-    private fun makeCall() {
-        val propertioes = HashMap<String?, Any?>()
-        propertioes["operation"] = "startRmp"
-        propertioes["rmpurl"] = "111"
-//        propertioes["rmpSyncTime"] = 1.0
-        val request: Request = CompleteRequest("2.0", 1L, "org.atsc.setRMPURL", propertioes)
-        var json: String? = ""
-        try {
-            json = mapper.writeValueAsString(request)
-        } catch (e: JsonProcessingException) {
-            e.printStackTrace()
-        }
-        json?.let {
-            callWrapper.processRequest(json)
-        }
     }
 
     private fun initLibAtsc3() {
@@ -209,16 +140,6 @@ class MainActivity : AppCompatActivity() {
         val serviceIntent = Intent(this, ForegroundRpcService::class.java)
         serviceIntent.action = ForegroundRpcService.ACTION_STOP
         ContextCompat.startForegroundService(this, serviceIntent)
-    }
-
-    private fun startWSClient() {
-        val wsClient: Thread = object : Thread() {
-            override fun run() {
-                val client = MiddlewareWebSocketClient(callWrapper)
-                client.start()
-            }
-        }
-        wsClient.start()
     }
 
     override fun onDestroy() {

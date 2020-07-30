@@ -8,23 +8,22 @@ import android.os.PowerManager.WakeLock
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.distinctUntilChanged
 import dagger.android.AndroidInjection
-import org.ngbp.jsonrpc4jtestharness.controller.service.IServiceController
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import org.ngbp.jsonrpc4jtestharness.controller.view.IViewController
 import org.ngbp.jsonrpc4jtestharness.core.model.PlaybackState
 import org.ngbp.jsonrpc4jtestharness.core.cert.UserAgentSSLContext
 import org.ngbp.jsonrpc4jtestharness.core.web.MiddlewareWebServer
-import org.ngbp.jsonrpc4jtestharness.core.ws.SocketHolder
-import org.ngbp.jsonrpc4jtestharness.rpc.processor.RPCProcessor
+import org.ngbp.jsonrpc4jtestharness.gateway.rpc.IRPCGateway
+import org.ngbp.jsonrpc4jtestharness.gateway.web.IWebGateway
 import java.util.*
 import javax.inject.Inject
 
 class ForegroundRpcService : LifecycleService() {
     @Inject
-    lateinit var rpcProcessor: RPCProcessor
+    lateinit var rpcGateway: IRPCGateway
     @Inject
-    lateinit var socketHolder: SocketHolder
-    @Inject
-    lateinit var serviceController: IServiceController
+    lateinit var webGateway: IWebGateway
     @Inject
     lateinit var viewController: IViewController
 
@@ -44,7 +43,7 @@ class ForegroundRpcService : LifecycleService() {
 
         startForeground(NOTIFICATION_ID, createNotification(getServiceName()))
 
-        serviceController.selectedService.observe(this, androidx.lifecycle.Observer {
+        webGateway.selectedService.observe(this, androidx.lifecycle.Observer {
             updateNotification()
         })
         viewController.rmpState.distinctUntilChanged().observe(this, androidx.lifecycle.Observer {
@@ -70,8 +69,8 @@ class ForegroundRpcService : LifecycleService() {
 
         return START_NOT_STICKY
     }
-    
-    private fun getServiceName() = serviceController.selectedService.value?.shortName ?: "---"
+
+    private fun getServiceName() = webGateway.selectedService.value?.shortName ?: "---"
 
     private fun startService(message: String) {
         if (isServiceStarted) return
@@ -88,35 +87,25 @@ class ForegroundRpcService : LifecycleService() {
     }
 
     private fun updateNotification() {
-        val serviceName = serviceController.selectedService.value?.shortName ?: ""
+        val serviceName = webGateway.selectedService.value?.shortName ?: ""
         notificationHelper.notify(NOTIFICATION_ID, createNotification(serviceName, "", viewController.rmpState.value ?: PlaybackState.IDLE))
     }
 
     private fun startWebServer() {
-        val serverThread: Thread = object : Thread() {
-            override fun run() {
-                webServer = MiddlewareWebServer.Builder()
-                        .hostName("localHost")
-                        .resourcePath("storage/emulated/0/Download/test")
-                        .httpsPort(8443)
-                        .httpPort(8080)
-                        .wssPort(9999)
-                        .wsPort(9998)
-                        .rpcProcessing(processor = rpcProcessor, holder = socketHolder)
-                        .sslContext(UserAgentSSLContext(applicationContext))
-                        .enableConnectors(
-                                arrayOf(
-                                        MiddlewareWebServer.Connectors.HTTPS_CONNECTOR,
-                                        MiddlewareWebServer.Connectors.HTTP_CONNECTOR,
-                                        MiddlewareWebServer.Connectors.WS_CONNECTOR,
-                                        MiddlewareWebServer.Connectors.WSS_CONNECTOR
-                                )
-                        )
-                        .build()
-                webServer?.start()
-            }
-        }
-        serverThread.start()
+        webServer = MiddlewareWebServer.Builder()
+                .hostName("localHost")
+                .httpsPort(8443)
+                .httpPort(8080)
+                .wssPort(9999)
+                .wsPort(9998)
+                .rpcGateway(rpcGateway)
+                .webGateway(webGateway)
+                .sslContext(UserAgentSSLContext(applicationContext))
+                .build().also { server ->
+                    GlobalScope.launch {
+                        server.start()
+                    }
+                }
     }
 
     private fun stopService() {
