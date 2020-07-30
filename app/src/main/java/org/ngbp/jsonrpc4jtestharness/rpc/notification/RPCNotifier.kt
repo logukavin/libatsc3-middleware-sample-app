@@ -29,7 +29,7 @@ class RPCNotifier (private val gateway: IRPCGateway) {
         if (currentTime <= 0) return
 
         val seconds = currentTime.toDouble() / 1000
-        sendNotification(RmpMediaTimeChangeNotification(String.format("%.2f", seconds)))
+        sendNotification(RmpMediaTimeChangeNotification(String.format("%.3f", seconds)))
     }
 
     fun notifyRmpPlaybackRateChange(playbackRate: Float) {
