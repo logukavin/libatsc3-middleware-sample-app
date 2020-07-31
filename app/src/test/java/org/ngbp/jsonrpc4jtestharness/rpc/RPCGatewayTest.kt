@@ -26,7 +26,7 @@ import org.ngbp.jsonrpc4jtestharness.core.model.AppData
 import org.ngbp.jsonrpc4jtestharness.core.model.PlaybackState
 import org.ngbp.jsonrpc4jtestharness.core.model.SLSService
 import org.ngbp.jsonrpc4jtestharness.core.repository.IRepository
-import org.ngbp.jsonrpc4jtestharness.core.ws.SocketHolder
+import org.ngbp.jsonrpc4jtestharness.core.ws.MiddlewareWebSocket
 import org.ngbp.jsonrpc4jtestharness.gateway.rpc.IRPCGateway
 import org.ngbp.jsonrpc4jtestharness.gateway.rpc.RPCGatewayImpl
 import org.ngbp.jsonrpc4jtestharness.rpc.notification.NotificationType
@@ -37,7 +37,7 @@ import org.powermock.modules.junit4.PowerMockRunner
 import java.util.*
 
 @RunWith(PowerMockRunner::class)
-@PrepareForTest(RPCGatewayImpl::class, ViewControllerImpl::class, IServiceController::class, IViewController::class, IRepository::class, SocketHolder::class)
+@PrepareForTest(RPCGatewayImpl::class, ViewControllerImpl::class, IServiceController::class, IViewController::class, IRepository::class, MiddlewareWebSocket::class)
 class RPCGatewayTest {
 
     @JvmField
@@ -56,7 +56,9 @@ class RPCGatewayTest {
     @Mock
     private val repository: IRepository? = null
 
-    private lateinit var socketHolder: SocketHolder
+    @Mock
+    private lateinit var middlewareWebSocket: MiddlewareWebSocket
+
     private lateinit var iRPCGateway: IRPCGateway
     private lateinit var mediaPlayerController: ViewControllerImpl
 
@@ -74,7 +76,6 @@ class RPCGatewayTest {
     private val testDispatcher = TestCoroutineDispatcher()
     private val testServiceGuideUrls = listOf(Urls("testType", "TestUrl"))
     private lateinit var mediaPlayerControllerSpy: ViewControllerImpl
-    private lateinit var socketHolderSpy: SocketHolder
 
     @Before
     fun initCoordinator() {
@@ -87,12 +88,10 @@ class RPCGatewayTest {
         `when`(repository?.selectedService).thenReturn(selectedService)
         `when`(viewController?.rmpMediaUrl).thenReturn(rmpMediaUrl)
         `when`(viewController?.rmpState).thenReturn(rmpState)
-
         mediaPlayerController = ViewControllerImpl(repository!!)
-        socketHolder = SocketHolder()
         mediaPlayerControllerSpy = PowerMockito.spy(mediaPlayerController)
-        socketHolderSpy = PowerMockito.spy(socketHolder)
-        iRPCGateway = RPCGatewayImpl(serviceController!!, mediaPlayerControllerSpy, repository, socketHolderSpy)
+        iRPCGateway = RPCGatewayImpl(serviceController!!, mediaPlayerControllerSpy, repository)
+        middlewareWebSocket = PowerMockito.spy(MiddlewareWebSocket(iRPCGateway))
         viewController = mediaPlayerController
         Dispatchers.setMain(testDispatcher)
 
@@ -170,10 +169,11 @@ class RPCGatewayTest {
     }
 
     @Test
-    fun testSendNotification() = testDispatcher.runBlockingTest {
+    fun testSendNotification() {
         val message = "message"
+        iRPCGateway.onSocketOpened(middlewareWebSocket!!)
         iRPCGateway.sendNotification(message)
-        verify(socketHolderSpy).broadcastMessage(message)
+        verify(middlewareWebSocket)?.sendMessage(message)
     }
 
     @After
