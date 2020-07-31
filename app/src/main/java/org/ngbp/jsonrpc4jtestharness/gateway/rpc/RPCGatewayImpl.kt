@@ -19,8 +19,7 @@ import javax.inject.Singleton
 @Singleton
 class RPCGatewayImpl @Inject constructor(
         private val serviceController: IServiceController,
-        private val viewController: IViewController,
-        repository: IRepository
+        private val viewController: IViewController
 ) : IRPCGateway {
     private val mainScope = MainScope()
 
@@ -45,7 +44,7 @@ class RPCGatewayImpl @Inject constructor(
         get() = viewController.rmpMediaTime.value ?: 0
 
     init {
-        repository.appData.distinctUntilChanged().observeForever{ appData ->
+        viewController.appData.distinctUntilChanged().observeForever{ appData ->
             onAppDataUpdated(appData)
         }
 
@@ -129,6 +128,7 @@ class RPCGatewayImpl @Inject constructor(
     }
 
     private fun onAppDataUpdated(appData: AppData?) {
+        //TODO: It's incorrect. Should notify that service changed if we stay on the same BA
         appData?.let {
             if (appData.isAppEquals(currentAppData)) {
                 if (subscribedNotifications.contains(NotificationType.SERVICE_CHANGE)) {
