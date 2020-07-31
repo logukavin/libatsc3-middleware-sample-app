@@ -2,7 +2,6 @@ package org.ngbp.jsonrpc4jtestharness.controller.service
 
 import androidx.lifecycle.MutableLiveData
 import kotlinx.coroutines.*
-import org.ngbp.jsonrpc4jtestharness.core.model.AppData
 import org.ngbp.jsonrpc4jtestharness.core.model.ReceiverState
 import org.ngbp.jsonrpc4jtestharness.core.model.SLSService
 import org.ngbp.jsonrpc4jtestharness.core.repository.IRepository
@@ -52,21 +51,13 @@ class ServiceControllerImpl @Inject constructor(
     }
 
     override fun onPackageReceived(appPackage: Atsc3Application) {
-        //TODO: check package contains entry point, than report
         repository.addOrUpdateApplication(appPackage)
     }
 
     override fun onCurrentServicePackageChanged(pkg: Atsc3HeldPackage?) {
         cancelUnloadBAJob()
 
-        val newAppData = pkg?.let {
-            val appContextId = it.appContextId ?: return@let null
-            val appEntryPage = it.bcastEntryPageUrl ?: it.bbandEntryPageUrl ?: return@let null
-            val compatibleServiceIds = it.coupledServices ?: emptyList()
-            AppData(appContextId, appEntryPage, compatibleServiceIds)
-        }
-
-        repository.setAppEntryPoint(newAppData)
+        repository.setHeldPackage(pkg)
     }
 
     override fun onCurrentServiceDashPatched(mpdPath: String) {
@@ -95,15 +86,15 @@ class ServiceControllerImpl @Inject constructor(
             repository.setSelectedService(service)
 
             // force reset BA if it's not compatible with current or start delayed reset
-            repository.appData.value?.let { currentApp ->
-                if (!currentApp.compatibleServiceIds.contains(service.id)) {
-                    repository.setAppEntryPoint(null)
-                } else {
+            repository.heldPackage.value?.let { currentApp ->
+                if (currentApp.coupledServices?.contains(service.id) == true) {
                     startUnloadBAJob()
+                } else {
+                    repository.setHeldPackage(null)
                 }
             }
         } else {
-            repository.setAppEntryPoint(null)
+            repository.setHeldPackage(null)
             repository.setSelectedService(null)
         }
     }
@@ -113,7 +104,7 @@ class ServiceControllerImpl @Inject constructor(
         unloadBAJob = ioScope.launch {
             delay(BA_LOADING_TIMEOUT)
             withContext(Dispatchers.Main) {
-                repository.setAppEntryPoint(null)
+                repository.setHeldPackage(null)
                 unloadBAJob = null
             }
         }
