@@ -7,7 +7,7 @@
     android:layout_height="match_parent"
     tools:context=".useragent.UserAgentActivity">
 
-    <org.ngbp.jsonrpc4jtestharness.view.ReceiverMediaPlayer
+    <com.nextgenbroadcast.mobile.view.ReceiverMediaPlayer
         android:id="@+id/receiver_media_player"
         android:layout_width="0dp"
         android:layout_height="0dp"
@@ -26,7 +26,7 @@
         app:layout_constraintStart_toStartOf="@id/receiver_media_player"
         app:layout_constraintTop_toTopOf="@id/receiver_media_player" />
 
-    <org.ngbp.jsonrpc4jtestharness.view.UserAgentView
+    <com.nextgenbroadcast.mobile.view.UserAgentView
         android:id="@+id/user_agent_web_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent"

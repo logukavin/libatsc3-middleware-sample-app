@@ -22,8 +22,8 @@ import org.mockito.Mockito.verify
 import org.ngbp.jsonrpc4jtestharness.controller.service.IServiceController
 import org.ngbp.jsonrpc4jtestharness.controller.view.IViewController
 import org.ngbp.jsonrpc4jtestharness.controller.view.ViewControllerImpl
+import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import org.ngbp.jsonrpc4jtestharness.core.model.AppData
-import org.ngbp.jsonrpc4jtestharness.core.model.PlaybackState
 import org.ngbp.jsonrpc4jtestharness.core.model.SLSService
 import org.ngbp.jsonrpc4jtestharness.core.repository.IRepository
 import org.ngbp.jsonrpc4jtestharness.core.ws.MiddlewareWebSocket

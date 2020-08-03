@@ -5,7 +5,7 @@ import org.ngbp.jsonrpc4jtestharness.core.mapWith
 import org.ngbp.jsonrpc4jtestharness.core.media.IObservablePlayer
 import org.ngbp.jsonrpc4jtestharness.core.media.PlayerStateRegistry
 import org.ngbp.jsonrpc4jtestharness.core.model.AppData
-import org.ngbp.jsonrpc4jtestharness.core.model.PlaybackState
+import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import org.ngbp.jsonrpc4jtestharness.core.model.RPMParams
 import org.ngbp.jsonrpc4jtestharness.core.repository.IRepository
 import javax.inject.Inject

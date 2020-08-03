@@ -9,8 +9,8 @@ import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.distinctUntilChanged
 import dagger.android.AndroidInjection
 import org.ngbp.jsonrpc4jtestharness.controller.view.IViewController
+import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import org.ngbp.jsonrpc4jtestharness.core.cert.UserAgentSSLContext
-import org.ngbp.jsonrpc4jtestharness.core.model.PlaybackState
 import org.ngbp.jsonrpc4jtestharness.core.web.MiddlewareWebServer
 import org.ngbp.jsonrpc4jtestharness.gateway.rpc.IRPCGateway
 import org.ngbp.jsonrpc4jtestharness.gateway.web.IWebGateway

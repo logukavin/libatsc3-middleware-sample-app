@@ -1,7 +1,6 @@
-package org.ngbp.jsonrpc4jtestharness.core
+package com.nextgenbroadcast.mobile.core
 
 import android.content.Context
-import org.ngbp.jsonrpc4jtestharness.R
 import java.security.KeyStore
 import java.security.PrivateKey
 import java.security.cert.X509Certificate

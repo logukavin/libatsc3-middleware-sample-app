@@ -1,4 +1,4 @@
-package org.ngbp.jsonrpc4jtestharness.view
+package com.nextgenbroadcast.mobile.view
 
 import android.webkit.WebView
 

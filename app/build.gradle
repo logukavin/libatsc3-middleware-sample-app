@@ -49,13 +49,14 @@ afterEvaluate {
 ext.daggerVersion = '2.28.1'
 ext.lifecycle_version = '2.3.0-alpha05'
 def powermock_version = "2.0.7"
-def mockito_version = "3.3.0"
+
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
 
-    api project(":libatsc3Module")
-    api project(":jsonrpc-core")
-    api project(":jsonrpc-jackson")
+    implementation project(":libatsc3Module")
+    implementation project(":nextgen-view")
+    implementation project(":jsonrpc-core")
+    implementation project(":jsonrpc-jackson")
 
     implementation "androidx.core:core-ktx:+"
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
@@ -85,10 +86,6 @@ dependencies {
     implementation 'org.eclipse.jetty:jetty-server:9.4.30.v20200611'
     implementation 'org.eclipse.jetty:jetty-servlet:9.4.30.v20200611'
     implementation group: 'org.eclipse.jetty.websocket', name: 'websocket-server', version: '9.4.30.v20200611'
-
-    implementation project(':exoplayer-library-core')
-    implementation project(':exoplayer-library-dash')
-    implementation project(':exoplayer-library-ui')
 
     androidTestImplementation 'androidx.test.ext:junit:1.1.1'
     testImplementation 'junit:junit:4.12'

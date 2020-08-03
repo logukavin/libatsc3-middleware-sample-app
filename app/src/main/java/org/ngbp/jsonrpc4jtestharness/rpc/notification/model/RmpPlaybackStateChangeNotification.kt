@@ -1,6 +1,6 @@
 package org.ngbp.jsonrpc4jtestharness.rpc.notification.model
 
-import org.ngbp.jsonrpc4jtestharness.core.model.PlaybackState
+import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import org.ngbp.jsonrpc4jtestharness.rpc.notification.NotificationType
 
 data class RmpPlaybackStateChangeNotification (

@@ -3,7 +3,7 @@ package org.ngbp.jsonrpc4jtestharness.server
 import org.eclipse.jetty.websocket.client.WebSocketClient
 import org.junit.*
 import org.ngbp.jsonrpc4jtestharness.gateway.rpc.IRPCGateway
-import org.ngbp.jsonrpc4jtestharness.core.model.PlaybackState
+import com.nextgenbroadcast.mobile.core.model.PlaybackState
 
 import org.ngbp.jsonrpc4jtestharness.core.ws.MiddlewareWebSocket
 
@@ -13,7 +13,6 @@ import org.ngbp.jsonrpc4jtestharness.rpc.notification.NotificationType
 
 import org.ngbp.jsonrpc4jtestharness.rpc.processor.RPCProcessor
 import org.ngbp.jsonrpc4jtestharness.rpc.receiverQueryApi.model.Urls
-import java.net.URI
 
 class WebServerTests {
 

@@ -1,4 +1,4 @@
-package org.ngbp.jsonrpc4jtestharness.view
+package com.nextgenbroadcast.mobile.view
 
 import android.content.Context
 import android.net.Uri
@@ -10,8 +10,8 @@ import com.google.android.exoplayer2.source.dash.DefaultDashChunkSource
 import com.google.android.exoplayer2.ui.PlayerView
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
 import com.google.android.exoplayer2.upstream.DefaultLoadErrorHandlingPolicy
-import org.ngbp.jsonrpc4jtestharness.core.AppUtils
-import org.ngbp.jsonrpc4jtestharness.core.model.PlaybackState
+import com.nextgenbroadcast.mobile.core.AppUtils
+import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import java.io.IOException
 
 class ReceiverMediaPlayer @JvmOverloads constructor(
