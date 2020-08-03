@@ -23,6 +23,7 @@ class RPCGatewayImpl @Inject constructor(
         repository: IRepository
 ) : IRPCGateway {
     private val mainScope = MainScope()
+    private val ioScope = CoroutineScope(Dispatchers.IO)
 
     private val sessions = CopyOnWriteArrayList<MiddlewareWebSocket>()
     private val subscribedNotifications = mutableSetOf<NotificationType>()
@@ -33,7 +34,7 @@ class RPCGatewayImpl @Inject constructor(
 
     override val language: String = java.util.Locale.getDefault().language
     override val queryServiceId: String?
-            get() = serviceController.selectedService.value?.globalId
+        get() = serviceController.selectedService.value?.globalId
     override val mediaUrl: String?
         get() = viewController.rmpMediaUrl.value
     override val playbackState: PlaybackState
@@ -123,8 +124,10 @@ class RPCGatewayImpl @Inject constructor(
     }
 
     override fun sendNotification(message: String) {
-        sessions.forEach { socket ->
-            socket.sendMessage(message)
+        ioScope.launch {
+            sessions.forEach { socket ->
+                socket.sendMessage(message)
+            }
         }
     }
 
