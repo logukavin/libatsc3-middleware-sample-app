@@ -18,7 +18,7 @@ class RepositoryImpl @Inject constructor() : IRepository {
 
     override val routeMediaUrl = MutableLiveData<String>()
 
-    override val applications = MutableLiveData<List<Atsc3Application>?>()
+    override val applications = MutableLiveData<List<Atsc3Application>>()
     override val services = MutableLiveData<List<SLSService>>()
     override val heldPackage = MutableLiveData<Atsc3HeldPackage?>()
 
