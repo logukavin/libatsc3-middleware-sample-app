@@ -1,10 +1,10 @@
 package org.ngbp.jsonrpc4jtestharness.core.repository
 
 import androidx.lifecycle.MutableLiveData
-import org.ngbp.jsonrpc4jtestharness.core.model.AppData
 import org.ngbp.jsonrpc4jtestharness.core.model.SLSService
 import org.ngbp.jsonrpc4jtestharness.rpc.receiverQueryApi.model.Urls
 import org.ngbp.libatsc3.entities.app.Atsc3Application
+import org.ngbp.libatsc3.entities.held.Atsc3HeldPackage
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -18,9 +18,9 @@ class RepositoryImpl @Inject constructor() : IRepository {
 
     override val routeMediaUrl = MutableLiveData<String>()
 
-    override val applications = MutableLiveData<List<Atsc3Application>>()
+    override val applications = MutableLiveData<List<Atsc3Application>?>()
     override val services = MutableLiveData<List<SLSService>>()
-    override val appData = MutableLiveData<AppData?>()
+    override val heldPackage = MutableLiveData<Atsc3HeldPackage?>()
 
     init {
         //TODO: remove after tests
@@ -32,6 +32,12 @@ class RepositoryImpl @Inject constructor() : IRepository {
         applications.postValue(_applications.values.toList())
     }
 
+    override fun findApplication(appContextId: String): Atsc3Application? {
+        return _applications.elements().toList().firstOrNull { app ->
+            app.appContextIdList.contains(appContextId)
+        }
+    }
+
     override fun setServices(services: List<SLSService>) {
         this.services.postValue(services)
     }
@@ -40,8 +46,8 @@ class RepositoryImpl @Inject constructor() : IRepository {
         selectedService.postValue(service)
     }
 
-    override fun setAppEntryPoint(data: AppData?) {
-        appData.postValue(data)
+    override fun setHeldPackage(data: Atsc3HeldPackage?) {
+        heldPackage.postValue(data)
     }
 
     override fun setMediaUrl(mediaUrl: String?) {
@@ -52,7 +58,7 @@ class RepositoryImpl @Inject constructor() : IRepository {
         selectedService.postValue(null)
         serviceGuideUrls.postValue(emptyList())
         services.postValue(emptyList())
-        appData.postValue(null)
+        heldPackage.postValue(null)
         routeMediaUrl.postValue(null)
     }
 }

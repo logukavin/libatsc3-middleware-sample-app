@@ -1,9 +1,10 @@
 package org.ngbp.jsonrpc4jtestharness.controller.view
 
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.Transformations
+import androidx.lifecycle.*
+import org.ngbp.jsonrpc4jtestharness.core.mapWith
 import org.ngbp.jsonrpc4jtestharness.core.media.IObservablePlayer
 import org.ngbp.jsonrpc4jtestharness.core.media.PlayerStateRegistry
+import org.ngbp.jsonrpc4jtestharness.core.model.AppData
 import org.ngbp.jsonrpc4jtestharness.core.model.PlaybackState
 import org.ngbp.jsonrpc4jtestharness.core.model.RPMParams
 import org.ngbp.jsonrpc4jtestharness.core.repository.IRepository
@@ -22,9 +23,19 @@ class ViewControllerImpl @Inject constructor(
     private val playbackSource = MutableLiveData<PlaybackSource>(PlaybackSource.BROADCAST)
     private val externalMediaUrl = MutableLiveData<String>()
     private val rmpListeners = PlayerStateRegistry()
-    private val selectedService = Transformations.distinctUntilChanged(repository.selectedService)
 
-    override val appData = repository.appData
+    override val appData: LiveData<AppData?> = repository.heldPackage.mapWith(repository.applications) { held, applications ->
+        held?.let {
+            val appContextId = held.appContextId ?: return@let null
+            val appEntryPage = held.bcastEntryPageUrl ?: held.bbandEntryPageUrl ?: return@let null
+            val compatibleServiceIds = held.coupledServices ?: emptyList()
+            val application = applications?.firstOrNull { app ->
+                app.appContextIdList.contains(appContextId)
+            }
+
+            AppData(appContextId, appEntryPage, compatibleServiceIds, application?.cachePath)
+        }
+    }
 
     override val rmpLayoutParams = MutableLiveData<RPMParams>(RPMParams())
     override val rmpMediaUrl = Transformations.switchMap(playbackSource) { source ->
@@ -40,7 +51,7 @@ class ViewControllerImpl @Inject constructor(
     override val rmpPlaybackRate = MutableLiveData<Float>()
 
     init {
-        selectedService.observeForever {
+        repository.selectedService.distinctUntilChanged().observeForever {
             rmpReset()
         }
     }

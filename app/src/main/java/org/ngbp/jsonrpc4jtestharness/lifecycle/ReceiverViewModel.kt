@@ -27,7 +27,8 @@ class ReceiverViewModel(
     private fun formatLog(data: AppData?, rpmMediaUri: String?): String {
         val contextId = data?.appContextId ?: "NO Context ID"
         val entryPoint = data?.appEntryPage ?: "NO Entry Point"
+        val cachePath = data?.cachePath ?: "NO Application available"
         val mediaUrl = rpmMediaUri ?: "NO Media Url"
-        return "> $contextId\n> $entryPoint\n> $mediaUrl"
+        return "> $contextId\n> $entryPoint\n> $cachePath\n> $mediaUrl"
     }
 }
