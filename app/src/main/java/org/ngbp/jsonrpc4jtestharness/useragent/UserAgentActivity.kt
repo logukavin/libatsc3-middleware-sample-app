@@ -1,20 +1,12 @@
 package org.ngbp.jsonrpc4jtestharness.useragent
 
-import android.annotation.SuppressLint
-import android.graphics.Color
 import android.net.Uri
-import android.net.http.SslError
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
-import android.view.GestureDetector
 import android.view.View
 import android.view.WindowManager
-import android.webkit.ClientCertRequest
-import android.webkit.SslErrorHandler
-import android.webkit.WebView
-import android.webkit.WebViewClient
 import android.widget.AdapterView
 import android.widget.Toast
 import androidx.activity.viewModels
@@ -22,27 +14,17 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.view.postDelayed
 import androidx.lifecycle.Observer
-import com.google.android.exoplayer2.*
-import com.google.android.exoplayer2.source.dash.DashMediaSource
-import com.google.android.exoplayer2.source.dash.DefaultDashChunkSource
-import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
-import com.google.android.exoplayer2.upstream.DefaultLoadErrorHandlingPolicy
 import dagger.android.AndroidInjection
 import kotlinx.android.synthetic.main.activity_user_agent.*
 import kotlinx.coroutines.Runnable
 import org.ngbp.jsonrpc4jtestharness.R
-import org.ngbp.jsonrpc4jtestharness.core.AppUtils
-import org.ngbp.jsonrpc4jtestharness.core.CertificateUtils
-import org.ngbp.jsonrpc4jtestharness.core.SwipeGestureDetector
 import org.ngbp.jsonrpc4jtestharness.core.model.AppData
 import org.ngbp.jsonrpc4jtestharness.core.model.PlaybackState
 import org.ngbp.jsonrpc4jtestharness.lifecycle.RMPViewModel
 import org.ngbp.jsonrpc4jtestharness.lifecycle.SelectorViewModel
 import org.ngbp.jsonrpc4jtestharness.lifecycle.UserAgentViewModel
 import org.ngbp.jsonrpc4jtestharness.lifecycle.factory.UserAgentViewModelFactory
-import java.io.IOException
-import java.text.DecimalFormat
-import java.text.DecimalFormatSymbols
+import org.ngbp.jsonrpc4jtestharness.view.ReceiverMediaPlayer
 import javax.inject.Inject
 
 class UserAgentActivity : AppCompatActivity() {
@@ -53,12 +35,8 @@ class UserAgentActivity : AppCompatActivity() {
     private val userAgentViewModel: UserAgentViewModel by viewModels { viewModelFactory }
     private val selectorViewModel: SelectorViewModel by viewModels { viewModelFactory }
 
-    private var isBAMenuOpened = false
     private var currentAppData: AppData? = null
-    private var rmpState: PlaybackState? = null
 
-    private lateinit var simpleExoPlayer: SimpleExoPlayer
-    private lateinit var dashMediaSourceFactory: DashMediaSource.Factory
     private lateinit var selectorAdapter: ServiceAdapter
 
     private val updateMediaTimeHandler = Handler(Looper.getMainLooper())
@@ -69,53 +47,8 @@ class UserAgentActivity : AppCompatActivity() {
 
         setContentView(R.layout.activity_user_agent)
 
-        simpleExoPlayer = createExoPlayer().also {
-            receiver_media_player.player = it
-        }
-        dashMediaSourceFactory = createMediaSourceFactory()
         selectorAdapter = ServiceAdapter(this)
 
-        initWebView()
-        initSelector()
-
-        bindMediaPlayer()
-        bindSelector()
-        bindUserAgent()
-    }
-
-    @SuppressLint("SetJavaScriptEnabled")
-    private fun initWebView() {
-        val swipeGD = GestureDetector(this, object : SwipeGestureDetector() {
-            override fun onClose() {
-                closeBAMenu()
-            }
-
-            override fun onOpen() {
-                openBAMenu()
-            }
-        })
-
-        user_agent_web_view.apply {
-            setOnTouchListener { _, motionEvent -> swipeGD.onTouchEvent(motionEvent) }
-
-            clearCache(true)
-            setInitialScale(150)
-            setBackgroundColor(Color.TRANSPARENT)
-            settings?.apply {
-                javaScriptEnabled = true
-                domStorageEnabled = true
-            }
-
-            clearSslPreferences()
-            webViewClient = createWebViewClient()
-        }.also {
-            user_agent_web_view.postDelayed(500) {
-                loadBAContent(CONTENT_URL)
-            }
-        }
-    }
-
-    private fun initSelector() {
         service_spinner.adapter = selectorAdapter
         service_spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onNothingSelected(parent: AdapterView<*>?) {
@@ -125,6 +58,32 @@ class UserAgentActivity : AppCompatActivity() {
                 changeService(id.toInt())
             }
         }
+
+        receiver_media_player.setListener(object : ReceiverMediaPlayer.EventListener {
+            override fun onPlayerStateChanged(state: PlaybackState) {
+                rmpViewModel.setCurrentPlayerState(state)
+
+                if (state == PlaybackState.PLAYING) {
+                    window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                    startMediaTimeUpdate()
+                } else {
+                    window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                    cancelMediaTimeUpdate()
+                }
+            }
+
+            override fun onPlayerError(error: Exception) {
+                Log.d(TAG, error.message ?: "")
+            }
+
+            override fun onPlaybackSpeedChanged(speed: Float) {
+                rmpViewModel.setCurrentPlaybackRate(speed)
+            }
+        })
+
+        bindMediaPlayer()
+        bindSelector()
+        bindUserAgent()
     }
 
     private fun bindMediaPlayer() {
@@ -141,7 +100,7 @@ class UserAgentActivity : AppCompatActivity() {
                 mediaUri?.let { startPlayback(mediaUri) } ?: stopPlayback()
             })
             playWhenReady.observe(this@UserAgentActivity, Observer { playWhenReady ->
-                simpleExoPlayer.playWhenReady = playWhenReady
+                receiver_media_player.playWhenReady = playWhenReady
             })
         }
 
@@ -172,15 +131,12 @@ class UserAgentActivity : AppCompatActivity() {
     override fun onStop() {
         super.onStop()
 
-        with(simpleExoPlayer) {
-            stop()
-            release()
-        }
+        receiver_media_player.reset()
     }
 
     override fun onBackPressed() {
-        if (isBAMenuOpened) {
-            closeBAMenu()
+        if (user_agent_web_view.isBAMenuOpened) {
+            user_agent_web_view.closeMenu()
         } else super.onBackPressed()
     }
 
@@ -201,13 +157,12 @@ class UserAgentActivity : AppCompatActivity() {
         if (appData != null) {
             setBAAvailability(true)
             if (!appData.isAppEquals(currentAppData)) {
-                loadBAContent(appData.appEntryPage)
+                user_agent_web_view.loadBAContent(appData.appEntryPage)
             }
         } else {
-            unloadBAContent()
+            user_agent_web_view.unloadBAContent()
         }
         currentAppData = appData
-        isBAMenuOpened = false
     }
 
     private fun updateRMPLayout(x: Float, y: Float, scale: Float) {
@@ -220,124 +175,19 @@ class UserAgentActivity : AppCompatActivity() {
         }.applyTo(user_agent_root)
     }
 
-    private fun loadBAContent(entryPoint: String) {
-        user_agent_web_view.loadUrl(CONTENT_URL)
-    }
-
-    private fun unloadBAContent() {
-        if (user_agent_web_view != null) {
-            user_agent_web_view.loadUrl("about:blank")
-        }
-    }
-
-    private fun createExoPlayer(): SimpleExoPlayer {
-        return ExoPlayerFactory.newSimpleInstance(applicationContext).apply {
-            addListener(object : Player.EventListener {
-                override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
-                    val state = when (playbackState) {
-                        Player.STATE_BUFFERING, Player.STATE_READY -> {
-                            if (playWhenReady) PlaybackState.PLAYING else PlaybackState.PAUSED
-                        }
-                        Player.STATE_IDLE, Player.STATE_ENDED -> {
-                            PlaybackState.IDLE
-                        }
-                        else -> return
-                    }
-
-                    if (rmpState != state) {
-                        rmpState = state
-                        onPlayerStateChanged(state)
-                    }
-                }
-
-                override fun onPlayerError(error: ExoPlaybackException?) {
-                    super.onPlayerError(error)
-                    Log.d(TAG, error?.message ?: "Unknown player error")
-                }
-
-                override fun onPlaybackParametersChanged(playbackParameters: PlaybackParameters) {
-                    super.onPlaybackParametersChanged(playbackParameters)
-
-                    rmpViewModel.setCurrentPlaybackRate(playbackParameters.speed)
-                }
-            })
-        }
-    }
-
-    private fun onPlayerStateChanged(state: PlaybackState) {
-        rmpViewModel.setCurrentPlayerState(state)
-
-        if (state == PlaybackState.PLAYING) {
-            window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-            startMediaTimeUpdate()
-        } else {
-            window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-            cancelMediaTimeUpdate()
-        }
-    }
-
-    private fun createMediaSourceFactory(): DashMediaSource.Factory {
-        val userAgent = AppUtils.getUserAgent(applicationContext)
-        val manifestDataSourceFactory = DefaultDataSourceFactory(applicationContext, userAgent)
-        val mediaDataSourceFactory = DefaultDataSourceFactory(applicationContext, userAgent)
-        return DashMediaSource.Factory(
-                DefaultDashChunkSource.Factory(mediaDataSourceFactory),
-                manifestDataSourceFactory
-        ).apply {
-            setLoadErrorHandlingPolicy(object : DefaultLoadErrorHandlingPolicy() {
-                override fun getRetryDelayMsFor(dataType: Int, loadDurationMs: Long, exception: IOException?, errorCount: Int): Long {
-                    Log.w("ExoPlayerCustomLoadErrorHandlingPolicy", "dataType: $dataType, loadDurationMs: $loadDurationMs, exception ex: $exception, errorCount: $errorCount")
-
-                    //jjustman-2019-11-07 - retry every 1s for exoplayer errors from ROUTE/DASH
-                    return 1000
-                }
-            })
-        }
-    }
-
     private fun startPlayback(mpdPath: String) {
-        val dashMediaSource = dashMediaSourceFactory.createMediaSource(Uri.parse(mpdPath))
-        receiver_media_player.player = simpleExoPlayer
-        simpleExoPlayer.prepare(dashMediaSource)
-        simpleExoPlayer.playWhenReady = true
-
+        receiver_media_player.play(Uri.parse(mpdPath))
         progress_bar.visibility = View.GONE
     }
 
     private fun stopPlayback() {
-        simpleExoPlayer.stop()
-        receiver_media_player.player = null
-
+        receiver_media_player.stop()
         progress_bar.visibility = View.VISIBLE
-    }
-
-    private fun closeBAMenu() {
-        BANavController.navigateExit(user_agent_web_view)
-        isBAMenuOpened = false
-    }
-
-    private fun openBAMenu() {
-        BANavController.navigateNext(user_agent_web_view)
-        isBAMenuOpened = true
-    }
-
-    private fun createWebViewClient() = object : WebViewClient() {
-
-        override fun onReceivedSslError(view: WebView, handler: SslErrorHandler, error: SslError) {
-            handler.proceed()
-        }
-
-        override fun onReceivedClientCertRequest(view: WebView, request: ClientCertRequest) {
-            if (CertificateUtils.certificates == null || CertificateUtils.privateKey == null) {
-                CertificateUtils.loadCertificateAndPrivateKey(view.context)
-            }
-            request.proceed(CertificateUtils.privateKey, CertificateUtils.certificates)
-        }
     }
 
     private val updateMediaTimeRunnable = object : Runnable {
         override fun run() {
-            rmpViewModel.setCurrentMediaTime(simpleExoPlayer.currentPosition)
+            rmpViewModel.setCurrentMediaTime(receiver_media_player.playbackPosition)
 
             updateMediaTimeHandler.postDelayed(this, MEDIA_TIME_UPDATE_DELAY)
         }
@@ -354,8 +204,6 @@ class UserAgentActivity : AppCompatActivity() {
 
     companion object {
         val TAG: String = UserAgentActivity::class.java.simpleName
-
-        const val CONTENT_URL = "https://127.0.0.1:8443/index.html?wsURL=ws://127.0.0.1:9998&rev=20180720"
 
         private const val MEDIA_TIME_UPDATE_DELAY = 500L
     }
