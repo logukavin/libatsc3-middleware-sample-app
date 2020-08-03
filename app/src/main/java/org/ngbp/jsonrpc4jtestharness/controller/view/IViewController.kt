@@ -1,7 +1,7 @@
 package org.ngbp.jsonrpc4jtestharness.controller.view
 
 import androidx.lifecycle.LiveData
-import org.ngbp.jsonrpc4jtestharness.core.model.PlaybackState
+import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import org.ngbp.jsonrpc4jtestharness.presentation.IMediaPlayerPresenter
 import org.ngbp.jsonrpc4jtestharness.presentation.IUserAgentPresenter
 

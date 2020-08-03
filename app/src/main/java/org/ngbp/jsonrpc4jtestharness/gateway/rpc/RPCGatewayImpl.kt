@@ -5,7 +5,7 @@ import kotlinx.coroutines.*
 import org.ngbp.jsonrpc4jtestharness.controller.service.IServiceController
 import org.ngbp.jsonrpc4jtestharness.controller.view.IViewController
 import org.ngbp.jsonrpc4jtestharness.core.model.AppData
-import org.ngbp.jsonrpc4jtestharness.core.model.PlaybackState
+import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import org.ngbp.jsonrpc4jtestharness.core.ws.MiddlewareWebSocket
 import org.ngbp.jsonrpc4jtestharness.rpc.notification.NotificationType
 import org.ngbp.jsonrpc4jtestharness.rpc.notification.RPCNotifier
@@ -21,9 +21,9 @@ class RPCGatewayImpl @Inject constructor(
         mainDispatcher: CoroutineDispatcher,
         ioDispatcher: CoroutineDispatcher
 ) : IRPCGateway {
-
     private val mainScope = CoroutineScope(mainDispatcher)
     private val ioScope = CoroutineScope(ioDispatcher)
+
     private val sessions = CopyOnWriteArrayList<MiddlewareWebSocket>()
     private val subscribedNotifications = mutableSetOf<NotificationType>()
     private val rpcNotifier = RPCNotifier(this)

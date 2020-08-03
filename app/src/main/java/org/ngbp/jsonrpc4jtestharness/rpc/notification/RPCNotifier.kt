@@ -1,7 +1,7 @@
 package org.ngbp.jsonrpc4jtestharness.rpc.notification
 
 import com.github.nmuzhichin.jsonrpc.model.request.Notification
-import org.ngbp.jsonrpc4jtestharness.core.model.PlaybackState
+import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import org.ngbp.jsonrpc4jtestharness.gateway.rpc.IRPCGateway
 import org.ngbp.jsonrpc4jtestharness.rpc.notification.model.*
 import org.ngbp.jsonrpc4jtestharness.rpc.processor.RPCObjectMapper

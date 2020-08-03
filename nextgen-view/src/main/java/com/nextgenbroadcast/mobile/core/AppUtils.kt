@@ -1,4 +1,4 @@
-package org.ngbp.jsonrpc4jtestharness.core
+package com.nextgenbroadcast.mobile.core
 
 import android.content.Context
 import com.google.android.exoplayer2.util.Util

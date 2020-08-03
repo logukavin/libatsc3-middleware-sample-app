@@ -1,10 +1,12 @@
 package org.ngbp.jsonrpc4jtestharness.useragent
 
+import android.annotation.SuppressLint
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import android.view.GestureDetector
 import android.view.View
 import android.view.WindowManager
 import android.widget.AdapterView
@@ -19,12 +21,13 @@ import kotlinx.android.synthetic.main.activity_user_agent.*
 import kotlinx.coroutines.Runnable
 import org.ngbp.jsonrpc4jtestharness.R
 import org.ngbp.jsonrpc4jtestharness.core.model.AppData
-import org.ngbp.jsonrpc4jtestharness.core.model.PlaybackState
+import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import org.ngbp.jsonrpc4jtestharness.lifecycle.RMPViewModel
 import org.ngbp.jsonrpc4jtestharness.lifecycle.SelectorViewModel
 import org.ngbp.jsonrpc4jtestharness.lifecycle.UserAgentViewModel
 import org.ngbp.jsonrpc4jtestharness.lifecycle.factory.UserAgentViewModelFactory
-import org.ngbp.jsonrpc4jtestharness.view.ReceiverMediaPlayer
+import com.nextgenbroadcast.mobile.view.ReceiverMediaPlayer
+import org.ngbp.jsonrpc4jtestharness.core.SwipeGestureDetector
 import javax.inject.Inject
 
 class UserAgentActivity : AppCompatActivity() {
@@ -41,6 +44,7 @@ class UserAgentActivity : AppCompatActivity() {
 
     private val updateMediaTimeHandler = Handler(Looper.getMainLooper())
 
+    @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
         AndroidInjection.inject(this)
         super.onCreate(savedInstanceState)
@@ -48,6 +52,17 @@ class UserAgentActivity : AppCompatActivity() {
         setContentView(R.layout.activity_user_agent)
 
         selectorAdapter = ServiceAdapter(this)
+
+        val swipeGD = GestureDetector(this, object : SwipeGestureDetector() {
+            override fun onClose() {
+                user_agent_web_view.closeMenu()
+            }
+
+            override fun onOpen() {
+                user_agent_web_view.openMenu()
+            }
+        })
+        user_agent_web_view.setOnTouchListener { _, motionEvent -> swipeGD.onTouchEvent(motionEvent) }
 
         service_spinner.adapter = selectorAdapter
         service_spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {

@@ -1,4 +1,4 @@
-package org.ngbp.jsonrpc4jtestharness.core.model
+package com.nextgenbroadcast.mobile.core.model
 
 enum class PlaybackState(val state: Int) {
     PLAYING(0),

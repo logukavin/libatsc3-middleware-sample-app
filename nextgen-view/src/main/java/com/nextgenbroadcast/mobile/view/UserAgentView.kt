@@ -1,18 +1,17 @@
-package org.ngbp.jsonrpc4jtestharness.view
+package com.nextgenbroadcast.mobile.view
 
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Color
 import android.net.http.SslError
 import android.util.AttributeSet
-import android.view.GestureDetector
 import android.webkit.ClientCertRequest
 import android.webkit.SslErrorHandler
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import org.ngbp.jsonrpc4jtestharness.core.CertificateUtils
-import org.ngbp.jsonrpc4jtestharness.core.SwipeGestureDetector
-import org.ngbp.jsonrpc4jtestharness.core.md5
+import androidx.core.view.postDelayed
+import com.nextgenbroadcast.mobile.core.CertificateUtils
+import org.nextgenbroadcast.mobile.core.md5
 
 class UserAgentView @JvmOverloads constructor(
         context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
@@ -21,23 +20,11 @@ class UserAgentView @JvmOverloads constructor(
     var isBAMenuOpened = false
         private set
 
-    @SuppressLint("SetJavaScriptEnabled", "ClickableViewAccessibility")
+    @SuppressLint("SetJavaScriptEnabled")
     override fun onFinishInflate() {
         super.onFinishInflate()
 
         if (isInEditMode) return
-
-        val swipeGD = GestureDetector(context, object : SwipeGestureDetector() {
-            override fun onClose() {
-                closeMenu()
-            }
-
-            override fun onOpen() {
-                openMenu()
-            }
-        })
-
-        setOnTouchListener { _, motionEvent -> swipeGD.onTouchEvent(motionEvent) }
 
         clearCache(true)
         setInitialScale(150)

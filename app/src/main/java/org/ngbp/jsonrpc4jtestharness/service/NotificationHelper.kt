@@ -11,7 +11,7 @@ import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import org.ngbp.jsonrpc4jtestharness.NotificationReceiverActivity
 import org.ngbp.jsonrpc4jtestharness.R
-import org.ngbp.jsonrpc4jtestharness.core.model.PlaybackState
+import com.nextgenbroadcast.mobile.core.model.PlaybackState
 
 class NotificationHelper(
         private val context: Context,
