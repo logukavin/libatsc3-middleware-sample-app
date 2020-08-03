@@ -3,7 +3,8 @@ package org.ngbp.jsonrpc4jtestharness.core.model
 data class AppData(
         val appContextId: String,
         val appEntryPage: String,
-        val compatibleServiceIds: List<Int>
+        val compatibleServiceIds: List<Int>,
+        val cachePath: String?
 ) {
     fun isAppEquals(other: AppData?): Boolean {
         return other?.let {

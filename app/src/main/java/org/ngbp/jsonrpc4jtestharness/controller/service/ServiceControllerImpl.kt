@@ -2,7 +2,6 @@ package org.ngbp.jsonrpc4jtestharness.controller.service
 
 import androidx.lifecycle.MutableLiveData
 import kotlinx.coroutines.*
-import org.ngbp.jsonrpc4jtestharness.core.model.AppData
 import org.ngbp.jsonrpc4jtestharness.core.model.ReceiverState
 import org.ngbp.jsonrpc4jtestharness.core.model.SLSService
 import org.ngbp.jsonrpc4jtestharness.core.repository.IRepository
@@ -21,8 +20,8 @@ class ServiceControllerImpl @Inject constructor(
 
     private val ioScope = CoroutineScope(Dispatchers.IO)
 
-    private var unloadBAJob: Job? = null
-    private var mpdUpdateJob: Job? = null
+    private var heldResetJob: Job? = null
+    private var mediaUrlAssignmentJob: Job? = null
 
     override val receiverState = MutableLiveData<ReceiverState>()
 
@@ -52,25 +51,17 @@ class ServiceControllerImpl @Inject constructor(
     }
 
     override fun onPackageReceived(appPackage: Atsc3Application) {
-        //TODO: check package contains entry point, than report
         repository.addOrUpdateApplication(appPackage)
     }
 
     override fun onCurrentServicePackageChanged(pkg: Atsc3HeldPackage?) {
-        cancelUnloadBAJob()
+        cancelHeldReset()
 
-        val newAppData = pkg?.let {
-            val appContextId = it.appContextId ?: return@let null
-            val appEntryPage = it.bcastEntryPageUrl ?: it.bbandEntryPageUrl ?: return@let null
-            val compatibleServiceIds = it.coupledServices ?: emptyList()
-            AppData(appContextId, appEntryPage, compatibleServiceIds)
-        }
-
-        repository.setAppEntryPoint(newAppData)
+        repository.setHeldPackage(pkg)
     }
 
     override fun onCurrentServiceDashPatched(mpdPath: String) {
-        startMPDUpdateJob(mpdPath)
+        setMediaUrlWithDelay(mpdPath)
     }
 
     override fun openRoute(pcapFile: String): Boolean {
@@ -86,61 +77,65 @@ class ServiceControllerImpl @Inject constructor(
     }
 
     override fun selectService(service: SLSService) {
-        cancelMPDUpdateJob()
+        // Reset current media. New media url will be received after service selection.
+        cancelMediaUrlAssignment()
         repository.setMediaUrl(null)
 
         val res = atsc3Module.selectService(service.id)
         if (res) {
-            // this will reset RMP
+            // Store successfully selected service. This will lead to RMP reset
             repository.setSelectedService(service)
 
-            // force reset BA if it's not compatible with current or start delayed reset
-            repository.appData.value?.let { currentApp ->
-                if (!currentApp.compatibleServiceIds.contains(service.id)) {
-                    repository.setAppEntryPoint(null)
+            // Reset the current HELD if it's not compatible new service or start delayed reset otherwise.
+            // Delayed reset will be canceled when a new HELD been received for selected service.
+            repository.heldPackage.value?.let { currentHeld ->
+                // Is new service compatible with current HELD?
+                if (currentHeld.coupledServices?.contains(service.id) == true) {
+                    resetHeldWithDelay()
                 } else {
-                    startUnloadBAJob()
+                    repository.setHeldPackage(null)
                 }
             }
         } else {
-            repository.setAppEntryPoint(null)
+            // Reset HELD and service if service can't be selected
+            repository.setHeldPackage(null)
             repository.setSelectedService(null)
         }
     }
 
-    private fun startUnloadBAJob() {
-        cancelUnloadBAJob()
-        unloadBAJob = ioScope.launch {
+    private fun resetHeldWithDelay() {
+        cancelHeldReset()
+        heldResetJob = ioScope.launch {
             delay(BA_LOADING_TIMEOUT)
             withContext(Dispatchers.Main) {
-                repository.setAppEntryPoint(null)
-                unloadBAJob = null
+                repository.setHeldPackage(null)
+                heldResetJob = null
             }
         }
     }
 
-    private fun cancelUnloadBAJob() {
-        unloadBAJob?.let {
+    private fun cancelHeldReset() {
+        heldResetJob?.let {
             it.cancel()
-            unloadBAJob = null
+            heldResetJob = null
         }
     }
 
-    private fun startMPDUpdateJob(mpdPath: String) {
-        cancelMPDUpdateJob()
-        mpdUpdateJob = ioScope.launch {
+    private fun setMediaUrlWithDelay(mpdPath: String) {
+        cancelMediaUrlAssignment()
+        mediaUrlAssignmentJob = ioScope.launch {
             delay(MPD_UPDATE_DELAY)
             withContext(Dispatchers.Main) {
                 repository.setMediaUrl(mpdPath)
-                mpdUpdateJob = null
+                mediaUrlAssignmentJob = null
             }
         }
     }
 
-    private fun cancelMPDUpdateJob() {
-        mpdUpdateJob?.let {
+    private fun cancelMediaUrlAssignment() {
+        mediaUrlAssignmentJob?.let {
             it.cancel()
-            mpdUpdateJob = null
+            mediaUrlAssignmentJob = null
         }
     }
 
