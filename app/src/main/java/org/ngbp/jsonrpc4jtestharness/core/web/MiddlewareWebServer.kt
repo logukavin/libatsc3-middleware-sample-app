@@ -3,11 +3,14 @@ package org.ngbp.jsonrpc4jtestharness.core.web
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
-import com.google.android.exoplayer2.util.Log
 import org.eclipse.jetty.http.HttpVersion
 import org.eclipse.jetty.server.*
+import org.eclipse.jetty.server.handler.HandlerCollection
 import org.eclipse.jetty.server.handler.HandlerList
 import org.eclipse.jetty.server.handler.ResourceHandler
+import org.eclipse.jetty.servlet.DefaultServlet
+import org.eclipse.jetty.servlet.ServletContextHandler
+import org.eclipse.jetty.servlet.ServletHolder
 import org.eclipse.jetty.util.resource.Resource
 import org.eclipse.jetty.util.ssl.SslContextFactory
 import org.eclipse.jetty.websocket.server.WebSocketHandler
@@ -29,6 +32,7 @@ class MiddlewareWebServer constructor(
 ) : AutoCloseable, LifecycleOwner {
 
     private val lifecycleRegistry = LifecycleRegistry(this)
+    private val serverHandler = (server.handler as HandlerCollection)
 
     init {
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
@@ -61,7 +65,51 @@ class MiddlewareWebServer constructor(
     override fun getLifecycle() = lifecycleRegistry
 
     private fun onCacheChanged(applications: List<Atsc3Application>) {
-        //TODO: add applications to web server
+        addResources(applications)
+    }
+
+    private fun addResources(resources: List<Atsc3Application>) {
+        val addedResources: List<ServletContextHandler> = serverHandler.handlers.filterIsInstance<ServletContextHandler>()
+
+//        Add all if server has not contains any resources
+        if (addedResources.isEmpty()) {
+            for (resource in resources) {
+                for (contextId in resource.appContextIdList) {
+                    addNewResourceToServer(contextId, resource)
+                }
+            }
+        } else {
+//        remove resources without actual cache path
+            for (old in addedResources) {
+                val hasNotContainsActualPath = !resources.map { Resource.newResource(it.cachePath)}.contains(old.baseResource )
+                if (hasNotContainsActualPath) {
+                    old.stop()
+                    serverHandler.removeHandler(old)
+                }
+            }
+//            Add only new resources
+            for (resource in resources) {
+                for (contextId in resource.appContextIdList) {
+
+                    val hasNotContainsContextId = !addedResources.map { it.contextPath.substring(1) }.contains(contextId)
+                    val hasNotContainsCachePath = !addedResources.map { it.baseResource }.contains(Resource.newResource(resource.cachePath))
+
+                    if (hasNotContainsContextId || hasNotContainsCachePath) {
+                        addNewResourceToServer(contextId, resource)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun addNewResourceToServer(contextId: String, resource: Atsc3Application) {
+        val contextHandler = ServletContextHandler().apply {
+            contextPath = "/$contextId"
+            addServlet(ServletHolder(DefaultServlet()), "/")
+            baseResource = Resource.newResource(resource.cachePath)
+        }
+        serverHandler.addHandler(contextHandler)
+        contextHandler.start()
     }
 
     class Builder {
