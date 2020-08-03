@@ -7,7 +7,7 @@
     android:layout_height="match_parent"
     tools:context=".useragent.UserAgentActivity">
 
-    <com.google.android.exoplayer2.ui.PlayerView
+    <org.ngbp.jsonrpc4jtestharness.view.ReceiverMediaPlayer
         android:id="@+id/receiver_media_player"
         android:layout_width="0dp"
         android:layout_height="0dp"
@@ -26,10 +26,11 @@
         app:layout_constraintStart_toStartOf="@id/receiver_media_player"
         app:layout_constraintTop_toTopOf="@id/receiver_media_player" />
 
-    <WebView
+    <org.ngbp.jsonrpc4jtestharness.view.UserAgentView
         android:id="@+id/user_agent_web_view"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent"
+        android:focusedByDefault="true" />
 
     <androidx.appcompat.widget.AppCompatSpinner
         android:id="@+id/service_spinner"
@@ -39,6 +40,5 @@
         android:spinnerMode="dropdown"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
-
 
 </androidx.constraintlayout.widget.ConstraintLayout>
