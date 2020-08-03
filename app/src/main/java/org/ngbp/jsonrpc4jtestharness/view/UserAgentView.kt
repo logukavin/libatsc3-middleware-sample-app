@@ -13,7 +13,6 @@ import android.webkit.WebViewClient
 import androidx.core.view.postDelayed
 import org.ngbp.jsonrpc4jtestharness.core.CertificateUtils
 import org.ngbp.jsonrpc4jtestharness.core.SwipeGestureDetector
-import org.ngbp.jsonrpc4jtestharness.useragent.BANavController
 
 class UserAgentView @JvmOverloads constructor(
         context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0

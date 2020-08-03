@@ -1,4 +1,4 @@
-package org.ngbp.jsonrpc4jtestharness.useragent
+package org.ngbp.jsonrpc4jtestharness.view
 
 import android.webkit.WebView
 
