@@ -1,4 +1,4 @@
-package org.ngbp.jsonrpc4jtestharness.core
+package com.nextgenbroadcast.mobile.core
 
 import java.math.BigInteger
 import java.security.MessageDigest
