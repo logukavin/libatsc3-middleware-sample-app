@@ -15,7 +15,7 @@ interface IRepository {
     val routeMediaUrl: LiveData<String?>
 
     // User Agent
-    val applications: LiveData<List<Atsc3Application>>
+    val applications: LiveData<List<Atsc3Application>?>
     val services: LiveData<List<SLSService>>
     val heldPackage: LiveData<Atsc3HeldPackage?>
 
