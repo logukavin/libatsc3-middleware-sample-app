@@ -22,7 +22,6 @@ import org.mockito.Mockito.verify
 import org.ngbp.jsonrpc4jtestharness.controller.service.IServiceController
 import org.ngbp.jsonrpc4jtestharness.controller.view.IViewController
 import org.ngbp.jsonrpc4jtestharness.controller.view.ViewControllerImpl
-import org.ngbp.jsonrpc4jtestharness.core.model.AppData
 import org.ngbp.jsonrpc4jtestharness.core.model.PlaybackState
 import org.ngbp.jsonrpc4jtestharness.core.model.SLSService
 import org.ngbp.jsonrpc4jtestharness.core.repository.IRepository
@@ -31,6 +30,8 @@ import org.ngbp.jsonrpc4jtestharness.gateway.rpc.IRPCGateway
 import org.ngbp.jsonrpc4jtestharness.gateway.rpc.RPCGatewayImpl
 import org.ngbp.jsonrpc4jtestharness.rpc.notification.NotificationType
 import org.ngbp.jsonrpc4jtestharness.rpc.receiverQueryApi.model.Urls
+import org.ngbp.libatsc3.entities.app.Atsc3Application
+import org.ngbp.libatsc3.entities.held.Atsc3HeldPackage
 import org.powermock.api.mockito.PowerMockito
 import org.powermock.core.classloader.annotations.PrepareForTest
 import org.powermock.modules.junit4.PowerMockRunner
@@ -68,7 +69,8 @@ class RPCGatewayTest {
     private val mockedSLSService: SLSService = SLSService(5003, "WZTV", "tag:sinclairplatform.com,2020:WZTV:2727")
     private val mockedMediaUrl: String? = null
 
-    private val appData: LiveData<AppData?> = MutableLiveData()
+    val heldPackage: LiveData<Atsc3HeldPackage?> = MutableLiveData()
+    val applications: LiveData<List<Atsc3Application>> = MutableLiveData()
     private val serviceGuidUrls: MutableLiveData<List<Urls>?> = MutableLiveData()
     private var selectedService: MutableLiveData<SLSService?> = MutableLiveData()
     private val rmpState: LiveData<PlaybackState> = MutableLiveData()
@@ -81,18 +83,19 @@ class RPCGatewayTest {
     fun initCoordinator() {
         selectedService.value = mockedSLSService
         serviceGuidUrls.value = testServiceGuideUrls
-        `when`(repository?.appData).thenReturn(appData)
+        `when`(repository?.heldPackage).thenReturn(heldPackage)
+        `when`(repository?.applications).thenReturn(applications)
         `when`(serviceController?.serviceGuidUrls).thenReturn(serviceGuidUrls)
         `when`(serviceController?.selectedService).thenReturn(selectedService)
-        `when`(serviceController?.serviceGuidUrls).thenReturn(serviceGuidUrls)
         `when`(repository?.selectedService).thenReturn(selectedService)
         `when`(viewController?.rmpMediaUrl).thenReturn(rmpMediaUrl)
         `when`(viewController?.rmpState).thenReturn(rmpState)
         mediaPlayerController = ViewControllerImpl(repository!!)
         mediaPlayerControllerSpy = PowerMockito.spy(mediaPlayerController)
-        iRPCGateway = RPCGatewayImpl(serviceController!!, mediaPlayerControllerSpy, repository)
+        iRPCGateway = RPCGatewayImpl(serviceController!!, mediaPlayerControllerSpy)
         middlewareWebSocket = PowerMockito.spy(MiddlewareWebSocket(iRPCGateway))
         viewController = mediaPlayerController
+        iRPCGateway.onSocketOpened(middlewareWebSocket!!)
         Dispatchers.setMain(testDispatcher)
 
     }
@@ -169,9 +172,8 @@ class RPCGatewayTest {
     }
 
     @Test
-    fun testSendNotification() {
+    fun testSendNotification() = testDispatcher.runBlockingTest {
         val message = "message"
-        iRPCGateway.onSocketOpened(middlewareWebSocket!!)
         iRPCGateway.sendNotification(message)
         verify(middlewareWebSocket)?.sendMessage(message)
     }
