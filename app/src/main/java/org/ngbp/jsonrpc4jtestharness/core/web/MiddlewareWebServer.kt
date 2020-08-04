@@ -3,6 +3,8 @@ package org.ngbp.jsonrpc4jtestharness.core.web
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import org.eclipse.jetty.http.HttpVersion
 import org.eclipse.jetty.server.*
 import org.eclipse.jetty.server.handler.HandlerCollection
@@ -47,7 +49,9 @@ class MiddlewareWebServer constructor(
     @Throws(MiddlewareWebServerError::class)
     fun start() {
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_START)
-        server.start()
+        GlobalScope.launch {
+            server.start()
+        }
     }
 
     @Throws(Exception::class)

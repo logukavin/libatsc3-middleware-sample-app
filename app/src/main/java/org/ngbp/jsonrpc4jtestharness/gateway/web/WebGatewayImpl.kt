@@ -1,6 +1,7 @@
 package org.ngbp.jsonrpc4jtestharness.gateway.web
 
 import androidx.lifecycle.distinctUntilChanged
+import androidx.lifecycle.map
 import org.ngbp.jsonrpc4jtestharness.controller.service.IServiceController
 import org.ngbp.jsonrpc4jtestharness.core.repository.IRepository
 import javax.inject.Inject
@@ -12,5 +13,5 @@ class WebGatewayImpl @Inject constructor(
         repository: IRepository
 ) : IWebGateway {
     override val selectedService = serviceController.selectedService.distinctUntilChanged()
-    override val appCache = repository.applications
+    override val appCache = repository.applications.map { it ?: emptyList() }
 }
