@@ -36,7 +36,7 @@ android {
 dependencies {
     implementation fileTree(dir: "libs", include: ["*.jar"])
 
-    api project(':nextgen-core')
+    implementation project(':nextgen-core')
     api project(':exoplayer-library-core')
     api project(':exoplayer-library-dash')
     api project(':exoplayer-library-ui')
