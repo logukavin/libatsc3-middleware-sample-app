@@ -72,7 +72,7 @@ class RPCGatewayTest {
     private val mockedMediaUrl: String? = null
 
     val heldPackage: LiveData<Atsc3HeldPackage?> = MutableLiveData()
-    val applications: LiveData<List<Atsc3Application>> = MutableLiveData()
+    val applications: LiveData<List<Atsc3Application>?> = MutableLiveData()
     private val serviceGuidUrls: MutableLiveData<List<Urls>?> = MutableLiveData()
     private var selectedService: MutableLiveData<SLSService?> = MutableLiveData()
     private val rmpState: LiveData<PlaybackState> = MutableLiveData()
@@ -89,23 +89,20 @@ class RPCGatewayTest {
         repositorySpy = PowerMockito.spy(repository)
         mediaPlayerController = ViewControllerImpl(repositorySpy)
         mediaPlayerControllerSpy = PowerMockito.spy(mediaPlayerController)
-        `when`(repository?.heldPackage).thenReturn(heldPackage)
-        `when`(repository?.applications).thenReturn(applications)
+        `when`(repositorySpy.heldPackage).thenReturn(heldPackage)
+        `when`(repositorySpy.applications).thenReturn(applications)
         `when`(serviceController?.serviceGuidUrls).thenReturn(serviceGuidUrls)
         `when`(serviceController?.selectedService).thenReturn(selectedService)
         `when`(serviceController?.serviceGuidUrls).thenReturn(serviceGuidUrls)
         `when`(repositorySpy.selectedService).thenReturn(selectedService)
-        `when`(repository?.selectedService).thenReturn(selectedService)
+        `when`(repositorySpy.selectedService).thenReturn(selectedService)
         `when`(viewController?.rmpMediaUrl).thenReturn(rmpMediaUrl)
         `when`(viewController?.rmpState).thenReturn(rmpState)
-        mediaPlayerController = ViewControllerImpl(repository!!)
-        mediaPlayerControllerSpy = PowerMockito.spy(mediaPlayerController)
-        iRPCGateway = RPCGatewayImpl(serviceController!!, mediaPlayerControllerSpy)
 
         iRPCGateway = RPCGatewayImpl(serviceController!!, mediaPlayerControllerSpy, testDispatcher, testDispatcher)
         middlewareWebSocket = PowerMockito.spy(MiddlewareWebSocket(iRPCGateway))
         viewController = mediaPlayerController
-        iRPCGateway.onSocketOpened(middlewareWebSocket!!)
+        iRPCGateway.onSocketOpened(middlewareWebSocket)
         Dispatchers.setMain(testDispatcher)
 
     }
