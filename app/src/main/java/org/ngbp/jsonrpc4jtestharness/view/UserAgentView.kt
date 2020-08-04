@@ -84,8 +84,10 @@ class UserAgentView @JvmOverloads constructor(
         isBAMenuOpened = true
     }
 
+    private val CONTENT_URL = "https://$LOCALHOST:8443/"
+    private val CONTENT_WS = "?wsURL=ws://$LOCALHOST:9998&rev=20180720"
+
     companion object {
-        const val CONTENT_URL = "https://127.0.0.1:8443/"
-        const val CONTENT_WS = "?wsURL=ws://127.0.0.1:9998&rev=20180720"
+        private const val LOCALHOST = "127.0.0.1"
     }
 }
