@@ -9,9 +9,8 @@ import android.webkit.ClientCertRequest
 import android.webkit.SslErrorHandler
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import androidx.core.view.postDelayed
 import com.nextgenbroadcast.mobile.core.cert.CertificateUtils
-import org.nextgenbroadcast.mobile.core.md5
+import com.nextgenbroadcast.mobile.core.md5
 
 class UserAgentView @JvmOverloads constructor(
         context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
