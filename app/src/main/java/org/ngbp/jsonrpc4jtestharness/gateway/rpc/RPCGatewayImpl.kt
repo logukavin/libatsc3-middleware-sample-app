@@ -1,13 +1,11 @@
 package org.ngbp.jsonrpc4jtestharness.gateway.rpc
 
 import androidx.lifecycle.distinctUntilChanged
-import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.*
 import org.ngbp.jsonrpc4jtestharness.controller.service.IServiceController
 import org.ngbp.jsonrpc4jtestharness.controller.view.IViewController
 import org.ngbp.jsonrpc4jtestharness.core.model.AppData
 import org.ngbp.jsonrpc4jtestharness.core.model.PlaybackState
-import org.ngbp.jsonrpc4jtestharness.core.repository.IRepository
 import org.ngbp.jsonrpc4jtestharness.core.ws.MiddlewareWebSocket
 import org.ngbp.jsonrpc4jtestharness.rpc.notification.NotificationType
 import org.ngbp.jsonrpc4jtestharness.rpc.notification.RPCNotifier
@@ -19,11 +17,13 @@ import javax.inject.Singleton
 @Singleton
 class RPCGatewayImpl @Inject constructor(
         private val serviceController: IServiceController,
-        private val viewController: IViewController
+        private val viewController: IViewController,
+        mainDispatcher: CoroutineDispatcher,
+        ioDispatcher: CoroutineDispatcher
 ) : IRPCGateway {
-    private val mainScope = MainScope()
-    private val ioScope = CoroutineScope(Dispatchers.IO)
 
+    private val mainScope = CoroutineScope(mainDispatcher)
+    private val ioScope = CoroutineScope(ioDispatcher)
     private val sessions = CopyOnWriteArrayList<MiddlewareWebSocket>()
     private val subscribedNotifications = mutableSetOf<NotificationType>()
     private val rpcNotifier = RPCNotifier(this)
@@ -45,7 +45,7 @@ class RPCGatewayImpl @Inject constructor(
         get() = viewController.rmpMediaTime.value ?: 0
 
     init {
-        viewController.appData.distinctUntilChanged().observeForever{ appData ->
+        viewController.appData.distinctUntilChanged().observeForever { appData ->
             onAppDataUpdated(appData)
         }
 
@@ -184,7 +184,7 @@ class RPCGatewayImpl @Inject constructor(
         if (!subscribedNotifications.contains(NotificationType.RMP_MEDIA_TIME_CHANGE)) return
 
         mediaTimeUpdateJob = CoroutineScope(Dispatchers.IO).launch {
-            while(isActive) {
+            while (isActive) {
                 onMediaTimeChanged(rmpPlaybackTime)
 
                 delay(MEDIA_TIME_UPDATE_DELAY)
