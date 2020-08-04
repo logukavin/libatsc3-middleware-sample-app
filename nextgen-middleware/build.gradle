@@ -53,9 +53,14 @@ android {
         doNotStrip '**.so'
     }
 
+    testOptions {
+        unitTests.includeAndroidResources = true
+        unitTests.returnDefaultValues = true
+    }
+
     //TODO: refactore to remove
-    dataBinding {
-        enabled = true
+    buildFeatures {
+        dataBinding = true
     }
 }
 
