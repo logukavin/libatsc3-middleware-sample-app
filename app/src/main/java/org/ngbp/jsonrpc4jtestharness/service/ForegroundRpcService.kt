@@ -8,11 +8,9 @@ import android.os.PowerManager.WakeLock
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.distinctUntilChanged
 import dagger.android.AndroidInjection
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
 import org.ngbp.jsonrpc4jtestharness.controller.view.IViewController
-import org.ngbp.jsonrpc4jtestharness.core.model.PlaybackState
 import org.ngbp.jsonrpc4jtestharness.core.cert.UserAgentSSLContext
+import org.ngbp.jsonrpc4jtestharness.core.model.PlaybackState
 import org.ngbp.jsonrpc4jtestharness.core.web.MiddlewareWebServer
 import org.ngbp.jsonrpc4jtestharness.gateway.rpc.IRPCGateway
 import org.ngbp.jsonrpc4jtestharness.gateway.web.IWebGateway
@@ -101,10 +99,8 @@ class ForegroundRpcService : LifecycleService() {
                 .rpcGateway(rpcGateway)
                 .webGateway(webGateway)
                 .sslContext(UserAgentSSLContext(applicationContext))
-                .build().also { server ->
-                    GlobalScope.launch {
-                        server.start()
-                    }
+                .build().also {
+                    it.start()
                 }
     }
 

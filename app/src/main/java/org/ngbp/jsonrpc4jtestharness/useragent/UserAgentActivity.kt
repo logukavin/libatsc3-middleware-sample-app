@@ -157,7 +157,7 @@ class UserAgentActivity : AppCompatActivity() {
         if (appData != null) {
             setBAAvailability(true)
             if (!appData.isAppEquals(currentAppData)) {
-                user_agent_web_view.loadBAContent(appData.appEntryPage)
+                user_agent_web_view.loadBAContent(appData.appContextId, appData.appEntryPage)
             }
         } else {
             user_agent_web_view.unloadBAContent()
