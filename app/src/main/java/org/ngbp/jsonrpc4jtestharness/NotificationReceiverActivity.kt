@@ -3,7 +3,7 @@ package org.ngbp.jsonrpc4jtestharness
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import dagger.android.AndroidInjection
-import org.ngbp.jsonrpc4jtestharness.controller.view.IViewController
+import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
 import javax.inject.Inject
 
 class NotificationReceiverActivity : AppCompatActivity() {

@@ -2,9 +2,9 @@ package org.ngbp.jsonrpc4jtestharness.lifecycle.factory
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import org.ngbp.jsonrpc4jtestharness.presentation.IMediaPlayerPresenter
-import org.ngbp.jsonrpc4jtestharness.presentation.ISelectorPresenter
-import org.ngbp.jsonrpc4jtestharness.presentation.IUserAgentPresenter
+import com.nextgenbroadcast.mobile.middleware.presentation.IMediaPlayerPresenter
+import com.nextgenbroadcast.mobile.middleware.presentation.ISelectorPresenter
+import com.nextgenbroadcast.mobile.middleware.presentation.IUserAgentPresenter
 import org.ngbp.jsonrpc4jtestharness.lifecycle.RMPViewModel
 import org.ngbp.jsonrpc4jtestharness.lifecycle.ReceiverViewModel
 import org.ngbp.jsonrpc4jtestharness.lifecycle.SelectorViewModel

@@ -2,8 +2,8 @@ package org.ngbp.jsonrpc4jtestharness.lifecycle
 
 import androidx.lifecycle.Transformations
 import androidx.lifecycle.ViewModel
-import org.ngbp.jsonrpc4jtestharness.presentation.IUserAgentPresenter
-import org.ngbp.jsonrpc4jtestharness.core.model.AppData
+import com.nextgenbroadcast.mobile.middleware.presentation.IUserAgentPresenter
+import com.nextgenbroadcast.mobile.core.model.AppData
 
 class UserAgentViewModel(
         private val presenter: IUserAgentPresenter
