@@ -9,7 +9,6 @@ import org.ngbp.jsonrpc4jtestharness.App
 import org.ngbp.jsonrpc4jtestharness.di.module.AndroidBindingModule
 import com.nextgenbroadcast.mobile.middleware.di.MiddlewareBindingModule
 import org.ngbp.jsonrpc4jtestharness.di.module.AppModule
-import org.ngbp.jsonrpc4jtestharness.di.module.MiddlewareModule
 import javax.inject.Singleton
 
 @Singleton
@@ -18,7 +17,6 @@ import javax.inject.Singleton
             AndroidInjectionModule::class,
             AppModule::class,
             AndroidBindingModule::class,
-            MiddlewareModule::class,
             MiddlewareBindingModule::class
         ]
 )
