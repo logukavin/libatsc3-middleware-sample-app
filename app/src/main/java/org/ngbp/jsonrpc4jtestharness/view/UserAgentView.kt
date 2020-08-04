@@ -10,9 +10,9 @@ import android.webkit.ClientCertRequest
 import android.webkit.SslErrorHandler
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import androidx.core.view.postDelayed
 import org.ngbp.jsonrpc4jtestharness.core.CertificateUtils
 import org.ngbp.jsonrpc4jtestharness.core.SwipeGestureDetector
+import org.ngbp.jsonrpc4jtestharness.core.md5
 
 class UserAgentView @JvmOverloads constructor(
         context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
@@ -49,11 +49,6 @@ class UserAgentView @JvmOverloads constructor(
 
         clearSslPreferences()
         webViewClient = createWebViewClient()
-
-        //TODO: remove after tests
-        postDelayed(500) {
-            loadBAContent(CONTENT_URL)
-        }
     }
 
     private fun createWebViewClient() = object : WebViewClient() {
@@ -70,9 +65,10 @@ class UserAgentView @JvmOverloads constructor(
         }
     }
 
-    fun loadBAContent(entryPoint: String) {
+    fun loadBAContent(appContextId: String, appEntryPoint: String) {
         isBAMenuOpened = false
-        loadUrl(CONTENT_URL)
+        val contextPath = appContextId.md5()
+        loadUrl("$CONTENT_URL$contextPath/$appEntryPoint$CONTENT_WS")
     }
 
     fun unloadBAContent() {
@@ -91,6 +87,8 @@ class UserAgentView @JvmOverloads constructor(
     }
 
     companion object {
-        const val CONTENT_URL = "https://127.0.0.1:8443/index.html?wsURL=ws://127.0.0.1:9998&rev=20180720"
+        private const val LOCALHOST = "127.0.0.1"
+        private const val CONTENT_URL = "https://$LOCALHOST:8443/"
+        private const val CONTENT_WS = "?wsURL=ws://$LOCALHOST:9998&rev=20180720"
     }
 }

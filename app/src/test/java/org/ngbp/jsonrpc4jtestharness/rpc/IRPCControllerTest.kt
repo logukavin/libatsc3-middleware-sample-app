@@ -65,7 +65,7 @@ class IRPCControllerTest {
     private val mockedMediaUrl: String? = null
 
     val appData: LiveData<Atsc3HeldPackage?> = MutableLiveData()
-    val applications = MutableLiveData<List<Atsc3Application>?>()
+    val applications = MutableLiveData<List<Atsc3Application>>()
     val serviceGuidUrls: LiveData<List<Urls>?> = MutableLiveData()
     var selectedService: MutableLiveData<SLSService?> = MutableLiveData()
     val rmpState: LiveData<PlaybackState> = MutableLiveData()
