@@ -10,7 +10,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class RepositoryImpl @Inject constructor() : IRepository {
+open class RepositoryImpl @Inject constructor() : IRepository {
     private val _applications = ConcurrentHashMap<String, Atsc3Application>()
 
     override val selectedService = MutableLiveData<SLSService>()
