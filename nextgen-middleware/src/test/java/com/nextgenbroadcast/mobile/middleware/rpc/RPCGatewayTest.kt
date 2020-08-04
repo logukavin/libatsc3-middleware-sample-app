@@ -31,8 +31,8 @@ import com.nextgenbroadcast.mobile.middleware.gateway.rpc.RPCGatewayImpl
 import com.nextgenbroadcast.mobile.middleware.rpc.notification.NotificationType
 import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.Urls
 import com.nextgenbroadcast.mobile.middleware.ws.MiddlewareWebSocket
-import org.ngbp.libatsc3.entities.app.Atsc3Application
-import org.ngbp.libatsc3.entities.held.Atsc3HeldPackage
+import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
+import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPackage
 import org.powermock.api.mockito.PowerMockito
 import org.powermock.core.classloader.annotations.PrepareForTest
 import org.powermock.modules.junit4.PowerMockRunner

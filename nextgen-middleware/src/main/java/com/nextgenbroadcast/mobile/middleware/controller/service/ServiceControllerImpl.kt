@@ -5,10 +5,10 @@ import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import kotlinx.coroutines.*
 import com.nextgenbroadcast.mobile.core.model.SLSService
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
-import org.ngbp.libatsc3.Atsc3Module
-import org.ngbp.libatsc3.entities.app.Atsc3Application
-import org.ngbp.libatsc3.entities.held.Atsc3HeldPackage
-import org.ngbp.libatsc3.entities.service.Atsc3Service
+import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3Module
+import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
+import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPackage
+import com.nextgenbroadcast.mobile.middleware.atsc3.entities.service.Atsc3Service
 import javax.inject.Inject
 import javax.inject.Singleton
 
