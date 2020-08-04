@@ -9,7 +9,6 @@ import org.eclipse.jetty.http.HttpVersion
 import org.eclipse.jetty.server.*
 import org.eclipse.jetty.server.handler.HandlerCollection
 import org.eclipse.jetty.server.handler.HandlerList
-import org.eclipse.jetty.server.handler.ResourceHandler
 import org.eclipse.jetty.servlet.DefaultServlet
 import org.eclipse.jetty.servlet.ServletContextHandler
 import org.eclipse.jetty.servlet.ServletHolder
@@ -19,6 +18,7 @@ import org.eclipse.jetty.websocket.server.WebSocketHandler
 import org.eclipse.jetty.websocket.servlet.WebSocketCreator
 import org.eclipse.jetty.websocket.servlet.WebSocketServletFactory
 import org.ngbp.jsonrpc4jtestharness.core.cert.IUserAgentSSLContext
+import org.ngbp.jsonrpc4jtestharness.core.md5
 import org.ngbp.jsonrpc4jtestharness.core.ws.MiddlewareWebSocket
 import org.ngbp.jsonrpc4jtestharness.gateway.rpc.IRPCGateway
 import org.ngbp.jsonrpc4jtestharness.gateway.web.IWebGateway
@@ -34,7 +34,7 @@ class MiddlewareWebServer constructor(
 ) : AutoCloseable, LifecycleOwner {
 
     private val lifecycleRegistry = LifecycleRegistry(this)
-    private val serverHandler = (server.handler as HandlerCollection)
+    private val availResources = arrayListOf<AppResource>()
 
     init {
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
@@ -69,52 +69,53 @@ class MiddlewareWebServer constructor(
     override fun getLifecycle() = lifecycleRegistry
 
     private fun onCacheChanged(applications: List<Atsc3Application>) {
-        addResources(applications)
+        val handler = server.handler
+        if (handler !is HandlerCollection) return
+
+        val resources = applications.flatMap { app ->
+            app.appContextIdList.map { contextId ->
+                AppResource(contextId, app.cachePath)
+            }
+        }
+
+        val oldResources = availResources.subtract(resources)
+        removeResources(handler, oldResources)
+        availResources.removeAll(oldResources)
+
+        val newResources = resources.subtract(availResources)
+        addResources(handler, newResources)
+        availResources.addAll(newResources)
     }
 
-    private fun addResources(resources: List<Atsc3Application>) {
-        val addedResources: List<ServletContextHandler> = serverHandler.handlers.filterIsInstance<ServletContextHandler>()
+    private fun removeResources(handler: HandlerCollection, resources: Set<AppResource>) {
+        val addedResources: List<ServletContextHandler> = handler.handlers.filterIsInstance<ServletContextHandler>()
 
-//        Add all if server has not contains any resources
-        if (addedResources.isEmpty()) {
-            for (resource in resources) {
-                for (contextId in resource.appContextIdList) {
-                    addNewResourceToServer(contextId, resource)
-                }
-            }
-        } else {
-//        remove resources without actual cache path
-            for (old in addedResources) {
-                val hasNotContainsActualPath = !resources.map { Resource.newResource(it.cachePath)}.contains(old.baseResource )
-                if (hasNotContainsActualPath) {
-                    old.stop()
-                    serverHandler.removeHandler(old)
-                }
-            }
-//            Add only new resources
-            for (resource in resources) {
-                for (contextId in resource.appContextIdList) {
-
-                    val hasNotContainsContextId = !addedResources.map { it.contextPath.substring(1) }.contains(contextId)
-                    val hasNotContainsCachePath = !addedResources.map { it.baseResource }.contains(Resource.newResource(resource.cachePath))
-
-                    if (hasNotContainsContextId || hasNotContainsCachePath) {
-                        addNewResourceToServer(contextId, resource)
-                    }
-                }
-            }
+        addedResources.filter { servlet ->
+            val contextPath = servlet.contextPath.substring(1)
+            resources.firstOrNull { it.contextId == contextPath } != null
+        }.forEach { servlet ->
+            servlet.stop()
+            handler.removeHandler(servlet)
         }
     }
 
-    private fun addNewResourceToServer(contextId: String, resource: Atsc3Application) {
-        val contextHandler = ServletContextHandler().apply {
-            contextPath = "/$contextId"
-            addServlet(ServletHolder(DefaultServlet()), "/")
-            baseResource = Resource.newResource(resource.cachePath)
+    private fun addResources(handler: HandlerCollection, resources: Set<AppResource>) {
+        resources.forEach { resource ->
+            val contextId = resource.contextId.md5()
+            val contextHandler = ServletContextHandler().apply {
+                contextPath = "/$contextId"
+                baseResource = Resource.newResource(resource.cachePath)
+                addServlet(ServletHolder(DefaultServlet()), "/")
+            }
+            handler.addHandler(contextHandler)
+            contextHandler.start()
         }
-        serverHandler.addHandler(contextHandler)
-        contextHandler.start()
     }
+
+    private data class AppResource(
+            val contextId: String,
+            val cachePath: String
+    )
 
     class Builder {
         var httpsPort: Int? = null
@@ -167,13 +168,6 @@ class MiddlewareWebServer constructor(
             }
 
             val handlerArray = ArrayList<Handler>().apply {
-                //TODO: remove test data
-                add(ResourceHandler().apply {
-                    isDirectoriesListed = true
-                    welcomeFiles = arrayOf("index.html")
-                    baseResource = Resource.newResource("storage/emulated/0/Download/test")
-                })
-
                 rpcGateway?.let { rpcGateway ->
                     add(object : WebSocketHandler() {
                         override fun configure(factory: WebSocketServletFactory) {

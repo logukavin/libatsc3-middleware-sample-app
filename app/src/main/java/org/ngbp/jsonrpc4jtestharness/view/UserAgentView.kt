@@ -12,6 +12,7 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import org.ngbp.jsonrpc4jtestharness.core.CertificateUtils
 import org.ngbp.jsonrpc4jtestharness.core.SwipeGestureDetector
+import org.ngbp.jsonrpc4jtestharness.core.md5
 
 class UserAgentView @JvmOverloads constructor(
         context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
@@ -66,7 +67,8 @@ class UserAgentView @JvmOverloads constructor(
 
     fun loadBAContent(appContextId: String, appEntryPoint: String) {
         isBAMenuOpened = false
-        loadUrl("$CONTENT_URL$appContextId/$appEntryPoint$CONTENT_WS")
+        val contextPath = appContextId.md5()
+        loadUrl("$CONTENT_URL$contextPath/$appEntryPoint$CONTENT_WS")
     }
 
     fun unloadBAContent() {
@@ -84,10 +86,9 @@ class UserAgentView @JvmOverloads constructor(
         isBAMenuOpened = true
     }
 
-    private val CONTENT_URL = "https://$LOCALHOST:8443/"
-    private val CONTENT_WS = "?wsURL=ws://$LOCALHOST:9998&rev=20180720"
-
     companion object {
         private const val LOCALHOST = "127.0.0.1"
+        private const val CONTENT_URL = "https://$LOCALHOST:8443/"
+        private const val CONTENT_WS = "?wsURL=ws://$LOCALHOST:9998&rev=20180720"
     }
 }
