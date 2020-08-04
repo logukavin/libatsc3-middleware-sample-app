@@ -18,8 +18,8 @@ import androidx.databinding.DataBindingUtil
 import androidx.lifecycle.Observer
 import dagger.android.AndroidInjection
 import kotlinx.android.synthetic.main.activity_main.*
-import org.ngbp.jsonrpc4jtestharness.core.model.ReceiverState
-import org.ngbp.jsonrpc4jtestharness.presentation.IReceiverPresenter
+import com.nextgenbroadcast.mobile.core.model.ReceiverState
+import com.nextgenbroadcast.mobile.middleware.presentation.IReceiverPresenter
 import org.ngbp.jsonrpc4jtestharness.core.FileUtils
 import org.ngbp.jsonrpc4jtestharness.useragent.ServiceAdapter
 import org.ngbp.jsonrpc4jtestharness.databinding.ActivityMainBinding

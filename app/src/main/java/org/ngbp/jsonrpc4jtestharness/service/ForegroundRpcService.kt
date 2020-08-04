@@ -8,12 +8,12 @@ import android.os.PowerManager.WakeLock
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.distinctUntilChanged
 import dagger.android.AndroidInjection
-import org.ngbp.jsonrpc4jtestharness.controller.view.IViewController
+import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
-import org.ngbp.jsonrpc4jtestharness.core.cert.UserAgentSSLContext
-import org.ngbp.jsonrpc4jtestharness.core.web.MiddlewareWebServer
-import org.ngbp.jsonrpc4jtestharness.gateway.rpc.IRPCGateway
-import org.ngbp.jsonrpc4jtestharness.gateway.web.IWebGateway
+import com.nextgenbroadcast.mobile.core.cert.UserAgentSSLContext
+import com.nextgenbroadcast.mobile.middleware.web.MiddlewareWebServer
+import com.nextgenbroadcast.mobile.middleware.gateway.rpc.IRPCGateway
+import com.nextgenbroadcast.mobile.middleware.gateway.web.IWebGateway
 import java.util.*
 import javax.inject.Inject
 

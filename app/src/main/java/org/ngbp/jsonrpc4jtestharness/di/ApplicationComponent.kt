@@ -7,7 +7,7 @@ import dagger.android.AndroidInjectionModule
 import dagger.android.AndroidInjector
 import org.ngbp.jsonrpc4jtestharness.App
 import org.ngbp.jsonrpc4jtestharness.di.module.AndroidBindingModule
-import org.ngbp.jsonrpc4jtestharness.di.module.AppBindingModule
+import com.nextgenbroadcast.mobile.middleware.di.MiddlewareBindingModule
 import org.ngbp.jsonrpc4jtestharness.di.module.AppModule
 import org.ngbp.jsonrpc4jtestharness.di.module.MiddlewareModule
 import javax.inject.Singleton
@@ -19,7 +19,7 @@ import javax.inject.Singleton
             AppModule::class,
             AndroidBindingModule::class,
             MiddlewareModule::class,
-            AppBindingModule::class
+            MiddlewareBindingModule::class
         ]
 )
 interface ApplicationComponent : AndroidInjector<App> {

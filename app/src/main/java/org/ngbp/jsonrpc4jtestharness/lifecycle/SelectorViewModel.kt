@@ -2,7 +2,7 @@ package org.ngbp.jsonrpc4jtestharness.lifecycle
 
 import androidx.lifecycle.Transformations
 import androidx.lifecycle.ViewModel
-import org.ngbp.jsonrpc4jtestharness.presentation.ISelectorPresenter
+import com.nextgenbroadcast.mobile.middleware.presentation.ISelectorPresenter
 
 class SelectorViewModel(
         private val presenter: ISelectorPresenter

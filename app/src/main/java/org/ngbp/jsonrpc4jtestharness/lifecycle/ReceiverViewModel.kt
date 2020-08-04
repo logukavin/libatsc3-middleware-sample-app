@@ -3,9 +3,9 @@ package org.ngbp.jsonrpc4jtestharness.lifecycle
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.ViewModel
-import org.ngbp.jsonrpc4jtestharness.presentation.IMediaPlayerPresenter
-import org.ngbp.jsonrpc4jtestharness.presentation.IUserAgentPresenter
-import org.ngbp.jsonrpc4jtestharness.core.model.AppData
+import com.nextgenbroadcast.mobile.middleware.presentation.IMediaPlayerPresenter
+import com.nextgenbroadcast.mobile.middleware.presentation.IUserAgentPresenter
+import com.nextgenbroadcast.mobile.core.model.AppData
 
 class ReceiverViewModel(
         private val agentPresenter: IUserAgentPresenter,
