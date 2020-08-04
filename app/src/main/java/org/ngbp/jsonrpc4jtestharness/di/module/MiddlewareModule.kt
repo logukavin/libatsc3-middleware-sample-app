@@ -4,11 +4,11 @@ import android.content.Context
 import dagger.Module
 import dagger.Provides
 import kotlinx.coroutines.Dispatchers
-import org.ngbp.jsonrpc4jtestharness.controller.service.IServiceController
-import org.ngbp.jsonrpc4jtestharness.controller.view.IViewController
-import org.ngbp.jsonrpc4jtestharness.gateway.rpc.IRPCGateway
-import org.ngbp.jsonrpc4jtestharness.gateway.rpc.RPCGatewayImpl
-import org.ngbp.libatsc3.Atsc3Module
+import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3Module
+import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
+import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
+import com.nextgenbroadcast.mobile.middleware.gateway.rpc.IRPCGateway
+import com.nextgenbroadcast.mobile.middleware.gateway.rpc.RPCGatewayImpl
 import javax.inject.Singleton
 
 @Module

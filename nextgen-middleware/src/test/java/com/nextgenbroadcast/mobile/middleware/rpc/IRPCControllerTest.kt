@@ -29,8 +29,8 @@ import com.nextgenbroadcast.mobile.middleware.repository.IRepository
 import com.nextgenbroadcast.mobile.middleware.gateway.rpc.IRPCGateway
 import com.nextgenbroadcast.mobile.middleware.gateway.rpc.RPCGatewayImpl
 import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.Urls
-import org.ngbp.libatsc3.entities.app.Atsc3Application
-import org.ngbp.libatsc3.entities.held.Atsc3HeldPackage
+import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
+import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPackage
 import org.powermock.core.classloader.annotations.PrepareForTest
 import org.powermock.modules.junit4.PowerMockRunner
 import java.util.*

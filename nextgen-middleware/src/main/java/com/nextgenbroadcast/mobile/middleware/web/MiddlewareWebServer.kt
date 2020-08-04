@@ -22,7 +22,7 @@ import org.eclipse.jetty.util.ssl.SslContextFactory
 import org.eclipse.jetty.websocket.server.WebSocketHandler
 import org.eclipse.jetty.websocket.servlet.WebSocketCreator
 import org.eclipse.jetty.websocket.servlet.WebSocketServletFactory
-import org.ngbp.libatsc3.entities.app.Atsc3Application
+import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import java.io.IOException
 import java.security.GeneralSecurityException
 import java.util.*
