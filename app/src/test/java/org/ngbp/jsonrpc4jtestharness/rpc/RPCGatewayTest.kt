@@ -50,10 +50,10 @@ class RPCGatewayTest {
     var instantTaskExecutorRule = InstantTaskExecutorRule()
 
     @Mock
-    private val serviceController: IServiceController? = null
+    private lateinit var serviceController: IServiceController
 
     @Mock
-    private var viewController: IViewController? = null
+    private lateinit var viewController: IViewController
 
     @Mock
     private lateinit var repository: IRepository
@@ -91,15 +91,15 @@ class RPCGatewayTest {
         mediaPlayerControllerSpy = PowerMockito.spy(mediaPlayerController)
         `when`(repositorySpy.heldPackage).thenReturn(heldPackage)
         `when`(repositorySpy.applications).thenReturn(applications)
-        `when`(serviceController?.serviceGuidUrls).thenReturn(serviceGuidUrls)
-        `when`(serviceController?.selectedService).thenReturn(selectedService)
-        `when`(serviceController?.serviceGuidUrls).thenReturn(serviceGuidUrls)
+        `when`(serviceController.serviceGuidUrls).thenReturn(serviceGuidUrls)
+        `when`(serviceController.selectedService).thenReturn(selectedService)
+        `when`(serviceController.serviceGuidUrls).thenReturn(serviceGuidUrls)
         `when`(repositorySpy.selectedService).thenReturn(selectedService)
         `when`(repositorySpy.selectedService).thenReturn(selectedService)
-        `when`(viewController?.rmpMediaUrl).thenReturn(rmpMediaUrl)
-        `when`(viewController?.rmpState).thenReturn(rmpState)
+        `when`(viewController.rmpMediaUrl).thenReturn(rmpMediaUrl)
+        `when`(viewController.rmpState).thenReturn(rmpState)
 
-        iRPCGateway = RPCGatewayImpl(serviceController!!, mediaPlayerControllerSpy, testDispatcher, testDispatcher)
+        iRPCGateway = RPCGatewayImpl(serviceController, mediaPlayerControllerSpy, testDispatcher, testDispatcher)
         middlewareWebSocket = PowerMockito.spy(MiddlewareWebSocket(iRPCGateway))
         viewController = mediaPlayerController
         iRPCGateway.onSocketOpened(middlewareWebSocket)
