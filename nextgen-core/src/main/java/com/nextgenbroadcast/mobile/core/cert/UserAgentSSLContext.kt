@@ -13,18 +13,16 @@ class UserAgentSSLContext(private val context: Context) : IUserAgentSSLContext {
 
     @Throws(GeneralSecurityException::class, IOException::class)
     override fun getInitializedSSLContext(password: String): SSLContext {
-        val inputStream = context.resources.openRawResource(R.raw.mykey)
-        var keystore: KeyStore? = null
-        inputStream.use {
-            keystore = KeyStore.getInstance("PKCS12")
-            keystore?.run { load(it, password.toCharArray()) }
+        val keystore = CertificateUtils.loadKeystore(context, password)
+        val keyManagerFactory = KeyManagerFactory.getInstance(CertificateUtils.KEY_MANAGER_ALGORITHM).apply {
+            init(keystore, password.toCharArray())
         }
-        val keyManagerFactory = KeyManagerFactory.getInstance("X509")
-        keyManagerFactory.init(keystore, password.toCharArray())
-        val tmf = TrustManagerFactory.getInstance("X509")
-        tmf.init(keystore)
-        val sslContext = SSLContext.getInstance("TLS")
-        sslContext.init(keyManagerFactory.keyManagers, tmf.trustManagers, null)
-        return sslContext
+        val tmf = TrustManagerFactory.getInstance(CertificateUtils.KEY_MANAGER_ALGORITHM).apply {
+            init(keystore)
+        }
+
+        return SSLContext.getInstance("TLS").apply {
+            init(keyManagerFactory.keyManagers, tmf.trustManagers, null)
+        }
     }
 }

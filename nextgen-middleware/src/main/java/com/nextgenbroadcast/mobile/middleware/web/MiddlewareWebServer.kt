@@ -3,6 +3,7 @@ package com.nextgenbroadcast.mobile.middleware.web
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
+import com.nextgenbroadcast.mobile.core.cert.CertificateUtils
 import com.nextgenbroadcast.mobile.core.cert.IUserAgentSSLContext
 import com.nextgenbroadcast.mobile.core.md5
 import com.nextgenbroadcast.mobile.middleware.gateway.rpc.IRPCGateway
@@ -30,7 +31,7 @@ import java.util.*
 
 class MiddlewareWebServer constructor(
         private val server: Server,
-        private val webGateway: IWebGateway?
+        webGateway: IWebGateway?
 ) : AutoCloseable, LifecycleOwner {
 
     private val lifecycleRegistry = LifecycleRegistry(this)
@@ -118,14 +119,14 @@ class MiddlewareWebServer constructor(
     )
 
     class Builder {
-        var httpsPort: Int? = null
-        var httpPort: Int? = null
-        var wssPort: Int? = null
-        var wsPort: Int? = null
-        var hostName: String? = null
-        var generatedSSLContext: IUserAgentSSLContext? = null
-        var rpcGateway: IRPCGateway? = null
-        var webGateway: IWebGateway? = null
+        private var httpsPort: Int? = null
+        private var httpPort: Int? = null
+        private var wssPort: Int? = null
+        private var wsPort: Int? = null
+        private var hostName: String? = null
+        private var generatedSSLContext: IUserAgentSSLContext? = null
+        private var rpcGateway: IRPCGateway? = null
+        private var webGateway: IWebGateway? = null
 
         fun httpsPort(value: Int) = apply { httpsPort = value }
 
@@ -193,7 +194,7 @@ class MiddlewareWebServer constructor(
 private fun configureSSLFactory(generatedSSLContext: IUserAgentSSLContext): SslContextFactory {
     // Configuring SSL
     return SslContextFactory.Server().apply {
-        keyStoreType = "PKCS12"
+        keyStoreType = CertificateUtils.KEY_STORE_TYPE
         //TODO: remove hardcoded password
         sslContext = generatedSSLContext.getInitializedSSLContext("MY_PASSWORD")
         setKeyStorePassword("MY_PASSWORD")

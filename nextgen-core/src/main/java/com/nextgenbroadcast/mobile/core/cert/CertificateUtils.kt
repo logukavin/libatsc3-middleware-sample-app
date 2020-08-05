@@ -7,30 +7,32 @@ import java.security.PrivateKey
 import java.security.cert.X509Certificate
 
 object CertificateUtils {
+    const val KEY_MANAGER_ALGORITHM = "X509"
+    const val KEY_STORE_TYPE = "PKCS12"
 
-    var certificates: Array<X509Certificate?>? = null
-    var privateKey: PrivateKey? = null
+    fun loadKeystore(context: Context, password: String): KeyStore {
+        context.resources.openRawResource(R.raw.mykey).use { inputStream ->
+            return KeyStore.getInstance(KEY_STORE_TYPE).also {
+                it.load(inputStream, password.toCharArray())
+            }
+        }
+    }
 
-    fun loadCertificateAndPrivateKey(context: Context) {
+    fun loadCertificateAndPrivateKey(context: Context, password: String = "MY_PASSWORD"): Pair<PrivateKey, X509Certificate>? {
         try {
-            val certificateFileStream = context.resources.openRawResource(R.raw.mykey)
-            val keyStore = KeyStore.getInstance("PKCS12")
-            val password = "MY_PASSWORD"
-            keyStore.load(certificateFileStream, password.toCharArray())
-            val aliases = keyStore.aliases()
-            val alias = aliases.nextElement()
+            val keyStore = loadKeystore(context, password)
+            val alias = keyStore.aliases().nextElement()
             val key = keyStore.getKey(alias, password.toCharArray())
             if (key is PrivateKey) {
-                privateKey = key
                 val cert = keyStore.getCertificate(alias)
-                certificates = arrayOfNulls(1)
-                certificates?.let{
-                    it[0] = cert as X509Certificate
+                if (cert is X509Certificate) {
+                    return Pair(key, cert)
                 }
             }
-            certificateFileStream.close()
         } catch (e: Exception) {
             e.printStackTrace()
         }
+
+        return null
     }
 }
