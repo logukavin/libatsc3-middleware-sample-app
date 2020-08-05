@@ -41,9 +41,6 @@ abstract class MiddlewareBindingModule {
     internal abstract fun mediaPlayerPresenterBinder(obj: ViewControllerImpl): IMediaPlayerPresenter
 
     @Binds
-    internal abstract fun rpcGatewayBinder(obj: RPCGatewayImpl): IRPCGateway
-
-    @Binds
     internal abstract fun webGatewayBinder(obj: WebGatewayImpl): IWebGateway
 
 }
