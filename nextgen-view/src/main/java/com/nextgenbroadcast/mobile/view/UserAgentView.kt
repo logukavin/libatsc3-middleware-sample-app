@@ -44,10 +44,10 @@ class UserAgentView @JvmOverloads constructor(
         }
 
         override fun onReceivedClientCertRequest(view: WebView, request: ClientCertRequest) {
-            if (CertificateUtils.certificates == null || CertificateUtils.privateKey == null) {
-                CertificateUtils.loadCertificateAndPrivateKey(view.context)
+            val certPair = CertificateUtils.loadCertificateAndPrivateKey(view.context)
+            certPair?.let {
+                request.proceed(certPair.first, arrayOf(certPair.second))
             }
-            request.proceed(CertificateUtils.privateKey, CertificateUtils.certificates)
         }
     }
 
