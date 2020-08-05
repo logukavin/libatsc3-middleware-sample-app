@@ -22,6 +22,7 @@ import org.mockito.Mockito.verify
 import org.ngbp.jsonrpc4jtestharness.controller.service.IServiceController
 import org.ngbp.jsonrpc4jtestharness.controller.view.IViewController
 import org.ngbp.jsonrpc4jtestharness.controller.view.ViewControllerImpl
+import org.ngbp.jsonrpc4jtestharness.core.model.AppData
 import org.ngbp.jsonrpc4jtestharness.core.model.PlaybackState
 import org.ngbp.jsonrpc4jtestharness.core.model.SLSService
 import org.ngbp.jsonrpc4jtestharness.core.repository.IRepository
@@ -49,18 +50,20 @@ class RPCGatewayTest {
     var instantTaskExecutorRule = InstantTaskExecutorRule()
 
     @Mock
-    private val serviceController: IServiceController? = null
+    private lateinit var serviceController: IServiceController
 
     @Mock
-    private var viewController: IViewController? = null
+    private lateinit var viewController: IViewController
 
     @Mock
-    private val repository: IRepository? = null
+    private lateinit var repository: IRepository
 
     @Mock
     private lateinit var middlewareWebSocket: MiddlewareWebSocket
 
     private lateinit var iRPCGateway: IRPCGateway
+
+    @Mock
     private lateinit var mediaPlayerController: ViewControllerImpl
 
     private var scaleFactor: Double = 1.0
@@ -70,32 +73,35 @@ class RPCGatewayTest {
     private val mockedMediaUrl: String? = null
 
     val heldPackage: LiveData<Atsc3HeldPackage?> = MutableLiveData()
-    val applications: LiveData<List<Atsc3Application>> = MutableLiveData()
+    val applications: LiveData<List<Atsc3Application>?> = MutableLiveData()
     private val serviceGuidUrls: MutableLiveData<List<Urls>?> = MutableLiveData()
     private var selectedService: MutableLiveData<SLSService?> = MutableLiveData()
     private val rmpState: LiveData<PlaybackState> = MutableLiveData()
     private val rmpMediaUrl: LiveData<String?> = MutableLiveData()
     private val testDispatcher = TestCoroutineDispatcher()
     private val testServiceGuideUrls = listOf(Urls("testType", "TestUrl"))
-    private lateinit var mediaPlayerControllerSpy: ViewControllerImpl
+    val appDataViewController: LiveData<AppData?> = MutableLiveData()
+    val rmpPlaybackRate: LiveData<Float> = MutableLiveData()
+
 
     @Before
     fun initCoordinator() {
         selectedService.value = mockedSLSService
         serviceGuidUrls.value = testServiceGuideUrls
-        `when`(repository?.heldPackage).thenReturn(heldPackage)
-        `when`(repository?.applications).thenReturn(applications)
-        `when`(serviceController?.serviceGuidUrls).thenReturn(serviceGuidUrls)
-        `when`(serviceController?.selectedService).thenReturn(selectedService)
-        `when`(repository?.selectedService).thenReturn(selectedService)
-        `when`(viewController?.rmpMediaUrl).thenReturn(rmpMediaUrl)
-        `when`(viewController?.rmpState).thenReturn(rmpState)
-        mediaPlayerController = ViewControllerImpl(repository!!)
-        mediaPlayerControllerSpy = PowerMockito.spy(mediaPlayerController)
-        iRPCGateway = RPCGatewayImpl(serviceController!!, mediaPlayerControllerSpy)
+        `when`(repository.heldPackage).thenReturn(heldPackage)
+        `when`(repository.applications).thenReturn(applications)
+        `when`(serviceController.serviceGuidUrls).thenReturn(serviceGuidUrls)
+        `when`(serviceController.selectedService).thenReturn(selectedService)
+        `when`(serviceController.serviceGuidUrls).thenReturn(serviceGuidUrls)
+        `when`(repository.selectedService).thenReturn(selectedService)
+        `when`(repository.selectedService).thenReturn(selectedService)
+        `when`(viewController.rmpMediaUrl).thenReturn(rmpMediaUrl)
+        `when`(viewController.rmpState).thenReturn(rmpState)
+        `when`(viewController.appData).thenReturn(appDataViewController)
+        `when`(viewController.rmpPlaybackRate).thenReturn(rmpPlaybackRate)
+        iRPCGateway = RPCGatewayImpl(serviceController, viewController, testDispatcher, testDispatcher)
         middlewareWebSocket = PowerMockito.spy(MiddlewareWebSocket(iRPCGateway))
-        viewController = mediaPlayerController
-        iRPCGateway.onSocketOpened(middlewareWebSocket!!)
+        iRPCGateway.onSocketOpened(middlewareWebSocket)
         Dispatchers.setMain(testDispatcher)
 
     }
@@ -103,9 +109,7 @@ class RPCGatewayTest {
     @Test
     fun testCallBackData() = testDispatcher.runBlockingTest {
         iRPCGateway.updateRMPPosition(scaleFactor, xPos, yPos)
-        assertEquals(scaleFactor, mediaPlayerControllerSpy.rmpLayoutParams.value?.scale)
-        assertEquals(xPos.toInt(), mediaPlayerControllerSpy.rmpLayoutParams.value?.x)
-        assertEquals(yPos.toInt(), mediaPlayerControllerSpy.rmpLayoutParams.value?.y)
+        verify(viewController).updateRMPPosition(scaleFactor, xPos, yPos)
     }
 
 
@@ -145,14 +149,14 @@ class RPCGatewayTest {
         val mediaURL = "url"
         val delay = 11L
         iRPCGateway.requestMediaPlay(mediaURL, delay)
-        verify(mediaPlayerControllerSpy).requestMediaPlay(mediaURL, delay)
+        verify(viewController).requestMediaPlay(mediaURL, delay)
     }
 
     @Test
     fun testRequestMediaStop() = testDispatcher.runBlockingTest {
         val delay = 11L
         iRPCGateway.requestMediaStop(delay)
-        verify(mediaPlayerControllerSpy).requestMediaStop(delay)
+        verify(viewController).requestMediaStop(delay)
     }
 
     @Test

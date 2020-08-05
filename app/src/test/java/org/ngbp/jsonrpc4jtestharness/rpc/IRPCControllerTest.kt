@@ -22,6 +22,7 @@ import org.mockito.Mockito
 import org.ngbp.jsonrpc4jtestharness.controller.service.IServiceController
 import org.ngbp.jsonrpc4jtestharness.controller.view.IViewController
 import org.ngbp.jsonrpc4jtestharness.controller.view.ViewControllerImpl
+import org.ngbp.jsonrpc4jtestharness.core.model.AppData
 import org.ngbp.jsonrpc4jtestharness.core.model.PlaybackState
 import org.ngbp.jsonrpc4jtestharness.core.model.SLSService
 import org.ngbp.jsonrpc4jtestharness.core.repository.IRepository
@@ -46,13 +47,13 @@ class IRPCControllerTest {
     var instantTaskExecutorRule = InstantTaskExecutorRule()
 
     @Mock
-    private val serviceController: IServiceController? = null
+    private lateinit var serviceController: IServiceController
 
     @Mock
-    private val viewController: IViewController? = null
+    private lateinit var viewController: IViewController
 
     @Mock
-    private val repository: IRepository? = null
+    private lateinit var repository: IRepository
 
     @Mock
     private lateinit var iRPCGateway: IRPCGateway
@@ -70,6 +71,7 @@ class IRPCControllerTest {
     var selectedService: MutableLiveData<SLSService?> = MutableLiveData()
     val rmpState: LiveData<PlaybackState> = MutableLiveData()
     val rmpMediaUrl: LiveData<String?> = MutableLiveData()
+    val appDataViewController: LiveData<AppData?> = MutableLiveData()
 
     @ExperimentalCoroutinesApi
     private val testDispatcher = TestCoroutineDispatcher()
@@ -78,17 +80,18 @@ class IRPCControllerTest {
     @Before
     fun initCoordinator() {
         selectedService.value = mockedSLSService
-        Mockito.`when`(repository?.heldPackage).thenReturn(appData)
-        Mockito.`when`(repository?.applications).thenReturn(applications)
-        Mockito.`when`(serviceController?.serviceGuidUrls).thenReturn(serviceGuidUrls)
-        Mockito.`when`(serviceController?.selectedService).thenReturn(selectedService)
-        Mockito.`when`(serviceController?.serviceGuidUrls).thenReturn(serviceGuidUrls)
-        Mockito.`when`(repository?.selectedService).thenReturn(selectedService)
-        Mockito.`when`(viewController?.rmpMediaUrl).thenReturn(rmpMediaUrl)
-        Mockito.`when`(viewController?.rmpState).thenReturn(rmpState)
+        Mockito.`when`(repository.heldPackage).thenReturn(appData)
+        Mockito.`when`(repository.applications).thenReturn(applications)
+        Mockito.`when`(serviceController.serviceGuidUrls).thenReturn(serviceGuidUrls)
+        Mockito.`when`(serviceController.selectedService).thenReturn(selectedService)
+        Mockito.`when`(serviceController.serviceGuidUrls).thenReturn(serviceGuidUrls)
+        Mockito.`when`(repository.selectedService).thenReturn(selectedService)
+        Mockito.`when`(viewController.rmpMediaUrl).thenReturn(rmpMediaUrl)
+        Mockito.`when`(viewController.rmpState).thenReturn(rmpState)
+        Mockito.`when`(viewController.appData).thenReturn(appDataViewController)
 
-        mediaPlayerController = ViewControllerImpl(repository!!)
-        coordinator = RPCGatewayImpl(serviceController!!, mediaPlayerController)
+        mediaPlayerController = ViewControllerImpl(repository)
+        coordinator = RPCGatewayImpl(serviceController, mediaPlayerController, testDispatcher, testDispatcher)
         iRPCGateway = coordinator
         Dispatchers.setMain(testDispatcher)
     }
