@@ -1,6 +1,0 @@
-<resources>
-    <string name="app_name">jsonrpc4j test harness</string>
-    <string name="notification_play_btn_title">Play</string>
-    <string name="notification_pause_btn_title">Pause</string>
-    <string name="no_service_available">No service available</string>
-</resources>
