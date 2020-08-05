@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/user_agent_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".useragent.UserAgentActivity">
+
+    <com.nextgenbroadcast.mobile.view.ReceiverMediaPlayer
+        android:id="@+id/receiver_media_player"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:use_controller="false" />
+
+    <ProgressBar
+        android:id="@+id/progress_bar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintBottom_toBottomOf="@id/receiver_media_player"
+        app:layout_constraintEnd_toEndOf="@id/receiver_media_player"
+        app:layout_constraintStart_toStartOf="@id/receiver_media_player"
+        app:layout_constraintTop_toTopOf="@id/receiver_media_player" />
+
+    <com.nextgenbroadcast.mobile.view.UserAgentView
+        android:id="@+id/user_agent_web_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:focusedByDefault="true" />
+
+    <androidx.appcompat.widget.AppCompatSpinner
+        android:id="@+id/service_spinner"
+        android:layout_width="@dimen/service_spinner_width"
+        android:layout_height="@dimen/item_spinner_height"
+        android:background="@android:color/white"
+        android:spinnerMode="dropdown"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

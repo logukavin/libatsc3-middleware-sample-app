@@ -1,0 +1,15 @@
+[submodule "libatsc3"]
+	path = libatsc3
+	url = https://NGWP@dev.azure.com/NGWP/Middleware/_git/libatsc3
+	branch = route-dash-alc-multiple-object-same-content-type
+	update = rebase
+[submodule "jsonrpc2"]
+	path = jsonrpc2
+	url = https://NGWP@dev.azure.com/NGWP/Middleware/_git/jsonrpc2
+	branch = master
+	update = rebase
+[submodule "ExoPlayer"]
+	path = ExoPlayer
+	url = https://github.com/jjustman/ExoPlayer.git
+	branch = release-v2
+	update = rebase
