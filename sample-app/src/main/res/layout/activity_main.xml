@@ -24,7 +24,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:visibility="gone"
-            app:constraint_referenced_ids="connect_to_ws,top,bottom,left,right" />
+            app:constraint_referenced_ids="connect_to_ws,top,bottom,left,right,start,stop" />
 
         <Button
             android:id="@+id/start"
@@ -97,8 +97,7 @@
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toStartOf="@+id/atsc3_file_choose"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintVertical_bias="0.6" />
+            app:layout_constraintTop_toTopOf="parent"/>
 
         <Button
             android:id="@+id/atsc3_file_choose"
@@ -187,6 +186,7 @@
             android:text="Start User Agent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintBottom_toTopOf="@+id/ATSC3_tv"
             app:layout_constraintTop_toBottomOf="@+id/stop" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
