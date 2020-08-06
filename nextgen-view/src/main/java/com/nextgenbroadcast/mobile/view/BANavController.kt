@@ -6,13 +6,15 @@ object BANavController {
 
     fun navigateUp(webView: WebView) = execute(webView, JS_NAVIGATE_UP)
     fun navigateDown(webView: WebView) = execute(webView, JS_NAVIGATE_DOWN)
-    fun navigateNext(webView: WebView) = execute(webView, JS_NAVIGATE_NEXT)
+    fun navigateNext(webView: WebView, block: (Boolean) -> Unit) = execute(webView, JS_NAVIGATE_NEXT, block)
     fun navigateBack(webView: WebView) = execute(webView, JS_NAVIGATE_BACK)
-    fun navigateExit(webView: WebView) = execute(webView, JS_NAVIGATE_EXIT)
+    fun navigateExit(webView: WebView, block: (Boolean) -> Unit) = execute(webView, JS_NAVIGATE_EXIT, block)
     fun navigateEnter(webView: WebView) = execute(webView, JS_NAVIGATE_ENTER)
 
-    private fun execute(webView: WebView, script: String) {
-        webView.evaluateJavascript(script, null)
+    private fun execute(webView: WebView, script: String, block: (Boolean) -> Unit = {}) {
+        webView.evaluateJavascript(script) { result ->
+            block.invoke(result != "null")
+        }
     }
 
     private const val JS_ENTRY_POINT = "__ANDROID_BRIDGE"

@@ -5,6 +5,7 @@
     android:id="@+id/user_agent_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/black"
     tools:context=".useragent.UserAgentActivity">
 
     <com.nextgenbroadcast.mobile.view.ReceiverMediaPlayer
@@ -15,6 +16,8 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
+        app:resize_mode="zoom"
+        app:show_buffering="always"
         app:use_controller="false" />
 
     <ProgressBar

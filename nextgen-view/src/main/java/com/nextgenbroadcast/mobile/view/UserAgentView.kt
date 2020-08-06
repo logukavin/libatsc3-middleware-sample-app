@@ -5,6 +5,7 @@ import android.content.Context
 import android.graphics.Color
 import android.net.http.SslError
 import android.util.AttributeSet
+import android.view.KeyEvent
 import android.webkit.ClientCertRequest
 import android.webkit.SslErrorHandler
 import android.webkit.WebView
@@ -26,7 +27,7 @@ class UserAgentView @JvmOverloads constructor(
         if (isInEditMode) return
 
         clearCache(true)
-        setInitialScale(150)
+        setInitialScale(100)
         setBackgroundColor(Color.TRANSPARENT)
         settings?.apply {
             javaScriptEnabled = true
@@ -63,13 +64,22 @@ class UserAgentView @JvmOverloads constructor(
     }
 
     fun closeMenu() {
-        BANavController.navigateExit(this)
+        BANavController.navigateExit(this) { success ->
+            if (!success) sendKeyPress(KeyEvent.KEYCODE_DPAD_LEFT)
+        }
         isBAMenuOpened = false
     }
 
     fun openMenu() {
-        BANavController.navigateNext(this)
+        BANavController.navigateNext(this) { success ->
+            if (!success) sendKeyPress(KeyEvent.KEYCODE_DPAD_RIGHT)
+        }
         isBAMenuOpened = true
+    }
+
+    private fun sendKeyPress(key: Int) {
+        dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, key))
+        dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, key))
     }
 
     companion object {
