@@ -1,4 +1,4 @@
-package com.nextgenbroadcast.mobile.middleware.sample.service
+package com.nextgenbroadcast.mobile.middleware.notification
 
 import android.os.Handler
 import android.os.Looper
