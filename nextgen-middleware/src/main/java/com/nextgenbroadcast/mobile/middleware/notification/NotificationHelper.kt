@@ -1,4 +1,4 @@
-package com.nextgenbroadcast.mobile.middleware.sample.service
+package com.nextgenbroadcast.mobile.middleware.notification
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -10,8 +10,8 @@ import android.graphics.drawable.Icon
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
-import com.nextgenbroadcast.mobile.middleware.sample.NotificationReceiverActivity
-import com.nextgenbroadcast.mobile.middleware.sample.R
+import com.nextgenbroadcast.mobile.middleware.NotificationReceiverActivity
+import com.nextgenbroadcast.mobile.middleware.R
 
 class NotificationHelper(
         private val context: Context,

@@ -27,7 +27,7 @@ import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.SelectorViewModel
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.UserAgentViewModel
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.factory.UserAgentViewModelFactory
 import com.nextgenbroadcast.mobile.middleware.sample.useragent.ServiceAdapter
-import com.nextgenbroadcast.mobile.middleware.sample.service.ForegroundRpcService
+import com.nextgenbroadcast.mobile.middleware.Atsc3ForegroundService
 import com.nextgenbroadcast.mobile.middleware.sample.useragent.UserAgentActivity
 import javax.inject.Inject
 
@@ -130,15 +130,15 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startService() {
-        val serviceIntent = Intent(this, ForegroundRpcService::class.java)
-        serviceIntent.action = ForegroundRpcService.ACTION_START
+        val serviceIntent = Intent(this, Atsc3ForegroundService::class.java)
+        serviceIntent.action = Atsc3ForegroundService.ACTION_START
         serviceIntent.putExtra("inputExtra", "Foreground RPC Service Example in Android")
         ContextCompat.startForegroundService(this, serviceIntent)
     }
 
     private fun stopService() {
-        val serviceIntent = Intent(this, ForegroundRpcService::class.java)
-        serviceIntent.action = ForegroundRpcService.ACTION_STOP
+        val serviceIntent = Intent(this, Atsc3ForegroundService::class.java)
+        serviceIntent.action = Atsc3ForegroundService.ACTION_STOP
         ContextCompat.startForegroundService(this, serviceIntent)
     }
 

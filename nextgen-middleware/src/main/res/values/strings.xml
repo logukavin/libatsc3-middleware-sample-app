@@ -1,0 +1,4 @@
+<resources>
+    <string name="notification_play_btn_title">Play</string>
+    <string name="notification_pause_btn_title">Pause</string>
+</resources>

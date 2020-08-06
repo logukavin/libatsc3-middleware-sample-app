@@ -1,4 +1,4 @@
-package com.nextgenbroadcast.mobile.middleware.sample.service
+package com.nextgenbroadcast.mobile.middleware
 
 import android.app.Notification
 import android.content.Context
@@ -14,10 +14,11 @@ import com.nextgenbroadcast.mobile.core.cert.UserAgentSSLContext
 import com.nextgenbroadcast.mobile.middleware.web.MiddlewareWebServer
 import com.nextgenbroadcast.mobile.middleware.gateway.rpc.IRPCGateway
 import com.nextgenbroadcast.mobile.middleware.gateway.web.IWebGateway
+import com.nextgenbroadcast.mobile.middleware.notification.NotificationHelper
 import java.util.*
 import javax.inject.Inject
 
-class ForegroundRpcService : LifecycleService() {
+class Atsc3ForegroundService : LifecycleService() {
     @Inject
     lateinit var rpcGateway: IRPCGateway
     @Inject
