@@ -7,6 +7,13 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Applicatio
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPackage
 
 internal interface IRepository {
+    // Web/Socket server
+    val hostName: String
+    val httpPort: Int
+    val httpsPort: Int
+    val wsPort: Int
+    val wssPort: Int
+
     // Receiver
     val selectedService: LiveData<SLSService?>
     val serviceGuideUrls: LiveData<List<Urls>?>

@@ -92,11 +92,11 @@ class Atsc3ForegroundService : LifecycleService() {
 
     private fun startWebServer() {
         webServer = MiddlewareWebServer.Builder()
-                .hostName("localHost")
-                .httpsPort(8443)
-                .httpPort(8080)
-                .wssPort(9999)
-                .wsPort(9998)
+                .hostName(webGateway.hostName)
+                .httpsPort(webGateway.httpsPort)
+                .httpPort(webGateway.httpPort)
+                .wssPort(webGateway.wssPort)
+                .wsPort(webGateway.wsPort)
                 .rpcGateway(rpcGateway)
                 .webGateway(webGateway)
                 .sslContext(UserAgentSSLContext(applicationContext))
