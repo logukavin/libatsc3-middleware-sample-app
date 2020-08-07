@@ -6,11 +6,8 @@ import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.Urls
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPackage
 import java.util.concurrent.ConcurrentHashMap
-import javax.inject.Inject
-import javax.inject.Singleton
 
-@Singleton
-internal class RepositoryImpl @Inject constructor() : IRepository {
+internal class RepositoryImpl : IRepository {
     private val _applications = ConcurrentHashMap<String, Atsc3Application>()
 
     override val hostName = "localHost"
@@ -27,11 +24,6 @@ internal class RepositoryImpl @Inject constructor() : IRepository {
     override val applications = MutableLiveData<List<Atsc3Application>?>()
     override val services = MutableLiveData<List<SLSService>>()
     override val heldPackage = MutableLiveData<Atsc3HeldPackage?>()
-
-    init {
-        //TODO: remove after tests
-        selectedService.value = SLSService(5003, "WZTV", "tag:sinclairplatform.com,2020:WZTV:2727")
-    }
 
     override fun addOrUpdateApplication(application: Atsc3Application) {
         _applications[application.cachePath] = application

@@ -11,11 +11,8 @@ import com.nextgenbroadcast.mobile.middleware.rpc.notification.RPCNotifier
 import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.Urls
 import com.nextgenbroadcast.mobile.middleware.ws.MiddlewareWebSocket
 import java.util.concurrent.CopyOnWriteArrayList
-import javax.inject.Inject
-import javax.inject.Singleton
 
-@Singleton
-internal class RPCGatewayImpl @Inject constructor(
+internal class RPCGatewayImpl (
         private val serviceController: IServiceController,
         private val viewController: IViewController,
         mainDispatcher: CoroutineDispatcher,
