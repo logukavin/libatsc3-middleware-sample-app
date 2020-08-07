@@ -4,11 +4,8 @@ import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.map
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
-import javax.inject.Inject
-import javax.inject.Singleton
 
-@Singleton
-internal class WebGatewayImpl @Inject constructor(
+internal class WebGatewayImpl (
         serviceController: IServiceController,
         repository: IRepository
 ) : IWebGateway {

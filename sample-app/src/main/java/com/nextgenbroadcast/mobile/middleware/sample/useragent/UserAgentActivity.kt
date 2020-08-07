@@ -11,16 +11,17 @@ import android.view.View
 import android.view.WindowManager
 import android.widget.AdapterView
 import android.widget.Toast
-import androidx.activity.viewModels
-import androidx.appcompat.app.AppCompatActivity
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.view.postDelayed
 import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProvider
 import dagger.android.AndroidInjection
 import kotlinx.android.synthetic.main.activity_user_agent.*
 import kotlinx.coroutines.Runnable
 import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
+import com.nextgenbroadcast.mobile.middleware.Atsc3Activity
+import com.nextgenbroadcast.mobile.middleware.Atsc3ForegroundService
 import com.nextgenbroadcast.mobile.middleware.sample.R
 import com.nextgenbroadcast.mobile.middleware.sample.core.SwipeGestureDetector
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.RMPViewModel
@@ -28,21 +29,56 @@ import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.SelectorViewModel
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.UserAgentViewModel
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.factory.UserAgentViewModelFactory
 import com.nextgenbroadcast.mobile.view.ReceiverMediaPlayer
-import javax.inject.Inject
 
-class UserAgentActivity : AppCompatActivity() {
-    @Inject
-    lateinit var viewModelFactory: UserAgentViewModelFactory
-
-    private val rmpViewModel: RMPViewModel by viewModels { viewModelFactory }
-    private val userAgentViewModel: UserAgentViewModel by viewModels { viewModelFactory }
-    private val selectorViewModel: SelectorViewModel by viewModels { viewModelFactory }
+class UserAgentActivity : Atsc3Activity() {
+    private var rmpViewModel: RMPViewModel? = null
+    private var userAgentViewModel: UserAgentViewModel? = null
+    private var selectorViewModel: SelectorViewModel? = null
 
     private var currentAppData: AppData? = null
 
     private lateinit var selectorAdapter: ServiceAdapter
 
     private val updateMediaTimeHandler = Handler(Looper.getMainLooper())
+
+    override fun onBind(binder: Atsc3ForegroundService.ServiceBinder) {
+        val provider = UserAgentViewModelFactory(
+                binder.getUserAgentPresenter(),
+                binder.getMediaPlayerPresenter(),
+                binder.getSelectorPresenter()
+        ).let { userAgentViewModelFactory ->
+            ViewModelProvider(viewModelStore, userAgentViewModelFactory)
+        }
+
+        bintViewModels(provider).let { (rmp, userAgent, selector) ->
+            bindSelector(selector)
+            bindUserAgent(userAgent)
+            bindMediaPlayer(rmp)
+        }
+    }
+
+    private fun bintViewModels(provider: ViewModelProvider): Triple<RMPViewModel, UserAgentViewModel, SelectorViewModel> {
+        val rmp = provider.get(RMPViewModel::class.java).also {
+            rmpViewModel = it
+        }
+
+        val userAgent = provider.get(UserAgentViewModel::class.java).also {
+            userAgentViewModel = it
+        }
+
+        val selector = provider.get(SelectorViewModel::class.java).also {
+            selectorViewModel = it
+        }
+        return Triple(rmp, userAgent, selector)
+    }
+
+    override fun onUnbind() {
+        rmpViewModel = null
+        userAgentViewModel = null
+        selectorViewModel = null
+
+        viewModelStore.clear()
+    }
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -76,7 +112,7 @@ class UserAgentActivity : AppCompatActivity() {
 
         receiver_media_player.setListener(object : ReceiverMediaPlayer.EventListener {
             override fun onPlayerStateChanged(state: PlaybackState) {
-                rmpViewModel.setCurrentPlayerState(state)
+                rmpViewModel?.setCurrentPlayerState(state)
 
                 if (state == PlaybackState.PLAYING) {
                     window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
@@ -92,16 +128,12 @@ class UserAgentActivity : AppCompatActivity() {
             }
 
             override fun onPlaybackSpeedChanged(speed: Float) {
-                rmpViewModel.setCurrentPlaybackRate(speed)
+                rmpViewModel?.setCurrentPlaybackRate(speed)
             }
         })
-
-        bindMediaPlayer()
-        bindSelector()
-        bindUserAgent()
     }
 
-    private fun bindMediaPlayer() {
+    private fun bindMediaPlayer(rmpViewModel: RMPViewModel) {
         with(rmpViewModel) {
             reset()
             layoutParams.observe(this@UserAgentActivity, Observer { params ->
@@ -127,7 +159,7 @@ class UserAgentActivity : AppCompatActivity() {
         }
     }
 
-    private fun bindSelector() {
+    private fun bindSelector(selectorViewModel: SelectorViewModel) {
         val selectedServiceId = selectorViewModel.getSelectedServiceId()
         selectorViewModel.services.observe(this, Observer { services ->
             selectorAdapter.setServices(services)
@@ -137,7 +169,7 @@ class UserAgentActivity : AppCompatActivity() {
         })
     }
 
-    private fun bindUserAgent() {
+    private fun bindUserAgent(userAgentViewModel: UserAgentViewModel) {
         userAgentViewModel.appData.observe(this, Observer { appData ->
             switchBA(appData)
         })
@@ -156,12 +188,10 @@ class UserAgentActivity : AppCompatActivity() {
     }
 
     private fun changeService(serviceId: Int) {
-        if (selectorViewModel.getSelectedServiceId() == serviceId) return
+        if (selectorViewModel?.selectService(serviceId) != true) return
 
         stopPlayback()
         setBAAvailability(false)
-
-        selectorViewModel.selectService(serviceId)
     }
 
     private fun setBAAvailability(available: Boolean) {
@@ -202,7 +232,7 @@ class UserAgentActivity : AppCompatActivity() {
 
     private val updateMediaTimeRunnable = object : Runnable {
         override fun run() {
-            rmpViewModel.setCurrentMediaTime(receiver_media_player.playbackPosition)
+            rmpViewModel?.setCurrentMediaTime(receiver_media_player.playbackPosition)
 
             updateMediaTimeHandler.postDelayed(this, MEDIA_TIME_UPDATE_DELAY)
         }

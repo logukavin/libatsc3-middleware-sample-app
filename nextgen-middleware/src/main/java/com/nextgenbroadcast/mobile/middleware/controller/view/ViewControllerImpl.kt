@@ -9,11 +9,8 @@ import com.nextgenbroadcast.mobile.core.model.RPMParams
 import com.nextgenbroadcast.mobile.middleware.controller.media.IObservablePlayer
 import com.nextgenbroadcast.mobile.middleware.controller.media.PlayerStateRegistry
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
-import javax.inject.Inject
-import javax.inject.Singleton
 
-@Singleton
-internal class ViewControllerImpl @Inject constructor(
+internal class ViewControllerImpl (
         private val repository: IRepository
 ) : IViewController {
 
@@ -25,23 +22,24 @@ internal class ViewControllerImpl @Inject constructor(
     private val externalMediaUrl = MutableLiveData<String>()
     private val rmpListeners = PlayerStateRegistry()
 
-    override val appData: LiveData<AppData?> = repository.heldPackage.mapWith(repository.applications) { held, applications ->
+    override val appData: LiveData<AppData?> = repository.heldPackage.mapWith(repository.applications) { (held, applications) ->
         held?.let {
             val appContextId = held.appContextId ?: return@let null
+            val hostName = repository.hostName
+            val httpPost = repository.httpsPort
+            val socketPort = repository.wsPort
+            val rev = 20180720 //TODO: use real revision
             val appEntryPage = held.bcastEntryPageUrl?.let { entryPage ->
-                val hostName = repository.hostName
-                val httpPost = repository.httpsPort
-                val socketPort = repository.wsPort
                 val contextPath = appContextId.md5()
-                val rev = 20180720 //TODO: use real revision
-                "https://$hostName:$httpPost/$contextPath/$entryPage?wsURL=ws://$hostName:$socketPort&rev=$rev"
+                "https://$hostName:$httpPost/$contextPath/$entryPage"
             } ?: held.bbandEntryPageUrl ?: return@let null
             val compatibleServiceIds = held.coupledServices ?: emptyList()
             val application = applications?.firstOrNull { app ->
                 app.appContextIdList.contains(appContextId)
             }
+            val appUrl = "$appEntryPage?wsURL=ws://$hostName:$socketPort&rev=$rev"
 
-            AppData(appContextId, appEntryPage, compatibleServiceIds, application?.cachePath)
+            AppData(appContextId, appUrl, compatibleServiceIds, application?.cachePath)
         }
     }
 
