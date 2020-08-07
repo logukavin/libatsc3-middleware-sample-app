@@ -17,12 +17,9 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.ndk.data.PackageExtractEnvel
 import java.lang.IllegalStateException
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
-import javax.inject.Inject
-import javax.inject.Singleton
 
 //TODO: multithreading requests
-@Singleton
-internal class Atsc3Module @Inject constructor(context: Context) : ClientListener {
+internal class Atsc3Module(context: Context) : ClientListener {
     enum class State {
         OPENED, PAUSED, IDLE
     }

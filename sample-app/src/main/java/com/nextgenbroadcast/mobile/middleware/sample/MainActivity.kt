@@ -11,14 +11,13 @@ import android.view.View
 import android.widget.AdapterView
 import android.widget.EditText
 import android.widget.Toast
-import androidx.activity.viewModels
-import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.databinding.DataBindingUtil
 import androidx.lifecycle.Observer
-import dagger.android.AndroidInjection
+import androidx.lifecycle.ViewModelProvider
 import kotlinx.android.synthetic.main.activity_main.*
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
+import com.nextgenbroadcast.mobile.middleware.Atsc3Activity
 import com.nextgenbroadcast.mobile.middleware.presentation.IReceiverPresenter
 import com.nextgenbroadcast.mobile.middleware.sample.core.FileUtils
 import com.nextgenbroadcast.mobile.middleware.sample.databinding.ActivityMainBinding
@@ -31,16 +30,14 @@ import com.nextgenbroadcast.mobile.middleware.Atsc3ForegroundService
 import com.nextgenbroadcast.mobile.middleware.sample.useragent.UserAgentActivity
 import javax.inject.Inject
 
-class MainActivity : AppCompatActivity() {
-    @Inject
-    lateinit var controller: IReceiverPresenter
+class MainActivity : Atsc3Activity() {
+    private lateinit var binding: ActivityMainBinding
+    private lateinit var serviceAdapter: ServiceAdapter
 
-    @Inject
-    lateinit var userAgentViewModelFactory: UserAgentViewModelFactory
-
-    private val receiverViewModel: ReceiverViewModel by viewModels { userAgentViewModelFactory }
-    private val userAgentViewModel: UserAgentViewModel by viewModels { userAgentViewModelFactory }
-    private val selectorViewModel: SelectorViewModel by viewModels { userAgentViewModelFactory }
+    private var receiverPresenter: IReceiverPresenter? = null
+    private var receiverViewModel: ReceiverViewModel? = null
+    private var userAgentViewModel: UserAgentViewModel? = null
+    private var selectorViewModel: SelectorViewModel? = null
 
     private lateinit var stsc3FilePath: EditText
     private lateinit var stsc3Open: View
@@ -48,13 +45,52 @@ class MainActivity : AppCompatActivity() {
     private lateinit var stsc3Stop: View
     private lateinit var stsc3Close: View
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        AndroidInjection.inject(this)
-        super.onCreate(savedInstanceState)
+    override fun onBind(binder: Atsc3ForegroundService.ServiceBinder) {
+        val presenter = binder.getReceiverPresenter().also {
+            receiverPresenter = it
+        }
 
-        DataBindingUtil.setContentView<ActivityMainBinding>(this, R.layout.activity_main).apply {
+        val userAgentViewModelFactory = UserAgentViewModelFactory(
+                binder.getUserAgentPresenter(),
+                binder.getMediaPlayerPresenter(),
+                binder.getSelectorPresenter()
+        )
+
+        bindViewModels(ViewModelProvider(viewModelStore, userAgentViewModelFactory))
+
+        presenter.receiverState.observe(this, Observer { state -> updateAssc3Buttons(state) })
+    }
+
+    override fun onUnbind() {
+        receiverPresenter = null
+        receiverViewModel = null
+        userAgentViewModel = null
+        selectorViewModel = null
+
+        viewModelStore.clear()
+    }
+
+    private fun bindViewModels(provider: ViewModelProvider) {
+        receiverViewModel = provider.get(ReceiverViewModel::class.java)
+        userAgentViewModel = provider.get(UserAgentViewModel::class.java)
+        val selector = provider.get(SelectorViewModel::class.java).also {
+            selectorViewModel = it
+        }
+
+        with(binding) {
             userAgentModel = userAgentViewModel
             receiverModel = receiverViewModel
+        }
+
+        selector.services.observe(this, Observer { services ->
+            serviceAdapter.setServices(services)
+        })
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        binding = DataBindingUtil.setContentView<ActivityMainBinding>(this, R.layout.activity_main).apply {
             lifecycleOwner = this@MainActivity
         }
 
@@ -62,30 +98,23 @@ class MainActivity : AppCompatActivity() {
 
         findViewById<View>(R.id.stop).setOnClickListener { stopService() }
         findViewById<View>(R.id.start).setOnClickListener { startService() }
-        findViewById<View>(R.id.start_user_agent).setOnClickListener {
-            startUserAgent()
-        }
+        findViewById<View>(R.id.start_user_agent).setOnClickListener { startUserAgent() }
 
         initLibAtsc3()
-        val adapter = ServiceAdapter(this)
-        atsc3_service_spinner.adapter = adapter
 
-        selectorViewModel.services.observe(this, Observer { services ->
-            adapter.setServices(services)
-        })
+        serviceAdapter = ServiceAdapter(this)
+        atsc3_service_spinner.adapter = serviceAdapter
+
         atsc3_service_spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onNothingSelected(parent: AdapterView<*>?) {
             }
 
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
                 if (id > 0) {
-                    selectorViewModel.selectService(id.toInt())
+                    selectorViewModel?.selectService(id.toInt())
                 }
             }
         }
-
-//        makeCall_9_7_5_1()
-//        makeCall()
     }
 
     private fun startUserAgent() {
@@ -94,8 +123,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun initLibAtsc3() {
-        controller.receiverState.observe(this, Observer { state -> updateAssc3Buttons(state) })
-
         stsc3FilePath = findViewById(R.id.atsc3_file_path)
         stsc3FilePath.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
@@ -106,16 +133,16 @@ class MainActivity : AppCompatActivity() {
         })
 
         stsc3Open = findViewById(R.id.atsc3_open)
-        stsc3Open.setOnClickListener { controller.openRoute(stsc3FilePath.text.toString()) }
+        stsc3Open.setOnClickListener { receiverPresenter?.openRoute(stsc3FilePath.text.toString()) }
 
         stsc3Start = findViewById(R.id.atsc3_start)
         stsc3Start.setOnClickListener {}
 
         stsc3Stop = findViewById(R.id.atsc3_stop)
-        stsc3Stop.setOnClickListener { controller.stopRoute() }
+        stsc3Stop.setOnClickListener { receiverPresenter?.stopRoute() }
 
         stsc3Close = findViewById(R.id.atsc3_close)
-        stsc3Close.setOnClickListener { controller.closeRoute() }
+        stsc3Close.setOnClickListener { receiverPresenter?.closeRoute() }
 
         findViewById<View>(R.id.atsc3_file_choose).setOnClickListener { showFileChooser() }
 

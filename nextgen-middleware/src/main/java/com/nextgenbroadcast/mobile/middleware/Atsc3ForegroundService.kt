@@ -3,64 +3,82 @@ package com.nextgenbroadcast.mobile.middleware
 import android.app.Notification
 import android.content.Context
 import android.content.Intent
+import android.os.Binder
+import android.os.IBinder
 import android.os.PowerManager
 import android.os.PowerManager.WakeLock
 import androidx.lifecycle.LifecycleService
-import androidx.lifecycle.distinctUntilChanged
-import dagger.android.AndroidInjection
 import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.cert.UserAgentSSLContext
+import com.nextgenbroadcast.mobile.core.model.SLSService
+import com.nextgenbroadcast.mobile.core.unite
+import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3Module
+import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
+import com.nextgenbroadcast.mobile.middleware.controller.service.ServiceControllerImpl
+import com.nextgenbroadcast.mobile.middleware.controller.view.ViewControllerImpl
 import com.nextgenbroadcast.mobile.middleware.web.MiddlewareWebServer
 import com.nextgenbroadcast.mobile.middleware.gateway.rpc.IRPCGateway
+import com.nextgenbroadcast.mobile.middleware.gateway.rpc.RPCGatewayImpl
 import com.nextgenbroadcast.mobile.middleware.gateway.web.IWebGateway
+import com.nextgenbroadcast.mobile.middleware.gateway.web.WebGatewayImpl
 import com.nextgenbroadcast.mobile.middleware.notification.NotificationHelper
-import java.util.*
-import javax.inject.Inject
+import com.nextgenbroadcast.mobile.middleware.presentation.IMediaPlayerPresenter
+import com.nextgenbroadcast.mobile.middleware.presentation.IReceiverPresenter
+import com.nextgenbroadcast.mobile.middleware.presentation.ISelectorPresenter
+import com.nextgenbroadcast.mobile.middleware.presentation.IUserAgentPresenter
+import com.nextgenbroadcast.mobile.middleware.repository.IRepository
+import com.nextgenbroadcast.mobile.middleware.repository.RepositoryImpl
+import kotlinx.coroutines.Dispatchers
 
 class Atsc3ForegroundService : LifecycleService() {
-    @Inject
-    lateinit var rpcGateway: IRPCGateway
-    @Inject
-    lateinit var webGateway: IWebGateway
-    @Inject
-    lateinit var viewController: IViewController
+    private lateinit var repository: IRepository
+    private lateinit var atsc3Module: Atsc3Module
+    private lateinit var serviceController: IServiceController
+    private lateinit var notificationHelper: NotificationHelper
+
+    private var viewController: IViewController? = null
+    private var webGateway: IWebGateway? = null
+    private var rpcGateway: IRPCGateway? = null
 
     private lateinit var wakeLock: WakeLock
-    private lateinit var notificationHelper: NotificationHelper
 
     private var isServiceStarted: Boolean = false
     private var webServer: MiddlewareWebServer? = null
 
     override fun onCreate() {
-        AndroidInjection.inject(this)
         super.onCreate()
 
+        wakeLock = (getSystemService(Context.POWER_SERVICE) as PowerManager).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Atsc3ForegroundService::lock")
+
+        val repo = RepositoryImpl().also {
+            repository = it
+        }
+        val atsc3 = Atsc3Module(this).also {
+            atsc3Module = it
+        }
+        serviceController = ServiceControllerImpl(repo, atsc3)
         notificationHelper = NotificationHelper(this, NOTIFICATION_CHANNEL_ID).also {
-            it.createNotificationChannel("Foreground Rpc Service Channel")
+            it.createNotificationChannel(getString(R.string.atsc3_chanel_name))
         }
 
-        startForeground(NOTIFICATION_ID, createNotification(getServiceName()))
-
-        webGateway.selectedService.observe(this, androidx.lifecycle.Observer {
-            updateNotification()
-        })
-        viewController.rmpState.distinctUntilChanged().observe(this, androidx.lifecycle.Observer {
-            updateNotification()
-        })
+        startForeground(NOTIFICATION_ID, createNotification(getServiceName()
+                ?: getString(R.string.atsc3_no_service_available)))
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
 
-        val action = intent?.action
-        if (action != null) {
-            when (action) {
-                ACTION_START -> {
-                    val message = intent.getStringExtra("inputExtra") ?: ""
-                    startService(message)
-                }
+        if (intent != null) {
+            when (intent.action) {
+                ACTION_START -> startService()
+
                 ACTION_STOP -> stopService()
+
+                ACTION_RMP_PLAY -> viewController?.rmpResume()
+
+                ACTION_RMP_PAUSE -> viewController?.rmpPause()
+
                 else -> {
                 }
             }
@@ -69,66 +87,141 @@ class Atsc3ForegroundService : LifecycleService() {
         return START_NOT_STICKY
     }
 
-    private fun getServiceName() = webGateway.selectedService.value?.shortName ?: "---"
-
-    private fun startService(message: String) {
+    @Deprecated("old implementation")
+    private fun startService() {
         if (isServiceStarted) return
         isServiceStarted = true
-        wakeLock = (Objects.requireNonNull(getSystemService(Context.POWER_SERVICE)) as PowerManager).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "ForegroundRpcService::lock").apply {
-            acquire()
-        }
-        startForeground(NOTIFICATION_ID, createNotification(getServiceName(), message))
-        startWebServer()
+
+//        wakeLock.acquire()
+//        startWebServer()
     }
 
-    private fun createNotification(title: String, message: String = "", playbackState: PlaybackState = PlaybackState.IDLE): Notification {
-        return notificationHelper.createMediaNotification(title, message, playbackState)
-    }
-
-    private fun updateNotification() {
-        val serviceName = webGateway.selectedService.value?.shortName ?: ""
-        notificationHelper.notify(NOTIFICATION_ID, createNotification(serviceName, "", viewController.rmpState.value ?: PlaybackState.IDLE))
-    }
-
-    private fun startWebServer() {
-        webServer = MiddlewareWebServer.Builder()
-                .hostName(webGateway.hostName)
-                .httpsPort(webGateway.httpsPort)
-                .httpPort(webGateway.httpPort)
-                .wssPort(webGateway.wssPort)
-                .wsPort(webGateway.wsPort)
-                .rpcGateway(rpcGateway)
-                .webGateway(webGateway)
-                .sslContext(UserAgentSSLContext(applicationContext))
-                .build().also {
-                    it.start()
-                }
-    }
-
+    @Deprecated("old implementation")
     private fun stopService() {
         if (isServiceStarted) {
             wakeLock.release()
 
-            webServer?.let { server ->
-                if (server.isRunning()) {
-                    try {
-                        server.stop()
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
-                }
-            }
+            stopWebServer()
             stopForeground(true)
         }
         stopSelf()
         isServiceStarted = false
     }
 
-    companion object {
-        const val ACTION_START: String = "START"
-        const val ACTION_STOP: String = "STOP"
+    private fun startWebServer(rpc: IRPCGateway, web: IWebGateway) {
+        webServer = MiddlewareWebServer.Builder()
+                .hostName(web.hostName)
+                .httpsPort(web.httpsPort)
+                .httpPort(web.httpPort)
+                .wssPort(web.wssPort)
+                .wsPort(web.wsPort)
+                .rpcGateway(rpc)
+                .webGateway(web)
+                .sslContext(UserAgentSSLContext(applicationContext))
+                .build().also {
+                    it.start()
+                }
+    }
 
-        private const val NOTIFICATION_CHANNEL_ID = "ForegroundRpcServiceChannel"
+    private fun stopWebServer() {
+        webServer?.let { server ->
+            if (server.isRunning()) {
+                try {
+                    server.stop()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        }
+    }
+
+    override fun onBind(intent: Intent): IBinder? {
+        super.onBind(intent)
+
+        createViewPresentationAndStartService()
+
+        return ServiceBinder()
+    }
+
+    override fun onRebind(intent: Intent?) {
+        super.onRebind(intent)
+
+        createViewPresentationAndStartService()
+    }
+
+    override fun onUnbind(intent: Intent?): Boolean {
+        super.onUnbind(intent)
+
+        destroyViewPresentationAndStopService()
+
+        return true
+    }
+
+    private fun createViewPresentationAndStartService() {
+        val view = ViewControllerImpl(repository).also {
+            viewController = it
+        }
+        val web = WebGatewayImpl(serviceController, repository).also {
+            webGateway = it
+        }
+        val rpc = RPCGatewayImpl(serviceController, view, Dispatchers.Main, Dispatchers.IO).also {
+            rpcGateway = it
+        }
+
+        web.selectedService.unite(view.rmpState).observe(this, androidx.lifecycle.Observer { (service, state) ->
+            updateNotification(service, state)
+        })
+
+        //TODO: start only when atsc3 source active?!
+        startWebServer(rpc, web)
+
+        //TODO: add lock limitation??
+        wakeLock.acquire()
+    }
+
+    private fun destroyViewPresentationAndStopService() {
+        wakeLock.release()
+
+        stopWebServer()
+
+        webGateway = null
+        rpcGateway = null
+        viewController = null
+    }
+
+    private fun getServiceName() = webGateway?.let { it.selectedService.value?.shortName }
+
+    private fun createNotification(title: String, message: String = "", playbackState: PlaybackState = PlaybackState.IDLE): Notification {
+        return notificationHelper.createMediaNotification(title, message, playbackState)
+    }
+
+    private fun updateNotification(service: SLSService?, rmpState: PlaybackState?) {
+        val serviceName = service?.shortName ?: ""
+        val playbackState = rmpState ?: PlaybackState.IDLE
+        notificationHelper.notify(NOTIFICATION_ID, createNotification(serviceName, "", playbackState))
+    }
+
+    inner class ServiceBinder : Binder() {
+        fun getReceiverPresenter(): IReceiverPresenter = serviceController
+        fun getSelectorPresenter(): ISelectorPresenter = serviceController
+        fun getUserAgentPresenter(): IUserAgentPresenter = viewController.required()
+        fun getMediaPlayerPresenter(): IMediaPlayerPresenter = viewController.required()
+    }
+
+    private fun <T> T?.required(): T {
+        return this ?: throw InitializationException()
+    }
+
+    class InitializationException : RuntimeException()
+
+    companion object {
+        private const val NOTIFICATION_CHANNEL_ID = "Atsc3ServiceChannel"
         private const val NOTIFICATION_ID = 1
+        private const val SERVICE_ACTION = "${BuildConfig.LIBRARY_PACKAGE_NAME}.intent.action"
+
+        const val ACTION_START = "$SERVICE_ACTION.START"
+        const val ACTION_STOP = "$SERVICE_ACTION.STOP"
+        const val ACTION_RMP_PLAY = "$SERVICE_ACTION.RMP_PLAY"
+        const val ACTION_RMP_PAUSE = "$SERVICE_ACTION.RMP_PAUSE"
     }
 }

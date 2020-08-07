@@ -10,7 +10,7 @@ import android.graphics.drawable.Icon
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
-import com.nextgenbroadcast.mobile.middleware.NotificationReceiverActivity
+import com.nextgenbroadcast.mobile.middleware.Atsc3ForegroundService
 import com.nextgenbroadcast.mobile.middleware.R
 
 class NotificationHelper(
@@ -20,9 +20,7 @@ class NotificationHelper(
     private val notificationManager = context.getSystemService(NotificationManager::class.java)
 
     fun createMediaNotification(title: String, text: String, state: PlaybackState): Notification {
-        val notificationIntent = Intent(context, NotificationReceiverActivity::class.java)
-
-        val pendingIntent = PendingIntent.getActivity(context, 0, notificationIntent, 0)
+        val pendingIntent = createPendingIntent(context)
 
         val builder = Notification.Builder(context, channelID)
                 .setContentTitle(title)
@@ -32,13 +30,15 @@ class NotificationHelper(
 
         when (state) {
             PlaybackState.PLAYING -> {
-                builder.addAction(createAction(context, android.R.drawable.ic_media_play, R.string.notification_play_btn_title, NotificationReceiverActivity.PLAYER_ACTION_PLAY))
+                builder.addAction(createAction(context, android.R.drawable.ic_media_pause, R.string.notification_pause_btn_title, Atsc3ForegroundService.ACTION_RMP_PAUSE))
                 builder.style = Notification.MediaStyle().setShowActionsInCompactView(0)
             }
+
             PlaybackState.PAUSED -> {
-                builder.addAction(createAction(context, android.R.drawable.ic_media_pause, R.string.notification_pause_btn_title, NotificationReceiverActivity.PLAYER_ACTION_PAUSE))
+                builder.addAction(createAction(context, android.R.drawable.ic_media_play, R.string.notification_play_btn_title, Atsc3ForegroundService.ACTION_RMP_PLAY))
                 builder.style = Notification.MediaStyle().setShowActionsInCompactView(0)
             }
+
             else -> {
             }
         }
@@ -47,18 +47,27 @@ class NotificationHelper(
     }
 
     private fun createAction(context: Context, @DrawableRes iconResId: Int, @StringRes titleResId: Int, intentAction: String): Notification.Action {
-        val intent = Intent(context, NotificationReceiverActivity::class.java).apply {
-            action = intentAction
-        }
-        val pendingIntent = PendingIntent.getActivity(context, 0, intent, 0)
+        val pendingIntent = createPendingIntent(context, intentAction)
         return Notification.Action.Builder(
                 Icon.createWithResource(context, iconResId),
                 context.getString(titleResId),
-                pendingIntent).build()
+                pendingIntent
+        ).build()
+    }
+
+    private fun createPendingIntent(context: Context, intentAction: String? = null): PendingIntent {
+        val intent = Intent(context, Atsc3ForegroundService::class.java).apply {
+            action = intentAction
+        }
+        return PendingIntent.getService(context, 0, intent, 0)
     }
 
     fun createNotificationChannel(name: String) {
-        notificationManager.createNotificationChannel(NotificationChannel(channelID, name, NotificationManager.IMPORTANCE_DEFAULT))
+        notificationManager.createNotificationChannel(
+                NotificationChannel(channelID, name, NotificationManager.IMPORTANCE_DEFAULT).apply {
+                    importance = NotificationManager.IMPORTANCE_HIGH
+                }
+        )
     }
 
     fun notify(id: Int, notification: Notification) {

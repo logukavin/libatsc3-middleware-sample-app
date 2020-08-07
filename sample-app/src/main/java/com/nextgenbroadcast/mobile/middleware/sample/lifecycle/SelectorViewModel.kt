@@ -9,7 +9,9 @@ class SelectorViewModel(
 ) : ViewModel() {
     val services = Transformations.distinctUntilChanged(presenter.sltServices)
 
-    fun selectService(serviceId: Int) {
+    fun selectService(serviceId: Int): Boolean {
+        if (getSelectedServiceId() == serviceId) return false
+
         services.value?.let { serviceList ->
             val service = serviceList.firstOrNull { it.id == serviceId }
 
@@ -17,6 +19,8 @@ class SelectorViewModel(
                 presenter.selectService(service)
             }
         }
+
+        return true
     }
 
     fun getSelectedServiceId(): Int? {

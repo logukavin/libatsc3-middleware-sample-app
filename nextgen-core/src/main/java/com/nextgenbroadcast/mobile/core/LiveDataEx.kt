@@ -23,5 +23,8 @@ private class Variable<T> {
     var value: T? = null
 }
 
-inline fun <X, Y, R> LiveData<X>.mapWith(second: LiveData<Y>, crossinline transform: (X?, Y?) -> R): LiveData<R> =
-        mapPair(this, second) { transform(it.first, it.second) }
+inline fun <X, Y, R> LiveData<X>.mapWith(second: LiveData<Y>, crossinline transform: (Pair<X?, Y?>) -> R): LiveData<R> =
+        mapPair(this, second) { transform(it) }
+
+fun <X, Y> LiveData<X>.unite(second: LiveData<Y>): LiveData<Pair<X?, Y?>> =
+        mapPair(this, second) { it }

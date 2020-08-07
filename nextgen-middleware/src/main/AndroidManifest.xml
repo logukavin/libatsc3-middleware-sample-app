@@ -10,18 +10,6 @@
 
     <application>
 
-        <activity
-            android:name=".NotificationReceiverActivity"
-            android:theme="@android:style/Theme.NoDisplay">
-            <intent-filter>
-                <action android:name="${applicationId}.intent.action.RMP_PLAY" />
-                <action android:name="${applicationId}.intent.action.RMP_PAUSE" />
-
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
-
-        </activity>
-
         <service
             android:name=".Atsc3ForegroundService"
             android:exported="false" />
