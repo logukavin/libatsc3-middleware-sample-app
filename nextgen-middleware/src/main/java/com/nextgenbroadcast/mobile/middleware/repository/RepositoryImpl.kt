@@ -13,6 +13,12 @@ import javax.inject.Singleton
 internal class RepositoryImpl @Inject constructor() : IRepository {
     private val _applications = ConcurrentHashMap<String, Atsc3Application>()
 
+    override val hostName = "localHost"
+    override val httpPort = 8080
+    override val httpsPort = 8443
+    override val wsPort = 9998
+    override val wssPort = 9999
+
     override val selectedService = MutableLiveData<SLSService>()
     override val serviceGuideUrls = MutableLiveData<List<Urls>>()
 

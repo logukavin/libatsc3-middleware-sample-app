@@ -2,6 +2,7 @@ package com.nextgenbroadcast.mobile.middleware.controller.view
 
 import androidx.lifecycle.*
 import com.nextgenbroadcast.mobile.core.mapWith
+import com.nextgenbroadcast.mobile.core.md5
 import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.RPMParams
@@ -27,7 +28,14 @@ internal class ViewControllerImpl @Inject constructor(
     override val appData: LiveData<AppData?> = repository.heldPackage.mapWith(repository.applications) { held, applications ->
         held?.let {
             val appContextId = held.appContextId ?: return@let null
-            val appEntryPage = held.bcastEntryPageUrl ?: held.bbandEntryPageUrl ?: return@let null
+            val appEntryPage = held.bcastEntryPageUrl?.let { entryPage ->
+                val hostName = repository.hostName
+                val httpPost = repository.httpsPort
+                val socketPort = repository.wsPort
+                val contextPath = appContextId.md5()
+                val rev = 20180720 //TODO: use real revision
+                "https://$hostName:$httpPost/$contextPath/$entryPage?wsURL=ws://$hostName:$socketPort&rev=$rev"
+            } ?: held.bbandEntryPageUrl ?: return@let null
             val compatibleServiceIds = held.coupledServices ?: emptyList()
             val application = applications?.firstOrNull { app ->
                 app.appContextIdList.contains(appContextId)

@@ -52,10 +52,9 @@ class UserAgentView @JvmOverloads constructor(
         }
     }
 
-    fun loadBAContent(appContextId: String, appEntryPoint: String) {
+    fun loadBAContent(appEntryPoint: String) {
         isBAMenuOpened = false
-        val contextPath = appContextId.md5()
-        loadUrl("$CONTENT_URL$contextPath/$appEntryPoint$CONTENT_WS")
+        loadUrl(appEntryPoint)
     }
 
     fun unloadBAContent() {
@@ -80,11 +79,5 @@ class UserAgentView @JvmOverloads constructor(
     private fun sendKeyPress(key: Int) {
         dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, key))
         dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, key))
-    }
-
-    companion object {
-        private const val LOCALHOST = "127.0.0.1"
-        private const val CONTENT_URL = "https://$LOCALHOST:8443/"
-        private const val CONTENT_WS = "?wsURL=ws://$LOCALHOST:9998&rev=20180720"
     }
 }
