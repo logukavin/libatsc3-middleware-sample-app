@@ -1,4 +1,4 @@
-package com.nextgenbroadcast.mobile.middleware.sample.service
+package com.nextgenbroadcast.mobile.middleware.notification
 
 interface INotificationManager {
     fun addNotification(notification: NotificationContainer)

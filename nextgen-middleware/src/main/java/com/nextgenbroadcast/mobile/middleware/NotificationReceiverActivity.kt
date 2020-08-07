@@ -1,4 +1,4 @@
-package com.nextgenbroadcast.mobile.middleware.sample
+package com.nextgenbroadcast.mobile.middleware
 
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
@@ -29,7 +29,7 @@ class NotificationReceiverActivity : AppCompatActivity() {
     }
 
     companion object {
-        const val PLAYER_ACTION_PLAY = "${BuildConfig.APPLICATION_ID}.intent.action.RMP_PLAY"
-        const val PLAYER_ACTION_PAUSE = "${BuildConfig.APPLICATION_ID}.intent.action.RMP_PAUSE"
+        const val PLAYER_ACTION_PLAY = "${BuildConfig.LIBRARY_PACKAGE_NAME}.intent.action.RMP_PLAY"
+        const val PLAYER_ACTION_PAUSE = "${BuildConfig.LIBRARY_PACKAGE_NAME}.intent.action.RMP_PAUSE"
     }
 }
