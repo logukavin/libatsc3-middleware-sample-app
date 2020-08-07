@@ -9,11 +9,8 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3Module
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPackage
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.service.Atsc3Service
-import javax.inject.Inject
-import javax.inject.Singleton
 
-@Singleton
-internal class ServiceControllerImpl @Inject constructor(
+internal class ServiceControllerImpl (
         private val repository: IRepository,
         private val atsc3Module: Atsc3Module
 ) : IServiceController, Atsc3Module.Listener {
