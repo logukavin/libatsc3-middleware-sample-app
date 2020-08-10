@@ -63,12 +63,7 @@ class Atsc3ForegroundService : LifecycleService() {
             it.createNotificationChannel(getString(R.string.atsc3_chanel_name))
         }
 
-        startForeground(NOTIFICATION_ID, createNotification(
-                if (getAtsc3SourceState() != ReceiverState.OPENED)
-                    getString(R.string.atsc3_source_is_not_initialized)
-                else
-                    getServiceName() ?: getString(R.string.atsc3_no_service_available))
-        )
+        startForeground(NOTIFICATION_ID, createAtsc3SourceStateNotification(getAtsc3SourceState()))
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -177,12 +172,9 @@ class Atsc3ForegroundService : LifecycleService() {
             updateNotification(service, state)
         })
 
-        serviceController.receiverState.observe(this, androidx.lifecycle.Observer { state ->
-            if (state == ReceiverState.OPENED) {
-                val serverIsRunning = webServer?.isRunning() ?: false
-                if (webServer == null || !serverIsRunning) startWebServer(rpc, web)
-            } else {
-                notificationHelper.notify(NOTIFICATION_ID, createNotification(getString(R.string.atsc3_source_is_not_initialized)))
+        serviceController.receiverState.observe (this, androidx.lifecycle.Observer {
+            if (getAtsc3SourceState() == ReceiverState.OPENED) {
+                startWebServer(rpc, web)
             }
         })
 
@@ -200,11 +192,14 @@ class Atsc3ForegroundService : LifecycleService() {
         viewController = null
     }
 
-    private fun getServiceName() = webGateway?.let { it.selectedService.value?.shortName }
-    private fun getAtsc3SourceState() = serviceController.receiverState.value
+    private fun getAtsc3SourceState() = serviceController.receiverState.value ?: ReceiverState.IDLE
 
     private fun createNotification(title: String, message: String = "", playbackState: PlaybackState = PlaybackState.IDLE): Notification {
         return notificationHelper.createMediaNotification(title, message, playbackState)
+    }
+
+    private fun createAtsc3SourceStateNotification(sourceState: ReceiverState): Notification {
+        return notificationHelper.createAtsc3SourceStateNotification(sourceState)
     }
 
     private fun updateNotification(service: SLSService?, rmpState: PlaybackState?) {
