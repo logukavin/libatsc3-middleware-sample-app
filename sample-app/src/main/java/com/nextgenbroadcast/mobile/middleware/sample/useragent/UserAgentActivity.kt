@@ -15,9 +15,6 @@ import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.view.postDelayed
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
-import dagger.android.AndroidInjection
-import kotlinx.android.synthetic.main.activity_user_agent.*
-import kotlinx.coroutines.Runnable
 import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.middleware.Atsc3Activity
@@ -30,6 +27,9 @@ import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.UserAgentViewMode
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.factory.UserAgentViewModelFactory
 import com.nextgenbroadcast.mobile.view.IOnErrorListener
 import com.nextgenbroadcast.mobile.view.ReceiverMediaPlayer
+import dagger.android.AndroidInjection
+import kotlinx.android.synthetic.main.activity_user_agent.*
+import kotlinx.coroutines.Runnable
 
 class UserAgentActivity : Atsc3Activity(),IOnErrorListener {
     private var rmpViewModel: RMPViewModel? = null
@@ -254,7 +254,7 @@ class UserAgentActivity : Atsc3Activity(),IOnErrorListener {
         private const val MEDIA_TIME_UPDATE_DELAY = 500L
     }
 
-    override fun onError() {
+    override fun onBaLoadingError() {
         Toast.makeText(this, getText(R.string.ba_loading_problem), Toast.LENGTH_SHORT).show()
     }
 }

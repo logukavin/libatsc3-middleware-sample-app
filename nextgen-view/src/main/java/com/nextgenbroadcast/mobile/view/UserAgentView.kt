@@ -7,7 +7,6 @@ import android.net.http.SslError
 import android.util.AttributeSet
 import android.view.KeyEvent
 import android.webkit.*
-import android.widget.Toast
 import com.nextgenbroadcast.mobile.core.cert.CertificateUtils
 import kotlinx.coroutines.*
 
@@ -21,7 +20,11 @@ class UserAgentView @JvmOverloads constructor(
     private var appEntryPoint: String? = null
     private var reloadJob: Job? = null
     private var onErrorListener: IOnErrorListener? = null
-    private val RETRY_DELAY = 500L
+    private val ioScope = CoroutineScope(Dispatchers.IO)
+
+    companion object {
+        private const val RETRY_DELAY = 500L
+    }
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onFinishInflate() {
@@ -71,26 +74,28 @@ class UserAgentView @JvmOverloads constructor(
 
     private fun checkReloadStatus() {
         val localAppEntryPoint = appEntryPoint
-        if (localAppEntryPoint != null && !isReloaded) {
+        if (localAppEntryPoint != null && reloadJob?.isCompleted != true) {
             isReloaded = true
-            reloadJob = GlobalScope.launch {
+            reloadJob = ioScope.launch {
+                delay(RETRY_DELAY)
                 withContext(Dispatchers.Main) {
-                    delay(RETRY_DELAY)
                     reloadData()
                 }
             }
         } else if (isReloaded) {
-            onErrorListener?.onError()
+            onErrorListener?.onBaLoadingError()
             unloadBAContent()
-
         }
     }
 
     private suspend fun reloadData() {
+        reloadJob?.isCompleted
         loadUrl(appEntryPoint)
     }
 
     fun loadBAContent(appEntryPoint: String) {
+        this.appEntryPoint = appEntryPoint
+        reloadJob?.cancel()
         isBAMenuOpened = false
         loadUrl(appEntryPoint)
     }
