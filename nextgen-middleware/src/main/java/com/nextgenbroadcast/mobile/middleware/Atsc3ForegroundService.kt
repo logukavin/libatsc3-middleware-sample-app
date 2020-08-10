@@ -117,7 +117,7 @@ class Atsc3ForegroundService : LifecycleService() {
                 .wsPort(web.wsPort)
                 .rpcGateway(rpc)
                 .webGateway(web)
-                .sslContext(UserAgentSSLContext(applicationContext))
+                .sslContext(UserAgentSSLContext(applicationContext.resources.openRawResource(com.nextgenbroadcast.mobile.core.R.raw.mykey)))
                 .build().also {
                     it.start()
                 }

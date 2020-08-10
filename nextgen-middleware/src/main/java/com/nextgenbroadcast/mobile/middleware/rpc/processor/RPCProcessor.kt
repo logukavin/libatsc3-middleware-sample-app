@@ -39,7 +39,7 @@ import com.nextgenbroadcast.mobile.middleware.rpc.subscribeUnsubscribe.Subscribe
 import com.nextgenbroadcast.mobile.middleware.rpc.xLink.IXLink
 import com.nextgenbroadcast.mobile.middleware.rpc.xLink.XLinkImpl
 
-internal class RPCProcessor (
+class RPCProcessor (
         private val gateway: IRPCGateway
 ) : IRPCProcessor {
 
