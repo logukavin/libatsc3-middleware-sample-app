@@ -6,6 +6,7 @@ import androidx.lifecycle.LifecycleRegistry
 import com.nextgenbroadcast.mobile.core.cert.CertificateUtils
 import com.nextgenbroadcast.mobile.core.cert.IUserAgentSSLContext
 import com.nextgenbroadcast.mobile.core.md5
+import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import com.nextgenbroadcast.mobile.middleware.gateway.rpc.IRPCGateway
 import com.nextgenbroadcast.mobile.middleware.gateway.web.IWebGateway
 import com.nextgenbroadcast.mobile.middleware.ws.MiddlewareWebSocket
@@ -23,13 +24,12 @@ import org.eclipse.jetty.util.ssl.SslContextFactory
 import org.eclipse.jetty.websocket.server.WebSocketHandler
 import org.eclipse.jetty.websocket.servlet.WebSocketCreator
 import org.eclipse.jetty.websocket.servlet.WebSocketServletFactory
-import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import java.io.IOException
 import java.security.GeneralSecurityException
 import java.util.*
 
 
-class MiddlewareWebServer constructor(
+open class MiddlewareWebServer constructor(
         private val server: Server,
         webGateway: IWebGateway?
 ) : AutoCloseable, LifecycleOwner {
@@ -118,15 +118,15 @@ class MiddlewareWebServer constructor(
             val cachePath: String
     )
 
-    class Builder {
-        private var httpsPort: Int? = null
-        private var httpPort: Int? = null
-        private var wssPort: Int? = null
-        private var wsPort: Int? = null
-        private var hostName: String? = null
-        private var generatedSSLContext: IUserAgentSSLContext? = null
-        private var rpcGateway: IRPCGateway? = null
-        private var webGateway: IWebGateway? = null
+    open class Builder {
+        protected var httpsPort: Int? = null
+        protected var httpPort: Int? = null
+        protected var wssPort: Int? = null
+        protected var wsPort: Int? = null
+        protected var hostName: String? = null
+        protected var generatedSSLContext: IUserAgentSSLContext? = null
+        protected var rpcGateway: IRPCGateway? = null
+        protected var webGateway: IWebGateway? = null
 
         fun httpsPort(value: Int) = apply { httpsPort = value }
 
@@ -144,7 +144,7 @@ class MiddlewareWebServer constructor(
 
         fun webGateway(value: IWebGateway) = apply { webGateway = value }
 
-        fun build(): MiddlewareWebServer {
+        open fun build(): MiddlewareWebServer {
             val server = Server()
 
             val connectorArray = hostName?.let { hostName ->
@@ -191,7 +191,7 @@ class MiddlewareWebServer constructor(
 }
 
 @Throws(GeneralSecurityException::class, IOException::class)
-private fun configureSSLFactory(generatedSSLContext: IUserAgentSSLContext): SslContextFactory {
+fun configureSSLFactory(generatedSSLContext: IUserAgentSSLContext): SslContextFactory {
     // Configuring SSL
     return SslContextFactory.Server().apply {
         keyStoreType = CertificateUtils.KEY_STORE_TYPE
@@ -202,14 +202,14 @@ private fun configureSSLFactory(generatedSSLContext: IUserAgentSSLContext): SslC
     }
 }
 
-private fun getServerConnector(server: Server, serverHost: String, serverPort: Int): ServerConnector {
+fun getServerConnector(server: Server, serverHost: String, serverPort: Int): ServerConnector {
     return ServerConnector(server).apply {
         port = serverPort
         host = serverHost
     }
 }
 
-private fun getSecureServerConnector(server: Server, serverHost: String, serverPort: Int, sslContextFactory: SslContextFactory): ServerConnector {
+fun getSecureServerConnector(server: Server, serverHost: String, serverPort: Int, sslContextFactory: SslContextFactory): ServerConnector {
     val config = HttpConfiguration().apply {
         addCustomizer(SecureRequestCustomizer())
         securePort = serverPort
