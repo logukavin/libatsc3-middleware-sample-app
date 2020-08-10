@@ -28,9 +28,10 @@ import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.RMPViewModel
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.SelectorViewModel
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.UserAgentViewModel
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.factory.UserAgentViewModelFactory
+import com.nextgenbroadcast.mobile.view.IOnErrorListener
 import com.nextgenbroadcast.mobile.view.ReceiverMediaPlayer
 
-class UserAgentActivity : Atsc3Activity() {
+class UserAgentActivity : Atsc3Activity(),IOnErrorListener {
     private var rmpViewModel: RMPViewModel? = null
     private var userAgentViewModel: UserAgentViewModel? = null
     private var selectorViewModel: SelectorViewModel? = null
@@ -86,7 +87,7 @@ class UserAgentActivity : Atsc3Activity() {
         super.onCreate(savedInstanceState)
 
         setContentView(R.layout.activity_user_agent)
-
+        user_agent_web_view.setOnErrorListener(this)
         selectorAdapter = ServiceAdapter(this)
 
         val swipeGD = GestureDetector(this, object : SwipeGestureDetector() {
@@ -251,5 +252,9 @@ class UserAgentActivity : Atsc3Activity() {
         val TAG: String = UserAgentActivity::class.java.simpleName
 
         private const val MEDIA_TIME_UPDATE_DELAY = 500L
+    }
+
+    override fun onError() {
+        Toast.makeText(this, getText(R.string.ba_loading_problem), Toast.LENGTH_SHORT).show()
     }
 }
