@@ -1,4 +1,5 @@
 <resources>
     <string name="app_name">Atsc3 Sample App</string>
     <string name="no_service_available">No service available</string>
+    <string name="ba_loading_problem">Some problem with BA loading</string>
 </resources>
