@@ -8,16 +8,16 @@ import android.os.IBinder
 import android.os.PowerManager
 import android.os.PowerManager.WakeLock
 import androidx.lifecycle.LifecycleService
-import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
-import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.cert.UserAgentSSLContext
+import com.nextgenbroadcast.mobile.core.model.PlaybackState
+import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.model.SLSService
 import com.nextgenbroadcast.mobile.core.unite
 import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3Module
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
 import com.nextgenbroadcast.mobile.middleware.controller.service.ServiceControllerImpl
+import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
 import com.nextgenbroadcast.mobile.middleware.controller.view.ViewControllerImpl
-import com.nextgenbroadcast.mobile.middleware.web.MiddlewareWebServer
 import com.nextgenbroadcast.mobile.middleware.gateway.rpc.IRPCGateway
 import com.nextgenbroadcast.mobile.middleware.gateway.rpc.RPCGatewayImpl
 import com.nextgenbroadcast.mobile.middleware.gateway.web.IWebGateway
@@ -29,6 +29,7 @@ import com.nextgenbroadcast.mobile.middleware.presentation.ISelectorPresenter
 import com.nextgenbroadcast.mobile.middleware.presentation.IUserAgentPresenter
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
 import com.nextgenbroadcast.mobile.middleware.repository.RepositoryImpl
+import com.nextgenbroadcast.mobile.middleware.web.MiddlewareWebServer
 import kotlinx.coroutines.Dispatchers
 
 class Atsc3ForegroundService : LifecycleService() {
@@ -62,8 +63,18 @@ class Atsc3ForegroundService : LifecycleService() {
             it.createNotificationChannel(getString(R.string.atsc3_chanel_name))
         }
 
-        startForeground(NOTIFICATION_ID, createNotification(getServiceName()
-                ?: getString(R.string.atsc3_no_service_available)))
+        startForeground(NOTIFICATION_ID, checkAtsc3SourceStateAndCreateNotification())
+    }
+
+    private fun checkAtsc3SourceStateAndCreateNotification(title: String = "", message: String = "", state: PlaybackState = PlaybackState.IDLE): Notification {
+        return if (getAtsc3SourceState() == ReceiverState.OPENED) {
+
+            val titleValue = if (title.isEmpty()) getServiceName() else title
+
+            createNotification(titleValue, message, state)
+        } else {
+            createNotification(getString(R.string.atsc3_source_is_not_initialized))
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -189,16 +200,17 @@ class Atsc3ForegroundService : LifecycleService() {
         viewController = null
     }
 
-    private fun getServiceName() = webGateway?.let { it.selectedService.value?.shortName }
+    private fun getAtsc3SourceState() = serviceController.receiverState.value ?: ReceiverState.IDLE
+    private fun getServiceName() = webGateway?.let { it.selectedService.value?.shortName } ?: getString(R.string.atsc3_no_service_available)
 
     private fun createNotification(title: String, message: String = "", playbackState: PlaybackState = PlaybackState.IDLE): Notification {
         return notificationHelper.createMediaNotification(title, message, playbackState)
     }
 
     private fun updateNotification(service: SLSService?, rmpState: PlaybackState?) {
-        val serviceName = service?.shortName ?: ""
+        val serviceName = service?.shortName ?: getString(R.string.atsc3_no_service_available)
         val playbackState = rmpState ?: PlaybackState.IDLE
-        notificationHelper.notify(NOTIFICATION_ID, createNotification(serviceName, "", playbackState))
+        notificationHelper.notify(NOTIFICATION_ID, checkAtsc3SourceStateAndCreateNotification(title = serviceName, state = playbackState))
     }
 
     inner class ServiceBinder : Binder() {
