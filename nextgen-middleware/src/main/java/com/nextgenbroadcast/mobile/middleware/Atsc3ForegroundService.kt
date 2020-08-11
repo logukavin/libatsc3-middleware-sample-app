@@ -63,7 +63,18 @@ class Atsc3ForegroundService : LifecycleService() {
             it.createNotificationChannel(getString(R.string.atsc3_chanel_name))
         }
 
-        startForeground(NOTIFICATION_ID, createAtsc3SourceStateNotification(getAtsc3SourceState()))
+        startForeground(NOTIFICATION_ID, checkAtsc3SourceStateAndCreateNotification())
+    }
+
+    private fun checkAtsc3SourceStateAndCreateNotification(title: String = "", message: String = "", state: PlaybackState = PlaybackState.IDLE): Notification {
+        return if (getAtsc3SourceState() == ReceiverState.OPENED) {
+
+            val titleValue = if (title.isEmpty()) getServiceName() else title
+
+            createNotification(titleValue, message, state)
+        } else {
+            createNotification(getString(R.string.atsc3_source_is_not_initialized))
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -172,11 +183,8 @@ class Atsc3ForegroundService : LifecycleService() {
             updateNotification(service, state)
         })
 
-        serviceController.receiverState.observe (this, androidx.lifecycle.Observer { state ->
-            if (state == ReceiverState.OPENED) {
-                startWebServer(rpc, web)
-            }
-        })
+        //TODO: start only when atsc3 source active?!
+        startWebServer(rpc, web)
 
         //TODO: add lock limitation??
         wakeLock.acquire()
@@ -193,19 +201,16 @@ class Atsc3ForegroundService : LifecycleService() {
     }
 
     private fun getAtsc3SourceState() = serviceController.receiverState.value ?: ReceiverState.IDLE
+    private fun getServiceName() = webGateway?.let { it.selectedService.value?.shortName } ?: getString(R.string.atsc3_no_service_available)
 
     private fun createNotification(title: String, message: String = "", playbackState: PlaybackState = PlaybackState.IDLE): Notification {
         return notificationHelper.createMediaNotification(title, message, playbackState)
     }
 
-    private fun createAtsc3SourceStateNotification(sourceState: ReceiverState): Notification {
-        return notificationHelper.createAtsc3SourceStateNotification(sourceState)
-    }
-
     private fun updateNotification(service: SLSService?, rmpState: PlaybackState?) {
         val serviceName = service?.shortName ?: getString(R.string.atsc3_no_service_available)
         val playbackState = rmpState ?: PlaybackState.IDLE
-        notificationHelper.notify(NOTIFICATION_ID, createNotification(serviceName, "", playbackState))
+        notificationHelper.notify(NOTIFICATION_ID, checkAtsc3SourceStateAndCreateNotification(title = serviceName, state = playbackState))
     }
 
     inner class ServiceBinder : Binder() {
