@@ -15,9 +15,6 @@ import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.view.postDelayed
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
-import dagger.android.AndroidInjection
-import kotlinx.android.synthetic.main.activity_user_agent.*
-import kotlinx.coroutines.Runnable
 import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.middleware.Atsc3Activity
@@ -29,6 +26,9 @@ import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.SelectorViewModel
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.UserAgentViewModel
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.factory.UserAgentViewModelFactory
 import com.nextgenbroadcast.mobile.view.ReceiverMediaPlayer
+import dagger.android.AndroidInjection
+import kotlinx.android.synthetic.main.activity_user_agent.*
+import kotlinx.coroutines.Runnable
 
 class UserAgentActivity : Atsc3Activity() {
     private var rmpViewModel: RMPViewModel? = null
@@ -50,14 +50,14 @@ class UserAgentActivity : Atsc3Activity() {
             ViewModelProvider(viewModelStore, userAgentViewModelFactory)
         }
 
-        bintViewModels(provider).let { (rmp, userAgent, selector) ->
+        bindViewModels(provider).let { (rmp, userAgent, selector) ->
             bindSelector(selector)
             bindUserAgent(userAgent)
             bindMediaPlayer(rmp)
         }
     }
 
-    private fun bintViewModels(provider: ViewModelProvider): Triple<RMPViewModel, UserAgentViewModel, SelectorViewModel> {
+    private fun bindViewModels(provider: ViewModelProvider): Triple<RMPViewModel, UserAgentViewModel, SelectorViewModel> {
         val rmp = provider.get(RMPViewModel::class.java).also {
             rmpViewModel = it
         }
