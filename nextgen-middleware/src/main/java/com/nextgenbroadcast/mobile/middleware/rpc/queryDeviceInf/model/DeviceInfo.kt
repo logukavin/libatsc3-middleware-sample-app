@@ -2,11 +2,14 @@ package com.nextgenbroadcast.mobile.middleware.rpc.queryDeviceInf.model
 
 import com.nextgenbroadcast.mobile.middleware.rpc.RpcResponse
 
-data class DeviceInfo(
+data class  DeviceInfo(
         var deviceMake: String? = null,
         var deviceModel: String? = null,
         var deviceInput: DeviceInput? = null,
-        var deviceInfo: Info? = null
+        var deviceInfo: Info? = null,
+        var deviceId: String? = null,
+        var advertisingId :String? = null,
+        var deviceCapabilities :String? = null
 ) : RpcResponse()
 
 data class DeviceInput(

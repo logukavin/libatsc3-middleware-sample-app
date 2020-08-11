@@ -91,7 +91,7 @@ class IRPCControllerTest {
         Mockito.`when`(viewController.appData).thenReturn(appDataViewController)
 
         mediaPlayerController = ViewControllerImpl(repository)
-        coordinator = RPCGatewayImpl(serviceController, mediaPlayerController, testDispatcher, testDispatcher)
+        coordinator = RPCGatewayImpl(serviceController, mediaPlayerController, testDispatcher, testDispatcher, repository)
         iRPCGateway = coordinator
         Dispatchers.setMain(testDispatcher)
     }

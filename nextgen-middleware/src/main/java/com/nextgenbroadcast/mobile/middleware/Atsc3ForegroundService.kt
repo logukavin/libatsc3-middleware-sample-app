@@ -51,12 +51,13 @@ class Atsc3ForegroundService : LifecycleService() {
 
         wakeLock = (getSystemService(Context.POWER_SERVICE) as PowerManager).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Atsc3ForegroundService::lock")
 
-        val repo = RepositoryImpl().also {
+        val repo = RepositoryImpl(applicationContext).also {
             repository = it
         }
         val atsc3 = Atsc3Module(this).also {
             atsc3Module = it
         }
+
         serviceController = ServiceControllerImpl(repo, atsc3)
         notificationHelper = NotificationHelper(this, NOTIFICATION_CHANNEL_ID).also {
             it.createNotificationChannel(getString(R.string.atsc3_chanel_name))
@@ -164,7 +165,7 @@ class Atsc3ForegroundService : LifecycleService() {
         val web = WebGatewayImpl(serviceController, repository).also {
             webGateway = it
         }
-        val rpc = RPCGatewayImpl(serviceController, view, Dispatchers.Main, Dispatchers.IO).also {
+        val rpc = RPCGatewayImpl(serviceController, view, Dispatchers.Main, Dispatchers.IO,repository).also {
             rpcGateway = it
         }
 
