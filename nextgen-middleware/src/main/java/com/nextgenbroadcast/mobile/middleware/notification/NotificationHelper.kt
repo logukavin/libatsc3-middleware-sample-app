@@ -21,13 +21,7 @@ class NotificationHelper(
     private val notificationManager = context.getSystemService(NotificationManager::class.java)
 
     fun createMediaNotification(title: String, text: String, state: PlaybackState): Notification {
-        val pendingIntent = createPendingIntent(context)
-
-        val builder = Notification.Builder(context, channelID)
-                .setContentTitle(title)
-                .setContentText(text)
-                .setSmallIcon(R.mipmap.ic_launcher_round)
-                .setContentIntent(pendingIntent)
+        val builder = createNotificationBuilder(title, text)
 
         when (state) {
             PlaybackState.PLAYING -> {
@@ -80,19 +74,20 @@ class NotificationHelper(
     }
 
     fun createAtsc3SourceStateNotification(sourceState: ReceiverState): Notification {
-        val pendingIntent = createPendingIntent(context)
-
         val title = if (sourceState == ReceiverState.OPENED)
             context.getString(R.string.atsc3_source_is_initialized)
         else
             context.getString(R.string.atsc3_source_is_not_initialized)
 
+        return createNotificationBuilder(title).build()
+    }
 
-        val builder = Notification.Builder(context, channelID)
+    private fun createNotificationBuilder(title: String, text: String = ""): Notification.Builder {
+        val pendingIntent = createPendingIntent(context)
+        return Notification.Builder(context, channelID)
                 .setSmallIcon(R.mipmap.ic_launcher_round)
                 .setContentIntent(pendingIntent)
                 .setContentTitle(title)
-
-        return builder.build()
+                .setContentText(text)
     }
 }
