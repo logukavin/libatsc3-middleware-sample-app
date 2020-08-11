@@ -10,7 +10,6 @@ import android.graphics.drawable.Icon
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
-import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.middleware.Atsc3ForegroundService
 import com.nextgenbroadcast.mobile.middleware.R
 
@@ -21,7 +20,13 @@ class NotificationHelper(
     private val notificationManager = context.getSystemService(NotificationManager::class.java)
 
     fun createMediaNotification(title: String, text: String, state: PlaybackState): Notification {
-        val builder = createNotificationBuilder(title, text)
+        val pendingIntent = createPendingIntent(context)
+
+        val builder = Notification.Builder(context, channelID)
+                .setSmallIcon(R.mipmap.ic_launcher_round)
+                .setContentIntent(pendingIntent)
+                .setContentTitle(title)
+                .setContentText(text)
 
         when (state) {
             PlaybackState.PLAYING -> {
@@ -71,23 +76,5 @@ class NotificationHelper(
 
     fun createMediaNotification(container: NotificationContainer): Notification {
         return createMediaNotification(container.title, container.message, container.state)
-    }
-
-    fun createAtsc3SourceStateNotification(sourceState: ReceiverState): Notification {
-        val title = if (sourceState == ReceiverState.OPENED)
-            context.getString(R.string.atsc3_source_is_initialized)
-        else
-            context.getString(R.string.atsc3_source_is_not_initialized)
-
-        return createNotificationBuilder(title).build()
-    }
-
-    private fun createNotificationBuilder(title: String, text: String = ""): Notification.Builder {
-        val pendingIntent = createPendingIntent(context)
-        return Notification.Builder(context, channelID)
-                .setSmallIcon(R.mipmap.ic_launcher_round)
-                .setContentIntent(pendingIntent)
-                .setContentTitle(title)
-                .setContentText(text)
     }
 }

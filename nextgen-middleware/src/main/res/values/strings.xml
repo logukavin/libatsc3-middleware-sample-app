@@ -3,6 +3,5 @@
     <string name="notification_pause_btn_title">Pause</string>
     <string name="atsc3_chanel_name">Atsc3 Service Channel</string>
     <string name="atsc3_no_service_available">No service available</string>
-    <string name="atsc3_source_is_initialized">Atsc3 source is initialized</string>
     <string name="atsc3_source_is_not_initialized">Atsc3 source is not initialized</string>
 </resources>
