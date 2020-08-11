@@ -172,8 +172,8 @@ class Atsc3ForegroundService : LifecycleService() {
             updateNotification(service, state)
         })
 
-        serviceController.receiverState.observe (this, androidx.lifecycle.Observer {
-            if (getAtsc3SourceState() == ReceiverState.OPENED) {
+        serviceController.receiverState.observe (this, androidx.lifecycle.Observer { state ->
+            if (state == ReceiverState.OPENED) {
                 startWebServer(rpc, web)
             }
         })
