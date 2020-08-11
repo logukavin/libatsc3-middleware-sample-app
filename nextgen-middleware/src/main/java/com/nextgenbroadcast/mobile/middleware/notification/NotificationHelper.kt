@@ -23,10 +23,10 @@ class NotificationHelper(
         val pendingIntent = createPendingIntent(context)
 
         val builder = Notification.Builder(context, channelID)
-                .setContentTitle(title)
-                .setContentText(text)
                 .setSmallIcon(R.mipmap.ic_launcher_round)
                 .setContentIntent(pendingIntent)
+                .setContentTitle(title)
+                .setContentText(text)
 
         when (state) {
             PlaybackState.PLAYING -> {
