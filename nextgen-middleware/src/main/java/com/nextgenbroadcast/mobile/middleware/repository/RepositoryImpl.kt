@@ -1,14 +1,29 @@
 package com.nextgenbroadcast.mobile.middleware.repository
 
+import android.content.Context
+import android.content.SharedPreferences
 import androidx.lifecycle.MutableLiveData
 import com.nextgenbroadcast.mobile.core.model.SLSService
 import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.Urls
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPackage
+import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
-internal class RepositoryImpl : IRepository {
+internal class RepositoryImpl(private var applicationContext: Context) : IRepository {
     private val _applications = ConcurrentHashMap<String, Atsc3Application>()
+
+    init {
+        setUpIDGeneration()
+    }
+
+    companion object {
+        const val REPOSITORY_PREFERENCE = "com.nextgenbroadcast.mobile.middleware.repository"
+        const val DEVICE_ID = "device_id"
+        const val ADVERTISING_ID = "advertising_id"
+    }
+
+    lateinit var preferences: SharedPreferences
 
     override val hostName = "localHost"
     override val httpPort = 8080
@@ -58,5 +73,26 @@ internal class RepositoryImpl : IRepository {
         services.postValue(emptyList())
         heldPackage.postValue(null)
         routeMediaUrl.postValue(null)
+    }
+
+    private fun setUpIDGeneration() {
+        preferences = applicationContext.getSharedPreferences(REPOSITORY_PREFERENCE, Context.MODE_PRIVATE)
+        val deviceId = preferences.getString(DEVICE_ID, "")
+        val advertisingId = preferences.getString(ADVERTISING_ID, "")
+        if (deviceId == "" || advertisingId == "") {
+            with(preferences.edit()) {
+                putString(DEVICE_ID, UUID.randomUUID().toString())
+                putString(ADVERTISING_ID, UUID.randomUUID().toString())
+                commit()
+            }
+        }
+    }
+
+    override fun getDeviceId(): String {
+        return preferences.getString(DEVICE_ID, "") ?: ""
+    }
+
+    override fun getAdvertisingId(): String {
+        return preferences.getString(ADVERTISING_ID, "") ?: ""
     }
 }

@@ -76,6 +76,14 @@ class WebServerTests {
                     get() = PlaybackState.IDLE
                 override val serviceGuideUrls: List<Urls>
                     get() = emptyList()
+
+                override fun getDeviceId(): String {
+                    TODO("Not yet implemented")
+                }
+
+                override fun getAdvertisingId(): String {
+                    TODO("Not yet implemented")
+                }
             })
             //Server without ContentProviderServlet(applicationContext) and UserAgentSSLContext(applicationContext)
             webServer = MiddlewareWebServer.Builder()

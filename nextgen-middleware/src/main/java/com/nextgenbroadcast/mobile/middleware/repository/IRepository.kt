@@ -34,4 +34,6 @@ internal interface IRepository {
     fun setHeldPackage(data: Atsc3HeldPackage?)
     fun setMediaUrl(mediaUrl: String?)
     fun reset()
+    fun getDeviceId():String
+    fun getAdvertisingId():String
 }
