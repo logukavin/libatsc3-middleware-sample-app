@@ -26,7 +26,6 @@ object DeviceUtils {
         val intf = conf.getInterface(0)
         val numEp = intf.endpointCount
 
-        Log.d(tag, "******* device (vid " + device.vendorId + ", pid " + device.productId +
-                ", ep " + numEp + ", " + device.deviceName + ") " + action)
+        Log.d(tag, "******* device (vid: ${device.vendorId}, pid: ${device.productId}, ep: $numEp, ${device.deviceName}) $action")
     }
 }
