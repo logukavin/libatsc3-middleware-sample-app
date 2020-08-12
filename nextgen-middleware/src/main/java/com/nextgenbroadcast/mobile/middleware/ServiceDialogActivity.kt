@@ -26,6 +26,16 @@ internal class ServiceDialogActivity : AppCompatActivity() {
         disconnect_service.setOnClickListener {
             stopService()
         }
+
+        start_tv_app.setOnClickListener {
+            startTVApplication()
+        }
+    }
+
+    private fun startTVApplication() {
+        Atsc3ForegroundService.startTvApplication(this)
+
+        finish()
     }
 
     private fun openFileChooser() {

@@ -15,6 +15,13 @@
         android:text="@string/service_action_select_pcap" />
 
     <Button
+        android:id="@+id/start_tv_app"
+        style="@style/Widget.AppCompat.ActionButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/start_tv_application" />
+
+    <Button
         android:id="@+id/disconnect_service"
         style="@style/Widget.AppCompat.ActionButton"
         android:layout_width="match_parent"

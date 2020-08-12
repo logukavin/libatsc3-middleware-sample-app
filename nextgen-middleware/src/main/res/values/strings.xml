@@ -7,4 +7,5 @@
     <string name="service_action_menu_title">Atsc3 service menu</string>
     <string name="service_action_select_pcap">Select pcap file…</string>
     <string name="service_action_disconnect">Disconnect</string>
+    <string name="start_tv_application">Start TV application</string>
 </resources>
