@@ -9,7 +9,8 @@ import java.security.cert.X509Certificate
 import javax.net.ssl.KeyManagerFactory
 
 object CertificateUtils {
-    var KEY_MANAGER_ALGORITHM = KeyManagerFactory.getDefaultAlgorithm().toString()
+    @JvmStatic
+    var KEY_MANAGER_ALGORITHM = "X509"
     const val KEY_STORE_TYPE = "PKCS12"
 
     fun loadKeystore(inputStream: InputStream?, password: String): KeyStore {

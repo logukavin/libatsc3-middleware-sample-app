@@ -29,7 +29,7 @@ import java.security.GeneralSecurityException
 import java.util.*
 
 
-open class MiddlewareWebServer constructor(
+class MiddlewareWebServer constructor(
         private val server: Server,
         webGateway: IWebGateway?
 ) : AutoCloseable, LifecycleOwner {
@@ -118,15 +118,15 @@ open class MiddlewareWebServer constructor(
             val cachePath: String
     )
 
-    open class Builder {
-        protected var httpsPort: Int? = null
-        protected var httpPort: Int? = null
-        protected var wssPort: Int? = null
-        protected var wsPort: Int? = null
-        protected var hostName: String? = null
-        protected var generatedSSLContext: IUserAgentSSLContext? = null
-        protected var rpcGateway: IRPCGateway? = null
-        protected var webGateway: IWebGateway? = null
+    class Builder {
+        private var httpsPort: Int? = null
+        private var httpPort: Int? = null
+        private var wssPort: Int? = null
+        private var wsPort: Int? = null
+        private var hostName: String? = null
+        private var generatedSSLContext: IUserAgentSSLContext? = null
+        private var rpcGateway: IRPCGateway? = null
+        private var webGateway: IWebGateway? = null
 
         fun httpsPort(value: Int) = apply { httpsPort = value }
 
@@ -144,7 +144,7 @@ open class MiddlewareWebServer constructor(
 
         fun webGateway(value: IWebGateway) = apply { webGateway = value }
 
-        open fun build(): MiddlewareWebServer {
+        fun build(): MiddlewareWebServer {
             val server = Server()
 
             val connectorArray = hostName?.let { hostName ->

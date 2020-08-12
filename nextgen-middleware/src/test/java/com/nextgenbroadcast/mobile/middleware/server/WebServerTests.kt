@@ -1,7 +1,7 @@
 package com.nextgenbroadcast.mobile.middleware.server
 
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
-import androidx.lifecycle.LifecycleRegistry
+import com.nextgenbroadcast.mobile.core.cert.CertificateUtils
 import com.nextgenbroadcast.mobile.core.cert.UserAgentSSLContext
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.middleware.gateway.rpc.IRPCGateway
@@ -11,15 +11,33 @@ import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.Urls
 import com.nextgenbroadcast.mobile.middleware.web.MiddlewareWebServer
 import com.nextgenbroadcast.mobile.middleware.web.MiddlewareWebServerError
 import com.nextgenbroadcast.mobile.middleware.ws.MiddlewareWebSocket
+import kotlinx.coroutines.test.TestCoroutineDispatcher
+import kotlinx.coroutines.test.runBlockingTest
 import okhttp3.ConnectionSpec
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.eclipse.jetty.websocket.client.WebSocketClient
 import org.junit.*
-import org.mockito.Mock
+import org.junit.runner.RunWith
+import org.mockito.Mockito
+import org.powermock.api.mockito.PowerMockito
+import org.powermock.core.classloader.annotations.PowerMockIgnore
+import org.powermock.core.classloader.annotations.PrepareForTest
+import org.powermock.modules.junit4.PowerMockRunner
+import javax.net.ssl.KeyManagerFactory
 
+
+@RunWith(PowerMockRunner::class)
+@PrepareForTest(CertificateUtils::class,java.lang.String::class)
+@PowerMockIgnore( "javax.net.ssl.*", "javax.security.*" )
 
 class WebServerTests {
+    private val testDispatcher = TestCoroutineDispatcher()
+
+    @Rule
+    @ClassRule
+    @JvmField
+    var instantTaskExecutorRule = InstantTaskExecutorRule()
 
     abstract class RPCGatewayAdapter : IRPCGateway {
         override fun updateRMPPosition(scaleFactor: Double, xPos: Double, yPos: Double) {
@@ -55,64 +73,59 @@ class WebServerTests {
         }
     }
 
-    companion object {
-        private const val HTTP_PORT = 8080
-        private const val HTTPS_PORT = 8443
-        private const val WS_PORT = 9998
-        private const val WSS_PORT = 9999
-        @Rule
-        @ClassRule
-        @JvmField
-        var instantTaskExecutorRule = InstantTaskExecutorRule()
+    //    companion object {
+    private val HTTP_PORT = 8080
+    private val HTTPS_PORT = 8443
+    private val WS_PORT = 9998
+    private val WSS_PORT = 9999
+    lateinit var rpcProcessor: RPCProcessor
+    lateinit var webServer: MiddlewareWebServer
+    lateinit var webSocketClient: WebSocketClient
 
-        lateinit var rpcProcessor: RPCProcessor
-        lateinit var webServer: MiddlewareWebServer
-        lateinit var webSocketClient: WebSocketClient
+    val classLoader = this.javaClass.classLoader
 
-        val classLoader = this.javaClass.classLoader
-        @BeforeClass
-        @JvmStatic
-        fun setup() {
-            System.setProperty("javax.net.ssl.trustStore", "NONE")
-            rpcProcessor = RPCProcessor(object : RPCGatewayAdapter() {
-                override val language: String
-                    get() = "test"
-                override val queryServiceId: String?
-                    get() = "test"
-                override val mediaUrl: String?
-                    get() = "test"
-                override val playbackState: PlaybackState
-                    get() = PlaybackState.IDLE
-                override val serviceGuideUrls: List<Urls>
-                    get() = emptyList()
-            })
-            val servletList = listOf(ServletContainer(MiddlewareWebServerTestServlet(), "/index.html"))
+    @Before
+    fun setup() = testDispatcher.runBlockingTest {
+        System.setProperty("javax.net.ssl.trustStore", "NONE")
+        rpcProcessor = RPCProcessor(object : RPCGatewayAdapter() {
+            override val language: String
+                get() = "test"
+            override val queryServiceId: String?
+                get() = "test"
+            override val mediaUrl: String?
+                get() = "test"
+            override val playbackState: PlaybackState
+                get() = PlaybackState.IDLE
+            override val serviceGuideUrls: List<Urls>
+                get() = emptyList()
+        })
+        val servletList = listOf(ServletContainer(MiddlewareWebServerTestServlet(), "/index.html"))
+        PowerMockito.mockStatic(CertificateUtils::class.java)
+        Mockito.`when`(CertificateUtils.KEY_MANAGER_ALGORITHM).thenReturn(KeyManagerFactory.getDefaultAlgorithm())
+        webServer = WebServerWithServlet.Builder()
+                .addServlets(servletList)
+                .hostName("localhost")
+                .httpPort(HTTP_PORT)
+                .httpsPort(HTTPS_PORT)
+                .wsPort(WS_PORT)
+                .wssPort(WSS_PORT)
+                .sslContext(UserAgentSSLContext(classLoader?.getResourceAsStream("mykey.p12")))
+                .build().also {
+                    it.start()
+                }
+        webSocketClient = WebSocketClient()
+    }
 
-            webServer = WebServerWithServlet.BuilderWithServlet()
-                    .addServlets(servletList)
-                    .hostName("localhost")
-                    .httpPort(HTTP_PORT)
-                    .httpsPort(HTTPS_PORT)
-                    .wsPort(WS_PORT)
-                    .wssPort(WSS_PORT)
-                    .sslContext(UserAgentSSLContext(classLoader?.getResourceAsStream("mykey.p12")))
-                    .build()
-//            Whitebox.setInternalState(webServer, "lifecycleRegistry", lifecycleRegistry);
-            webSocketClient = WebSocketClient()
-            webServer.start()
+    @Test
+    @After
+    fun tearDown() {
+        if (webSocketClient.isRunning) {
+            webSocketClient.stop()
         }
-//
-//        @AfterClass
-//        @JvmStatic
-//        fun tearDown() {
-//            if (webSocketClient.isRunning) {
-//                webSocketClient.stop()
-//            }
-//            if (webServer.isRunning()) {
-//                webServer.stop()
-//            }
-//            Assert.assertEquals(false, (webServer.isRunning()))
-//        }
+        if (webServer.isRunning()) {
+            webServer.stop()
+        }
+        Assert.assertEquals(false, (webServer.isRunning()))
     }
 
     @Test
