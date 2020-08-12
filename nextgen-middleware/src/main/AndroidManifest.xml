@@ -10,6 +10,17 @@
 
     <application>
 
+        <activity
+            android:name=".phy.Atsc3DeviceActivity"
+            android:theme="@android:style/Theme.NoDisplay">
+            <intent-filter>
+                <action android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" />
+            </intent-filter>
+            <meta-data
+                android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED"
+                android:resource="@xml/device_filter" />
+        </activity>
+
         <activity android:name=".Atsc3NotificationDialogActivity"
             android:excludeFromRecents="true"
             android:theme="@style/Theme.AppCompat.Dialog"/>
