@@ -65,7 +65,7 @@ class NotificationHelper(
     fun createNotificationChannel(name: String) {
         notificationManager.createNotificationChannel(
                 NotificationChannel(channelID, name, NotificationManager.IMPORTANCE_DEFAULT).apply {
-                    importance = NotificationManager.IMPORTANCE_HIGH
+                    importance = NotificationManager.IMPORTANCE_LOW
                 }
         )
     }
