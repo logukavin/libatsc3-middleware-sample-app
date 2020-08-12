@@ -96,8 +96,8 @@ class MainActivity : Atsc3Activity() {
 
         requestPermissions(arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), 1)
 
-        findViewById<View>(R.id.stop).setOnClickListener { stopService() }
-        findViewById<View>(R.id.start).setOnClickListener { startService() }
+        findViewById<View>(R.id.stop).setOnClickListener { Atsc3ForegroundService.stopService(this@MainActivity) }
+        findViewById<View>(R.id.start).setOnClickListener { Atsc3ForegroundService.startService(this@MainActivity) }
         findViewById<View>(R.id.start_user_agent).setOnClickListener { startUserAgent() }
 
         initLibAtsc3()
@@ -156,21 +156,8 @@ class MainActivity : Atsc3Activity() {
         stsc3Close.isEnabled = state == ReceiverState.OPENED || state == ReceiverState.PAUSED
     }
 
-    private fun startService() {
-        val serviceIntent = Intent(this, Atsc3ForegroundService::class.java)
-        serviceIntent.action = Atsc3ForegroundService.ACTION_START
-        serviceIntent.putExtra("inputExtra", "Foreground RPC Service Example in Android")
-        ContextCompat.startForegroundService(this, serviceIntent)
-    }
-
-    private fun stopService() {
-        val serviceIntent = Intent(this, Atsc3ForegroundService::class.java)
-        serviceIntent.action = Atsc3ForegroundService.ACTION_STOP
-        ContextCompat.startForegroundService(this, serviceIntent)
-    }
-
     override fun onDestroy() {
-        stopService()
+        Atsc3ForegroundService.stopService(this)
         super.onDestroy()
     }
 
