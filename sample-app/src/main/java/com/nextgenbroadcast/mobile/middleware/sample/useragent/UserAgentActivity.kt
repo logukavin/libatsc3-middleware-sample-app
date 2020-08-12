@@ -51,14 +51,14 @@ class UserAgentActivity : Atsc3Activity() {
             ViewModelProvider(viewModelStore, userAgentViewModelFactory)
         }
 
-        bintViewModels(provider).let { (rmp, userAgent, selector) ->
+        bindViewModels(provider).let { (rmp, userAgent, selector) ->
             bindSelector(selector)
             bindUserAgent(userAgent)
             bindMediaPlayer(rmp)
         }
     }
 
-    private fun bintViewModels(provider: ViewModelProvider): Triple<RMPViewModel, UserAgentViewModel, SelectorViewModel> {
+    private fun bindViewModels(provider: ViewModelProvider): Triple<RMPViewModel, UserAgentViewModel, SelectorViewModel> {
         val rmp = provider.get(RMPViewModel::class.java).also {
             rmpViewModel = it
         }
