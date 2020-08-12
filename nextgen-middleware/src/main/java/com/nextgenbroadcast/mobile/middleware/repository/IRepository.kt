@@ -2,9 +2,9 @@ package com.nextgenbroadcast.mobile.middleware.repository
 
 import androidx.lifecycle.LiveData
 import com.nextgenbroadcast.mobile.core.model.SLSService
-import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.Urls
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPackage
+import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.Urls
 
 internal interface IRepository {
     // Web/Socket server
@@ -34,6 +34,4 @@ internal interface IRepository {
     fun setHeldPackage(data: Atsc3HeldPackage?)
     fun setMediaUrl(mediaUrl: String?)
     fun reset()
-    fun getDeviceId():String
-    fun getAdvertisingId():String
 }

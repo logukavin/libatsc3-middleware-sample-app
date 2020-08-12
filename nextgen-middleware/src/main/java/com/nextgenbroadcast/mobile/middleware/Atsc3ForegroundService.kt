@@ -27,13 +27,16 @@ import com.nextgenbroadcast.mobile.middleware.presentation.IMediaPlayerPresenter
 import com.nextgenbroadcast.mobile.middleware.presentation.IReceiverPresenter
 import com.nextgenbroadcast.mobile.middleware.presentation.ISelectorPresenter
 import com.nextgenbroadcast.mobile.middleware.presentation.IUserAgentPresenter
+import com.nextgenbroadcast.mobile.middleware.repository.IPreferenceRepository
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
+import com.nextgenbroadcast.mobile.middleware.repository.PreferenceHelperImpl
 import com.nextgenbroadcast.mobile.middleware.repository.RepositoryImpl
 import com.nextgenbroadcast.mobile.middleware.web.MiddlewareWebServer
 import kotlinx.coroutines.Dispatchers
 
 class Atsc3ForegroundService : LifecycleService() {
     private lateinit var repository: IRepository
+    private lateinit var preferenceRepository: IPreferenceRepository
     private lateinit var atsc3Module: Atsc3Module
     private lateinit var serviceController: IServiceController
     private lateinit var notificationHelper: NotificationHelper
@@ -52,8 +55,11 @@ class Atsc3ForegroundService : LifecycleService() {
 
         wakeLock = (getSystemService(Context.POWER_SERVICE) as PowerManager).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Atsc3ForegroundService::lock")
 
-        val repo = RepositoryImpl(applicationContext).also {
+        val preferenceHelper = PreferenceHelperImpl(applicationContext)
+
+        val repo = RepositoryImpl(preferenceHelper).also {
             repository = it
+            preferenceRepository = it
         }
         val atsc3 = Atsc3Module(this).also {
             atsc3Module = it
@@ -176,7 +182,7 @@ class Atsc3ForegroundService : LifecycleService() {
         val web = WebGatewayImpl(serviceController, repository).also {
             webGateway = it
         }
-        val rpc = RPCGatewayImpl(serviceController, view, Dispatchers.Main, Dispatchers.IO,repository).also {
+        val rpc = RPCGatewayImpl(serviceController, view, Dispatchers.Main, Dispatchers.IO, preferenceRepository).also {
             rpcGateway = it
         }
 
@@ -202,7 +208,8 @@ class Atsc3ForegroundService : LifecycleService() {
     }
 
     private fun getAtsc3SourceState() = serviceController.receiverState.value ?: ReceiverState.IDLE
-    private fun getServiceName() = webGateway?.let { it.selectedService.value?.shortName } ?: getString(R.string.atsc3_no_service_available)
+    private fun getServiceName() = webGateway?.let { it.selectedService.value?.shortName }
+            ?: getString(R.string.atsc3_no_service_available)
 
     private fun createNotification(title: String, message: String = "", playbackState: PlaybackState = PlaybackState.IDLE): Notification {
         return notificationHelper.createMediaNotification(title, message, playbackState)
