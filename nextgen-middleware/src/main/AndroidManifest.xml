@@ -10,6 +10,10 @@
 
     <application>
 
+        <activity android:name=".Atsc3NotificationDialogActivity"
+            android:excludeFromRecents="true"
+            android:theme="@style/Theme.AppCompat.Dialog"/>
+
         <service
             android:name=".Atsc3ForegroundService"
             android:exported="false" />

@@ -1,6 +1,7 @@
 package com.nextgenbroadcast.mobile.middleware
 
 import android.app.Notification
+import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Binder
@@ -73,7 +74,17 @@ class Atsc3ForegroundService : LifecycleService() {
 
             createNotification(titleValue, message, state)
         } else {
-            createNotification(getString(R.string.atsc3_source_is_not_initialized))
+            createAtsc3SourceChooserNotification()
+        }
+    }
+
+    private fun createAtsc3SourceChooserNotification(): Notification {
+
+        val notificationIntent = Intent(this, Atsc3NotificationDialogActivity::class.java)
+        val contentIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0)
+
+        return createNotification(getString(R.string.atsc3_source_is_not_initialized)).apply {
+            this.contentIntent = contentIntent
         }
     }
 
@@ -90,12 +101,21 @@ class Atsc3ForegroundService : LifecycleService() {
 
                 ACTION_RMP_PAUSE -> viewController?.rmpPause()
 
+                ACTION_ATSC3_SOURCE_OPEN -> {
+                    openAtsc3Source(intent)
+                }
+
                 else -> {
                 }
             }
         }
 
         return START_NOT_STICKY
+    }
+
+    private fun openAtsc3Source(intent: Intent) {
+        val pcapFilePath = intent.getStringExtra("pcapSourcePath")
+        serviceController.openRoute(pcapFilePath)
     }
 
     @Deprecated("old implementation")
@@ -235,5 +255,6 @@ class Atsc3ForegroundService : LifecycleService() {
         const val ACTION_STOP = "$SERVICE_ACTION.STOP"
         const val ACTION_RMP_PLAY = "$SERVICE_ACTION.RMP_PLAY"
         const val ACTION_RMP_PAUSE = "$SERVICE_ACTION.RMP_PAUSE"
+        const val ACTION_ATSC3_SOURCE_OPEN = "$SERVICE_ACTION.ATSC3_SOURCE_OPEN"
     }
 }
