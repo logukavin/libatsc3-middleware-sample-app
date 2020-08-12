@@ -1,7 +1,6 @@
 package com.nextgenbroadcast.mobile.middleware
 
 import android.app.Notification
-import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -75,16 +74,6 @@ class Atsc3ForegroundService : LifecycleService() {
         }
     }
 
-    private fun createAtsc3SourceChooserNotification(): Notification {
-
-        val notificationIntent = Intent(this, Atsc3NotificationDialogActivity::class.java)
-        val contentIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0)
-
-        return createNotification(getString(R.string.atsc3_source_is_not_initialized)).apply {
-            this.contentIntent = contentIntent
-        }
-    }
-
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
 
@@ -102,9 +91,7 @@ class Atsc3ForegroundService : LifecycleService() {
 
                 ACTION_RMP_PAUSE -> viewController?.rmpPause()
 
-                ACTION_ATSC3_SOURCE_OPEN -> {
-                    openAtsc3Source(intent)
-                }
+                ACTION_ATSC3_SOURCE_OPEN -> openAtsc3Source(intent)
 
                 else -> {
                 }

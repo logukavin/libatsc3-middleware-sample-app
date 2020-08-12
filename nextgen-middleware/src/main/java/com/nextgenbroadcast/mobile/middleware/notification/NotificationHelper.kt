@@ -39,6 +39,13 @@ class NotificationHelper(
                 builder.style = Notification.MediaStyle().setShowActionsInCompactView(0)
             }
 
+            PlaybackState.IDLE -> {
+                val notificationIntent = Intent(context, Atsc3NotificationDialogActivity::class.java)
+                val contentIntent = PendingIntent.getActivity(context, 0, notificationIntent, 0)
+
+                builder.setContentIntent(contentIntent)
+            }
+
             else -> {
             }
         }

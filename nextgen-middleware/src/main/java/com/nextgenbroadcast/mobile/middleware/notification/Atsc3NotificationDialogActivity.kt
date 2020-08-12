@@ -1,10 +1,13 @@
-package com.nextgenbroadcast.mobile.middleware
+package com.nextgenbroadcast.mobile.middleware.notification
 
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import com.nextgenbroadcast.mobile.middleware.Atsc3ForegroundService
+import com.nextgenbroadcast.mobile.middleware.R
+import com.nextgenbroadcast.mobile.middleware.core.FileUtils
 import kotlinx.android.synthetic.main.activity_dialog.*
 
 class Atsc3NotificationDialogActivity: AppCompatActivity() {

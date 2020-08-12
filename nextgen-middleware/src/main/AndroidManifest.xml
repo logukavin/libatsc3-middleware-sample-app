@@ -21,7 +21,7 @@
                 android:resource="@xml/device_filter" />
         </activity>
 
-        <activity android:name=".Atsc3NotificationDialogActivity"
+        <activity android:name=".notification.Atsc3NotificationDialogActivity"
             android:excludeFromRecents="true"
             android:theme="@style/Theme.AppCompat.Dialog"/>
 
