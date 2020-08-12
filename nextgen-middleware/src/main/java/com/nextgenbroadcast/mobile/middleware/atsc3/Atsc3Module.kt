@@ -143,10 +143,7 @@ internal class Atsc3Module(context: Context) : ClientListener {
     }
 
     fun close() {
-        if (usbDevice == null) {
-            log("no atlas device connected yet")
-            return
-        }
+        usbDevice?.disconnect() ?: return
 
         clear()
 
