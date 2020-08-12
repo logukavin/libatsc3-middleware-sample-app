@@ -25,13 +25,13 @@ import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.RMPViewModel
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.SelectorViewModel
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.UserAgentViewModel
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.factory.UserAgentViewModelFactory
-import com.nextgenbroadcast.mobile.view.IOnErrorListener
 import com.nextgenbroadcast.mobile.view.ReceiverMediaPlayer
+import com.nextgenbroadcast.mobile.view.UserAgentView
 import dagger.android.AndroidInjection
 import kotlinx.android.synthetic.main.activity_user_agent.*
 import kotlinx.coroutines.Runnable
 
-class UserAgentActivity : Atsc3Activity(),IOnErrorListener {
+class UserAgentActivity : Atsc3Activity() {
     private var rmpViewModel: RMPViewModel? = null
     private var userAgentViewModel: UserAgentViewModel? = null
     private var selectorViewModel: SelectorViewModel? = null
@@ -87,7 +87,7 @@ class UserAgentActivity : Atsc3Activity(),IOnErrorListener {
         super.onCreate(savedInstanceState)
 
         setContentView(R.layout.activity_user_agent)
-        user_agent_web_view.setOnErrorListener(this)
+
         selectorAdapter = ServiceAdapter(this)
 
         val swipeGD = GestureDetector(this, object : SwipeGestureDetector() {
@@ -100,6 +100,11 @@ class UserAgentActivity : Atsc3Activity(),IOnErrorListener {
             }
         })
         user_agent_web_view.setOnTouchListener { _, motionEvent -> swipeGD.onTouchEvent(motionEvent) }
+        user_agent_web_view.setErrorListener(object : UserAgentView.IErrorListener {
+            override fun onLoadingError() {
+                onBALoadingError()
+            }
+        })
 
         service_spinner.adapter = selectorAdapter
         service_spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
@@ -132,6 +137,13 @@ class UserAgentActivity : Atsc3Activity(),IOnErrorListener {
                 rmpViewModel?.setCurrentPlaybackRate(speed)
             }
         })
+    }
+
+    private fun onBALoadingError() {
+        setBAAvailability(false)
+        user_agent_web_view.unloadBAContent()
+
+        Toast.makeText(this@UserAgentActivity, getText(R.string.ba_loading_problem), Toast.LENGTH_SHORT).show()
     }
 
     private fun bindMediaPlayer(rmpViewModel: RMPViewModel) {
@@ -252,9 +264,5 @@ class UserAgentActivity : Atsc3Activity(),IOnErrorListener {
         val TAG: String = UserAgentActivity::class.java.simpleName
 
         private const val MEDIA_TIME_UPDATE_DELAY = 500L
-    }
-
-    override fun onBaLoadingError() {
-        Toast.makeText(this, getText(R.string.ba_loading_problem), Toast.LENGTH_SHORT).show()
     }
 }

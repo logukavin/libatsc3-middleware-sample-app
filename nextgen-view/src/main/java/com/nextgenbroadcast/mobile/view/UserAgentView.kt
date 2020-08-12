@@ -3,6 +3,7 @@ package com.nextgenbroadcast.mobile.view
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Color
+import android.net.Uri
 import android.net.http.SslError
 import android.util.AttributeSet
 import android.view.KeyEvent
@@ -14,16 +15,23 @@ class UserAgentView @JvmOverloads constructor(
         context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
 ) : WebView(context, attrs, defStyleAttr) {
 
-    var isBAMenuOpened = false
-        private set
-    private var isReloaded = false
-    private var appEntryPoint: String? = null
-    private var reloadJob: Job? = null
-    private var onErrorListener: IOnErrorListener? = null
     private val ioScope = CoroutineScope(Dispatchers.IO)
 
-    companion object {
-        private const val RETRY_DELAY = 500L
+    var isBAMenuOpened = false
+        private set
+
+    private var errorListener: IErrorListener? = null
+
+    private var appEntryPoint: String? = null
+    private var loadingRetryCount: Int = 0
+    private var reloadJob: Job? = null
+
+    interface IErrorListener {
+        fun onLoadingError()
+    }
+
+    fun setErrorListener(listener: IErrorListener) {
+        errorListener = listener
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -50,17 +58,19 @@ class UserAgentView @JvmOverloads constructor(
             handler.proceed()
         }
 
-        //        Called when was Loading resource error
         override fun onReceivedError(view: WebView?, request: WebResourceRequest?, error: WebResourceError?) {
             super.onReceivedError(view, request, error)
-            checkReloadStatus()
+
+            request?.let {
+                onLoadingError(request.url)
+            }
         }
 
-        //        Called when we have some error with entry point
         override fun onReceivedHttpError(view: WebView?, request: WebResourceRequest?, errorResponse: WebResourceResponse?) {
             super.onReceivedHttpError(view, request, errorResponse)
-            if (request?.url.toString() == appEntryPoint) {
-                checkReloadStatus()
+
+            request?.let {
+                onLoadingError(request.url)
             }
         }
 
@@ -72,40 +82,35 @@ class UserAgentView @JvmOverloads constructor(
         }
     }
 
-    private fun checkReloadStatus() {
-        val localAppEntryPoint = appEntryPoint
-        if (localAppEntryPoint != null && reloadJob?.isCompleted != true) {
-            isReloaded = true
-            reloadJob = ioScope.launch {
-                delay(RETRY_DELAY)
-                withContext(Dispatchers.Main) {
-                    reloadData()
+    private fun onLoadingError(uri: Uri) {
+        if (reloadJob != null) return
+
+        if (loadingRetryCount < MAX_RETRY_COUNT) {
+            appEntryPoint?.let { entryPoint ->
+                if (uri.toString() == entryPoint) {
+                    loadingRetryCount++
+                    reloadJob = ioScope.launch {
+                        delay(RETRY_DELAY)
+                        withContext(Dispatchers.Main) {
+                            reloadJob = null
+                            loadUrl(entryPoint)
+                        }
+                    }
                 }
             }
-        } else if (isReloaded) {
-            onErrorListener?.onBaLoadingError()
-            unloadBAContent()
+        } else {
+            errorListener?.onLoadingError()
         }
     }
 
-    private suspend fun reloadData() {
-        reloadJob?.isCompleted
-        loadUrl(appEntryPoint)
-    }
-
     fun loadBAContent(appEntryPoint: String) {
+        reset()
         this.appEntryPoint = appEntryPoint
-        reloadJob?.cancel()
-        isBAMenuOpened = false
         loadUrl(appEntryPoint)
-    }
-
-    fun setOnErrorListener(listener: IOnErrorListener) {
-        onErrorListener = listener
     }
 
     fun unloadBAContent() {
-        isBAMenuOpened = false
+        reset()
         loadUrl("about:blank")
     }
 
@@ -123,8 +128,20 @@ class UserAgentView @JvmOverloads constructor(
         isBAMenuOpened = true
     }
 
+    private fun reset() {
+        reloadJob?.cancel()
+        loadingRetryCount = 0
+        appEntryPoint = null
+        isBAMenuOpened = false
+    }
+
     private fun sendKeyPress(key: Int) {
         dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, key))
         dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, key))
+    }
+
+    companion object {
+        private const val RETRY_DELAY = 500L
+        private const val MAX_RETRY_COUNT = 1
     }
 }
