@@ -10,7 +10,7 @@ import java.util.concurrent.ConcurrentHashMap
 internal class RepositoryImpl(private var preferenceHelper: PreferenceHelper) : IRepository, IPreferenceRepository {
     private val _applications = ConcurrentHashMap<String, Atsc3Application>()
 
-    override val hostName = "localHost"
+    override val hostName = "localhost"
     override val httpPort = 8080
     override val httpsPort = 8443
     override val wsPort = 9998
