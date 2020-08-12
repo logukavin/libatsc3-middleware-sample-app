@@ -309,6 +309,8 @@ class Atsc3ForegroundService : LifecycleService() {
         const val ACTION_RMP_PAUSE = "$SERVICE_ACTION.RMP_PAUSE"
         const val ACTION_OPEN_FILE = "$SERVICE_ACTION.OPEN_FILE"
 
+        const val ACTION_START_TV_APP = "com.nextgenbroadcast.mobile.middleware.action.startTV"
+
         const val EXTRA_DEVICE = "device"
         const val EXTRA_FILE_PATH = "file_path"
 
@@ -341,6 +343,11 @@ class Atsc3ForegroundService : LifecycleService() {
                 serviceIntent.putExtra(EXTRA_FILE_PATH, filePath)
                 ContextCompat.startForegroundService(context, serviceIntent)
             }
+        }
+
+        fun startTvApplication(context: Context) {
+            val intent = Intent(ACTION_START_TV_APP)
+            ContextCompat.startActivity(context, intent, null)
         }
 
         private fun newIntent(context: Context, serviceAction: String) = Intent(context, Atsc3ForegroundService::class.java).apply {
