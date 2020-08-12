@@ -3,14 +3,12 @@ package com.nextgenbroadcast.mobile.middleware.server
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import com.nextgenbroadcast.mobile.core.cert.CertificateUtils
 import com.nextgenbroadcast.mobile.core.cert.UserAgentSSLContext
-import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.middleware.gateway.rpc.IRPCGateway
 import com.nextgenbroadcast.mobile.middleware.rpc.notification.NotificationType
-import com.nextgenbroadcast.mobile.middleware.rpc.processor.RPCProcessor
-import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.Urls
 import com.nextgenbroadcast.mobile.middleware.web.MiddlewareWebServer
 import com.nextgenbroadcast.mobile.middleware.web.MiddlewareWebServerError
 import com.nextgenbroadcast.mobile.middleware.ws.MiddlewareWebSocket
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestCoroutineDispatcher
 import kotlinx.coroutines.test.runBlockingTest
 import okhttp3.ConnectionSpec
@@ -28,10 +26,10 @@ import javax.net.ssl.KeyManagerFactory
 
 
 @RunWith(PowerMockRunner::class)
-@PrepareForTest(CertificateUtils::class,java.lang.String::class)
-@PowerMockIgnore( "javax.net.ssl.*", "javax.security.*" )
-
+@PrepareForTest(CertificateUtils::class, java.lang.String::class)
+@PowerMockIgnore("javax.net.ssl.*", "javax.security.*")
 class WebServerTests {
+    @ExperimentalCoroutinesApi
     private val testDispatcher = TestCoroutineDispatcher()
 
     @Rule
@@ -73,46 +71,20 @@ class WebServerTests {
         }
     }
 
-    //    companion object {
-    private val HTTP_PORT = 8080
-    private val HTTPS_PORT = 8443
-    private val WS_PORT = 9998
-    private val WSS_PORT = 9999
-    lateinit var rpcProcessor: RPCProcessor
-    lateinit var webServer: MiddlewareWebServer
-    lateinit var webSocketClient: WebSocketClient
+    private lateinit var webServer: MiddlewareWebServer
+    private lateinit var webSocketClient: WebSocketClient
 
-    val classLoader = this.javaClass.classLoader
+    private val classLoader = WebServerTests::class.java.javaClass.classLoader
 
+    @ExperimentalCoroutinesApi
     @Before
     fun setup() = testDispatcher.runBlockingTest {
-        System.setProperty("javax.net.ssl.trustStore", "NONE")
-        rpcProcessor = RPCProcessor(object : RPCGatewayAdapter() {
-            override val language: String
-                get() = "test"
-            override val queryServiceId: String?
-                get() = "test"
-            override val mediaUrl: String?
-                get() = "test"
-            override val playbackState: PlaybackState
-                get() = PlaybackState.IDLE
-            override val serviceGuideUrls: List<Urls>
-                get() = emptyList()
-        })
-        val servletList = listOf(ServletContainer(MiddlewareWebServerTestServlet(), "/index.html"))
         PowerMockito.mockStatic(CertificateUtils::class.java)
         Mockito.`when`(CertificateUtils.KEY_MANAGER_ALGORITHM).thenReturn(KeyManagerFactory.getDefaultAlgorithm())
-        webServer = WebServerWithServlet.Builder()
-                .addServlets(servletList)
-                .hostName("localhost")
-                .httpPort(HTTP_PORT)
-                .httpsPort(HTTPS_PORT)
-                .wsPort(WS_PORT)
-                .wssPort(WSS_PORT)
-                .sslContext(UserAgentSSLContext(classLoader?.getResourceAsStream("mykey.p12")))
-                .build().also {
-                    it.start()
-                }
+        if (classLoader != null)
+            webServer = WebServerWithServlet(UserAgentSSLContext(classLoader.getResourceAsStream("mykey.p12"))).getServer().also {
+                it.start()
+            }
         webSocketClient = WebSocketClient()
     }
 
@@ -160,26 +132,30 @@ class WebServerTests {
 
     @Test
     fun makeHttpsCall() {
-        val client = OkHttpClient().newBuilder().sslSocketFactory(UserAgentSSLContext(classLoader?.getResourceAsStream("mykey.p12")).getInitializedSSLContext("MY_PASSWORD").socketFactory).build()
-        val request: Request = Request.Builder().url("https://localhost:8443/index.html").build()
-        val response = client.newCall(request).execute()
-        val serverMessage = response.body()?.string()
-        val code = response.code()
-        Assert.assertEquals(MiddlewareWebServerTestServlet.serverMessage, serverMessage)
-        Assert.assertEquals(200, code)
-        Assert.assertEquals(MiddlewareWebServerTestServlet.serverMessage, serverMessage)
+        if (classLoader != null) {
+            val client = OkHttpClient().newBuilder().sslSocketFactory(UserAgentSSLContext(classLoader.getResourceAsStream("mykey.p12")).getInitializedSSLContext("MY_PASSWORD").socketFactory).build()
+            val request: Request = Request.Builder().url("https://localhost:8443/index.html").build()
+            val response = client.newCall(request).execute()
+            val serverMessage = response.body()?.string()
+            val code = response.code()
+            Assert.assertEquals(MiddlewareWebServerTestServlet.serverMessage, serverMessage)
+            Assert.assertEquals(200, code)
+            Assert.assertEquals(MiddlewareWebServerTestServlet.serverMessage, serverMessage)
+        }
     }
 
     @Test
     fun makeHttpsErrorCall() {
-        val client = OkHttpClient().newBuilder().sslSocketFactory(UserAgentSSLContext(classLoader?.getResourceAsStream("mykey.p12")).getInitializedSSLContext("MY_PASSWORD").socketFactory).build()
-        val request: Request = Request.Builder().url("https://localhost:8443/index1.html").build()
-        val response = client.newCall(request).execute()
-        val serverMessage = response.body()?.string()
-        val code = response.code()
-        Assert.assertNotEquals(MiddlewareWebServerTestServlet.serverMessage, serverMessage)
-        Assert.assertEquals(404, code)
-        Assert.assertEquals(false, response.isSuccessful)
+        if (classLoader != null) {
+            val client = OkHttpClient().newBuilder().sslSocketFactory(UserAgentSSLContext(classLoader.getResourceAsStream("mykey.p12")).getInitializedSSLContext("MY_PASSWORD").socketFactory).build()
+            val request: Request = Request.Builder().url("https://localhost:8443/index1.html").build()
+            val response = client.newCall(request).execute()
+            val serverMessage = response.body()?.string()
+            val code = response.code()
+            Assert.assertNotEquals(MiddlewareWebServerTestServlet.serverMessage, serverMessage)
+            Assert.assertEquals(404, code)
+            Assert.assertEquals(false, response.isSuccessful)
+        }
     }
 
     @Test
