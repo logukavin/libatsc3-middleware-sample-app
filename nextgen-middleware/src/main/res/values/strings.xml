@@ -4,7 +4,7 @@
     <string name="atsc3_chanel_name">Atsc3 Service Channel</string>
     <string name="atsc3_no_service_available">No service available</string>
     <string name="atsc3_source_is_not_initialized">Atsc3 source is not initialized</string>
-    <string name="please_choose_your_action">Please choose your action:</string>
-    <string name="select_pcap">Select pcap..</string>
-    <string name="disconnect">Disconnect</string>
+    <string name="service_action_menu_title">Atsc3 service menu</string>
+    <string name="service_action_select_pcap">Select pcap file…</string>
+    <string name="service_action_disconnect">Disconnect</string>
 </resources>

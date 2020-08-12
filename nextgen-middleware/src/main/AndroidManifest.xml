@@ -21,9 +21,11 @@
                 android:resource="@xml/device_filter" />
         </activity>
 
-        <activity android:name=".notification.Atsc3NotificationDialogActivity"
+        <activity
+            android:name=".ServiceDialogActivity"
             android:excludeFromRecents="true"
-            android:theme="@style/Theme.AppCompat.Dialog"/>
+            android:exported="false"
+            android:theme="@style/Theme.AppCompat.Light.Dialog" />
 
         <service
             android:name=".Atsc3ForegroundService"

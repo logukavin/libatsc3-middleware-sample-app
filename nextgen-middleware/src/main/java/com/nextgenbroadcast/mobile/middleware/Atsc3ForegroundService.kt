@@ -91,7 +91,7 @@ class Atsc3ForegroundService : LifecycleService() {
 
                 ACTION_RMP_PAUSE -> viewController?.rmpPause()
 
-                ACTION_ATSC3_SOURCE_OPEN -> openAtsc3Source(intent)
+                ACTION_OPEN_FILE -> openFileSource(intent.getStringExtra(EXTRA_FILE_PATH))
 
                 else -> {
                 }
@@ -101,9 +101,10 @@ class Atsc3ForegroundService : LifecycleService() {
         return START_NOT_STICKY
     }
 
-    private fun openAtsc3Source(intent: Intent) {
-        val pcapFilePath = intent.getStringExtra("pcapSourcePath")
-        serviceController.openRoute(pcapFilePath)
+    private fun openFileSource(filePath: String?) {
+        filePath?.let {
+            serviceController.openRoute(filePath)
+        }
     }
 
     private fun getUsbDevice(intent: Intent) =
@@ -305,9 +306,10 @@ class Atsc3ForegroundService : LifecycleService() {
         const val ACTION_DEVICE_DETACHED = "$SERVICE_ACTION.USB_DETACHED"
         const val ACTION_RMP_PLAY = "$SERVICE_ACTION.RMP_PLAY"
         const val ACTION_RMP_PAUSE = "$SERVICE_ACTION.RMP_PAUSE"
-        const val ACTION_ATSC3_SOURCE_OPEN = "$SERVICE_ACTION.ATSC3_SOURCE_OPEN"
+        const val ACTION_OPEN_FILE = "$SERVICE_ACTION.OPEN_FILE"
 
         const val EXTRA_DEVICE = "device"
+        const val EXTRA_FILE_PATH = "file_path"
 
         @Deprecated("old implementation")
         fun startService(context: Context) {
@@ -329,6 +331,13 @@ class Atsc3ForegroundService : LifecycleService() {
         fun stopForDevice(context: Context, device: UsbDevice) {
             newIntent(context, ACTION_DEVICE_DETACHED).let { serviceIntent ->
                 serviceIntent.putExtra(EXTRA_DEVICE, device)
+                ContextCompat.startForegroundService(context, serviceIntent)
+            }
+        }
+
+        fun openFile(context: Context, filePath: String) {
+            newIntent(context, ACTION_OPEN_FILE).let { serviceIntent ->
+                serviceIntent.putExtra(EXTRA_FILE_PATH, filePath)
                 ContextCompat.startForegroundService(context, serviceIntent)
             }
         }
