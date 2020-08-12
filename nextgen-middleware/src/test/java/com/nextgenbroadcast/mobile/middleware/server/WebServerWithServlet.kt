@@ -19,84 +19,53 @@ import org.eclipse.jetty.websocket.servlet.WebSocketCreator
 import org.eclipse.jetty.websocket.servlet.WebSocketServletFactory
 import java.util.*
 
-class WebServerWithServlet {
+class WebServerWithServlet(SSLContext: IUserAgentSSLContext) {
+    fun getServer(): MiddlewareWebServer {
+        return MiddlewareWebServer(server, webGateway)
+    }
+companion object{
+    private const val HTTP_PORT = 8080
+    private const val HTTPS_PORT = 8443
+    private const val WS_PORT = 9998
+    private const val WSS_PORT = 9999
+    private const val HOST_NAME = "localhost"
+}
 
-    class Builder {
-        private var httpsPort: Int? = null
-        private var httpPort: Int? = null
-        private var wssPort: Int? = null
-        private var wsPort: Int? = null
-        private var hostName: String? = null
-        private var generatedSSLContext: IUserAgentSSLContext? = null
-        private var rpcGateway: IRPCGateway? = null
-        private var webGateway: IWebGateway? = null
-        private var listOfServlet: List<ServletContainer>? = null
-        fun httpsPort(value: Int) = apply { httpsPort = value }
+    private var rpcGateway: IRPCGateway? = null
+    private var webGateway: IWebGateway? = null
+    private val server = Server()
 
-        fun httpPort(value: Int) = apply { httpPort = value }
-
-        fun wssPort(value: Int) = apply { wssPort = value }
-
-        fun wsPort(value: Int) = apply { wsPort = value }
-
-        fun hostName(value: String) = apply { hostName = value }
-
-        fun sslContext(value: IUserAgentSSLContext) = apply { generatedSSLContext = value }
-
-        fun rpcGateway(value: IRPCGateway) = apply { rpcGateway = value }
-
-        fun webGateway(value: IWebGateway) = apply { webGateway = value }
-
-        fun addServlets(value: List<ServletContainer>) = apply { listOfServlet = value }
-        fun build(): MiddlewareWebServer {
-            val server = Server()
-
-            val connectorArray = hostName?.let { hostName ->
-                ArrayList<Connector>().apply {
-                    httpPort?.let { port ->
-                        add(getServerConnector(server, hostName, port))
-                    }
-                    wsPort?.let { port ->
-                        add(getServerConnector(server, hostName, port))
-                    }
-                    generatedSSLContext?.let { generatedSSLContext ->
-                        val sslContextFactory = configureSSLFactory(generatedSSLContext)
-
-                        httpsPort?.let { port ->
-                            add(getSecureServerConnector(server, hostName, port, sslContextFactory))
-                        }
-                        wssPort?.let { port ->
-                            add(getSecureServerConnector(server, hostName, port, sslContextFactory))
-                        }
-                    }
-                }.toTypedArray()
+    init {
+        val connectorArray = HOST_NAME.let { hostName ->
+            ArrayList<Connector>().apply {
+                add(getServerConnector(server, hostName, HTTP_PORT))
+                add(getServerConnector(server, hostName, WS_PORT))
+                val sslContextFactory = configureSSLFactory(SSLContext)
+                add(getSecureServerConnector(server, hostName, HTTPS_PORT, sslContextFactory))
+                add(getSecureServerConnector(server, hostName, WSS_PORT, sslContextFactory))
             }
-
-            val handlerArray = ArrayList<Handler>().apply {
-                rpcGateway?.let { rpcGateway ->
-                    add(object : WebSocketHandler() {
-                        override fun configure(factory: WebSocketServletFactory) {
-                            factory.creator = WebSocketCreator { _, _ -> MiddlewareWebSocket(rpcGateway) }
-                        }
-                    })
-                }
-            }.toTypedArray()
-
-            with(server) {
-                connectors = connectorArray
-                handler = HandlerList().apply {
-                    handlers = handlerArray
-                }
+        }.toTypedArray()
+        val handlerArray = ArrayList<Handler>().apply {
+            rpcGateway?.let { rpcGateway ->
+                add(object : WebSocketHandler() {
+                    override fun configure(factory: WebSocketServletFactory) {
+                        factory.creator = WebSocketCreator { _, _ -> MiddlewareWebSocket(rpcGateway) }
+                    }
+                })
             }
-            if (!listOfServlet.isNullOrEmpty()) {
-                val context = ServletContextHandler(server, "/")
-                server.handler = context
-                listOfServlet?.forEach {
-                    context.addServlet(ServletHolder(it.servlet), it.path)
-                }
+        }.toTypedArray()
 
+        with(server) {
+            connectors = connectorArray
+            handler = HandlerList().apply {
+                handlers = handlerArray
             }
-            return MiddlewareWebServer(server, webGateway)
+        }
+        val listOfServlet: List<ServletContainer> = listOf(ServletContainer(MiddlewareWebServerTestServlet(), "/index.html"))
+        val context = ServletContextHandler(server, "/")
+        server.handler = context
+        listOfServlet.forEach {
+            context.addServlet(ServletHolder(it.servlet), it.path)
         }
     }
 }

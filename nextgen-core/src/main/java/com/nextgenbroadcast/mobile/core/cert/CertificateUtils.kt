@@ -10,10 +10,10 @@ import javax.net.ssl.KeyManagerFactory
 
 object CertificateUtils {
     @JvmStatic
-    var KEY_MANAGER_ALGORITHM = "X509"
+    val KEY_MANAGER_ALGORITHM = "X509"
     const val KEY_STORE_TYPE = "PKCS12"
 
-    fun loadKeystore(inputStream: InputStream?, password: String): KeyStore {
+    fun loadKeystore(inputStream: InputStream, password: String): KeyStore {
         inputStream.use { inputStream ->
             return KeyStore.getInstance(KEY_STORE_TYPE).also {
                 it.load(inputStream, password.toCharArray())
