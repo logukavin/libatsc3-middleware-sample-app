@@ -3,6 +3,7 @@ package com.nextgenbroadcast.mobile.middleware.notification
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.os.Bundle
+import android.view.ViewGroup
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.nextgenbroadcast.mobile.middleware.Atsc3ForegroundService
@@ -16,6 +17,8 @@ class Atsc3NotificationDialogActivity: AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         setContentView(R.layout.activity_dialog)
+
+        window.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
         this.setFinishOnTouchOutside(true)
 
         select_pcap.setOnClickListener {
