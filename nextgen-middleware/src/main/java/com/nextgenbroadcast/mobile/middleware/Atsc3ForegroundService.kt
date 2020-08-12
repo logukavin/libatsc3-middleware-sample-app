@@ -136,15 +136,16 @@ class Atsc3ForegroundService : LifecycleService() {
             startService()
             serviceController.openRoute(device, usbManager)
 
-            if (deviceReceiver != null) {
-                unregisterReceiver(deviceReceiver)
+            deviceReceiver?.let { receiver ->
+                unregisterReceiver(receiver)
             }
 
             // Register BroadcastReceiver to detect when device is disconnected
-            deviceReceiver = Atsc3DeviceReceiver(device.deviceName)
-            registerReceiver(deviceReceiver, IntentFilter().apply {
-                addAction(UsbManager.ACTION_USB_DEVICE_DETACHED)
-            })
+            deviceReceiver = Atsc3DeviceReceiver(device.deviceName).also { receiver ->
+                registerReceiver(receiver, IntentFilter().apply {
+                    addAction(UsbManager.ACTION_USB_DEVICE_DETACHED)
+                })
+            }
         }
     }
 
