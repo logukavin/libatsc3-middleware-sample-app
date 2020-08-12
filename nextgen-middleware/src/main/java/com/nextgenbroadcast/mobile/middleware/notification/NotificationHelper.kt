@@ -12,6 +12,7 @@ import androidx.annotation.StringRes
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.middleware.Atsc3ForegroundService
 import com.nextgenbroadcast.mobile.middleware.R
+import com.nextgenbroadcast.mobile.middleware.ServiceDialogActivity
 
 class NotificationHelper(
         private val context: Context,
@@ -37,6 +38,13 @@ class NotificationHelper(
             PlaybackState.PAUSED -> {
                 builder.addAction(createAction(context, android.R.drawable.ic_media_play, R.string.notification_play_btn_title, Atsc3ForegroundService.ACTION_RMP_PLAY))
                 builder.style = Notification.MediaStyle().setShowActionsInCompactView(0)
+            }
+
+            PlaybackState.IDLE -> {
+                val notificationIntent = Intent(context, ServiceDialogActivity::class.java)
+                val contentIntent = PendingIntent.getActivity(context, 0, notificationIntent, 0)
+
+                builder.setContentIntent(contentIntent)
             }
 
             else -> {
@@ -65,7 +73,7 @@ class NotificationHelper(
     fun createNotificationChannel(name: String) {
         notificationManager.createNotificationChannel(
                 NotificationChannel(channelID, name, NotificationManager.IMPORTANCE_DEFAULT).apply {
-                    importance = NotificationManager.IMPORTANCE_HIGH
+                    importance = NotificationManager.IMPORTANCE_LOW
                 }
         )
     }

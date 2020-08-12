@@ -5,16 +5,19 @@ import android.util.Log
 import com.nextgenbroadcast.mobile.middleware.BuildConfig
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3ApplicationFile
-import com.nextgenbroadcast.mobile.middleware.atsc3.entities.service.LLSParserSLT
-import com.nextgenbroadcast.mobile.middleware.atsc3.entities.service.Atsc3Service
-import com.nextgenbroadcast.mobile.middleware.atsc3.ndk.atsc3NdkClient.ClientListener
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3Held
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPackage
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.HeldXmlParser
+import com.nextgenbroadcast.mobile.middleware.atsc3.entities.service.Atsc3Service
+import com.nextgenbroadcast.mobile.middleware.atsc3.entities.service.LLSParserSLT
 import com.nextgenbroadcast.mobile.middleware.atsc3.ndk.Atsc3UsbDevice
 import com.nextgenbroadcast.mobile.middleware.atsc3.ndk.atsc3NdkClient
+import com.nextgenbroadcast.mobile.middleware.atsc3.ndk.atsc3NdkClient.ClientListener
 import com.nextgenbroadcast.mobile.middleware.atsc3.ndk.data.PackageExtractEnvelopeMetadataAndPayload
-import java.lang.IllegalStateException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
@@ -33,7 +36,7 @@ internal class Atsc3Module(context: Context) : ClientListener {
     }
 
     private val client = atsc3NdkClient(context.cacheDir, this)
-    private val usbDevice: Atsc3UsbDevice? = null
+    private var usbDevice: Atsc3UsbDevice? = null
 
     private val serviceMap = ConcurrentHashMap<Int, Atsc3Service>()
     private val packageMap = HashMap<String, Atsc3Application>()
@@ -80,31 +83,36 @@ internal class Atsc3Module(context: Context) : ClientListener {
         return false
     }
 
-    fun openUsb(): Boolean {
-        if (usbDevice == null) {
-            log("no FX3 device connected yet")
-            return false
+    fun openUsbDevice(device: Atsc3UsbDevice): Boolean {
+        if (usbDevice != null) {
+            client.ApiClose();
         }
 
-        //notify pcap thread (if running) to stop
+        usbDevice = device
         client.atsc3_pcap_thread_stop()
-        log("opening mCurFx3Device: fd: %d, key: %d", usbDevice.fd, usbDevice.key)
-        //        //ThingsUI.WriteToAlphaDisplayNoEx("OPEN");
+        setState(State.IDLE)
+
+        log("opening Device: fd: %d, key: %d", device.fd, device.key)
+
+        //TODO: start in thread
+        CoroutineScope(Dispatchers.IO).launch {
+            val re = client.ApiOpen(device.fd, device.key)
+            withContext(Dispatchers.Main) {
+                if (re < 0) {
+                    log("open: failed, r: %d", re);
+                } else if (re == 240) { //SL_FX3S_I2C_AWAITING_BROADCAST_USB_ATTACHED
+                    log("open: pending SL_FX3S_I2C_AWAITING_BROADCAST_USB_ATTACHED event");
+                } else {
+                    setState(State.OPENED)
+                }
+            }
+        }
+
 //
 //        stopAllPlayers();
 //
-//        new Thread(new Runnable() {
-//            @Override
-//            public void run() {
-//                int re = mAt3DrvIntf.ApiOpen(mCurAt3Device.fd, mCurAt3Device.key);
-//                if (re < 0) {
-//                    log("open: failed, r: %d", re);
-//                } else if(re == 240) { //SL_FX3S_I2C_AWAITING_BROADCAST_USB_ATTACHED
-//                    log("open: pending SL_FX3S_I2C_AWAITING_BROADCAST_USB_ATTACHED event");
-//                }
-//            }
-//        }).start();
-        return false
+
+        return true
     }
 
     fun selectService(serviceId: Int): Boolean {
@@ -135,10 +143,7 @@ internal class Atsc3Module(context: Context) : ClientListener {
     }
 
     fun close() {
-        if (usbDevice == null) {
-            log("no atlas device connected yet")
-            return
-        }
+        usbDevice?.disconnect() ?: return
 
         clear()
 
