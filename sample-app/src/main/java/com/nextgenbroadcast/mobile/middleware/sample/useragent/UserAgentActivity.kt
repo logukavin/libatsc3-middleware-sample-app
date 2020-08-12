@@ -26,6 +26,7 @@ import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.SelectorViewModel
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.UserAgentViewModel
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.factory.UserAgentViewModelFactory
 import com.nextgenbroadcast.mobile.view.ReceiverMediaPlayer
+import com.nextgenbroadcast.mobile.view.UserAgentView
 import dagger.android.AndroidInjection
 import kotlinx.android.synthetic.main.activity_user_agent.*
 import kotlinx.coroutines.Runnable
@@ -99,6 +100,11 @@ class UserAgentActivity : Atsc3Activity() {
             }
         })
         user_agent_web_view.setOnTouchListener { _, motionEvent -> swipeGD.onTouchEvent(motionEvent) }
+        user_agent_web_view.setErrorListener(object : UserAgentView.IErrorListener {
+            override fun onLoadingError() {
+                onBALoadingError()
+            }
+        })
 
         service_spinner.adapter = selectorAdapter
         service_spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
@@ -131,6 +137,13 @@ class UserAgentActivity : Atsc3Activity() {
                 rmpViewModel?.setCurrentPlaybackRate(speed)
             }
         })
+    }
+
+    private fun onBALoadingError() {
+        setBAAvailability(false)
+        user_agent_web_view.unloadBAContent()
+
+        Toast.makeText(this@UserAgentActivity, getText(R.string.ba_loading_problem), Toast.LENGTH_SHORT).show()
     }
 
     private fun bindMediaPlayer(rmpViewModel: RMPViewModel) {
