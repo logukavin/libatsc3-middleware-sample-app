@@ -1,6 +1,7 @@
 package com.nextgenbroadcast.mobile.middleware.server
 
-import androidx.lifecycle.LifecycleRegistry
+import com.nextgenbroadcast.mobile.core.cert.IUserAgentSSLContext
+import com.nextgenbroadcast.mobile.middleware.gateway.rpc.IRPCGateway
 import com.nextgenbroadcast.mobile.middleware.gateway.web.IWebGateway
 import com.nextgenbroadcast.mobile.middleware.web.MiddlewareWebServer
 import com.nextgenbroadcast.mobile.middleware.web.configureSSLFactory
@@ -11,24 +12,43 @@ import org.eclipse.jetty.server.Connector
 import org.eclipse.jetty.server.Handler
 import org.eclipse.jetty.server.Server
 import org.eclipse.jetty.server.handler.HandlerList
-import org.eclipse.jetty.server.handler.ResourceHandler
 import org.eclipse.jetty.servlet.ServletContextHandler
 import org.eclipse.jetty.servlet.ServletHolder
-import org.eclipse.jetty.util.resource.Resource
 import org.eclipse.jetty.websocket.server.WebSocketHandler
 import org.eclipse.jetty.websocket.servlet.WebSocketCreator
 import org.eclipse.jetty.websocket.servlet.WebSocketServletFactory
-import java.util.ArrayList
+import java.util.*
 
-class WebServerWithServlet(
-        server: Server,
-        webGateway: IWebGateway?
-) : MiddlewareWebServer(server, webGateway) {
+class WebServerWithServlet {
 
-    class BuilderWithServlet : Builder() {
-        var listOfServlet: List<ServletContainer>? = null
+    class Builder {
+        private var httpsPort: Int? = null
+        private var httpPort: Int? = null
+        private var wssPort: Int? = null
+        private var wsPort: Int? = null
+        private var hostName: String? = null
+        private var generatedSSLContext: IUserAgentSSLContext? = null
+        private var rpcGateway: IRPCGateway? = null
+        private var webGateway: IWebGateway? = null
+        private var listOfServlet: List<ServletContainer>? = null
+        fun httpsPort(value: Int) = apply { httpsPort = value }
+
+        fun httpPort(value: Int) = apply { httpPort = value }
+
+        fun wssPort(value: Int) = apply { wssPort = value }
+
+        fun wsPort(value: Int) = apply { wsPort = value }
+
+        fun hostName(value: String) = apply { hostName = value }
+
+        fun sslContext(value: IUserAgentSSLContext) = apply { generatedSSLContext = value }
+
+        fun rpcGateway(value: IRPCGateway) = apply { rpcGateway = value }
+
+        fun webGateway(value: IWebGateway) = apply { webGateway = value }
+
         fun addServlets(value: List<ServletContainer>) = apply { listOfServlet = value }
-                override fun build(): WebServerWithServlet {
+        fun build(): MiddlewareWebServer {
             val server = Server()
 
             val connectorArray = hostName?.let { hostName ->
@@ -53,13 +73,6 @@ class WebServerWithServlet(
             }
 
             val handlerArray = ArrayList<Handler>().apply {
-                //TODO: remove test data
-                add(ResourceHandler().apply {
-                    isDirectoriesListed = true
-                    welcomeFiles = arrayOf("index.html")
-                    baseResource = Resource.newResource("storage/emulated/0/Download/test")
-                })
-
                 rpcGateway?.let { rpcGateway ->
                     add(object : WebSocketHandler() {
                         override fun configure(factory: WebSocketServletFactory) {
@@ -83,9 +96,7 @@ class WebServerWithServlet(
                 }
 
             }
-            return WebServerWithServlet(server, webGateway)
+            return MiddlewareWebServer(server, webGateway)
         }
-
-
     }
 }
