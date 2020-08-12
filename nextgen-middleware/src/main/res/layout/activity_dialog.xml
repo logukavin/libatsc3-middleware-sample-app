@@ -1,37 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:orientation="vertical"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content">
+    android:layout_height="match_parent"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:padding="10dp">
 
-    <TextView
-        android:id="@+id/txtTitle"
+    <Button
+        android:id="@+id/select_pcap"
+        style="@style/Widget.AppCompat.ActionButton"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="center"
-        android:paddingTop="20dp"
-        android:paddingBottom="20dp"
-        android:text="@string/please_choose_your_action" />
+        android:clickable="true"
+        android:text="@string/service_action_select_pcap" />
 
-    <LinearLayout
+    <Button
+        android:id="@+id/disconnect_service"
+        style="@style/Widget.AppCompat.ActionButton"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:weightSum="2">
-
-        <Button
-            android:id="@+id/select_pcap"
-            android:layout_weight="1"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:text="@string/select_pcap"/>
-
-        <Button
-            android:id="@+id/disconnect_service"
-            android:layout_weight="1"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:text="@string/disconnect"/>
-
-    </LinearLayout>
+        android:text="@string/service_action_disconnect" />
 </LinearLayout>

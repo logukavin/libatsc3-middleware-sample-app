@@ -12,6 +12,7 @@ import androidx.annotation.StringRes
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.middleware.Atsc3ForegroundService
 import com.nextgenbroadcast.mobile.middleware.R
+import com.nextgenbroadcast.mobile.middleware.ServiceDialogActivity
 
 class NotificationHelper(
         private val context: Context,
@@ -40,7 +41,7 @@ class NotificationHelper(
             }
 
             PlaybackState.IDLE -> {
-                val notificationIntent = Intent(context, Atsc3NotificationDialogActivity::class.java)
+                val notificationIntent = Intent(context, ServiceDialogActivity::class.java)
                 val contentIntent = PendingIntent.getActivity(context, 0, notificationIntent, 0)
 
                 builder.setContentIntent(contentIntent)

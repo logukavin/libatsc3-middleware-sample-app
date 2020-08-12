@@ -1,25 +1,23 @@
-package com.nextgenbroadcast.mobile.middleware.notification
+package com.nextgenbroadcast.mobile.middleware
 
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.os.Bundle
-import android.view.ViewGroup
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import com.nextgenbroadcast.mobile.middleware.Atsc3ForegroundService
-import com.nextgenbroadcast.mobile.middleware.R
 import com.nextgenbroadcast.mobile.middleware.core.FileUtils
 import kotlinx.android.synthetic.main.activity_dialog.*
 
-class Atsc3NotificationDialogActivity: AppCompatActivity() {
+internal class ServiceDialogActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         setContentView(R.layout.activity_dialog)
 
-        window.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-        this.setFinishOnTouchOutside(true)
+        setFinishOnTouchOutside(true)
+
+        title = getString(R.string.service_action_menu_title)
 
         select_pcap.setOnClickListener {
             openFileChooser()
@@ -31,15 +29,17 @@ class Atsc3NotificationDialogActivity: AppCompatActivity() {
     }
 
     private fun openFileChooser() {
-        val type = "*/*"
+        val contentType = "*/*"
 
-        val samsungIntent = Intent("com.sec.android.app.myfiles.PICK_DATA")
-        samsungIntent.putExtra("CONTENT_TYPE", type)
-        samsungIntent.addCategory(Intent.CATEGORY_DEFAULT)
+        val samsungIntent = Intent("com.sec.android.app.myfiles.PICK_DATA").apply {
+            putExtra("CONTENT_TYPE", contentType)
+            addCategory(Intent.CATEGORY_DEFAULT)
+        }
 
-        val intent = Intent(Intent.ACTION_GET_CONTENT)
-        intent.type = type
-        intent.addCategory(Intent.CATEGORY_OPENABLE)
+        val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
+            type = contentType
+            addCategory(Intent.CATEGORY_OPENABLE)
+        }
 
         val chooserIntent = if (packageManager.resolveActivity(samsungIntent, 0) != null) samsungIntent else intent
 
@@ -51,9 +51,7 @@ class Atsc3NotificationDialogActivity: AppCompatActivity() {
     }
 
     private fun stopService() {
-        val intent = Intent(this, Atsc3ForegroundService::class.java)
-        intent.action = Atsc3ForegroundService.ACTION_STOP
-        startService(intent)
+        Atsc3ForegroundService.stopService(this)
 
         finish()
     }
@@ -61,22 +59,19 @@ class Atsc3NotificationDialogActivity: AppCompatActivity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         if (requestCode == FILE_REQUEST_CODE && data != null) {
             data.data?.let { uri ->
-                val filePath = FileUtils.getPath(applicationContext, uri)
-
-                val intent = Intent(this, Atsc3ForegroundService::class.java)
-                intent.putExtra(ATSC3_SOURCE_PATH, filePath)
-                intent.action = Atsc3ForegroundService.ACTION_ATSC3_SOURCE_OPEN
-                startService(intent)
+                FileUtils.getPath(applicationContext, uri)?.let { filePath ->
+                    Atsc3ForegroundService.openFile(this, filePath)
+                }
 
                 finish()
             }
             return
         }
+
         super.onActivityResult(requestCode, resultCode, data)
     }
 
     companion object {
         private const val FILE_REQUEST_CODE = 133
-        const val ATSC3_SOURCE_PATH = "pcapSourcePath"
     }
 }
