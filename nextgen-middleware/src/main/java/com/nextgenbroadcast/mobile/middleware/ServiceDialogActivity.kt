@@ -5,6 +5,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import com.nextgenbroadcast.mobile.middleware.core.FileUtils
 import kotlinx.android.synthetic.main.activity_dialog.*
 
@@ -26,6 +27,19 @@ internal class ServiceDialogActivity : AppCompatActivity() {
         disconnect_service.setOnClickListener {
             stopService()
         }
+
+        watch_tv.setOnClickListener {
+            watchTV()
+        }
+    }
+
+    private fun watchTV() {
+        val intent = Intent(ACTION_WATCH_TV).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        ContextCompat.startActivity(this, intent, null)
+
+        finish()
     }
 
     private fun openFileChooser() {
@@ -73,5 +87,6 @@ internal class ServiceDialogActivity : AppCompatActivity() {
 
     companion object {
         private const val FILE_REQUEST_CODE = 133
+        private const val ACTION_WATCH_TV = "com.nextgenbroadcast.mobile.tv"
     }
 }
