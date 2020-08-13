@@ -28,8 +28,8 @@ class QueryDeviceInfoImpl(val gateway: IRPCGateway) : IQueryDeviceInfo {
                         numberOfTuners = 1
                         yearOfMfr = SimpleDateFormat("yyyy").format(Build.TIME).toInt()
                     }
-                    deviceId = gateway.getDeviceId()
-                    advertisingId = gateway.getAdvertisingId()
+                    deviceId = gateway.deviceId
+                    advertisingId = gateway.advertisingId
                 }
     }
 }
