@@ -22,16 +22,17 @@ class PreferenceHelperImpl(private var applicationContext: Context) : Preference
         val deviceId = preferences.getString(DEVICE_ID, "")
         val advertisingId = preferences.getString(ADVERTISING_ID, "")
         if (deviceId == "" || advertisingId == "") {
-            preferences.edit{
-                    putString(DEVICE_ID, java.util.UUID.randomUUID().toString())
-                    putString(ADVERTISING_ID, java.util.UUID.randomUUID().toString())
+            preferences.edit {
+                putString(DEVICE_ID, java.util.UUID.randomUUID().toString())
+                putString(ADVERTISING_ID, java.util.UUID.randomUUID().toString())
             }
         }
     }
 
     override fun getDeviceID(): String {
-        return preferences.getString(DEVICE_ID, "")?:""
+        return preferences.getString(DEVICE_ID, "") ?: ""
     }
+
     override fun getAdvertisingId(): String {
         return preferences.getString(ADVERTISING_ID, "") ?: ""
     }
