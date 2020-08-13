@@ -13,8 +13,8 @@ object CertificateUtils {
     val KEY_MANAGER_ALGORITHM = "X509"
     const val KEY_STORE_TYPE = "PKCS12"
 
-    fun loadKeystore(inputStream: InputStream, password: String): KeyStore {
-        inputStream.use { inputStream ->
+    fun loadKeystore(context: Context, password: String): KeyStore {
+        context.resources.openRawResource(R.raw.mykey).use { inputStream ->
             return KeyStore.getInstance(KEY_STORE_TYPE).also {
                 it.load(inputStream, password.toCharArray())
             }
@@ -23,7 +23,7 @@ object CertificateUtils {
 
     fun loadCertificateAndPrivateKey(context: Context, password: String = "MY_PASSWORD"): Pair<PrivateKey, X509Certificate>? {
         try {
-            val keyStore = loadKeystore(context.resources.openRawResource(R.raw.mykey), password)
+            val keyStore = loadKeystore(context, password)
             val alias = keyStore.aliases().nextElement()
             val key = keyStore.getKey(alias, password.toCharArray())
             if (key is PrivateKey) {
