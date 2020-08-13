@@ -7,7 +7,7 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPacka
 import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.Urls
 import java.util.concurrent.ConcurrentHashMap
 
-internal class RepositoryImpl() : IRepository{
+internal class RepositoryImpl : IRepository {
     private val _applications = ConcurrentHashMap<String, Atsc3Application>()
 
     override val hostName = "localhost"

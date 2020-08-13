@@ -25,6 +25,6 @@ interface IRPCGateway {
 
     fun sendNotification(message: String)
 
-    fun getDeviceId():String
-    fun getAdvertisingId():String
+    fun getDeviceId(): String
+    fun getAdvertisingId(): String
 }
