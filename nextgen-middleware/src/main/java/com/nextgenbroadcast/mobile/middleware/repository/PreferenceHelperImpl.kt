@@ -1,39 +1,35 @@
 package com.nextgenbroadcast.mobile.middleware.repository
 
 import android.content.Context
-import android.content.SharedPreferences
 import androidx.core.content.edit
+import com.nextgenbroadcast.mobile.middleware.BuildConfig
+import java.util.*
 
-class PreferenceHelperImpl(private var applicationContext: Context) : PreferenceHelper {
+class PreferenceHelperImpl(context: Context) : IPreferenceHelper {
+    private val preferences = context.getSharedPreferences(REPOSITORY_PREFERENCE, Context.MODE_PRIVATE)
+
+    override val deviceId: String
+        get() = requireString(DEVICE_ID) {
+            UUID.randomUUID().toString()
+        }
+
+    override val advertisingId: String
+        get() = requireString(ADVERTISING_ID) {
+            UUID.randomUUID().toString()
+        }
+
+    private fun saveString(key: String, value: String): String {
+        preferences.edit { putString(key, value) }
+        return value
+    }
+
+    private fun requireString(key: String, action: () -> String): String {
+        return preferences.getString(key, null) ?: saveString(key, action.invoke())
+    }
+
     companion object {
-        const val REPOSITORY_PREFERENCE = "com.nextgenbroadcast.mobile.middleware.repository"
+        const val REPOSITORY_PREFERENCE = "${BuildConfig.LIBRARY_PACKAGE_NAME}.preference"
         const val DEVICE_ID = "device_id"
         const val ADVERTISING_ID = "advertising_id"
-    }
-
-    lateinit var preferences: SharedPreferences
-
-    init {
-        setUpIDGeneration()
-    }
-
-    private fun setUpIDGeneration() {
-        preferences = applicationContext.getSharedPreferences(REPOSITORY_PREFERENCE, Context.MODE_PRIVATE)
-        val deviceId = preferences.getString(DEVICE_ID, "")
-        val advertisingId = preferences.getString(ADVERTISING_ID, "")
-        if (deviceId == "" || advertisingId == "") {
-            preferences.edit {
-                putString(DEVICE_ID, java.util.UUID.randomUUID().toString())
-                putString(ADVERTISING_ID, java.util.UUID.randomUUID().toString())
-            }
-        }
-    }
-
-    override fun getDeviceID(): String {
-        return preferences.getString(DEVICE_ID, "") ?: ""
-    }
-
-    override fun getAdvertisingId(): String {
-        return preferences.getString(ADVERTISING_ID, "") ?: ""
     }
 }
