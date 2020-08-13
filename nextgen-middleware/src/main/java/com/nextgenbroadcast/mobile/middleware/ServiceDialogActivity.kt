@@ -25,7 +25,7 @@ internal class ServiceDialogActivity : AppCompatActivity() {
         }
 
         disconnect_service.setOnClickListener {
-            stopService()
+            disconnectService()
         }
 
         watch_tv.setOnClickListener {
@@ -64,8 +64,8 @@ internal class ServiceDialogActivity : AppCompatActivity() {
         }
     }
 
-    private fun stopService() {
-        Atsc3ForegroundService.stopService(this)
+    private fun disconnectService() {
+        Atsc3ForegroundService.closeRoute(this)
 
         finish()
     }

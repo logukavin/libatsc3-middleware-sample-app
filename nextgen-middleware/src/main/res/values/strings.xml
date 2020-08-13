@@ -2,7 +2,7 @@
     <string name="notification_play_btn_title">Play</string>
     <string name="notification_pause_btn_title">Pause</string>
     <string name="atsc3_chanel_name">Atsc3 Service Channel</string>
-    <string name="atsc3_no_service_available">No service available</string>
+    <string name="atsc3_no_service_available">Service is not selected</string>
     <string name="atsc3_source_is_not_initialized">Atsc3 source is not initialized</string>
     <string name="service_action_menu_title">Atsc3 service menu</string>
     <string name="service_action_select_pcap">Select pcap file…</string>
