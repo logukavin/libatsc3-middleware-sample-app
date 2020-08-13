@@ -12,7 +12,6 @@ import android.os.PowerManager
 import android.os.PowerManager.WakeLock
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleService
-import androidx.lifecycle.LiveData
 import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.Observer
 import com.nextgenbroadcast.mobile.core.cert.UserAgentSSLContext
@@ -47,11 +46,11 @@ class Atsc3ForegroundService : LifecycleService() {
     private lateinit var atsc3Module: Atsc3Module
     private lateinit var serviceController: IServiceController
     private lateinit var notificationHelper: NotificationHelper
+    private lateinit var state: MediatorLiveData<Triple<ReceiverState?, SLSService?, PlaybackState?>>
 
     private var viewController: IViewController? = null
     private var webGateway: IWebGateway? = null
     private var rpcGateway: IRPCGateway? = null
-    private var state: LiveData<*>? = null
 
     private lateinit var wakeLock: WakeLock
 
@@ -78,6 +77,19 @@ class Atsc3ForegroundService : LifecycleService() {
         notificationHelper = NotificationHelper(this, NOTIFICATION_CHANNEL_ID).also {
             it.createNotificationChannel(getString(R.string.atsc3_chanel_name))
         }
+
+        state = MediatorLiveData<Triple<ReceiverState?, SLSService?, PlaybackState?>>().apply {
+            addSource(serviceController.receiverState) { receiverState ->
+                value = newState(receiverState = receiverState)
+            }
+            addSource(serviceController.selectedService) { service ->
+                value = newState(selectedService = service)
+            }
+        }.also {
+            it.observe(this, Observer { (receiverState, selectedService, playbackState) ->
+                notificationHelper.notify(NOTIFICATION_ID, createNotification(receiverState, selectedService, playbackState))
+            })
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -87,17 +99,19 @@ class Atsc3ForegroundService : LifecycleService() {
             when (intent.action) {
                 ACTION_START -> startService()
 
-                ACTION_STOP -> stopService()
+                ACTION_STOP -> killService()
 
-                ACTION_DEVICE_ATTACHED -> onDeviceAttached(getUsbDevice(intent))
+                ACTION_DEVICE_ATTACHED -> onDeviceAttached(intent.getParcelableExtra<UsbDevice?>(UsbManager.EXTRA_DEVICE))
 
-                ACTION_DEVICE_DETACHED -> onDeviceDetached(getUsbDevice(intent))
+                ACTION_DEVICE_DETACHED -> onDeviceDetached(intent.getParcelableExtra<UsbDevice?>(UsbManager.EXTRA_DEVICE))
 
                 ACTION_RMP_PLAY -> viewController?.rmpResume()
 
                 ACTION_RMP_PAUSE -> viewController?.rmpPause()
 
                 ACTION_OPEN_FILE -> openFileSource(intent.getStringExtra(EXTRA_FILE_PATH))
+
+                ACTION_CLOSE_ROUTE -> closeRoute()
 
                 else -> {
                 }
@@ -108,13 +122,24 @@ class Atsc3ForegroundService : LifecycleService() {
     }
 
     private fun openFileSource(filePath: String?) {
+        // change source to file. So, let's unregister device receiver
+        unregisterDeviceReceiver()
+
         filePath?.let {
             serviceController.openRoute(filePath)
         }
     }
 
-    private fun getUsbDevice(intent: Intent) =
-            intent.getParcelableExtra<UsbDevice?>(UsbManager.EXTRA_DEVICE)
+    private fun closeRoute() {
+        unregisterDeviceReceiver()
+        serviceController.closeRoute()
+
+        if (isBinded) {
+            stopSelf()
+        } else {
+            killService()
+        }
+    }
 
     private fun startService() {
         if (isForeground) return
@@ -124,20 +149,25 @@ class Atsc3ForegroundService : LifecycleService() {
     }
 
     private fun stopService() {
-        if (wakeLock.isHeld) {
-            wakeLock.release()
-        }
-
-        stopWebServer()
         stopForeground(true)
-        stopSelf()
 
         isForeground = false
     }
 
+    private fun killService() {
+        if (wakeLock.isHeld) {
+            wakeLock.release()
+        }
+
+        unregisterDeviceReceiver()
+        stopWebServer()
+        stopService()
+        stopSelf()
+    }
+
     private fun onDeviceAttached(device: UsbDevice?) {
         if (device == null) {
-            if (!isForeground) {
+            if (!isForeground && !isBinded) {
                 stopSelf()
             }
             return
@@ -148,11 +178,9 @@ class Atsc3ForegroundService : LifecycleService() {
         val usbManager = getSystemService(Context.USB_SERVICE) as UsbManager
         if (usbManager.hasPermission(device)) {
             startService()
-            serviceController.openRoute(device, usbManager)
+            unregisterDeviceReceiver()
 
-            deviceReceiver?.let { receiver ->
-                unregisterReceiver(receiver)
-            }
+            serviceController.openRoute(device, usbManager)
 
             // Register BroadcastReceiver to detect when device is disconnected
             deviceReceiver = Atsc3DeviceReceiver(device.deviceName).also { receiver ->
@@ -164,9 +192,13 @@ class Atsc3ForegroundService : LifecycleService() {
     }
 
     private fun onDeviceDetached(device: UsbDevice?) {
-        serviceController.closeRoute()
-        if (!isBinded) {
-            stopService()
+        closeRoute()
+    }
+
+    private fun unregisterDeviceReceiver() {
+        deviceReceiver?.let { receiver ->
+            unregisterReceiver(receiver)
+            deviceReceiver = null
         }
     }
 
@@ -200,11 +232,11 @@ class Atsc3ForegroundService : LifecycleService() {
     override fun onBind(intent: Intent): IBinder? {
         super.onBind(intent)
 
-        isBinded = true
-
         startService()
 
         createViewPresentationAndStartService()
+
+        isBinded = true
 
         return ServiceBinder()
     }
@@ -213,16 +245,14 @@ class Atsc3ForegroundService : LifecycleService() {
         super.onRebind(intent)
 
         isBinded = true
-
-        createViewPresentationAndStartService()
     }
 
     override fun onUnbind(intent: Intent?): Boolean {
         super.onUnbind(intent)
 
-        destroyViewPresentationAndStopService()
-
         isBinded = false
+
+        destroyViewPresentationAndStopService()
 
         return true
     }
@@ -238,20 +268,8 @@ class Atsc3ForegroundService : LifecycleService() {
             rpcGateway = it
         }
 
-        state = MediatorLiveData<Triple<ReceiverState?, SLSService?, PlaybackState?>>().apply {
-            addSource(serviceController.receiverState) { receiverState ->
-                value = Triple(receiverState, web.selectedService.value, view.rmpState.value)
-            }
-            addSource(web.selectedService) { service ->
-                value = Triple(serviceController.receiverState.value, service, view.rmpState.value)
-            }
-            addSource(view.rmpState) { playbackState ->
-                value = Triple(serviceController.receiverState.value, web.selectedService.value, playbackState)
-            }
-        }.also {
-            it.observe(this, Observer { (receiverState, selectedService, playbackState) ->
-                notificationHelper.notify(NOTIFICATION_ID, createNotification(receiverState, selectedService, playbackState))
-            })
+        state.addSource(view.rmpState) { playbackState ->
+            state.value = newState(playbackState = playbackState)
         }
 
         startWebServer(rpc, web)
@@ -261,8 +279,9 @@ class Atsc3ForegroundService : LifecycleService() {
     }
 
     private fun destroyViewPresentationAndStopService() {
-        state?.removeObservers(this)
-        state = null
+        viewController?.let { view ->
+            state.removeSource(view.rmpState)
+        }
 
         wakeLock.release()
 
@@ -272,6 +291,19 @@ class Atsc3ForegroundService : LifecycleService() {
         rpcGateway = null
         viewController = null
     }
+
+    private fun requireViewController(): IViewController {
+        if (viewController == null) {
+            createViewPresentationAndStartService()
+        }
+        return viewController ?: throw InitializationException()
+    }
+
+    private fun newState(receiverState: ReceiverState? = null, selectedService: SLSService? = null, playbackState: PlaybackState? = null) = Triple(
+            receiverState ?: serviceController.receiverState.value,
+            selectedService ?: serviceController.selectedService.value,
+            playbackState ?: viewController?.rmpState?.value
+    )
 
     private fun getReceiverState() = serviceController.receiverState.value ?: ReceiverState.IDLE
 
@@ -287,14 +319,23 @@ class Atsc3ForegroundService : LifecycleService() {
     }
 
     inner class ServiceBinder : Binder() {
-        fun getReceiverPresenter(): IReceiverPresenter = serviceController
-        fun getSelectorPresenter(): ISelectorPresenter = serviceController
-        fun getUserAgentPresenter(): IUserAgentPresenter = viewController.required()
-        fun getMediaPlayerPresenter(): IMediaPlayerPresenter = viewController.required()
-    }
+        fun getReceiverPresenter(): IReceiverPresenter = object : IReceiverPresenter {
+            override val receiverState = serviceController.receiverState
 
-    private fun <T> T?.required(): T {
-        return this ?: throw InitializationException()
+            override fun openRoute(pcapFile: String): Boolean {
+                openFile(this@Atsc3ForegroundService, pcapFile)
+                return true
+            }
+
+            override fun closeRoute() {
+                // call to stopRoute is not a mistake. We use it to close previously opened file
+                serviceController.stopRoute()
+                closeRoute(this@Atsc3ForegroundService)
+            }
+        }
+        fun getSelectorPresenter(): ISelectorPresenter = serviceController
+        fun getUserAgentPresenter(): IUserAgentPresenter = requireViewController()
+        fun getMediaPlayerPresenter(): IMediaPlayerPresenter = requireViewController()
     }
 
     class InitializationException : RuntimeException()
@@ -306,7 +347,6 @@ class Atsc3ForegroundService : LifecycleService() {
 
         @Deprecated("old implementation")
         const val ACTION_START = "$SERVICE_ACTION.START"
-
         @Deprecated("old implementation")
         const val ACTION_STOP = "$SERVICE_ACTION.STOP"
         const val ACTION_DEVICE_ATTACHED = "$SERVICE_ACTION.USB_ATTACHED"
@@ -314,6 +354,7 @@ class Atsc3ForegroundService : LifecycleService() {
         const val ACTION_RMP_PLAY = "$SERVICE_ACTION.RMP_PLAY"
         const val ACTION_RMP_PAUSE = "$SERVICE_ACTION.RMP_PAUSE"
         const val ACTION_OPEN_FILE = "$SERVICE_ACTION.OPEN_FILE"
+        const val ACTION_CLOSE_ROUTE = "$SERVICE_ACTION.CLOSE_ROUTE"
 
         const val EXTRA_DEVICE = "device"
         const val EXTRA_FILE_PATH = "file_path"
@@ -347,6 +388,10 @@ class Atsc3ForegroundService : LifecycleService() {
                 serviceIntent.putExtra(EXTRA_FILE_PATH, filePath)
                 ContextCompat.startForegroundService(context, serviceIntent)
             }
+        }
+
+        fun closeRoute(context: Context) {
+            ContextCompat.startForegroundService(context, newIntent(context, ACTION_CLOSE_ROUTE))
         }
 
         private fun newIntent(context: Context, serviceAction: String) = Intent(context, Atsc3ForegroundService::class.java).apply {
