@@ -137,7 +137,7 @@ class MainActivity : Atsc3Activity() {
         stsc3Start.setOnClickListener {}
 
         stsc3Stop = findViewById(R.id.atsc3_stop)
-        stsc3Stop.setOnClickListener { receiverPresenter?.stopRoute() }
+        stsc3Stop.setOnClickListener { receiverPresenter?.closeRoute() }
 
         stsc3Close = findViewById(R.id.atsc3_close)
         stsc3Close.setOnClickListener { receiverPresenter?.closeRoute() }
