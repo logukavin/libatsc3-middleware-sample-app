@@ -264,7 +264,7 @@ class Atsc3ForegroundService : LifecycleService() {
         val web = WebGatewayImpl(serviceController, repository).also {
             webGateway = it
         }
-        val rpc = RPCGatewayImpl(preferenceHelper, serviceController, view, Dispatchers.Main, Dispatchers.IO).also {
+        val rpc = RPCGatewayImpl(serviceController, view, preferenceHelper, Dispatchers.Main, Dispatchers.IO).also {
             rpcGateway = it
         }
 
