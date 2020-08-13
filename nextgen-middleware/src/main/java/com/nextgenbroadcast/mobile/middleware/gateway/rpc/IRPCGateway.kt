@@ -24,4 +24,7 @@ interface IRPCGateway {
     fun unsubscribeNotifications(notifications: Set<NotificationType>): Set<NotificationType>
 
     fun sendNotification(message: String)
+
+    fun getDeviceId(): String
+    fun getAdvertisingId(): String
 }

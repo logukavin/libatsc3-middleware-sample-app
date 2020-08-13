@@ -99,7 +99,7 @@ class RPCGatewayTest {
         `when`(viewController.rmpState).thenReturn(rmpState)
         `when`(viewController.appData).thenReturn(appDataViewController)
         `when`(viewController.rmpPlaybackRate).thenReturn(rmpPlaybackRate)
-        iRPCGateway = RPCGatewayImpl(serviceController, viewController, testDispatcher, testDispatcher)
+        iRPCGateway = RPCGatewayImpl(serviceController, viewController, testDispatcher, testDispatcher, repository)
         middlewareWebSocket = PowerMockito.spy(MiddlewareWebSocket(iRPCGateway))
         iRPCGateway.onSocketOpened(middlewareWebSocket)
         Dispatchers.setMain(testDispatcher)
