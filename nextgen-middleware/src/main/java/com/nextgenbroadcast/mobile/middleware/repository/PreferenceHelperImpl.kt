@@ -2,6 +2,7 @@ package com.nextgenbroadcast.mobile.middleware.repository
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.core.content.edit
 
 class PreferenceHelperImpl(private var applicationContext: Context) : PreferenceHelper {
     companion object {
@@ -21,10 +22,9 @@ class PreferenceHelperImpl(private var applicationContext: Context) : Preference
         val deviceId = preferences.getString(DEVICE_ID, "")
         val advertisingId = preferences.getString(ADVERTISING_ID, "")
         if (deviceId == "" || advertisingId == "") {
-            with(preferences.edit()) {
-                putString(DEVICE_ID, java.util.UUID.randomUUID().toString())
-                putString(ADVERTISING_ID, java.util.UUID.randomUUID().toString())
-                commit()
+            preferences.edit{
+                    putString(DEVICE_ID, java.util.UUID.randomUUID().toString())
+                    putString(ADVERTISING_ID, java.util.UUID.randomUUID().toString())
             }
         }
     }
