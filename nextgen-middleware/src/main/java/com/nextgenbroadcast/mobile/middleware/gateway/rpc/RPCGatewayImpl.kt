@@ -5,7 +5,7 @@ import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
 import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
-import com.nextgenbroadcast.mobile.middleware.repository.IPreferenceRepository
+import com.nextgenbroadcast.mobile.middleware.repository.PreferenceHelper
 import com.nextgenbroadcast.mobile.middleware.rpc.notification.NotificationType
 import com.nextgenbroadcast.mobile.middleware.rpc.notification.RPCNotifier
 import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.Urls
@@ -18,7 +18,7 @@ internal class RPCGatewayImpl(
         private val viewController: IViewController,
         mainDispatcher: CoroutineDispatcher,
         ioDispatcher: CoroutineDispatcher,
-        private var repository: IPreferenceRepository
+        private var preferenceHelper: PreferenceHelper
 ) : IRPCGateway {
     private val mainScope = CoroutineScope(mainDispatcher)
     private val ioScope = CoroutineScope(ioDispatcher)
@@ -130,11 +130,11 @@ internal class RPCGatewayImpl(
     }
 
     override fun getDeviceId(): String {
-        return repository.getDeviceId()
+        return preferenceHelper.getDeviceID()
     }
 
     override fun getAdvertisingId(): String {
-        return repository.getAdvertisingId()
+        return preferenceHelper.getAdvertisingId()
     }
 
     private fun onAppDataUpdated(appData: AppData?) {

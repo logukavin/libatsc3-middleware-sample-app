@@ -7,7 +7,7 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPacka
 import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.Urls
 import java.util.concurrent.ConcurrentHashMap
 
-internal class RepositoryImpl(private var preferenceHelper: PreferenceHelper) : IRepository, IPreferenceRepository {
+internal class RepositoryImpl() : IRepository{
     private val _applications = ConcurrentHashMap<String, Atsc3Application>()
 
     override val hostName = "localhost"
@@ -58,13 +58,5 @@ internal class RepositoryImpl(private var preferenceHelper: PreferenceHelper) : 
         services.postValue(emptyList())
         heldPackage.postValue(null)
         routeMediaUrl.postValue(null)
-    }
-
-    override fun getDeviceId(): String {
-        return preferenceHelper.getDeviceID()
-    }
-
-    override fun getAdvertisingId(): String {
-        return preferenceHelper.getAdvertisingId()
     }
 }
