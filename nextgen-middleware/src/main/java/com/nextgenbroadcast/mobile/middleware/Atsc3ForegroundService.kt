@@ -34,15 +34,15 @@ import com.nextgenbroadcast.mobile.middleware.presentation.IReceiverPresenter
 import com.nextgenbroadcast.mobile.middleware.presentation.ISelectorPresenter
 import com.nextgenbroadcast.mobile.middleware.presentation.IUserAgentPresenter
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
-import com.nextgenbroadcast.mobile.middleware.repository.PreferenceHelper
+import com.nextgenbroadcast.mobile.middleware.repository.IPreferenceHelper
 import com.nextgenbroadcast.mobile.middleware.repository.PreferenceHelperImpl
 import com.nextgenbroadcast.mobile.middleware.repository.RepositoryImpl
 import com.nextgenbroadcast.mobile.middleware.web.MiddlewareWebServer
 import kotlinx.coroutines.Dispatchers
 
 class Atsc3ForegroundService : LifecycleService() {
+    private lateinit var preferenceHelper: IPreferenceHelper
     private lateinit var repository: IRepository
-    private lateinit var preferenceHelper: PreferenceHelper
     private lateinit var atsc3Module: Atsc3Module
     private lateinit var serviceController: IServiceController
     private lateinit var notificationHelper: NotificationHelper
@@ -264,7 +264,7 @@ class Atsc3ForegroundService : LifecycleService() {
         val web = WebGatewayImpl(serviceController, repository).also {
             webGateway = it
         }
-        val rpc = RPCGatewayImpl(serviceController, view, Dispatchers.Main, Dispatchers.IO, preferenceHelper).also {
+        val rpc = RPCGatewayImpl(preferenceHelper, serviceController, view, Dispatchers.Main, Dispatchers.IO).also {
             rpcGateway = it
         }
 
