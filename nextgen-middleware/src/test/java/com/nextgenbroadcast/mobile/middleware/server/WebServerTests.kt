@@ -1,5 +1,7 @@
 package com.nextgenbroadcast.mobile.middleware.server
 
+import android.content.Context
+import android.content.res.Resources
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import com.nextgenbroadcast.mobile.core.cert.CertificateUtils
 import com.nextgenbroadcast.mobile.core.cert.UserAgentSSLContext
@@ -10,13 +12,14 @@ import com.nextgenbroadcast.mobile.middleware.web.MiddlewareWebServerError
 import com.nextgenbroadcast.mobile.middleware.ws.MiddlewareWebSocket
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestCoroutineDispatcher
-import kotlinx.coroutines.test.runBlockingTest
 import okhttp3.ConnectionSpec
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.eclipse.jetty.websocket.client.WebSocketClient
 import org.junit.*
 import org.junit.runner.RunWith
+import org.mockito.ArgumentMatchers
+import org.mockito.Mock
 import org.mockito.Mockito
 import org.powermock.api.mockito.PowerMockito
 import org.powermock.core.classloader.annotations.PowerMockIgnore
@@ -36,6 +39,12 @@ class WebServerTests {
     @ClassRule
     @JvmField
     var instantTaskExecutorRule = InstantTaskExecutorRule()
+
+    @Mock
+    private lateinit var mockApplicationContext: Context
+
+    @Mock
+    private lateinit var mockContextResources: Resources
 
     abstract class RPCGatewayAdapter : IRPCGateway {
         override fun updateRMPPosition(scaleFactor: Double, xPos: Double, yPos: Double) {
@@ -74,17 +83,19 @@ class WebServerTests {
     private lateinit var webServer: MiddlewareWebServer
     private lateinit var webSocketClient: WebSocketClient
 
-    private val classLoader = WebServerTests::class.java.javaClass.classLoader
-
     @ExperimentalCoroutinesApi
     @Before
-    fun setup() = testDispatcher.runBlockingTest {
+    fun setup() {
+        Mockito.`when`(mockApplicationContext.resources).thenReturn(mockContextResources)
+        Mockito.`when`(mockContextResources.openRawResource(ArgumentMatchers.anyInt())).then {
+            javaClass.getResourceAsStream("mykey.p12")
+        }
         PowerMockito.mockStatic(CertificateUtils::class.java)
         Mockito.`when`(CertificateUtils.KEY_MANAGER_ALGORITHM).thenReturn(KeyManagerFactory.getDefaultAlgorithm())
-        if (classLoader != null)
-            webServer = WebServerWithServlet(UserAgentSSLContext(classLoader.getResourceAsStream("mykey.p12"))).getServer().also {
-                it.start()
-            }
+
+        webServer = WebServerWithServlet(UserAgentSSLContext(mockApplicationContext)).getServer().also {
+            it.start()
+        }
         webSocketClient = WebSocketClient()
     }
 
@@ -132,30 +143,28 @@ class WebServerTests {
 
     @Test
     fun makeHttpsCall() {
-        if (classLoader != null) {
-            val client = OkHttpClient().newBuilder().sslSocketFactory(UserAgentSSLContext(classLoader.getResourceAsStream("mykey.p12")).getInitializedSSLContext("MY_PASSWORD").socketFactory).build()
-            val request: Request = Request.Builder().url("https://localhost:8443/index.html").build()
-            val response = client.newCall(request).execute()
-            val serverMessage = response.body()?.string()
-            val code = response.code()
-            Assert.assertEquals(MiddlewareWebServerTestServlet.serverMessage, serverMessage)
-            Assert.assertEquals(200, code)
-            Assert.assertEquals(MiddlewareWebServerTestServlet.serverMessage, serverMessage)
-        }
+        val sslContext = UserAgentSSLContext(mockApplicationContext).getInitializedSSLContext("MY_PASSWORD")
+        val client = OkHttpClient().newBuilder().sslSocketFactory(sslContext.socketFactory).build()
+        val request: Request = Request.Builder().url("https://localhost:8443/index.html").build()
+        val response = client.newCall(request).execute()
+        val serverMessage = response.body()?.string()
+        val code = response.code()
+        Assert.assertEquals(MiddlewareWebServerTestServlet.serverMessage, serverMessage)
+        Assert.assertEquals(200, code)
+        Assert.assertEquals(MiddlewareWebServerTestServlet.serverMessage, serverMessage)
     }
 
     @Test
     fun makeHttpsErrorCall() {
-        if (classLoader != null) {
-            val client = OkHttpClient().newBuilder().sslSocketFactory(UserAgentSSLContext(classLoader.getResourceAsStream("mykey.p12")).getInitializedSSLContext("MY_PASSWORD").socketFactory).build()
-            val request: Request = Request.Builder().url("https://localhost:8443/index1.html").build()
-            val response = client.newCall(request).execute()
-            val serverMessage = response.body()?.string()
-            val code = response.code()
-            Assert.assertNotEquals(MiddlewareWebServerTestServlet.serverMessage, serverMessage)
-            Assert.assertEquals(404, code)
-            Assert.assertEquals(false, response.isSuccessful)
-        }
+        val sslContext = UserAgentSSLContext(mockApplicationContext).getInitializedSSLContext("MY_PASSWORD")
+        val client = OkHttpClient().newBuilder().sslSocketFactory(sslContext.socketFactory).build()
+        val request: Request = Request.Builder().url("https://localhost:8443/index1.html").build()
+        val response = client.newCall(request).execute()
+        val serverMessage = response.body()?.string()
+        val code = response.code()
+        Assert.assertNotEquals(MiddlewareWebServerTestServlet.serverMessage, serverMessage)
+        Assert.assertEquals(404, code)
+        Assert.assertEquals(false, response.isSuccessful)
     }
 
     @Test
