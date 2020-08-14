@@ -8,6 +8,7 @@ import javax.net.ssl.SSLContext
 import javax.net.ssl.TrustManagerFactory
 
 class UserAgentSSLContext(private val context: Context) : IUserAgentSSLContext {
+
     @Throws(GeneralSecurityException::class, IOException::class)
     override fun getInitializedSSLContext(password: String): SSLContext {
         val keystore = CertificateUtils.loadKeystore(context, password)
