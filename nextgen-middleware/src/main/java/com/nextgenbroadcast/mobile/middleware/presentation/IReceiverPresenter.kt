@@ -7,6 +7,5 @@ interface IReceiverPresenter {
     val receiverState: LiveData<ReceiverState>
 
     fun openRoute(pcapFile: String): Boolean
-    fun stopRoute()
     fun closeRoute()
 }

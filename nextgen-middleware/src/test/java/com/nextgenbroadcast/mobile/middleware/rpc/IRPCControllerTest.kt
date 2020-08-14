@@ -31,6 +31,7 @@ import com.nextgenbroadcast.mobile.middleware.gateway.rpc.RPCGatewayImpl
 import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.Urls
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPackage
+import com.nextgenbroadcast.mobile.middleware.repository.IPreferenceHelper
 import org.powermock.core.classloader.annotations.PrepareForTest
 import org.powermock.modules.junit4.PowerMockRunner
 import java.util.*
@@ -53,10 +54,14 @@ class IRPCControllerTest {
     private lateinit var viewController: IViewController
 
     @Mock
+    private lateinit var prefs: IPreferenceHelper
+
+    @Mock
     private lateinit var repository: IRepository
 
     @Mock
     private lateinit var iRPCGateway: IRPCGateway
+
     private lateinit var coordinator: RPCGatewayImpl
     private lateinit var mediaPlayerController: ViewControllerImpl
     private var scaleFactor: Double = 1.0
@@ -64,6 +69,8 @@ class IRPCControllerTest {
     private var yPos: Double = 22.0
     private val mockedSLSService: SLSService = SLSService(5003, "WZTV", "tag:sinclairplatform.com,2020:WZTV:2727")
     private val mockedMediaUrl: String? = null
+    private val deviceId = UUID.randomUUID().toString()
+    private val advertisingId = UUID.randomUUID().toString()
 
     val appData: LiveData<Atsc3HeldPackage?> = MutableLiveData()
     val applications = MutableLiveData<List<Atsc3Application>>()
@@ -80,6 +87,8 @@ class IRPCControllerTest {
     @Before
     fun initCoordinator() {
         selectedService.value = mockedSLSService
+        Mockito.`when`(prefs.deviceId).thenReturn(deviceId)
+        Mockito.`when`(prefs.advertisingId).thenReturn(advertisingId)
         Mockito.`when`(repository.heldPackage).thenReturn(appData)
         Mockito.`when`(repository.applications).thenReturn(applications)
         Mockito.`when`(serviceController.serviceGuidUrls).thenReturn(serviceGuidUrls)
@@ -91,7 +100,7 @@ class IRPCControllerTest {
         Mockito.`when`(viewController.appData).thenReturn(appDataViewController)
 
         mediaPlayerController = ViewControllerImpl(repository)
-        coordinator = RPCGatewayImpl(serviceController, mediaPlayerController, testDispatcher, testDispatcher)
+        coordinator = RPCGatewayImpl(prefs, serviceController, mediaPlayerController, testDispatcher, testDispatcher)
         iRPCGateway = coordinator
         Dispatchers.setMain(testDispatcher)
     }

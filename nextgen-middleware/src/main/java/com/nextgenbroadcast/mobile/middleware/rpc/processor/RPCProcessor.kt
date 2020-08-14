@@ -39,7 +39,7 @@ import com.nextgenbroadcast.mobile.middleware.rpc.subscribeUnsubscribe.Subscribe
 import com.nextgenbroadcast.mobile.middleware.rpc.xLink.IXLink
 import com.nextgenbroadcast.mobile.middleware.rpc.xLink.XLinkImpl
 
-internal class RPCProcessor (
+internal class RPCProcessor(
         private val gateway: IRPCGateway
 ) : IRPCProcessor {
 
@@ -61,7 +61,7 @@ internal class RPCProcessor (
         processor.process(KeysImpl(), IKeys::class.java)
         processor.process(MarkUnusedImpl(), IMarkUnused::class.java)
         processor.process(MediaTrackSelectionImpl(), IMediaTrackSelection::class.java)
-        processor.process(QueryDeviceInfoImpl(), IQueryDeviceInfo::class.java)
+        processor.process(QueryDeviceInfoImpl(gateway), IQueryDeviceInfo::class.java)
         processor.process(ReceiverQueryApiImpl(gateway), IReceiverQueryApi::class.java)
         processor.process(ReceiverActionImpl(gateway), IReceiverAction::class.java)
         processor.process(RMPContentSynchronizationImpl(gateway), IRMPContentSynchronization::class.java)

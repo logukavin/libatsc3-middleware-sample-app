@@ -33,6 +33,8 @@ import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.Urls
 import com.nextgenbroadcast.mobile.middleware.ws.MiddlewareWebSocket
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPackage
+import com.nextgenbroadcast.mobile.middleware.repository.IPreferenceHelper
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.powermock.api.mockito.PowerMockito
 import org.powermock.core.classloader.annotations.PrepareForTest
 import org.powermock.modules.junit4.PowerMockRunner
@@ -66,28 +68,37 @@ class RPCGatewayTest {
     @Mock
     private lateinit var mediaPlayerController: ViewControllerImpl
 
+    @Mock
+    private lateinit var prefs: IPreferenceHelper
+
     private var scaleFactor: Double = 1.0
     private var xPos: Double = 11.0
     private var yPos: Double = 22.0
     private val mockedSLSService: SLSService = SLSService(5003, "WZTV", "tag:sinclairplatform.com,2020:WZTV:2727")
     private val mockedMediaUrl: String? = null
+    private val deviceId = UUID.randomUUID().toString()
+    private val advertisingId = UUID.randomUUID().toString()
 
-    val heldPackage: LiveData<Atsc3HeldPackage?> = MutableLiveData()
-    val applications: LiveData<List<Atsc3Application>?> = MutableLiveData()
+    private val heldPackage: LiveData<Atsc3HeldPackage?> = MutableLiveData()
+    private val applications: LiveData<List<Atsc3Application>?> = MutableLiveData()
     private val serviceGuidUrls: MutableLiveData<List<Urls>?> = MutableLiveData()
     private var selectedService: MutableLiveData<SLSService?> = MutableLiveData()
     private val rmpState: LiveData<PlaybackState> = MutableLiveData()
     private val rmpMediaUrl: LiveData<String?> = MutableLiveData()
+    @ExperimentalCoroutinesApi
     private val testDispatcher = TestCoroutineDispatcher()
     private val testServiceGuideUrls = listOf(Urls("testType", "TestUrl"))
-    val appDataViewController: LiveData<AppData?> = MutableLiveData()
-    val rmpPlaybackRate: LiveData<Float> = MutableLiveData()
+    private val appDataViewController: LiveData<AppData?> = MutableLiveData()
+    private val rmpPlaybackRate: LiveData<Float> = MutableLiveData()
 
 
+    @ExperimentalCoroutinesApi
     @Before
     fun initCoordinator() {
         selectedService.value = mockedSLSService
         serviceGuidUrls.value = testServiceGuideUrls
+        `when`(prefs.deviceId).thenReturn(deviceId)
+        `when`(prefs.advertisingId).thenReturn(advertisingId)
         `when`(repository.heldPackage).thenReturn(heldPackage)
         `when`(repository.applications).thenReturn(applications)
         `when`(serviceController.serviceGuidUrls).thenReturn(serviceGuidUrls)
@@ -99,13 +110,13 @@ class RPCGatewayTest {
         `when`(viewController.rmpState).thenReturn(rmpState)
         `when`(viewController.appData).thenReturn(appDataViewController)
         `when`(viewController.rmpPlaybackRate).thenReturn(rmpPlaybackRate)
-        iRPCGateway = RPCGatewayImpl(serviceController, viewController, testDispatcher, testDispatcher)
+        iRPCGateway = RPCGatewayImpl(prefs, serviceController, viewController, testDispatcher, testDispatcher)
         middlewareWebSocket = PowerMockito.spy(MiddlewareWebSocket(iRPCGateway))
         iRPCGateway.onSocketOpened(middlewareWebSocket)
         Dispatchers.setMain(testDispatcher)
-
     }
 
+    @ExperimentalCoroutinesApi
     @Test
     fun testCallBackData() = testDispatcher.runBlockingTest {
         iRPCGateway.updateRMPPosition(scaleFactor, xPos, yPos)
@@ -144,6 +155,7 @@ class RPCGatewayTest {
         assertEquals(testServiceGuideUrls, iRPCGateway.serviceGuideUrls)
     }
 
+    @ExperimentalCoroutinesApi
     @Test
     fun testRequestMediaPlay() = testDispatcher.runBlockingTest {
         val mediaURL = "url"
@@ -152,6 +164,7 @@ class RPCGatewayTest {
         verify(viewController).requestMediaPlay(mediaURL, delay)
     }
 
+    @ExperimentalCoroutinesApi
     @Test
     fun testRequestMediaStop() = testDispatcher.runBlockingTest {
         val delay = 11L
@@ -175,6 +188,7 @@ class RPCGatewayTest {
         assertEquals(setOf<NotificationType>(), iRPCGateway.unsubscribeNotifications(convertMsgTypeToNotifications(listOf("xlinkResolution"))))
     }
 
+    @ExperimentalCoroutinesApi
     @Test
     fun testSendNotification() = testDispatcher.runBlockingTest {
         val message = "message"
@@ -182,6 +196,7 @@ class RPCGatewayTest {
         verify(middlewareWebSocket)?.sendMessage(message)
     }
 
+    @ExperimentalCoroutinesApi
     @After
     fun cleanUp() {
         Dispatchers.resetMain()
