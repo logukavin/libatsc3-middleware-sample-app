@@ -2,12 +2,15 @@ package com.nextgenbroadcast.mobile.core.cert
 
 import android.content.Context
 import com.nextgenbroadcast.mobile.core.R
+import java.io.InputStream
 import java.security.KeyStore
 import java.security.PrivateKey
 import java.security.cert.X509Certificate
+import javax.net.ssl.KeyManagerFactory
 
 object CertificateUtils {
-    const val KEY_MANAGER_ALGORITHM = "X509"
+    @JvmStatic
+    val KEY_MANAGER_ALGORITHM = "X509"
     const val KEY_STORE_TYPE = "PKCS12"
 
     fun loadKeystore(context: Context, password: String): KeyStore {
