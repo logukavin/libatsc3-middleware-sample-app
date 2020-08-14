@@ -3,6 +3,19 @@ package com.nextgenbroadcast.mobile.middleware.rpc
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import com.nextgenbroadcast.mobile.core.model.AppData
+import com.nextgenbroadcast.mobile.core.model.PlaybackState
+import com.nextgenbroadcast.mobile.core.model.SLSService
+import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
+import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPackage
+import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
+import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
+import com.nextgenbroadcast.mobile.middleware.controller.view.ViewControllerImpl
+import com.nextgenbroadcast.mobile.middleware.gateway.rpc.IRPCGateway
+import com.nextgenbroadcast.mobile.middleware.gateway.rpc.RPCGatewayImpl
+import com.nextgenbroadcast.mobile.middleware.repository.IPreferenceHelper
+import com.nextgenbroadcast.mobile.middleware.repository.IRepository
+import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.Urls
 import junit.framework.TestCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -19,19 +32,6 @@ import org.junit.rules.TestRule
 import org.junit.runner.RunWith
 import org.mockito.Mock
 import org.mockito.Mockito
-import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
-import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
-import com.nextgenbroadcast.mobile.middleware.controller.view.ViewControllerImpl
-import com.nextgenbroadcast.mobile.core.model.PlaybackState
-import com.nextgenbroadcast.mobile.core.model.AppData
-import com.nextgenbroadcast.mobile.core.model.SLSService
-import com.nextgenbroadcast.mobile.middleware.repository.IRepository
-import com.nextgenbroadcast.mobile.middleware.gateway.rpc.IRPCGateway
-import com.nextgenbroadcast.mobile.middleware.gateway.rpc.RPCGatewayImpl
-import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.Urls
-import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
-import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPackage
-import com.nextgenbroadcast.mobile.middleware.repository.IPreferenceHelper
 import org.powermock.core.classloader.annotations.PrepareForTest
 import org.powermock.modules.junit4.PowerMockRunner
 import java.util.*
@@ -100,7 +100,7 @@ class IRPCControllerTest {
         Mockito.`when`(viewController.appData).thenReturn(appDataViewController)
 
         mediaPlayerController = ViewControllerImpl(repository)
-        coordinator = RPCGatewayImpl(prefs, serviceController, mediaPlayerController, testDispatcher, testDispatcher)
+        coordinator = RPCGatewayImpl(serviceController, mediaPlayerController, prefs, testDispatcher, testDispatcher)
         iRPCGateway = coordinator
         Dispatchers.setMain(testDispatcher)
     }
