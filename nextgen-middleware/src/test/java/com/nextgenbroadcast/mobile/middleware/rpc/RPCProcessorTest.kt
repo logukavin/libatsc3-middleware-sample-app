@@ -5,16 +5,16 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.github.nmuzhichin.jsonrpc.model.request.CompleteRequest
 import com.github.nmuzhichin.jsonrpc.model.request.Request
 import com.github.nmuzhichin.jsonrpc.module.JsonRpcModule
-import org.junit.Assert.*
-import org.junit.Before
-import org.junit.Test
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
-import com.nextgenbroadcast.mobile.middleware.ws.MiddlewareWebSocket
 import com.nextgenbroadcast.mobile.middleware.gateway.rpc.IRPCGateway
 import com.nextgenbroadcast.mobile.middleware.rpc.notification.NotificationType
 import com.nextgenbroadcast.mobile.middleware.rpc.processor.IRPCProcessor
 import com.nextgenbroadcast.mobile.middleware.rpc.processor.RPCProcessor
 import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.Urls
+import com.nextgenbroadcast.mobile.middleware.ws.MiddlewareWebSocket
+import org.junit.Assert.*
+import org.junit.Before
+import org.junit.Test
 import java.util.*
 
 
@@ -29,6 +29,10 @@ class RPCProcessorTest {
     @Before
     fun initRPCProcessor() {
         processor = RPCProcessor(object : IRPCGateway {
+            override val deviceId: String
+                get() = ""
+            override val advertisingId: String
+                get() = ""
             override val language: String
                 get() = "test"
             override val queryServiceId: String?
@@ -69,14 +73,6 @@ class RPCProcessorTest {
             }
 
             override fun onSocketClosed(socket: MiddlewareWebSocket) {
-                TODO("Not yet implemented")
-            }
-
-            override fun getDeviceId(): String {
-                TODO("Not yet implemented")
-            }
-
-            override fun getAdvertisingId(): String {
                 TODO("Not yet implemented")
             }
         })
