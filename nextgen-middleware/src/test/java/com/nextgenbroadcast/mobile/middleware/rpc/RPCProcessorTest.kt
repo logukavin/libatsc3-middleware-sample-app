@@ -54,7 +54,6 @@ class RPCProcessorTest {
 
             override fun subscribeNotifications(notifications: Set<NotificationType>): Set<NotificationType> {
                 return emptySet()
-
             }
 
             override fun unsubscribeNotifications(notifications: Set<NotificationType>): Set<NotificationType> {
@@ -70,6 +69,14 @@ class RPCProcessorTest {
             }
 
             override fun onSocketClosed(socket: MiddlewareWebSocket) {
+                TODO("Not yet implemented")
+            }
+
+            override fun getDeviceId(): String {
+                TODO("Not yet implemented")
+            }
+
+            override fun getAdvertisingId(): String {
                 TODO("Not yet implemented")
             }
         })

@@ -6,6 +6,8 @@ import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.Urls
 import com.nextgenbroadcast.mobile.middleware.ws.MiddlewareWebSocket
 
 interface IRPCGateway {
+    val deviceId: String
+    val advertisingId: String
     val language: String
     val queryServiceId: String?
     val mediaUrl: String?

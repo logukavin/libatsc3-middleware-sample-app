@@ -11,24 +11,22 @@ import android.view.View
 import android.widget.AdapterView
 import android.widget.EditText
 import android.widget.Toast
-import androidx.core.content.ContextCompat
 import androidx.databinding.DataBindingUtil
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
-import kotlinx.android.synthetic.main.activity_main.*
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.middleware.Atsc3Activity
+import com.nextgenbroadcast.mobile.middleware.Atsc3ForegroundService
+import com.nextgenbroadcast.mobile.middleware.core.FileUtils
 import com.nextgenbroadcast.mobile.middleware.presentation.IReceiverPresenter
-import com.nextgenbroadcast.mobile.middleware.sample.core.FileUtils
 import com.nextgenbroadcast.mobile.middleware.sample.databinding.ActivityMainBinding
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.ReceiverViewModel
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.SelectorViewModel
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.UserAgentViewModel
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.factory.UserAgentViewModelFactory
 import com.nextgenbroadcast.mobile.middleware.sample.useragent.ServiceAdapter
-import com.nextgenbroadcast.mobile.middleware.Atsc3ForegroundService
 import com.nextgenbroadcast.mobile.middleware.sample.useragent.UserAgentActivity
-import javax.inject.Inject
+import kotlinx.android.synthetic.main.activity_main.*
 
 class MainActivity : Atsc3Activity() {
     private lateinit var binding: ActivityMainBinding
@@ -96,8 +94,8 @@ class MainActivity : Atsc3Activity() {
 
         requestPermissions(arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), 1)
 
-        findViewById<View>(R.id.stop).setOnClickListener { stopService() }
-        findViewById<View>(R.id.start).setOnClickListener { startService() }
+        findViewById<View>(R.id.stop).setOnClickListener { Atsc3ForegroundService.stopService(this@MainActivity) }
+        findViewById<View>(R.id.start).setOnClickListener { Atsc3ForegroundService.startService(this@MainActivity) }
         findViewById<View>(R.id.start_user_agent).setOnClickListener { startUserAgent() }
 
         initLibAtsc3()
@@ -139,7 +137,7 @@ class MainActivity : Atsc3Activity() {
         stsc3Start.setOnClickListener {}
 
         stsc3Stop = findViewById(R.id.atsc3_stop)
-        stsc3Stop.setOnClickListener { receiverPresenter?.stopRoute() }
+        stsc3Stop.setOnClickListener { receiverPresenter?.closeRoute() }
 
         stsc3Close = findViewById(R.id.atsc3_close)
         stsc3Close.setOnClickListener { receiverPresenter?.closeRoute() }
@@ -156,21 +154,8 @@ class MainActivity : Atsc3Activity() {
         stsc3Close.isEnabled = state == ReceiverState.OPENED || state == ReceiverState.PAUSED
     }
 
-    private fun startService() {
-        val serviceIntent = Intent(this, Atsc3ForegroundService::class.java)
-        serviceIntent.action = Atsc3ForegroundService.ACTION_START
-        serviceIntent.putExtra("inputExtra", "Foreground RPC Service Example in Android")
-        ContextCompat.startForegroundService(this, serviceIntent)
-    }
-
-    private fun stopService() {
-        val serviceIntent = Intent(this, Atsc3ForegroundService::class.java)
-        serviceIntent.action = Atsc3ForegroundService.ACTION_STOP
-        ContextCompat.startForegroundService(this, serviceIntent)
-    }
-
     override fun onDestroy() {
-        stopService()
+        Atsc3ForegroundService.stopService(this)
         super.onDestroy()
     }
 
