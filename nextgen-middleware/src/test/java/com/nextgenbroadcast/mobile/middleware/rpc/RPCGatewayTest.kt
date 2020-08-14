@@ -3,8 +3,24 @@ package com.nextgenbroadcast.mobile.middleware.rpc
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import com.nextgenbroadcast.mobile.core.model.AppData
+import com.nextgenbroadcast.mobile.core.model.PlaybackState
+import com.nextgenbroadcast.mobile.core.model.SLSService
+import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
+import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPackage
+import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
+import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
+import com.nextgenbroadcast.mobile.middleware.controller.view.ViewControllerImpl
+import com.nextgenbroadcast.mobile.middleware.gateway.rpc.IRPCGateway
+import com.nextgenbroadcast.mobile.middleware.gateway.rpc.RPCGatewayImpl
+import com.nextgenbroadcast.mobile.middleware.repository.IPreferenceHelper
+import com.nextgenbroadcast.mobile.middleware.repository.IRepository
+import com.nextgenbroadcast.mobile.middleware.rpc.notification.NotificationType
+import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.Urls
+import com.nextgenbroadcast.mobile.middleware.ws.MiddlewareWebSocket
 import junit.framework.TestCase
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestCoroutineDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runBlockingTest
@@ -19,22 +35,6 @@ import org.junit.runner.RunWith
 import org.mockito.Mock
 import org.mockito.Mockito.`when`
 import org.mockito.Mockito.verify
-import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
-import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
-import com.nextgenbroadcast.mobile.middleware.controller.view.ViewControllerImpl
-import com.nextgenbroadcast.mobile.core.model.PlaybackState
-import com.nextgenbroadcast.mobile.core.model.AppData
-import com.nextgenbroadcast.mobile.core.model.SLSService
-import com.nextgenbroadcast.mobile.middleware.repository.IRepository
-import com.nextgenbroadcast.mobile.middleware.gateway.rpc.IRPCGateway
-import com.nextgenbroadcast.mobile.middleware.gateway.rpc.RPCGatewayImpl
-import com.nextgenbroadcast.mobile.middleware.rpc.notification.NotificationType
-import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.Urls
-import com.nextgenbroadcast.mobile.middleware.ws.MiddlewareWebSocket
-import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
-import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPackage
-import com.nextgenbroadcast.mobile.middleware.repository.IPreferenceHelper
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.powermock.api.mockito.PowerMockito
 import org.powermock.core.classloader.annotations.PrepareForTest
 import org.powermock.modules.junit4.PowerMockRunner
@@ -85,6 +85,7 @@ class RPCGatewayTest {
     private var selectedService: MutableLiveData<SLSService?> = MutableLiveData()
     private val rmpState: LiveData<PlaybackState> = MutableLiveData()
     private val rmpMediaUrl: LiveData<String?> = MutableLiveData()
+
     @ExperimentalCoroutinesApi
     private val testDispatcher = TestCoroutineDispatcher()
     private val testServiceGuideUrls = listOf(Urls("testType", "TestUrl"))
@@ -110,7 +111,7 @@ class RPCGatewayTest {
         `when`(viewController.rmpState).thenReturn(rmpState)
         `when`(viewController.appData).thenReturn(appDataViewController)
         `when`(viewController.rmpPlaybackRate).thenReturn(rmpPlaybackRate)
-        iRPCGateway = RPCGatewayImpl(prefs, serviceController, viewController, testDispatcher, testDispatcher)
+        iRPCGateway = RPCGatewayImpl(serviceController, viewController, prefs, testDispatcher, testDispatcher)
         middlewareWebSocket = PowerMockito.spy(MiddlewareWebSocket(iRPCGateway))
         iRPCGateway.onSocketOpened(middlewareWebSocket)
         Dispatchers.setMain(testDispatcher)

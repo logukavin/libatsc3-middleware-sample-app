@@ -6,6 +6,7 @@ import androidx.lifecycle.LifecycleRegistry
 import com.nextgenbroadcast.mobile.core.cert.CertificateUtils
 import com.nextgenbroadcast.mobile.core.cert.IUserAgentSSLContext
 import com.nextgenbroadcast.mobile.core.md5
+import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import com.nextgenbroadcast.mobile.middleware.gateway.rpc.IRPCGateway
 import com.nextgenbroadcast.mobile.middleware.gateway.web.IWebGateway
 import com.nextgenbroadcast.mobile.middleware.ws.MiddlewareWebSocket
@@ -23,7 +24,6 @@ import org.eclipse.jetty.util.ssl.SslContextFactory
 import org.eclipse.jetty.websocket.server.WebSocketHandler
 import org.eclipse.jetty.websocket.servlet.WebSocketCreator
 import org.eclipse.jetty.websocket.servlet.WebSocketServletFactory
-import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import java.io.IOException
 import java.security.GeneralSecurityException
 import java.util.*
@@ -191,7 +191,7 @@ class MiddlewareWebServer constructor(
 }
 
 @Throws(GeneralSecurityException::class, IOException::class)
-private fun configureSSLFactory(generatedSSLContext: IUserAgentSSLContext): SslContextFactory {
+fun configureSSLFactory(generatedSSLContext: IUserAgentSSLContext): SslContextFactory {
     // Configuring SSL
     return SslContextFactory.Server().apply {
         keyStoreType = CertificateUtils.KEY_STORE_TYPE
@@ -202,14 +202,14 @@ private fun configureSSLFactory(generatedSSLContext: IUserAgentSSLContext): SslC
     }
 }
 
-private fun getServerConnector(server: Server, serverHost: String, serverPort: Int): ServerConnector {
+fun getServerConnector(server: Server, serverHost: String, serverPort: Int): ServerConnector {
     return ServerConnector(server).apply {
         port = serverPort
         host = serverHost
     }
 }
 
-private fun getSecureServerConnector(server: Server, serverHost: String, serverPort: Int, sslContextFactory: SslContextFactory): ServerConnector {
+fun getSecureServerConnector(server: Server, serverHost: String, serverPort: Int, sslContextFactory: SslContextFactory): ServerConnector {
     val config = HttpConfiguration().apply {
         addCustomizer(SecureRequestCustomizer())
         securePort = serverPort

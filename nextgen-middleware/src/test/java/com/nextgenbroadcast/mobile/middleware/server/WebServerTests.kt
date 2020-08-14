@@ -1,141 +1,125 @@
 package com.nextgenbroadcast.mobile.middleware.server
 
-import org.eclipse.jetty.websocket.client.WebSocketClient
-import org.junit.*
-import com.nextgenbroadcast.mobile.middleware.gateway.rpc.IRPCGateway
-import com.nextgenbroadcast.mobile.core.model.PlaybackState
-
-import com.nextgenbroadcast.mobile.middleware.ws.MiddlewareWebSocket
-
+import com.nextgenbroadcast.mobile.core.cert.UserAgentSSLContext
 import com.nextgenbroadcast.mobile.middleware.web.MiddlewareWebServer
 import com.nextgenbroadcast.mobile.middleware.web.MiddlewareWebServerError
-import com.nextgenbroadcast.mobile.middleware.rpc.notification.NotificationType
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.test.TestCoroutineDispatcher
+import kotlinx.coroutines.test.runBlockingTest
+import okhttp3.ConnectionSpec
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import org.eclipse.jetty.servlet.ServletContextHandler
+import org.eclipse.jetty.servlet.ServletHolder
+import org.junit.*
+import org.junit.runner.RunWith
+import org.powermock.modules.junit4.PowerMockRunner
+import java.io.IOException
+import javax.servlet.ServletException
+import javax.servlet.http.HttpServlet
+import javax.servlet.http.HttpServletRequest
+import javax.servlet.http.HttpServletResponse
 
-import com.nextgenbroadcast.mobile.middleware.rpc.processor.RPCProcessor
-import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.Urls
 
-class WebServerTests {
+@RunWith(PowerMockRunner::class)
+class WebServerTests : ServerTest() {
+    @ExperimentalCoroutinesApi
+    private val testDispatcher = TestCoroutineDispatcher()
 
-    abstract class RPCGatewayAdapter : IRPCGateway {
-        override fun updateRMPPosition(scaleFactor: Double, xPos: Double, yPos: Double) {
-            TODO("Not yet implemented")
+    private lateinit var webServer: MiddlewareWebServer
+
+    @ExperimentalCoroutinesApi
+    @Before
+    fun setup() {
+        server.handler = ServletContextHandler(server, "/", ServletContextHandler.SESSIONS).apply {
+            addServlet(ServletHolder(MiddlewareWebServerTestServlet()), "/index.html")
         }
 
-        override fun requestMediaPlay(mediaUrl: String?, delay: Long) {
-            TODO("Not yet implemented")
-        }
-
-        override fun requestMediaStop(delay: Long) {
-            TODO("Not yet implemented")
-        }
-
-        override fun subscribeNotifications(notifications: Set<NotificationType>): Set<NotificationType> {
-            TODO("Not yet implemented")
-        }
-
-        override fun unsubscribeNotifications(notifications: Set<NotificationType>): Set<NotificationType> {
-            TODO("Not yet implemented")
-        }
-
-        override fun sendNotification(message: String) {
-            TODO("Not yet implemented")
-        }
-
-        override fun onSocketOpened(socket: MiddlewareWebSocket) {
-            TODO("Not yet implemented")
-        }
-
-        override fun onSocketClosed(socket: MiddlewareWebSocket) {
-            TODO("Not yet implemented")
+        webServer = MiddlewareWebServer(server, webGateway = null).also {
+            it.start()
         }
     }
-
-    companion object {
-        private const val HTTP_PORT = 8080
-        private const val HTTPS_PORT = 8443
-        private const val WS_PORT = 9998
-        private const val WSS_PORT = 9999
-
-        lateinit var rpcProcessor: RPCProcessor
-        lateinit var webServer: MiddlewareWebServer
-        lateinit var webSocketClient: WebSocketClient
-        val wsUrl: String = String.format("ws://%s:%d/", "localhost", WS_PORT)
-        val httpUrl: String = String.format("http://%s:%d/", "localhost", HTTP_PORT)
-
-        @BeforeClass
-        @JvmStatic
-        fun setup() {
-            rpcProcessor = RPCProcessor(object : RPCGatewayAdapter() {
-                override val language: String
-                    get() = "test"
-                override val queryServiceId: String?
-                    get() = "test"
-                override val mediaUrl: String?
-                    get() = "test"
-                override val playbackState: PlaybackState
-                    get() = PlaybackState.IDLE
-                override val serviceGuideUrls: List<Urls>
-                    get() = emptyList()
-
-                override fun getDeviceId(): String {
-                    TODO("Not yet implemented")
-                }
-
-                override fun getAdvertisingId(): String {
-                    TODO("Not yet implemented")
-                }
-            })
-            //Server without ContentProviderServlet(applicationContext) and UserAgentSSLContext(applicationContext)
-            webServer = MiddlewareWebServer.Builder()
-                    .hostName("localhost")
-                    .httpPort(HTTP_PORT)
-                    .httpsPort(HTTPS_PORT)
-                    .wsPort(WS_PORT)
-                    .wssPort(WSS_PORT)
-                    .build()
-
-            webSocketClient = WebSocketClient()
-        }
-
-        @AfterClass
-        @JvmStatic
-        fun tearDown() {
-            if (webSocketClient.isRunning) {
-                webSocketClient.stop()
-            }
-            if (webServer.isRunning()) {
-                webServer.stop()
-            }
-            Assert.assertEquals(false, (webServer.isRunning()))
-        }
-    }
-
 
     @Test
+    @After
+    fun tearDown() {
+        if (webServer.isRunning()) {
+            webServer.stop()
+        }
+        Assert.assertEquals(false, (webServer.isRunning()))
+    }
+
+    @ExperimentalCoroutinesApi
+    @Test
     @Throws(MiddlewareWebServerError::class)
-    fun startServer() {
-        webServer.start()
+    fun startServer() = testDispatcher.runBlockingTest {
+        delay(500) // wait server get started
         Assert.assertEquals(true, webServer.isRunning())
     }
 
     @Test
-    fun testWSConnection() {
-// TODO: Caused by: org.eclipse.jetty.websocket.api.UpgradeException at WebSocketUpgradeRequest.java:532
+    fun makeHttpCall() {
+        val client = OkHttpClient.Builder().connectionSpecs(listOf(ConnectionSpec.CLEARTEXT)).build()
+        val request: Request = Request.Builder().url("http://localhost:8080/index.html").build()
+        val response = client.newCall(request).execute()
+        val serverMessage = response.body()?.string()
+        val code = response.code()
+        Assert.assertEquals(SERVER_MESSAGE, serverMessage)
+        Assert.assertEquals(200, code)
+        Assert.assertEquals(true, response.isSuccessful)
+    }
 
-//        webSocketClient.start()
-//        val session = webSocketClient.connect(MiddlewareWebSocket(object : RPCGatewayAdapter() {
-//            override val language: String
-//                get() = "test"
-//            override val queryServiceId: String?
-//                get() = "test"
-//            override val mediaUrl: String?
-//                get() = "test"
-//            override val playbackState: PlaybackState
-//                get() = PlaybackState.IDLE
-//            override val serviceGuideUrls: List<Urls>
-//                get() = emptyList()
-//        }), URI(wsUrl)).get()
-//
-//        Assert.assertTrue(session.isOpen)
+    @Test
+    fun makeHttpErrorCall() {
+        val client = OkHttpClient.Builder().connectionSpecs(listOf(ConnectionSpec.CLEARTEXT)).build()
+        val request: Request = Request.Builder().url("http://localhost:8080/index1.html").build()
+        val response = client.newCall(request).execute()
+        val serverMessage = response.body()?.string()
+        val code = response.code()
+        Assert.assertNotEquals(SERVER_MESSAGE, serverMessage)
+        Assert.assertEquals(404, code)
+        Assert.assertEquals(false, response.isSuccessful)
+    }
+
+    @Test
+    fun makeHttpsCall() {
+        val sslContext = UserAgentSSLContext(mockApplicationContext).getInitializedSSLContext("MY_PASSWORD")
+        val client = OkHttpClient().newBuilder().sslSocketFactory(sslContext.socketFactory).build()
+        val request: Request = Request.Builder().url("https://localhost:8443/index.html").build()
+        val response = client.newCall(request).execute()
+        val serverMessage = response.body()?.string()
+        val code = response.code()
+        Assert.assertEquals(SERVER_MESSAGE, serverMessage)
+        Assert.assertEquals(200, code)
+    }
+
+    @Test
+    fun makeHttpsErrorCall() {
+        val sslContext = UserAgentSSLContext(mockApplicationContext).getInitializedSSLContext("MY_PASSWORD")
+        val client = OkHttpClient().newBuilder().sslSocketFactory(sslContext.socketFactory).build()
+        val request: Request = Request.Builder().url("https://localhost:8443/index1.html").build()
+        val response = client.newCall(request).execute()
+        val serverMessage = response.body()?.string()
+        val code = response.code()
+        Assert.assertNotEquals(SERVER_MESSAGE, serverMessage)
+        Assert.assertEquals(404, code)
+        Assert.assertEquals(false, response.isSuccessful)
+    }
+
+    companion object {
+        const val SERVER_MESSAGE = "Hello World"
+    }
+}
+
+class MiddlewareWebServerTestServlet : HttpServlet() {
+
+    @Throws(ServletException::class, IOException::class)
+    override fun doGet(request: HttpServletRequest, response: HttpServletResponse) {
+        with(response) {
+            contentType = "text/html"
+            status = HttpServletResponse.SC_OK
+            writer.print(WebServerTests.SERVER_MESSAGE)
+        }
     }
 }
