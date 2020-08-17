@@ -41,6 +41,7 @@ import com.nextgenbroadcast.mobile.middleware.server.web.MiddlewareWebServer
 import kotlinx.coroutines.Dispatchers
 
 class Atsc3ForegroundService : LifecycleService() {
+    private lateinit var wakeLock: WakeLock
     private lateinit var settings: IMiddlewareSettings
     private lateinit var repository: IRepository
     private lateinit var atsc3Module: Atsc3Module
@@ -51,9 +52,6 @@ class Atsc3ForegroundService : LifecycleService() {
     private var viewController: IViewController? = null
     private var webGateway: IWebGateway? = null
     private var rpcGateway: IRPCGateway? = null
-
-    private lateinit var wakeLock: WakeLock
-
     private var webServer: MiddlewareWebServer? = null
     private var deviceReceiver: Atsc3DeviceReceiver? = null
     private var isForeground = false
@@ -87,7 +85,9 @@ class Atsc3ForegroundService : LifecycleService() {
             }
         }.also {
             it.observe(this, Observer { (receiverState, selectedService, playbackState) ->
-                notificationHelper.notify(NOTIFICATION_ID, createNotification(receiverState, selectedService, playbackState))
+                if (isForeground) {
+                    notificationHelper.notify(NOTIFICATION_ID, createNotification(receiverState, selectedService, playbackState))
+                }
             })
         }
     }
@@ -97,7 +97,7 @@ class Atsc3ForegroundService : LifecycleService() {
 
         if (intent != null) {
             when (intent.action) {
-                ACTION_START -> startService()
+                ACTION_START -> startForeground()
 
                 ACTION_STOP -> killService()
 
@@ -141,14 +141,14 @@ class Atsc3ForegroundService : LifecycleService() {
         }
     }
 
-    private fun startService() {
+    private fun startForeground() {
         if (isForeground) return
         isForeground = true
 
         startForeground(NOTIFICATION_ID, createNotification(getReceiverState()))
     }
 
-    private fun stopService() {
+    private fun stopForeground() {
         stopForeground(true)
 
         isForeground = false
@@ -161,7 +161,7 @@ class Atsc3ForegroundService : LifecycleService() {
 
         unregisterDeviceReceiver()
         stopWebServer()
-        stopService()
+        stopForeground()
         stopSelf()
     }
 
@@ -177,7 +177,7 @@ class Atsc3ForegroundService : LifecycleService() {
 
         val usbManager = getSystemService(Context.USB_SERVICE) as UsbManager
         if (usbManager.hasPermission(device)) {
-            startService()
+            startForeground()
             unregisterDeviceReceiver()
 
             serviceController.openRoute(device, usbManager)
@@ -232,7 +232,7 @@ class Atsc3ForegroundService : LifecycleService() {
     override fun onBind(intent: Intent): IBinder? {
         super.onBind(intent)
 
-        startService()
+        startForeground()
 
         createViewPresentationAndStartService()
 
