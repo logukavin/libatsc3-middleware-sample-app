@@ -163,13 +163,6 @@ class UserAgentActivity : Atsc3Activity() {
                 receiver_media_player.playWhenReady = playWhenReady
             })
         }
-
-        //TODO: remove after tests
-        receiver_media_player.postDelayed(500) {
-            if (rmpViewModel.mediaUri.value.isNullOrEmpty()) {
-                Toast.makeText(this, "No media Url provided", Toast.LENGTH_LONG).show()
-            }
-        }
     }
 
     private fun bindSelector(selectorViewModel: SelectorViewModel) {
@@ -184,7 +177,7 @@ class UserAgentActivity : Atsc3Activity() {
 
     private fun bindUserAgent(userAgentViewModel: UserAgentViewModel) {
         userAgentViewModel.appData.observe(this, Observer { appData ->
-            switchBA(appData)
+            switchApplication(appData)
         })
     }
 
@@ -211,10 +204,10 @@ class UserAgentActivity : Atsc3Activity() {
         user_agent_web_view.visibility = if (available) View.VISIBLE else View.INVISIBLE
     }
 
-    private fun switchBA(appData: AppData?) {
-        if (appData != null) {
+    private fun switchApplication(appData: AppData?) {
+        if (appData != null && appData.isAvailable()) {
             setBAAvailability(true)
-            if (!appData.isAppEquals(currentAppData)) {
+            if (!appData.isAppEquals(currentAppData) || appData.isAvailable() != currentAppData?.isAvailable()) {
                 user_agent_web_view.loadBAContent(appData.appEntryPage)
             }
         } else {
