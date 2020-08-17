@@ -5,9 +5,9 @@ import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.middleware.gateway.rpc.IRPCGateway
 import com.nextgenbroadcast.mobile.middleware.rpc.notification.NotificationType
 import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.Urls
-import com.nextgenbroadcast.mobile.middleware.web.MiddlewareWebServer
-import com.nextgenbroadcast.mobile.middleware.web.configureSSLFactory
-import com.nextgenbroadcast.mobile.middleware.ws.MiddlewareWebSocket
+import com.nextgenbroadcast.mobile.middleware.server.web.MiddlewareWebServer
+import com.nextgenbroadcast.mobile.middleware.server.web.configureSSLFactory
+import com.nextgenbroadcast.mobile.middleware.server.ws.MiddlewareWebSocket
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.eclipse.jetty.client.HttpClient
 import org.eclipse.jetty.websocket.api.WebSocketAdapter
