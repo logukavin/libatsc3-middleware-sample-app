@@ -1,4 +1,4 @@
-package com.nextgenbroadcast.mobile.middleware.ws
+package com.nextgenbroadcast.mobile.middleware.server.ws
 
 //class MiddlewareWebSocketClient(private var rpcProcessor: IRPCProcessor) {
 //    fun start() {

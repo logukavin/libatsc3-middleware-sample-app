@@ -13,11 +13,11 @@ import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
 import com.nextgenbroadcast.mobile.middleware.controller.view.ViewControllerImpl
 import com.nextgenbroadcast.mobile.middleware.gateway.rpc.IRPCGateway
 import com.nextgenbroadcast.mobile.middleware.gateway.rpc.RPCGatewayImpl
-import com.nextgenbroadcast.mobile.middleware.repository.IPreferenceHelper
+import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
 import com.nextgenbroadcast.mobile.middleware.rpc.notification.NotificationType
 import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.Urls
-import com.nextgenbroadcast.mobile.middleware.ws.MiddlewareWebSocket
+import com.nextgenbroadcast.mobile.middleware.server.ws.MiddlewareWebSocket
 import junit.framework.TestCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -69,7 +69,7 @@ class RPCGatewayTest {
     private lateinit var mediaPlayerController: ViewControllerImpl
 
     @Mock
-    private lateinit var prefs: IPreferenceHelper
+    private lateinit var prefs: IMiddlewareSettings
 
     private var scaleFactor: Double = 1.0
     private var xPos: Double = 11.0

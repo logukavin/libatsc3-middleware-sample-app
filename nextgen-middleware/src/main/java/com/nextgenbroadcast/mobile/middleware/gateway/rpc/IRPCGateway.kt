@@ -3,7 +3,7 @@ package com.nextgenbroadcast.mobile.middleware.gateway.rpc
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.middleware.rpc.notification.NotificationType
 import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.Urls
-import com.nextgenbroadcast.mobile.middleware.ws.MiddlewareWebSocket
+import com.nextgenbroadcast.mobile.middleware.server.ws.MiddlewareWebSocket
 
 interface IRPCGateway {
     val deviceId: String

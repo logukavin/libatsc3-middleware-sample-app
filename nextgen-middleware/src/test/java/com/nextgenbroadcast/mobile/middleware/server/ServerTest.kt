@@ -5,9 +5,9 @@ import android.content.res.Resources
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import com.nextgenbroadcast.mobile.core.cert.CertificateUtils
 import com.nextgenbroadcast.mobile.core.cert.UserAgentSSLContext
-import com.nextgenbroadcast.mobile.middleware.web.configureSSLFactory
-import com.nextgenbroadcast.mobile.middleware.web.getSecureServerConnector
-import com.nextgenbroadcast.mobile.middleware.web.getServerConnector
+import com.nextgenbroadcast.mobile.middleware.server.web.configureSSLFactory
+import com.nextgenbroadcast.mobile.middleware.server.web.getSecureServerConnector
+import com.nextgenbroadcast.mobile.middleware.server.web.getServerConnector
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.eclipse.jetty.server.Server
 import org.junit.Before
