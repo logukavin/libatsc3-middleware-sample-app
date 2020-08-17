@@ -6,6 +6,8 @@ data class AppData(
         val compatibleServiceIds: List<Int>,
         val cachePath: String?
 ) {
+    fun isAvailable() = cachePath?.isNotEmpty() ?: false
+
     fun isAppEquals(other: AppData?): Boolean {
         return other?.let {
             this.appContextId == other.appContextId
