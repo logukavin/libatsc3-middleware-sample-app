@@ -1,4 +1,4 @@
-package com.nextgenbroadcast.mobile.middleware.ws
+package com.nextgenbroadcast.mobile.middleware.server.ws
 
 import android.util.Log
 import com.nextgenbroadcast.mobile.middleware.gateway.rpc.IRPCGateway

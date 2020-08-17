@@ -5,11 +5,11 @@ import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
 import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
-import com.nextgenbroadcast.mobile.middleware.repository.IPreferenceHelper
+import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
 import com.nextgenbroadcast.mobile.middleware.rpc.notification.NotificationType
 import com.nextgenbroadcast.mobile.middleware.rpc.notification.RPCNotifier
 import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.Urls
-import com.nextgenbroadcast.mobile.middleware.ws.MiddlewareWebSocket
+import com.nextgenbroadcast.mobile.middleware.server.ws.MiddlewareWebSocket
 import kotlinx.coroutines.*
 import java.util.*
 import java.util.concurrent.CopyOnWriteArrayList
@@ -17,7 +17,7 @@ import java.util.concurrent.CopyOnWriteArrayList
 internal class RPCGatewayImpl(
         private val serviceController: IServiceController,
         private val viewController: IViewController,
-        preferenceHelper: IPreferenceHelper,
+        settings: IMiddlewareSettings,
         mainDispatcher: CoroutineDispatcher,
         ioDispatcher: CoroutineDispatcher
 ) : IRPCGateway {
@@ -31,8 +31,8 @@ internal class RPCGatewayImpl(
     private var currentAppData: AppData? = null
     private var mediaTimeUpdateJob: Job? = null
 
-    override val deviceId = preferenceHelper.deviceId
-    override val advertisingId = preferenceHelper.advertisingId
+    override val deviceId = settings.deviceId
+    override val advertisingId = settings.advertisingId
     override val language: String = Locale.getDefault().language
     override val queryServiceId: String?
         get() = serviceController.selectedService.value?.globalId
