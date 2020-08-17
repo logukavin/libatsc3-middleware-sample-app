@@ -1,8 +1,8 @@
 package com.nextgenbroadcast.mobile.middleware.server
 
 import com.nextgenbroadcast.mobile.core.cert.UserAgentSSLContext
-import com.nextgenbroadcast.mobile.middleware.web.MiddlewareWebServer
-import com.nextgenbroadcast.mobile.middleware.web.MiddlewareWebServerError
+import com.nextgenbroadcast.mobile.middleware.server.web.MiddlewareWebServer
+import com.nextgenbroadcast.mobile.middleware.server.web.MiddlewareWebServerError
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.TestCoroutineDispatcher
@@ -41,11 +41,13 @@ class WebServerTests : ServerTest() {
         }
     }
 
+    @ExperimentalCoroutinesApi
     @Test
     @After
-    fun tearDown() {
+    fun tearDown() = testDispatcher.runBlockingTest {
         if (webServer.isRunning()) {
             webServer.stop()
+            delay(500) // wait server get stopped
         }
         Assert.assertEquals(false, (webServer.isRunning()))
     }

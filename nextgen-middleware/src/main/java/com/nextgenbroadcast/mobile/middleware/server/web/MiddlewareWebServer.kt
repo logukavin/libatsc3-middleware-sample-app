@@ -1,4 +1,4 @@
-package com.nextgenbroadcast.mobile.middleware.web
+package com.nextgenbroadcast.mobile.middleware.server.web
 
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
@@ -9,7 +9,7 @@ import com.nextgenbroadcast.mobile.core.md5
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import com.nextgenbroadcast.mobile.middleware.gateway.rpc.IRPCGateway
 import com.nextgenbroadcast.mobile.middleware.gateway.web.IWebGateway
-import com.nextgenbroadcast.mobile.middleware.ws.MiddlewareWebSocket
+import com.nextgenbroadcast.mobile.middleware.server.ws.MiddlewareWebSocket
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import org.eclipse.jetty.http.HttpVersion

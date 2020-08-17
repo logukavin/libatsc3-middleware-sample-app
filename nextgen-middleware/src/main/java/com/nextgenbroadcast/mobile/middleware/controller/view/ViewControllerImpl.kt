@@ -2,16 +2,18 @@ package com.nextgenbroadcast.mobile.middleware.controller.view
 
 import androidx.lifecycle.*
 import com.nextgenbroadcast.mobile.core.mapWith
-import com.nextgenbroadcast.mobile.core.md5
 import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.RPMParams
+import com.nextgenbroadcast.mobile.middleware.server.ServerUtils
 import com.nextgenbroadcast.mobile.middleware.controller.media.IObservablePlayer
 import com.nextgenbroadcast.mobile.middleware.controller.media.PlayerStateRegistry
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
+import com.nextgenbroadcast.mobile.middleware.settings.IClientSettings
 
 internal class ViewControllerImpl (
-        private val repository: IRepository
+        private val repository: IRepository,
+        private val settings: IClientSettings
 ) : IViewController {
 
     private enum class PlaybackSource {
@@ -25,19 +27,15 @@ internal class ViewControllerImpl (
     override val appData: LiveData<AppData?> = repository.heldPackage.mapWith(repository.applications) { (held, applications) ->
         held?.let {
             val appContextId = held.appContextId ?: return@let null
-            val hostName = repository.hostName
-            val httpPost = repository.httpsPort
-            val socketPort = repository.wsPort
-            val rev = 20180720 //TODO: use real revision
-            val appEntryPage = held.bcastEntryPageUrl?.let { entryPage ->
-                val contextPath = appContextId.md5()
-                "https://$hostName:$httpPost/$contextPath/$entryPage"
-            } ?: held.bbandEntryPageUrl ?: return@let null
+            val appUrl = held.bcastEntryPageUrl?.let { entryPageUrl ->
+                ServerUtils.getUrl(entryPageUrl, appContextId, settings, true)
+            } ?: held.bbandEntryPageUrl?.let { entryPageUrl ->
+                ServerUtils.getUrl(entryPageUrl, appContextId, settings, false)
+            } ?: return@let null
             val compatibleServiceIds = held.coupledServices ?: emptyList()
             val application = applications?.firstOrNull { app ->
                 app.appContextIdList.contains(appContextId)
             }
-            val appUrl = "$appEntryPage?wsURL=ws://$hostName:$socketPort&rev=$rev"
 
             AppData(appContextId, appUrl, compatibleServiceIds, application?.cachePath)
         }

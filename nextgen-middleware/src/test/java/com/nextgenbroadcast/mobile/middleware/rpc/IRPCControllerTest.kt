@@ -13,7 +13,7 @@ import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
 import com.nextgenbroadcast.mobile.middleware.controller.view.ViewControllerImpl
 import com.nextgenbroadcast.mobile.middleware.gateway.rpc.IRPCGateway
 import com.nextgenbroadcast.mobile.middleware.gateway.rpc.RPCGatewayImpl
-import com.nextgenbroadcast.mobile.middleware.repository.IPreferenceHelper
+import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
 import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.Urls
 import junit.framework.TestCase
@@ -54,7 +54,7 @@ class IRPCControllerTest {
     private lateinit var viewController: IViewController
 
     @Mock
-    private lateinit var prefs: IPreferenceHelper
+    private lateinit var prefs: IMiddlewareSettings
 
     @Mock
     private lateinit var repository: IRepository
@@ -89,6 +89,9 @@ class IRPCControllerTest {
         selectedService.value = mockedSLSService
         Mockito.`when`(prefs.deviceId).thenReturn(deviceId)
         Mockito.`when`(prefs.advertisingId).thenReturn(advertisingId)
+        Mockito.`when`(prefs.hostName).thenReturn("localhost")
+        Mockito.`when`(prefs.httpsPort).thenReturn(8443)
+        Mockito.`when`(prefs.wssPort).thenReturn(9999)
         Mockito.`when`(repository.heldPackage).thenReturn(appData)
         Mockito.`when`(repository.applications).thenReturn(applications)
         Mockito.`when`(serviceController.serviceGuidUrls).thenReturn(serviceGuidUrls)
@@ -99,7 +102,7 @@ class IRPCControllerTest {
         Mockito.`when`(viewController.rmpState).thenReturn(rmpState)
         Mockito.`when`(viewController.appData).thenReturn(appDataViewController)
 
-        mediaPlayerController = ViewControllerImpl(repository)
+        mediaPlayerController = ViewControllerImpl(repository, prefs)
         coordinator = RPCGatewayImpl(serviceController, mediaPlayerController, prefs, testDispatcher, testDispatcher)
         iRPCGateway = coordinator
         Dispatchers.setMain(testDispatcher)

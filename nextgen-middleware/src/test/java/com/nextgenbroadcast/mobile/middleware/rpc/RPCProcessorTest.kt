@@ -11,7 +11,7 @@ import com.nextgenbroadcast.mobile.middleware.rpc.notification.NotificationType
 import com.nextgenbroadcast.mobile.middleware.rpc.processor.IRPCProcessor
 import com.nextgenbroadcast.mobile.middleware.rpc.processor.RPCProcessor
 import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.Urls
-import com.nextgenbroadcast.mobile.middleware.ws.MiddlewareWebSocket
+import com.nextgenbroadcast.mobile.middleware.server.ws.MiddlewareWebSocket
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test

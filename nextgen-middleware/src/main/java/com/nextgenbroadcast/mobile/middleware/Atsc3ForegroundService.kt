@@ -34,14 +34,14 @@ import com.nextgenbroadcast.mobile.middleware.presentation.IReceiverPresenter
 import com.nextgenbroadcast.mobile.middleware.presentation.ISelectorPresenter
 import com.nextgenbroadcast.mobile.middleware.presentation.IUserAgentPresenter
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
-import com.nextgenbroadcast.mobile.middleware.repository.IPreferenceHelper
-import com.nextgenbroadcast.mobile.middleware.repository.PreferenceHelperImpl
+import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
+import com.nextgenbroadcast.mobile.middleware.settings.MiddlewareSettingsImpl
 import com.nextgenbroadcast.mobile.middleware.repository.RepositoryImpl
-import com.nextgenbroadcast.mobile.middleware.web.MiddlewareWebServer
+import com.nextgenbroadcast.mobile.middleware.server.web.MiddlewareWebServer
 import kotlinx.coroutines.Dispatchers
 
 class Atsc3ForegroundService : LifecycleService() {
-    private lateinit var preferenceHelper: IPreferenceHelper
+    private lateinit var settings: IMiddlewareSettings
     private lateinit var repository: IRepository
     private lateinit var atsc3Module: Atsc3Module
     private lateinit var serviceController: IServiceController
@@ -64,7 +64,7 @@ class Atsc3ForegroundService : LifecycleService() {
 
         wakeLock = (getSystemService(Context.POWER_SERVICE) as PowerManager).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Atsc3ForegroundService::lock")
 
-        preferenceHelper = PreferenceHelperImpl(applicationContext)
+        settings = MiddlewareSettingsImpl(applicationContext)
 
         val repo = RepositoryImpl().also {
             repository = it
@@ -258,13 +258,13 @@ class Atsc3ForegroundService : LifecycleService() {
     }
 
     private fun createViewPresentationAndStartService() {
-        val view = ViewControllerImpl(repository).also {
+        val view = ViewControllerImpl(repository, settings).also {
             viewController = it
         }
-        val web = WebGatewayImpl(serviceController, repository).also {
+        val web = WebGatewayImpl(serviceController, repository, settings).also {
             webGateway = it
         }
-        val rpc = RPCGatewayImpl(serviceController, view, preferenceHelper, Dispatchers.Main, Dispatchers.IO).also {
+        val rpc = RPCGatewayImpl(serviceController, view, settings, Dispatchers.Main, Dispatchers.IO).also {
             rpcGateway = it
         }
 

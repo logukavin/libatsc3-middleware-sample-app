@@ -1,11 +1,12 @@
-package com.nextgenbroadcast.mobile.middleware.repository
+package com.nextgenbroadcast.mobile.middleware.settings
 
 import android.content.Context
 import androidx.core.content.edit
 import com.nextgenbroadcast.mobile.middleware.BuildConfig
+import com.nextgenbroadcast.mobile.middleware.server.ServerConstants
 import java.util.*
 
-class PreferenceHelperImpl(context: Context) : IPreferenceHelper {
+internal class MiddlewareSettingsImpl(context: Context) : IMiddlewareSettings {
     private val preferences = context.getSharedPreferences(REPOSITORY_PREFERENCE, Context.MODE_PRIVATE)
 
     override val deviceId: String
@@ -17,6 +18,12 @@ class PreferenceHelperImpl(context: Context) : IPreferenceHelper {
         get() = requireString(ADVERTISING_ID) {
             UUID.randomUUID().toString()
         }
+
+    override val hostName = ServerConstants.HOST_NAME
+    override val httpPort = ServerConstants.HTTP_PORT
+    override val httpsPort = ServerConstants.HTTPS_PORT
+    override val wsPort = ServerConstants.WS_PORT
+    override val wssPort = ServerConstants.WSS_PORT
 
     private fun saveString(key: String, value: String): String {
         preferences.edit { putString(key, value) }
