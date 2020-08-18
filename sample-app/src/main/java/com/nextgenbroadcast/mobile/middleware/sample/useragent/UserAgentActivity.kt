@@ -114,7 +114,7 @@ class UserAgentActivity : Atsc3Activity() {
                         true
                     }
                 }.show()
-            } ?: setSelectedService(-1, getString(R.string.no_service_available))
+            }
         }
 
         receiver_media_player.setListener(object : ReceiverMediaPlayer.EventListener {
@@ -174,9 +174,14 @@ class UserAgentActivity : Atsc3Activity() {
     private fun bindSelector(selectorViewModel: SelectorViewModel) {
         selectorViewModel.services.observe(this, Observer { services ->
             servicesList = services
-            val selectedServiceId = selectorViewModel.getSelectedServiceId()
-            val service = services.firstOrNull { it.id == selectedServiceId } ?: services.first()
-            setSelectedService(service.id, service.shortName)
+
+            if (services.isNotEmpty()) {
+                val selectedServiceId = selectorViewModel.getSelectedServiceId()
+                val service = services.firstOrNull { it.id == selectedServiceId } ?: services.first()
+                setSelectedService(service.id, service.shortName)
+            } else {
+                setSelectedService(-1, getString(R.string.no_service_available))
+            }
         })
     }
 
