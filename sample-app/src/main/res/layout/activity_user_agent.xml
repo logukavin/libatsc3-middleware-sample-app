@@ -37,11 +37,15 @@
 
     <TextView
         android:id="@+id/pop_up_menu_title"
-        android:text="@string/no_service_available"
         android:layout_width="@dimen/service_spinner_width"
         android:layout_height="@dimen/item_spinner_height"
         android:background="@android:color/white"
+        android:gravity="center_vertical"
+        android:paddingStart="10dp"
+        android:paddingEnd="10dp"
         android:spinnerMode="dropdown"
+        android:text="@string/no_service_available"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent"/>
+        app:layout_constraintTop_toTopOf="parent" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>
