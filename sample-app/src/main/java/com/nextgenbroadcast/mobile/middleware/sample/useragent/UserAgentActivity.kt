@@ -9,14 +9,14 @@ import android.util.Log
 import android.view.GestureDetector
 import android.view.View
 import android.view.WindowManager
-import android.widget.AdapterView
 import android.widget.Toast
+import androidx.appcompat.widget.PopupMenu
 import androidx.constraintlayout.widget.ConstraintSet
-import androidx.core.view.postDelayed
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
+import com.nextgenbroadcast.mobile.core.model.SLSService
 import com.nextgenbroadcast.mobile.middleware.Atsc3Activity
 import com.nextgenbroadcast.mobile.middleware.Atsc3ForegroundService
 import com.nextgenbroadcast.mobile.middleware.sample.R
@@ -35,10 +35,9 @@ class UserAgentActivity : Atsc3Activity() {
     private var rmpViewModel: RMPViewModel? = null
     private var userAgentViewModel: UserAgentViewModel? = null
     private var selectorViewModel: SelectorViewModel? = null
+    private var servicesList: List<SLSService>? = null
 
     private var currentAppData: AppData? = null
-
-    private lateinit var selectorAdapter: ServiceAdapter
 
     private val updateMediaTimeHandler = Handler(Looper.getMainLooper())
 
@@ -88,8 +87,6 @@ class UserAgentActivity : Atsc3Activity() {
 
         setContentView(R.layout.activity_user_agent)
 
-        selectorAdapter = ServiceAdapter(this)
-
         val swipeGD = GestureDetector(this, object : SwipeGestureDetector() {
             override fun onClose() {
                 user_agent_web_view.closeMenu()
@@ -106,13 +103,17 @@ class UserAgentActivity : Atsc3Activity() {
             }
         })
 
-        service_spinner.adapter = selectorAdapter
-        service_spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onNothingSelected(parent: AdapterView<*>?) {
-            }
-
-            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                changeService(id.toInt())
+        pop_up_menu_title.setOnClickListener { view ->
+            servicesList?.let { list ->
+                PopupMenu(this, view).apply {
+                    list.forEachIndexed { index, service ->
+                        menu.add(1, service.id, index, service.shortName)
+                    }
+                    setOnMenuItemClickListener { item ->
+                        setSelectedService(item.itemId, item.title.toString())
+                        true
+                    }
+                }.show()
             }
         }
 
@@ -137,6 +138,11 @@ class UserAgentActivity : Atsc3Activity() {
                 rmpViewModel?.setCurrentPlaybackRate(speed)
             }
         })
+    }
+
+    private fun setSelectedService(serviceId: Int, serviceName: String?) {
+        pop_up_menu_title.text = serviceName
+        changeService(serviceId)
     }
 
     private fun onBALoadingError() {
@@ -166,12 +172,16 @@ class UserAgentActivity : Atsc3Activity() {
     }
 
     private fun bindSelector(selectorViewModel: SelectorViewModel) {
-        val selectedServiceId = selectorViewModel.getSelectedServiceId()
         selectorViewModel.services.observe(this, Observer { services ->
-            selectorAdapter.setServices(services)
+            servicesList = services
 
-            val position = services.indexOfFirst { it.id == selectedServiceId }
-            service_spinner.setSelection(if (position >= 0) position else 0)
+            if (services.isNotEmpty()) {
+                val selectedServiceId = selectorViewModel.getSelectedServiceId()
+                val service = services.firstOrNull { it.id == selectedServiceId } ?: services.first()
+                setSelectedService(service.id, service.shortName)
+            } else {
+                setSelectedService(-1, getString(R.string.no_service_available))
+            }
         })
     }
 
