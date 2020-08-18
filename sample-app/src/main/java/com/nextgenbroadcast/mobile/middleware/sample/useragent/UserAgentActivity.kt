@@ -12,7 +12,6 @@ import android.view.WindowManager
 import android.widget.Toast
 import androidx.appcompat.widget.PopupMenu
 import androidx.constraintlayout.widget.ConstraintSet
-import androidx.core.view.postDelayed
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import com.nextgenbroadcast.mobile.core.model.AppData
@@ -105,8 +104,8 @@ class UserAgentActivity : Atsc3Activity() {
         })
 
         pop_up_menu_title.setOnClickListener {
-            val popupMenu = PopupMenu(this, it)
             servicesList?.let { list ->
+                val popupMenu = PopupMenu(this, it)
                 fillPopupMenu(list, popupMenu)
                 popupMenu.show()
                 popupMenu.setOnMenuItemClickListener { item ->
@@ -174,26 +173,21 @@ class UserAgentActivity : Atsc3Activity() {
                 receiver_media_player.playWhenReady = playWhenReady
             })
         }
-
-        //TODO: remove after tests
-        receiver_media_player.postDelayed(500) {
-            if (rmpViewModel.mediaUri.value.isNullOrEmpty()) {
-                Toast.makeText(this, "No media Url provided", Toast.LENGTH_LONG).show()
-            }
-        }
     }
 
     private fun bindSelector(selectorViewModel: SelectorViewModel) {
         val selectedServiceId = selectorViewModel.getSelectedServiceId()
         selectorViewModel.services.observe(this, Observer { services ->
             servicesList = services
-            setSelectedService(services.first { it.id == selectedServiceId })
+            services.firstOrNull { it.id == selectedServiceId }?.let {
+                setSelectedService(it)
+            }
         })
     }
 
     private fun bindUserAgent(userAgentViewModel: UserAgentViewModel) {
         userAgentViewModel.appData.observe(this, Observer { appData ->
-            switchBA(appData)
+            switchApplication(appData)
         })
     }
 
@@ -220,10 +214,10 @@ class UserAgentActivity : Atsc3Activity() {
         user_agent_web_view.visibility = if (available) View.VISIBLE else View.INVISIBLE
     }
 
-    private fun switchBA(appData: AppData?) {
+    private fun switchApplication(appData: AppData?) {
         if (appData != null) {
             setBAAvailability(true)
-            if (!appData.isAppEquals(currentAppData)) {
+            if (!appData.isAppEquals(currentAppData) || appData.isAvailable() != currentAppData?.isAvailable()) {
                 user_agent_web_view.loadBAContent(appData.appEntryPage)
             }
         } else {
