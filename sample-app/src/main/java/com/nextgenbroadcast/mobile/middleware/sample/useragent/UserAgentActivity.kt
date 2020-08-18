@@ -9,14 +9,15 @@ import android.util.Log
 import android.view.GestureDetector
 import android.view.View
 import android.view.WindowManager
-import android.widget.AdapterView
 import android.widget.Toast
+import androidx.appcompat.widget.PopupMenu
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.view.postDelayed
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
+import com.nextgenbroadcast.mobile.core.model.SLSService
 import com.nextgenbroadcast.mobile.middleware.Atsc3Activity
 import com.nextgenbroadcast.mobile.middleware.Atsc3ForegroundService
 import com.nextgenbroadcast.mobile.middleware.sample.R
@@ -35,10 +36,9 @@ class UserAgentActivity : Atsc3Activity() {
     private var rmpViewModel: RMPViewModel? = null
     private var userAgentViewModel: UserAgentViewModel? = null
     private var selectorViewModel: SelectorViewModel? = null
+    private var servicesList: List<SLSService>? = null
 
     private var currentAppData: AppData? = null
-
-    private lateinit var selectorAdapter: ServiceAdapter
 
     private val updateMediaTimeHandler = Handler(Looper.getMainLooper())
 
@@ -88,8 +88,6 @@ class UserAgentActivity : Atsc3Activity() {
 
         setContentView(R.layout.activity_user_agent)
 
-        selectorAdapter = ServiceAdapter(this)
-
         val swipeGD = GestureDetector(this, object : SwipeGestureDetector() {
             override fun onClose() {
                 user_agent_web_view.closeMenu()
@@ -106,13 +104,15 @@ class UserAgentActivity : Atsc3Activity() {
             }
         })
 
-        service_spinner.adapter = selectorAdapter
-        service_spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onNothingSelected(parent: AdapterView<*>?) {
-            }
-
-            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                changeService(id.toInt())
+        pop_up_menu_title.setOnClickListener {
+            val popupMenu = PopupMenu(this, it)
+            servicesList?.let { list ->
+                fillPopupMenu(list, popupMenu)
+                popupMenu.show()
+                popupMenu.setOnMenuItemClickListener { item ->
+                    setSelectedService(list[item.itemId])
+                    true
+                }
             }
         }
 
@@ -139,6 +139,17 @@ class UserAgentActivity : Atsc3Activity() {
         })
     }
 
+    private fun setSelectedService(slsService: SLSService) {
+        pop_up_menu_title.text = slsService.shortName
+        changeService(slsService.id)
+    }
+
+    private fun fillPopupMenu(list: List<SLSService>, popupMenu: PopupMenu) {
+        list.forEachIndexed { index, slsService ->
+            popupMenu.menu.add(1, index, index, slsService.shortName)
+        }
+    }
+
     private fun onBALoadingError() {
         setBAAvailability(false)
         user_agent_web_view.unloadBAContent()
@@ -163,21 +174,26 @@ class UserAgentActivity : Atsc3Activity() {
                 receiver_media_player.playWhenReady = playWhenReady
             })
         }
+
+        //TODO: remove after tests
+        receiver_media_player.postDelayed(500) {
+            if (rmpViewModel.mediaUri.value.isNullOrEmpty()) {
+                Toast.makeText(this, "No media Url provided", Toast.LENGTH_LONG).show()
+            }
+        }
     }
 
     private fun bindSelector(selectorViewModel: SelectorViewModel) {
         val selectedServiceId = selectorViewModel.getSelectedServiceId()
         selectorViewModel.services.observe(this, Observer { services ->
-            selectorAdapter.setServices(services)
-
-            val position = services.indexOfFirst { it.id == selectedServiceId }
-            service_spinner.setSelection(if (position >= 0) position else 0)
+            servicesList = services
+            setSelectedService(services.first { it.id == selectedServiceId })
         })
     }
 
     private fun bindUserAgent(userAgentViewModel: UserAgentViewModel) {
         userAgentViewModel.appData.observe(this, Observer { appData ->
-            switchApplication(appData)
+            switchBA(appData)
         })
     }
 
@@ -204,10 +220,10 @@ class UserAgentActivity : Atsc3Activity() {
         user_agent_web_view.visibility = if (available) View.VISIBLE else View.INVISIBLE
     }
 
-    private fun switchApplication(appData: AppData?) {
-        if (appData != null && appData.isAvailable()) {
+    private fun switchBA(appData: AppData?) {
+        if (appData != null) {
             setBAAvailability(true)
-            if (!appData.isAppEquals(currentAppData) || appData.isAvailable() != currentAppData?.isAvailable()) {
+            if (!appData.isAppEquals(currentAppData)) {
                 user_agent_web_view.loadBAContent(appData.appEntryPage)
             }
         } else {

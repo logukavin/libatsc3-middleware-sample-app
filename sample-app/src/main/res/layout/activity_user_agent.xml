@@ -35,13 +35,14 @@
         android:layout_height="match_parent"
         android:focusedByDefault="true" />
 
-    <androidx.appcompat.widget.AppCompatSpinner
-        android:id="@+id/service_spinner"
+    <TextView
+        android:id="@+id/pop_up_menu_title"
+        android:gravity="center"
+        android:text="@string/no_service_available"
         android:layout_width="@dimen/service_spinner_width"
         android:layout_height="@dimen/item_spinner_height"
         android:background="@android:color/white"
         android:spinnerMode="dropdown"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
-
+        app:layout_constraintTop_toTopOf="parent"/>
 </androidx.constraintlayout.widget.ConstraintLayout>
