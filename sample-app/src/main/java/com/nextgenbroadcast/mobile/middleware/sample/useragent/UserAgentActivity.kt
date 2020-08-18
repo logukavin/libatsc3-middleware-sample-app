@@ -103,16 +103,18 @@ class UserAgentActivity : Atsc3Activity() {
             }
         })
 
-        pop_up_menu_title.setOnClickListener {
+        pop_up_menu_title.setOnClickListener { view ->
             servicesList?.let { list ->
-                val popupMenu = PopupMenu(this, it)
-                fillPopupMenu(list, popupMenu)
-                popupMenu.show()
-                popupMenu.setOnMenuItemClickListener { item ->
-                    setSelectedService(list[item.itemId])
-                    true
-                }
-            }
+                PopupMenu(this, view).apply {
+                    list.forEachIndexed { index, service ->
+                        menu.add(1, service.id, index, service.shortName)
+                    }
+                    setOnMenuItemClickListener { item ->
+                        setSelectedService(item.itemId, item.title.toString())
+                        true
+                    }
+                }.show()
+            } ?: setSelectedService(-1, getString(R.string.no_service_available))
         }
 
         receiver_media_player.setListener(object : ReceiverMediaPlayer.EventListener {
@@ -138,15 +140,9 @@ class UserAgentActivity : Atsc3Activity() {
         })
     }
 
-    private fun setSelectedService(slsService: SLSService) {
-        pop_up_menu_title.text = slsService.shortName
-        changeService(slsService.id)
-    }
-
-    private fun fillPopupMenu(list: List<SLSService>, popupMenu: PopupMenu) {
-        list.forEachIndexed { index, slsService ->
-            popupMenu.menu.add(1, index, index, slsService.shortName)
-        }
+    private fun setSelectedService(serviceId: Int, serviceName: String?) {
+        pop_up_menu_title.text = serviceName
+        changeService(serviceId)
     }
 
     private fun onBALoadingError() {
@@ -176,11 +172,11 @@ class UserAgentActivity : Atsc3Activity() {
     }
 
     private fun bindSelector(selectorViewModel: SelectorViewModel) {
-        val selectedServiceId = selectorViewModel.getSelectedServiceId()
         selectorViewModel.services.observe(this, Observer { services ->
             servicesList = services
-            setSelectedService(services.firstOrNull { it.id == selectedServiceId }
-                    ?: services.first())
+            val selectedServiceId = selectorViewModel.getSelectedServiceId()
+            val service = services.firstOrNull { it.id == selectedServiceId } ?: services.first()
+            setSelectedService(service.id, service.shortName)
         })
     }
 
