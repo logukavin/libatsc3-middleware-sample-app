@@ -11,7 +11,7 @@ import com.nextgenbroadcast.mobile.middleware.controller.media.PlayerStateRegist
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
 import com.nextgenbroadcast.mobile.middleware.settings.IClientSettings
 
-internal class ViewControllerImpl (
+internal class ViewControllerImpl(
         private val repository: IRepository,
         private val settings: IClientSettings
 ) : IViewController {
@@ -28,16 +28,19 @@ internal class ViewControllerImpl (
         held?.let {
             val appContextId = held.appContextId ?: return@let null
             val appUrl = held.bcastEntryPageUrl?.let { entryPageUrl ->
-                ServerUtils.getUrl(entryPageUrl, appContextId, settings, true)
-            } ?: held.bbandEntryPageUrl?.let { entryPageUrl ->
-                ServerUtils.getUrl(entryPageUrl, appContextId, settings, false)
-            } ?: return@let null
+                ServerUtils.createEntryPoint(entryPageUrl, appContextId, settings)
+            } ?: held.bbandEntryPageUrl ?: return@let null
             val compatibleServiceIds = held.coupledServices ?: emptyList()
             val application = applications?.firstOrNull { app ->
                 app.appContextIdList.contains(appContextId)
             }
 
-            AppData(appContextId, appUrl, compatibleServiceIds, application?.cachePath)
+            AppData(
+                    appContextId,
+                    ServerUtils.addSocketPath(appUrl, settings),
+                    compatibleServiceIds,
+                    application?.cachePath
+            )
         }
     }
 
