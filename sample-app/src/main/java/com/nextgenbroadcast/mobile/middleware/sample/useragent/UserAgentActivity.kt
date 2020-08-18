@@ -9,11 +9,14 @@ import android.util.Log
 import android.view.GestureDetector
 import android.view.View
 import android.view.WindowManager
+import android.widget.ArrayAdapter
 import android.widget.Toast
-import androidx.appcompat.widget.PopupMenu
+import androidx.annotation.NonNull
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
+import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.android.material.bottomsheet.BottomSheetBehavior.BottomSheetCallback
 import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.SLSService
@@ -29,14 +32,16 @@ import com.nextgenbroadcast.mobile.view.ReceiverMediaPlayer
 import com.nextgenbroadcast.mobile.view.UserAgentView
 import dagger.android.AndroidInjection
 import kotlinx.android.synthetic.main.activity_user_agent.*
+import kotlinx.android.synthetic.main.service_bottom_sheet.*
 import kotlinx.coroutines.Runnable
+
 
 class UserAgentActivity : Atsc3Activity() {
     private var rmpViewModel: RMPViewModel? = null
     private var userAgentViewModel: UserAgentViewModel? = null
     private var selectorViewModel: SelectorViewModel? = null
     private var servicesList: List<SLSService>? = null
-
+    private lateinit var adapter: ArrayAdapter<String>
     private var currentAppData: AppData? = null
 
     private val updateMediaTimeHandler = Handler(Looper.getMainLooper())
@@ -80,12 +85,25 @@ class UserAgentActivity : Atsc3Activity() {
         viewModelStore.clear()
     }
 
+    override fun onStart() {
+        super.onStart()
+        window.decorView.systemUiVisibility = (View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                or View.SYSTEM_UI_FLAG_FULLSCREEN)
+    }
+
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
         AndroidInjection.inject(this)
         super.onCreate(savedInstanceState)
 
         setContentView(R.layout.activity_user_agent)
+        adapter = ArrayAdapter(this,
+                R.layout.bottom_sheet_service_list_item, mutableListOf<String>())
+        serviceList.adapter = adapter
 
         val swipeGD = GestureDetector(this, object : SwipeGestureDetector() {
             override fun onClose() {
@@ -103,18 +121,25 @@ class UserAgentActivity : Atsc3Activity() {
             }
         })
 
-        pop_up_menu_title.setOnClickListener { view ->
-            servicesList?.let { list ->
-                PopupMenu(this, view).apply {
-                    list.forEachIndexed { index, service ->
-                        menu.add(1, service.id, index, service.shortName)
-                    }
-                    setOnMenuItemClickListener { item ->
-                        setSelectedService(item.itemId, item.title.toString())
-                        true
-                    }
-                }.show()
+
+        val bottomSheetBehavior: BottomSheetBehavior<*> = BottomSheetBehavior.from<View>(bottom_sheet)
+        bottomSheetBehavior.isHideable = false
+        bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED;
+        bottomSheetBehavior.addBottomSheetCallback(object : BottomSheetCallback() {
+            override fun onStateChanged(@NonNull bottomSheet: View, newState: Int) {
+
             }
+
+            override fun onSlide(@NonNull bottomSheet: View, slideOffset: Float) {
+
+            }
+        })
+        serviceList.setOnItemClickListener { parent, view, position, id ->
+            servicesList?.let {
+                setSelectedService(it[position].id, it[position].shortName)
+                bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED;
+            }
+
         }
 
         receiver_media_player.setListener(object : ReceiverMediaPlayer.EventListener {
@@ -141,7 +166,7 @@ class UserAgentActivity : Atsc3Activity() {
     }
 
     private fun setSelectedService(serviceId: Int, serviceName: String?) {
-        pop_up_menu_title.text = serviceName
+        bottom_sheet_title.text = serviceName
         changeService(serviceId)
     }
 
@@ -174,10 +199,13 @@ class UserAgentActivity : Atsc3Activity() {
     private fun bindSelector(selectorViewModel: SelectorViewModel) {
         selectorViewModel.services.observe(this, Observer { services ->
             servicesList = services
-
+            adapter.clear()
+            adapter.addAll(services.map { slsService -> slsService.shortName })
+            adapter.notifyDataSetChanged()
             if (services.isNotEmpty()) {
                 val selectedServiceId = selectorViewModel.getSelectedServiceId()
-                val service = services.firstOrNull { it.id == selectedServiceId } ?: services.first()
+                val service = services.firstOrNull { it.id == selectedServiceId }
+                        ?: services.first()
                 setSelectedService(service.id, service.shortName)
             } else {
                 setSelectedService(-1, getString(R.string.no_service_available))
