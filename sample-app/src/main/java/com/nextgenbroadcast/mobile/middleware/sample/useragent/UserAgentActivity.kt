@@ -11,12 +11,10 @@ import android.view.View
 import android.view.WindowManager
 import android.widget.ArrayAdapter
 import android.widget.Toast
-import androidx.annotation.NonNull
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import com.google.android.material.bottomsheet.BottomSheetBehavior
-import com.google.android.material.bottomsheet.BottomSheetBehavior.BottomSheetCallback
 import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.SLSService
@@ -114,6 +112,7 @@ class UserAgentActivity : Atsc3Activity() {
                 user_agent_web_view.openMenu()
             }
         })
+
         user_agent_web_view.setOnTouchListener { _, motionEvent -> swipeGD.onTouchEvent(motionEvent) }
         user_agent_web_view.setErrorListener(object : UserAgentView.IErrorListener {
             override fun onLoadingError() {
@@ -121,19 +120,10 @@ class UserAgentActivity : Atsc3Activity() {
             }
         })
 
-
         val bottomSheetBehavior: BottomSheetBehavior<*> = BottomSheetBehavior.from<View>(bottom_sheet)
         bottomSheetBehavior.isHideable = false
-        bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED;
-        bottomSheetBehavior.addBottomSheetCallback(object : BottomSheetCallback() {
-            override fun onStateChanged(@NonNull bottomSheet: View, newState: Int) {
+        bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
 
-            }
-
-            override fun onSlide(@NonNull bottomSheet: View, slideOffset: Float) {
-
-            }
-        })
         serviceList.setOnItemClickListener { parent, view, position, id ->
             servicesList?.let {
                 setSelectedService(it[position].id, it[position].shortName)
