@@ -28,9 +28,6 @@ internal class RPCGatewayImpl(
     private val subscribedNotifications = mutableSetOf<NotificationType>()
     private val rpcNotifier = RPCNotifier(this)
 
-    private var currentAppData: AppData? = null
-    private var mediaTimeUpdateJob: Job? = null
-
     override val deviceId = settings.deviceId
     override val advertisingId = settings.advertisingId
     override val language: String = Locale.getDefault().language
@@ -45,6 +42,9 @@ internal class RPCGatewayImpl(
 
     private val rmpPlaybackTime: Long
         get() = viewController.rmpMediaTime.value ?: 0
+
+    private var currentAppData: AppData? = null
+    private var mediaTimeUpdateJob: Job? = null
 
     init {
         viewController.appData.distinctUntilChanged().observeForever { appData ->
@@ -133,15 +133,19 @@ internal class RPCGatewayImpl(
     }
 
     private fun onAppDataUpdated(appData: AppData?) {
-        //TODO: It's incorrect. Should notify that service changed if we stay on the same BA
+        // Notify the user changes to another service also associated with the same Broadcaster Application
         appData?.let {
             if (appData.isAppEquals(currentAppData)) {
-                if (subscribedNotifications.contains(NotificationType.SERVICE_CHANGE)) {
-                    rpcNotifier.notifyServiceChange(it.appContextId)
-                }
+                onApplicationServiceChanged(appData.appContextId)
             }
         }
         currentAppData = appData
+    }
+
+    private fun onApplicationServiceChanged(serviceId: String) {
+        if (subscribedNotifications.contains(NotificationType.SERVICE_CHANGE)) {
+            rpcNotifier.notifyServiceChange(serviceId)
+        }
     }
 
     private fun onServiceGuidUrls(urls: List<Urls>?) {
