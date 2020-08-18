@@ -179,9 +179,8 @@ class UserAgentActivity : Atsc3Activity() {
         val selectedServiceId = selectorViewModel.getSelectedServiceId()
         selectorViewModel.services.observe(this, Observer { services ->
             servicesList = services
-            services.firstOrNull { it.id == selectedServiceId }?.let {
-                setSelectedService(it)
-            }
+            setSelectedService(services.firstOrNull { it.id == selectedServiceId }
+                    ?: services.first())
         })
     }
 
@@ -215,7 +214,7 @@ class UserAgentActivity : Atsc3Activity() {
     }
 
     private fun switchApplication(appData: AppData?) {
-        if (appData != null) {
+        if (appData != null && appData.isAvailable()) {
             setBAAvailability(true)
             if (!appData.isAppEquals(currentAppData) || appData.isAvailable() != currentAppData?.isAvailable()) {
                 user_agent_web_view.loadBAContent(appData.appEntryPage)
