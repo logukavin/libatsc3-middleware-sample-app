@@ -4,13 +4,13 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/black"
     tools:context=".useragent.UserAgentActivity">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/user_agent_root"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="@color/black">
+        android:layout_height="match_parent">
 
         <com.nextgenbroadcast.mobile.view.ReceiverMediaPlayer
             android:id="@+id/receiver_media_player"
