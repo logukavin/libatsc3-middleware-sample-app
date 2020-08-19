@@ -124,11 +124,9 @@ class UserAgentActivity : Atsc3Activity() {
         }
 
         serviceList.setOnItemClickListener { parent, view, position, id ->
-            servicesList?.let {
-                it[position].let { item ->
-                    setSelectedService(item.id, item.shortName)
-                    bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
-                }
+            servicesList?.getOrNull(position)?.let {item ->
+                setSelectedService(item.id, item.shortName)
+                bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
             }
         }
 
