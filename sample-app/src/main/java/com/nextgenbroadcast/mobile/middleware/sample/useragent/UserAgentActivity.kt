@@ -10,10 +10,10 @@ import android.view.GestureDetector
 import android.view.View
 import android.view.WindowManager
 import android.widget.Toast
-import androidx.appcompat.widget.PopupMenu
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
+import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.SLSService
@@ -31,6 +31,7 @@ import dagger.android.AndroidInjection
 import kotlinx.android.synthetic.main.activity_user_agent.*
 import kotlinx.coroutines.Runnable
 
+
 class UserAgentActivity : Atsc3Activity() {
     private var rmpViewModel: RMPViewModel? = null
     private var userAgentViewModel: UserAgentViewModel? = null
@@ -40,6 +41,7 @@ class UserAgentActivity : Atsc3Activity() {
     private var currentAppData: AppData? = null
 
     private val updateMediaTimeHandler = Handler(Looper.getMainLooper())
+    private lateinit var selectorAdapter: ServiceAdapter
 
     override fun onBind(binder: Atsc3ForegroundService.ServiceBinder) {
         val provider = UserAgentViewModelFactory(
@@ -80,12 +82,24 @@ class UserAgentActivity : Atsc3Activity() {
         viewModelStore.clear()
     }
 
+    override fun onStart() {
+        super.onStart()
+        window.decorView.systemUiVisibility = (View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                or View.SYSTEM_UI_FLAG_FULLSCREEN)
+    }
+
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
         AndroidInjection.inject(this)
         super.onCreate(savedInstanceState)
 
         setContentView(R.layout.activity_user_agent)
+        selectorAdapter = ServiceAdapter(this)
+        serviceList.adapter = selectorAdapter
 
         val swipeGD = GestureDetector(this, object : SwipeGestureDetector() {
             override fun onClose() {
@@ -96,6 +110,7 @@ class UserAgentActivity : Atsc3Activity() {
                 user_agent_web_view.openMenu()
             }
         })
+
         user_agent_web_view.setOnTouchListener { _, motionEvent -> swipeGD.onTouchEvent(motionEvent) }
         user_agent_web_view.setErrorListener(object : UserAgentView.IErrorListener {
             override fun onLoadingError() {
@@ -103,17 +118,15 @@ class UserAgentActivity : Atsc3Activity() {
             }
         })
 
-        pop_up_menu_title.setOnClickListener { view ->
-            servicesList?.let { list ->
-                PopupMenu(this, view).apply {
-                    list.forEachIndexed { index, service ->
-                        menu.add(1, service.id, index, service.shortName)
-                    }
-                    setOnMenuItemClickListener { item ->
-                        setSelectedService(item.itemId, item.title.toString())
-                        true
-                    }
-                }.show()
+        val bottomSheetBehavior = BottomSheetBehavior.from<View>(bottom_sheet).apply {
+            isHideable = false
+            state = BottomSheetBehavior.STATE_COLLAPSED
+        }
+
+        serviceList.setOnItemClickListener { parent, view, position, id ->
+            servicesList?.getOrNull(position)?.let {item ->
+                setSelectedService(item.id, item.shortName)
+                bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
             }
         }
 
@@ -141,7 +154,7 @@ class UserAgentActivity : Atsc3Activity() {
     }
 
     private fun setSelectedService(serviceId: Int, serviceName: String?) {
-        pop_up_menu_title.text = serviceName
+        bottom_sheet_title.text = serviceName
         changeService(serviceId)
     }
 
@@ -174,10 +187,12 @@ class UserAgentActivity : Atsc3Activity() {
     private fun bindSelector(selectorViewModel: SelectorViewModel) {
         selectorViewModel.services.observe(this, Observer { services ->
             servicesList = services
+            selectorAdapter.setServices(services)
 
             if (services.isNotEmpty()) {
                 val selectedServiceId = selectorViewModel.getSelectedServiceId()
-                val service = services.firstOrNull { it.id == selectedServiceId } ?: services.first()
+                val service = services.firstOrNull { it.id == selectedServiceId }
+                        ?: services.first()
                 setSelectedService(service.id, service.shortName)
             } else {
                 setSelectedService(-1, getString(R.string.no_service_available))
