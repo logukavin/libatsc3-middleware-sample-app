@@ -132,6 +132,7 @@ class MainActivity : Atsc3Activity() {
         }
 
         serviceList.setOnItemClickListener { _, _, position, _ ->
+            bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
             servicesList?.getOrNull(position)?.let {item ->
                 setSelectedService(item.id, item.shortName)
             } ?: showFileChooser()
@@ -180,7 +181,6 @@ class MainActivity : Atsc3Activity() {
 
     private fun setSelectedService(serviceId: Int, serviceName: String?) {
         bottom_sheet_title.text = serviceName
-        bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
         changeService(serviceId)
     }
 
