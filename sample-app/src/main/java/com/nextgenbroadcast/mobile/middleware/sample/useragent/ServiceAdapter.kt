@@ -40,7 +40,7 @@ class ServiceAdapter(context: Context) : ArrayAdapter<SLSService>(context, 0) {
         view.text = if (!isEmptyState()) {
             getItem(position)?.shortName
         } else {
-            context.getString(R.string.no_service_available)
+            context.getString(R.string.select_source)
         }
 
         return view
