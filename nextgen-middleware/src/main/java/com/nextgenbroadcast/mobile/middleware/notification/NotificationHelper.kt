@@ -21,7 +21,8 @@ class NotificationHelper(
     private val notificationManager = context.getSystemService(NotificationManager::class.java)
 
     fun createMediaNotification(title: String, text: String, state: PlaybackState): Notification {
-        val pendingIntent = createPendingIntent(context)
+        val dialogIntent = Intent(context, ServiceDialogActivity::class.java)
+        val pendingIntent = PendingIntent.getActivity(context, 0, dialogIntent, 0)
 
         val builder = Notification.Builder(context, channelID)
                 .setSmallIcon(R.mipmap.ic_launcher_round)
@@ -38,13 +39,6 @@ class NotificationHelper(
             PlaybackState.PAUSED -> {
                 builder.addAction(createAction(context, android.R.drawable.ic_media_play, R.string.notification_play_btn_title, Atsc3ForegroundService.ACTION_RMP_PLAY))
                 builder.style = Notification.MediaStyle().setShowActionsInCompactView(0)
-            }
-
-            PlaybackState.IDLE -> {
-                val notificationIntent = Intent(context, ServiceDialogActivity::class.java)
-                val contentIntent = PendingIntent.getActivity(context, 0, notificationIntent, 0)
-
-                builder.setContentIntent(contentIntent)
             }
 
             else -> {

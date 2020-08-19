@@ -1,6 +1,5 @@
 package com.nextgenbroadcast.mobile.middleware
 
-import android.app.Notification
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -11,7 +10,6 @@ import android.os.IBinder
 import android.os.PowerManager
 import android.os.PowerManager.WakeLock
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.Observer
 import com.nextgenbroadcast.mobile.core.cert.UserAgentSSLContext
@@ -27,7 +25,6 @@ import com.nextgenbroadcast.mobile.middleware.gateway.rpc.IRPCGateway
 import com.nextgenbroadcast.mobile.middleware.gateway.rpc.RPCGatewayImpl
 import com.nextgenbroadcast.mobile.middleware.gateway.web.IWebGateway
 import com.nextgenbroadcast.mobile.middleware.gateway.web.WebGatewayImpl
-import com.nextgenbroadcast.mobile.middleware.notification.NotificationHelper
 import com.nextgenbroadcast.mobile.middleware.phy.Atsc3DeviceReceiver
 import com.nextgenbroadcast.mobile.middleware.presentation.IMediaPlayerPresenter
 import com.nextgenbroadcast.mobile.middleware.presentation.IReceiverPresenter
@@ -40,13 +37,12 @@ import com.nextgenbroadcast.mobile.middleware.repository.RepositoryImpl
 import com.nextgenbroadcast.mobile.middleware.server.web.MiddlewareWebServer
 import kotlinx.coroutines.Dispatchers
 
-class Atsc3ForegroundService : LifecycleService() {
+class Atsc3ForegroundService : BindableForegroundService() {
     private lateinit var wakeLock: WakeLock
     private lateinit var settings: IMiddlewareSettings
     private lateinit var repository: IRepository
     private lateinit var atsc3Module: Atsc3Module
     private lateinit var serviceController: IServiceController
-    private lateinit var notificationHelper: NotificationHelper
     private lateinit var state: MediatorLiveData<Triple<ReceiverState?, SLSService?, PlaybackState?>>
 
     private var viewController: IViewController? = null
@@ -54,8 +50,6 @@ class Atsc3ForegroundService : LifecycleService() {
     private var rpcGateway: IRPCGateway? = null
     private var webServer: MiddlewareWebServer? = null
     private var deviceReceiver: Atsc3DeviceReceiver? = null
-    private var isForeground = false
-    private var isBinded = false
 
     override fun onCreate() {
         super.onCreate()
@@ -72,9 +66,6 @@ class Atsc3ForegroundService : LifecycleService() {
         }
 
         serviceController = ServiceControllerImpl(repo, atsc3)
-        notificationHelper = NotificationHelper(this, NOTIFICATION_CHANNEL_ID).also {
-            it.createNotificationChannel(getString(R.string.atsc3_chanel_name))
-        }
 
         state = MediatorLiveData<Triple<ReceiverState?, SLSService?, PlaybackState?>>().apply {
             addSource(serviceController.receiverState) { receiverState ->
@@ -86,7 +77,7 @@ class Atsc3ForegroundService : LifecycleService() {
         }.also {
             it.observe(this, Observer { (receiverState, selectedService, playbackState) ->
                 if (isForeground) {
-                    notificationHelper.notify(NOTIFICATION_ID, createNotification(receiverState, selectedService, playbackState))
+                    pushNotification(createNotification(receiverState, selectedService, playbackState))
                 }
             })
         }
@@ -121,6 +112,12 @@ class Atsc3ForegroundService : LifecycleService() {
         return START_NOT_STICKY
     }
 
+    override fun onBind(intent: Intent): IBinder? {
+        super.onBind(intent)
+
+        return ServiceBinder()
+    }
+
     private fun openFileSource(filePath: String?) {
         // change source to file. So, let's unregister device receiver
         unregisterDeviceReceiver()
@@ -133,25 +130,14 @@ class Atsc3ForegroundService : LifecycleService() {
     private fun closeRoute() {
         unregisterDeviceReceiver()
         serviceController.closeRoute()
+        // call to stopRoute is not a mistake. We use it to close previously opened file
+        serviceController.stopRoute()
 
         if (isBinded) {
             stopSelf()
         } else {
             killService()
         }
-    }
-
-    private fun startForeground() {
-        if (isForeground) return
-        isForeground = true
-
-        startForeground(NOTIFICATION_ID, createNotification(getReceiverState()))
-    }
-
-    private fun stopForeground() {
-        stopForeground(true)
-
-        isForeground = false
     }
 
     private fun killService() {
@@ -229,35 +215,12 @@ class Atsc3ForegroundService : LifecycleService() {
         }
     }
 
-    override fun onBind(intent: Intent): IBinder? {
-        super.onBind(intent)
+    override fun getReceiverState() = serviceController.receiverState.value ?: ReceiverState.IDLE
 
-        startForeground()
+    override fun createViewPresentationAndStartService() {
+        // we release it only when destroy presentation layer
+        if (wakeLock.isHeld) return
 
-        createViewPresentationAndStartService()
-
-        isBinded = true
-
-        return ServiceBinder()
-    }
-
-    override fun onRebind(intent: Intent?) {
-        super.onRebind(intent)
-
-        isBinded = true
-    }
-
-    override fun onUnbind(intent: Intent?): Boolean {
-        super.onUnbind(intent)
-
-        isBinded = false
-
-        destroyViewPresentationAndStopService()
-
-        return true
-    }
-
-    private fun createViewPresentationAndStartService() {
         val view = ViewControllerImpl(repository, settings).also {
             viewController = it
         }
@@ -278,7 +241,7 @@ class Atsc3ForegroundService : LifecycleService() {
         wakeLock.acquire()
     }
 
-    private fun destroyViewPresentationAndStopService() {
+    override fun destroyViewPresentationAndStopService() {
         viewController?.let { view ->
             state.removeSource(view.rmpState)
         }
@@ -305,19 +268,6 @@ class Atsc3ForegroundService : LifecycleService() {
             playbackState ?: viewController?.rmpState?.value
     )
 
-    private fun getReceiverState() = serviceController.receiverState.value ?: ReceiverState.IDLE
-
-    private fun createNotification(state: ReceiverState? = null, service: SLSService? = null, playbackState: PlaybackState? = null): Notification {
-        val title = if (state == null || state == ReceiverState.IDLE) {
-            getString(R.string.atsc3_source_is_not_initialized)
-        } else {
-            service?.shortName ?: getString(R.string.atsc3_no_service_available)
-        }
-
-        return notificationHelper.createMediaNotification(title, "", playbackState
-                ?: PlaybackState.IDLE)
-    }
-
     inner class ServiceBinder : Binder() {
         fun getReceiverPresenter(): IReceiverPresenter = object : IReceiverPresenter {
             override val receiverState = serviceController.receiverState
@@ -328,8 +278,6 @@ class Atsc3ForegroundService : LifecycleService() {
             }
 
             override fun closeRoute() {
-                // call to stopRoute is not a mistake. We use it to close previously opened file
-                serviceController.stopRoute()
                 closeRoute(this@Atsc3ForegroundService)
             }
         }
@@ -341,8 +289,6 @@ class Atsc3ForegroundService : LifecycleService() {
     class InitializationException : RuntimeException()
 
     companion object {
-        private const val NOTIFICATION_CHANNEL_ID = "Atsc3ServiceChannel"
-        private const val NOTIFICATION_ID = 1
         private const val SERVICE_ACTION = "${BuildConfig.LIBRARY_PACKAGE_NAME}.intent.action"
 
         @Deprecated("old implementation")
@@ -396,6 +342,7 @@ class Atsc3ForegroundService : LifecycleService() {
 
         private fun newIntent(context: Context, serviceAction: String) = Intent(context, Atsc3ForegroundService::class.java).apply {
             action = serviceAction
+            putExtra(EXTRA_FOREGROUND, true)
         }
     }
 }
