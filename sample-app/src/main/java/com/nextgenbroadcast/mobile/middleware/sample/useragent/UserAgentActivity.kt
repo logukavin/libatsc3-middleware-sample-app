@@ -9,7 +9,6 @@ import android.util.Log
 import android.view.GestureDetector
 import android.view.View
 import android.view.WindowManager
-import android.widget.ArrayAdapter
 import android.widget.Toast
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.lifecycle.Observer
@@ -30,7 +29,6 @@ import com.nextgenbroadcast.mobile.view.ReceiverMediaPlayer
 import com.nextgenbroadcast.mobile.view.UserAgentView
 import dagger.android.AndroidInjection
 import kotlinx.android.synthetic.main.activity_user_agent.*
-import kotlinx.android.synthetic.main.service_bottom_sheet.*
 import kotlinx.coroutines.Runnable
 
 
@@ -39,10 +37,11 @@ class UserAgentActivity : Atsc3Activity() {
     private var userAgentViewModel: UserAgentViewModel? = null
     private var selectorViewModel: SelectorViewModel? = null
     private var servicesList: List<SLSService>? = null
-    private lateinit var adapter: ArrayAdapter<String>
+
     private var currentAppData: AppData? = null
 
     private val updateMediaTimeHandler = Handler(Looper.getMainLooper())
+    private lateinit var selectorAdapter: ServiceAdapter
 
     override fun onBind(binder: Atsc3ForegroundService.ServiceBinder) {
         val provider = UserAgentViewModelFactory(
@@ -99,9 +98,8 @@ class UserAgentActivity : Atsc3Activity() {
         super.onCreate(savedInstanceState)
 
         setContentView(R.layout.activity_user_agent)
-        adapter = ArrayAdapter(this,
-                R.layout.bottom_sheet_service_list_item, mutableListOf<String>())
-        serviceList.adapter = adapter
+        selectorAdapter = ServiceAdapter(this)
+        serviceList.adapter = selectorAdapter
 
         val swipeGD = GestureDetector(this, object : SwipeGestureDetector() {
             override fun onClose() {
@@ -120,16 +118,18 @@ class UserAgentActivity : Atsc3Activity() {
             }
         })
 
-        val bottomSheetBehavior: BottomSheetBehavior<*> = BottomSheetBehavior.from<View>(bottom_sheet)
-        bottomSheetBehavior.isHideable = false
-        bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
+        val bottomSheetBehavior = BottomSheetBehavior.from<View>(bottom_sheet).apply {
+            isHideable = false
+            state = BottomSheetBehavior.STATE_COLLAPSED
+        }
 
         serviceList.setOnItemClickListener { parent, view, position, id ->
             servicesList?.let {
-                setSelectedService(it[position].id, it[position].shortName)
-                bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED;
+                it[position].let { item ->
+                    setSelectedService(item.id, item.shortName)
+                    bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
+                }
             }
-
         }
 
         receiver_media_player.setListener(object : ReceiverMediaPlayer.EventListener {
@@ -189,9 +189,8 @@ class UserAgentActivity : Atsc3Activity() {
     private fun bindSelector(selectorViewModel: SelectorViewModel) {
         selectorViewModel.services.observe(this, Observer { services ->
             servicesList = services
-            adapter.clear()
-            adapter.addAll(services.map { slsService -> slsService.shortName })
-            adapter.notifyDataSetChanged()
+            selectorAdapter.setServices(services)
+
             if (services.isNotEmpty()) {
                 val selectedServiceId = selectorViewModel.getSelectedServiceId()
                 val service = services.firstOrNull { it.id == selectedServiceId }
