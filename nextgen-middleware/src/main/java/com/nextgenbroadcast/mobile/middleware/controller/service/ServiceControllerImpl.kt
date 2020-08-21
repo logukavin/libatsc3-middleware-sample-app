@@ -9,7 +9,6 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3Module
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPackage
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.service.Atsc3Service
-import com.nextgenbroadcast.mobile.middleware.atsc3.ndk.Atsc3UsbDevice
 import com.nextgenbroadcast.mobile.middleware.phy.DeviceUtils
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
 import kotlinx.coroutines.*
@@ -70,20 +69,8 @@ internal class ServiceControllerImpl (
         return atsc3Module.openPcapFile(pcapFile)
     }
 
-    override fun openRoute(device: UsbDevice, manager: UsbManager): Boolean {
-        val key = DeviceUtils.getKeyFromUsbDevName(device.deviceName)
-        if (key < 0) return false
-
-        val conn = manager.openDevice(device) ?: return false
-
-        val atsc3Device =  Atsc3UsbDevice(
-                device,
-                conn,
-                conn.fileDescriptor,
-                key
-        )
-
-        return atsc3Module.openUsbDevice(atsc3Device)
+    override fun openRoute(device: UsbDevice): Boolean {
+        return atsc3Module.openUsbDevice(device)
     }
 
     override fun stopRoute() {
