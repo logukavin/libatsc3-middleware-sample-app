@@ -10,31 +10,22 @@
         android:requestLegacyExternalStorage="true"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:usesCleartextTraffic="true"
-        android:theme="@style/AppTheme">
+        android:theme="@style/AppTheme"
+        android:usesCleartextTraffic="true">
 
         <activity
             android:name=".MainActivity"
-            android:configChanges="orientation|keyboardHidden"
-            android:screenOrientation="portrait">
+            android:configChanges="keyboardHidden"
+            android:theme="@style/NoActionBar">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity>
-
-        <activity
-            android:name=".useragent.UserAgentActivity"
-            android:configChanges="orientation|keyboardHidden"
-            android:screenOrientation="landscape"
-            android:theme="@style/NoActionBar">
-
             <intent-filter>
-                <action android:name="com.nextgenbroadcast.mobile.tv"/>
-                <category android:name="android.intent.category.DEFAULT"/>
+                <action android:name="com.nextgenbroadcast.mobile.tv" />
+                <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
-
         </activity>
 
     </application>
