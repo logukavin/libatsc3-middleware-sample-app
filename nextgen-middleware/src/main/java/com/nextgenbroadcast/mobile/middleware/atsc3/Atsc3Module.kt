@@ -1,8 +1,9 @@
 package com.nextgenbroadcast.mobile.middleware.atsc3
 
 import android.content.Context
+import android.hardware.usb.UsbDevice
+import android.hardware.usb.UsbManager
 import android.util.Log
-import com.nextgenbroadcast.mobile.middleware.BuildConfig
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3ApplicationFile
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3Held
@@ -10,19 +11,26 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPacka
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.HeldXmlParser
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.service.Atsc3Service
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.service.LLSParserSLT
-import com.nextgenbroadcast.mobile.middleware.atsc3.ndk.Atsc3UsbDevice
-import com.nextgenbroadcast.mobile.middleware.atsc3.ndk.atsc3NdkClient
-import com.nextgenbroadcast.mobile.middleware.atsc3.ndk.atsc3NdkClient.ClientListener
-import com.nextgenbroadcast.mobile.middleware.atsc3.ndk.data.PackageExtractEnvelopeMetadataAndPayload
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import org.ngbp.libatsc3.middleware.Atsc3NdkApplicationBridge
+import org.ngbp.libatsc3.middleware.android.a331.PackageExtractEnvelopeMetadataAndPayload
+import org.ngbp.libatsc3.middleware.android.application.interfaces.IAtsc3NdkApplicationBridgeCallbacks
+import org.ngbp.libatsc3.middleware.android.application.sync.mmt.MfuByteBufferFragment
+import org.ngbp.libatsc3.middleware.android.application.sync.mmt.MpuMetadata_HEVC_NAL_Payload
+import org.ngbp.libatsc3.middleware.android.phy.Atsc3NdkPHYClientBase
+import org.ngbp.libatsc3.middleware.android.phy.Atsc3UsbDevice
+import org.ngbp.libatsc3.middleware.android.phy.LowaSISPHYAndroid
+import org.ngbp.libatsc3.middleware.android.phy.SaankhyaPHYAndroid
+import org.ngbp.libatsc3.middleware.android.phy.virtual.PcapDemuxedPHYVirtualAndroid
+import org.ngbp.libatsc3.middleware.android.phy.virtual.srt.SRTRxSTLTPVirtualPHYAndroid
+import java.io.File
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
 //TODO: multithreading requests
-internal class Atsc3Module(context: Context) : ClientListener {
+internal class Atsc3Module(
+        private val context: Context
+) : IAtsc3NdkApplicationBridgeCallbacks {
+
     enum class State {
         OPENED, PAUSED, IDLE
     }
@@ -35,13 +43,15 @@ internal class Atsc3Module(context: Context) : ClientListener {
         fun onCurrentServiceDashPatched(mpdPath: String)
     }
 
-    private val client = atsc3NdkClient(context.cacheDir, this)
-    private var usbDevice: Atsc3UsbDevice? = null
+    private val atsc3NdkApplicationBridge = Atsc3NdkApplicationBridge(this)
+
+    private val usbManager by lazy { context.getSystemService(Context.USB_SERVICE) as UsbManager }
+
+    private var atsc3NdkPHYClientInstance: Atsc3NdkPHYClientBase? = null //whomever is currently instantiated (e.g. SRTRxSTLTPVirtualPhyAndroid, etc..)
 
     private val serviceMap = ConcurrentHashMap<Int, Atsc3Service>()
     private val packageMap = HashMap<String, Atsc3Application>()
 
-    private var isPcapOpened = false
     private var state = State.IDLE
     private var selectedServiceId = -1
     private var selectedServiceSLSProtocol = -1
@@ -52,115 +62,135 @@ internal class Atsc3Module(context: Context) : ClientListener {
     @Volatile
     private var listener: Listener? = null
 
-    init {
-        with(client) {
-            ApiInit(client)
-            if (BuildConfig.DEBUG) {
-                setLogListener { s: String -> log("Client log: %s", s) }
-            }
-        }
-    }
-
     fun setListener(listener: Listener?) {
         if (this.listener != null) throw IllegalStateException("Atsc3Module listener already initialized")
         this.listener = listener
     }
 
-    fun openPcapFile(filename: String?): Boolean {
-        if (filename.isNullOrEmpty()) return false
+    fun openPcapFile(filename: String): Boolean {
+        log("Opening PCAP file: $filename")
 
-        log("Opening pcap file: %s", filename)
-        val res = client.atsc3_pcap_open_for_replay(filename)
+        close()
 
-        //TODO: for assets mAt3DrvIntf.atsc3_pcap_open_for_replay_from_assetManager(filename, assetManager);
-        if (res == RES_OK) {
-            isPcapOpened = true
-            client.atsc3_pcap_thread_run()
-            setState(State.OPENED)
-            return true
+        atsc3NdkPHYClientInstance = PcapDemuxedPHYVirtualAndroid().apply {
+            init()
+        }.also { client ->
+            val res = client.atsc3_pcap_open_for_replay(filename)
+
+            //TODO: for assets mAt3DrvIntf.atsc3_pcap_open_for_replay_from_assetManager(filename, assetManager);
+            if (res == RES_OK) {
+                client.run()
+                setState(State.OPENED)
+            }
         }
 
-        return false
+        return true
     }
 
-    fun openUsbDevice(device: Atsc3UsbDevice): Boolean {
-        if (usbDevice != null) {
-            client.ApiClose();
+    fun openSRTStream(srtSource: String): Boolean {
+        log("Opening SRT file: $srtSource")
+
+        close()
+
+        atsc3NdkPHYClientInstance = SRTRxSTLTPVirtualPHYAndroid().apply {
+            init()
+        }.also { client ->
+            client.setSrtSourceConnectionString(srtSource)
+            client.run()
         }
 
-        usbDevice = device
-        client.atsc3_pcap_thread_stop()
-        setState(State.IDLE)
+        return true
+    }
 
-        log("opening Device: fd: %d, key: %d", device.fd, device.key)
+    fun openUsbDevice(device: UsbDevice): Boolean {
+        log("Opening USB device: ${device.deviceName}")
 
-        //TODO: start in thread
-        CoroutineScope(Dispatchers.IO).launch {
-            val re = client.ApiOpen(device.fd, device.key)
-            withContext(Dispatchers.Main) {
-                if (re < 0) {
-                    log("open: failed, r: %d", re);
-                } else if (re == 240) { //SL_FX3S_I2C_AWAITING_BROADCAST_USB_ATTACHED
-                    log("open: pending SL_FX3S_I2C_AWAITING_BROADCAST_USB_ATTACHED event");
+        Atsc3UsbDevice.FindFromUsbDevice(device)?.let {
+            log("usbPHYLayerDeviceTryToInstantiateFromRegisteredPHYNDKs", "Atsc3UsbDevice already instantiated: $device")
+            return false
+        }
+
+        close()
+
+        val candidatePHYList = Atsc3NdkPHYClientBase.GetCandidatePHYImplementations(device)
+                ?: return false
+
+        val conn = usbManager.openDevice(device) ?: return false
+
+        val atsc3UsbDevice = Atsc3UsbDevice(device, conn)
+
+        candidatePHYList.forEach { candidatePHY ->
+            val atsc3NdkPHYClientBaseCandidate = Atsc3NdkPHYClientBase.CreateInstanceFromUSBVendorIDProductIDSupportedPHY(candidatePHY)
+
+            if (candidatePHY.getIsBootloader(device)) {
+                val r = atsc3NdkPHYClientBaseCandidate.download_bootloader_firmware(atsc3UsbDevice.fd, atsc3UsbDevice.deviceName)
+                if (r < 0) {
+                    log("prepareDevices: download_bootloader_firmware with $atsc3NdkPHYClientBaseCandidate failed for path: ${atsc3UsbDevice.deviceName}, fd: ${atsc3UsbDevice.fd}")
                 } else {
+                    log("prepareDevices: download_bootloader_firmware with $atsc3NdkPHYClientBaseCandidate for path: ${atsc3UsbDevice.deviceName}, fd: ${atsc3UsbDevice.fd}, success")
+                    //pre-boot devices should re-enumerate, so don't track this connection just yet...
+                }
+            } else {
+                val r = atsc3NdkPHYClientBaseCandidate.open(atsc3UsbDevice.fd, atsc3UsbDevice.deviceName)
+                if (r < 0) {
+                    log("prepareDevices: open with $atsc3NdkPHYClientBaseCandidate failed for path: ${atsc3UsbDevice.deviceName}, fd: ${atsc3UsbDevice.fd}, res: $r")
+                } else {
+                    log("prepareDevices: open with $atsc3NdkPHYClientBaseCandidate for path: ${atsc3UsbDevice.deviceName}, fd: ${atsc3UsbDevice.fd}, success")
+
+                    atsc3NdkPHYClientBaseCandidate.setAtsc3UsbDevice(atsc3UsbDevice)
+                    atsc3UsbDevice.setAtsc3NdkPHYClientBase(atsc3NdkPHYClientBaseCandidate)
+
+                    atsc3NdkPHYClientInstance = atsc3NdkPHYClientBaseCandidate
                     setState(State.OPENED)
+
+                    return true
                 }
             }
         }
 
-//
-//        stopAllPlayers();
-//
+        atsc3UsbDevice.destroy()
 
-        return true
+        return false
     }
 
     fun selectService(serviceId: Int): Boolean {
         clearHeld()
 
         selectedServiceId = serviceId
-        selectedServiceSLSProtocol = client.atsc3_slt_selectService(serviceId)
+        selectedServiceSLSProtocol = atsc3NdkApplicationBridge.atsc3_slt_selectService(serviceId)
 
         return selectedServiceSLSProtocol > 0
     }
 
     fun stop() {
-        if (isPcapOpened) {
-            isPcapOpened = false
-            client.atsc3_pcap_thread_stop()
-            clear()
-            setState(State.IDLE)
-            log("pcap thread stopped")
-            return
-        }
+        atsc3NdkPHYClientInstance?.stop()
 
-        if (usbDevice == null) {
-            log("no atlas device connected yet")
-            return
-        }
-        client.ApiStop()
         setState(State.PAUSED)
     }
 
     fun close() {
-        usbDevice?.disconnect() ?: return
+        atsc3NdkPHYClientInstance?.let { client ->
+            client.stop()
+            client.deinit()
+//            try {
+//                Thread.sleep(1000)
+//            } catch (e: InterruptedException) {
+//                e.printStackTrace()
+//            }
+            atsc3NdkPHYClientInstance = null
+        }
 
         clear()
-
-        val status = client.ApiClose()
-        if (status != RES_OK) {
-            log("closed")
-        }
 
         setState(State.IDLE)
     }
 
-    private fun getSelectedServiceMediaUri(): String? {
+    fun getSelectedServiceMediaUri(): String? {
         var mediaUri: String? = null
         if (selectedServiceSLSProtocol == 1) {
-            val routeMPDFileName = client.atsc3_slt_alc_get_sls_metadata_fragments_content_locations_from_monitor_service_id(selectedServiceId, DASH_CONTENT_TYPE)
+            val routeMPDFileName = atsc3NdkApplicationBridge.atsc3_slt_alc_get_sls_metadata_fragments_content_locations_from_monitor_service_id(selectedServiceId, DASH_CONTENT_TYPE)
             if (routeMPDFileName.isNotEmpty()) {
-                mediaUri = String.format("%s/%s", client.cacheDir, routeMPDFileName[0])
+                mediaUri = String.format("%s/%s", jni_getCacheDir(), routeMPDFileName[0])
             } else {
                 log("Unable to resolve Dash MPD path from MBMS envelope, service_id: %d", selectedServiceId)
             }
@@ -190,6 +220,14 @@ internal class Atsc3Module(context: Context) : ClientListener {
         selectedServiceHeldXml = null
     }
 
+    //////////////////////////////////////////////////////////////
+    /// IAtsc3NdkApplicationBridgeCallbacks
+    //////////////////////////////////////////////////////////////
+
+    override fun showMsgFromNative(message: String) = log(message)
+
+    override fun jni_getCacheDir(): File = context.cacheDir
+
     override fun onSlsTablePresent(sls_payload_xml: String) {
         val services = LLSParserSLT().parseXML(sls_payload_xml)
 
@@ -198,17 +236,21 @@ internal class Atsc3Module(context: Context) : ClientListener {
         listener?.onServicesLoaded(Collections.unmodifiableList(services))
     }
 
-    override fun onSlsHeldReceived(service_id: Int, held_payload_xml: String) {
-        if (service_id == selectedServiceId) {
-            if (held_payload_xml != selectedServiceHeldXml) {
-                selectedServiceHeldXml = held_payload_xml
+    override fun onAeatTablePresent(aeatPayloadXML: String) {
+        //TODO("Not yet implemented")
+    }
 
-                val held = HeldXmlParser().parseXML(held_payload_xml).also { held ->
+    override fun onSlsHeldEmissionPresent(serviceId: Int, heldPayloadXML: String) {
+        if (serviceId == selectedServiceId) {
+            if (heldPayloadXML != selectedServiceHeldXml) {
+                selectedServiceHeldXml = heldPayloadXML
+
+                val held = HeldXmlParser().parseXML(heldPayloadXML).also { held ->
                     selectedServiceHeld = held
                 }
 
                 if (held != null) {
-                    val pkg = held.findActivePackage(service_id)
+                    val pkg = held.findActivePackage(serviceId)
 
                     if (pkg != selectedServicePackage) {
                         selectedServicePackage = pkg
@@ -217,6 +259,14 @@ internal class Atsc3Module(context: Context) : ClientListener {
                 }
             }
         }
+    }
+
+    override fun pushMfuByteBufferFragment(mfuByteBufferFragment: MfuByteBufferFragment?) {
+        //TODO("Not yet implemented")
+    }
+
+    override fun pushMpuMetadata_HEVC_NAL_Payload(mpuMetadata_hevc_nal_payload: MpuMetadata_HEVC_NAL_Payload?) {
+        //TODO("Not yet implemented")
     }
 
     override fun onAlcObjectStatusMessage(alc_object_status_message: String) {
@@ -246,6 +296,16 @@ internal class Atsc3Module(context: Context) : ClientListener {
         }
     }
 
+    override fun routeDash_force_player_reload_mpd(ServiceID: Int) {
+        if (ServiceID == selectedServiceId) {
+            getSelectedServiceMediaUri()?.let { mpdPath ->
+                listener?.onCurrentServiceDashPatched(mpdPath)
+            }
+        }
+    }
+
+    //////////////////////////////////////////////////////////////
+
     private fun metadataToPackage(packageMetadata: PackageExtractEnvelopeMetadataAndPayload): Atsc3Application {
         val files = packageMetadata.multipartRelatedPayloadList?.map { file ->
             file.contentLocation to Atsc3ApplicationFile(file.contentLocation, file.contentType, file.version)
@@ -253,17 +313,9 @@ internal class Atsc3Module(context: Context) : ClientListener {
 
         return Atsc3Application(
                 packageMetadata.appContextIdList.split(" "),
-                String.format("%s/%s", client.cacheDir, packageMetadata.packageExtractPath),
+                String.format("%s/%s", jni_getCacheDir(), packageMetadata.packageExtractPath),
                 files
         )
-    }
-
-    override fun onRouteDashUpdated(service_id: Int) {
-        if (service_id == selectedServiceId) {
-            getSelectedServiceMediaUri()?.let { mpdPath ->
-                listener?.onCurrentServiceDashPatched(mpdPath)
-            }
-        }
     }
 
     private fun setState(newState: State) {

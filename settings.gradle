@@ -1,6 +1,21 @@
 rootProject.name='jsonrpc4j test harness'
 include ':sample-app', ':nextgen-core', ':nextgen-middleware', ':nextgen-view'
 
+include ':atsc3_core'
+project(':atsc3_core').projectDir = new File(rootProject.projectDir, 'libatsc3/android/atsc3_core')
+
+include ':atsc3_bridge'
+project(':atsc3_bridge').projectDir = new File(rootProject.projectDir, 'libatsc3/android/atsc3_bridge')
+
+include ':atsc3_phy_virtual'
+project(':atsc3_phy_virtual').projectDir = new File(rootProject.projectDir, 'libatsc3/android/atsc3_phy_virtual')
+
+include ':atsc3_phy_saankhya'
+project(':atsc3_phy_saankhya').projectDir = new File(rootProject.projectDir, 'libatsc3/android/atsc3_phy_saankhya')
+
+include ':atsc3_phy_lowasis'
+project(':atsc3_phy_lowasis').projectDir = new File(rootProject.projectDir, 'libatsc3/android/atsc3_phy_lowasis')
+
 include ':jsonrpc-core'
 project(':jsonrpc-core').projectDir = new File(rootProject.projectDir, 'jsonrpc2/jsonrpc-core')
 
