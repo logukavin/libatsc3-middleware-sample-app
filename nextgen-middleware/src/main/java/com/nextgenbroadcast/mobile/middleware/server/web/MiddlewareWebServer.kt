@@ -9,11 +9,13 @@ import com.nextgenbroadcast.mobile.core.md5
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import com.nextgenbroadcast.mobile.middleware.gateway.rpc.IRPCGateway
 import com.nextgenbroadcast.mobile.middleware.gateway.web.IWebGateway
+import com.nextgenbroadcast.mobile.middleware.server.ServerConstants
 import com.nextgenbroadcast.mobile.middleware.server.ws.MiddlewareWebSocket
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import org.eclipse.jetty.http.HttpVersion
 import org.eclipse.jetty.server.*
+import org.eclipse.jetty.server.handler.ContextHandler
 import org.eclipse.jetty.server.handler.HandlerCollection
 import org.eclipse.jetty.server.handler.HandlerList
 import org.eclipse.jetty.servlet.DefaultServlet
@@ -170,11 +172,14 @@ class MiddlewareWebServer constructor(
 
             val handlerArray = ArrayList<Handler>().apply {
                 rpcGateway?.let { rpcGateway ->
-                    add(object : WebSocketHandler() {
+                    val rpcSocketContextHandler = ContextHandler()
+                    rpcSocketContextHandler.contextPath = "/${ServerConstants.RPC_SOCKET_PATH}"
+                    rpcSocketContextHandler.handler = object : WebSocketHandler() {
                         override fun configure(factory: WebSocketServletFactory) {
                             factory.creator = WebSocketCreator { _, _ -> MiddlewareWebSocket(rpcGateway) }
                         }
-                    })
+                    }
+                    add(rpcSocketContextHandler)
                 }
             }.toTypedArray()
 

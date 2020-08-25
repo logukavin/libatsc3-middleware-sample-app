@@ -4,4 +4,5 @@ interface IClientSettings {
     val hostName: String
     val httpsPort: Int
     val wssPort: Int
+    val socketPath: String
 }
