@@ -9,13 +9,12 @@ import com.nextgenbroadcast.mobile.core.md5
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import com.nextgenbroadcast.mobile.middleware.gateway.rpc.IRPCGateway
 import com.nextgenbroadcast.mobile.middleware.gateway.web.IWebGateway
-import com.nextgenbroadcast.mobile.middleware.server.ServerConstants
+import com.nextgenbroadcast.mobile.middleware.server.ServerConstants.ATSC_CMD_PATH
 import com.nextgenbroadcast.mobile.middleware.server.ws.MiddlewareWebSocket
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import org.eclipse.jetty.http.HttpVersion
 import org.eclipse.jetty.server.*
-import org.eclipse.jetty.server.handler.ContextHandler
 import org.eclipse.jetty.server.handler.HandlerCollection
 import org.eclipse.jetty.server.handler.HandlerList
 import org.eclipse.jetty.servlet.DefaultServlet
@@ -24,6 +23,8 @@ import org.eclipse.jetty.servlet.ServletHolder
 import org.eclipse.jetty.util.resource.Resource
 import org.eclipse.jetty.util.ssl.SslContextFactory
 import org.eclipse.jetty.websocket.server.WebSocketHandler
+import org.eclipse.jetty.websocket.servlet.ServletUpgradeRequest
+import org.eclipse.jetty.websocket.servlet.ServletUpgradeResponse
 import org.eclipse.jetty.websocket.servlet.WebSocketCreator
 import org.eclipse.jetty.websocket.servlet.WebSocketServletFactory
 import java.io.IOException
@@ -172,14 +173,13 @@ class MiddlewareWebServer constructor(
 
             val handlerArray = ArrayList<Handler>().apply {
                 rpcGateway?.let { rpcGateway ->
-                    val rpcSocketContextHandler = ContextHandler()
-                    rpcSocketContextHandler.contextPath = "/${ServerConstants.RPC_SOCKET_PATH}"
-                    rpcSocketContextHandler.handler = object : WebSocketHandler() {
+                    add(object : WebSocketHandler() {
                         override fun configure(factory: WebSocketServletFactory) {
-                            factory.creator = WebSocketCreator { _, _ -> MiddlewareWebSocket(rpcGateway) }
+                            factory.creator = WebSocketCreator { request, response ->
+                                createWebSocket(request, response, rpcGateway)
+                            }
                         }
-                    }
-                    add(rpcSocketContextHandler)
+                    })
                 }
             }.toTypedArray()
 
@@ -191,6 +191,13 @@ class MiddlewareWebServer constructor(
             }
 
             return MiddlewareWebServer(server, webGateway)
+        }
+
+        private fun createWebSocket(request: ServletUpgradeRequest, response: ServletUpgradeResponse, rpcGateway: IRPCGateway) {
+            when (request.httpServletRequest.pathInfo) {
+                ATSC_CMD_PATH -> MiddlewareWebSocket(rpcGateway)
+                else -> response.sendError(404, "Not Found")
+            }
         }
     }
 }

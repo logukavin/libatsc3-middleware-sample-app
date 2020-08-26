@@ -16,7 +16,7 @@ object ServerUtils {
 
     fun addSocketPath(entryPoint: String, settings: IClientSettings) = Uri.parse(entryPoint)
             .buildUpon()
-            .appendQueryParameter("wsURL", "wss://${settings.hostName}:${settings.wssPort}/${settings.socketPath}")
+            .appendQueryParameter("wsURL", "wss://${settings.hostName}:${settings.wssPort}")
             .appendQueryParameter("rev", "${ServerConstants.REVISION}")
             .build()
             .toString()
