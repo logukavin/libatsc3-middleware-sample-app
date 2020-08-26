@@ -24,7 +24,6 @@ internal class MiddlewareSettingsImpl(context: Context) : IMiddlewareSettings {
     override val httpsPort = ServerConstants.HTTPS_PORT
     override val wsPort = ServerConstants.WS_PORT
     override val wssPort = ServerConstants.WSS_PORT
-    override val socketPath = ServerConstants.RPC_SOCKET_PATH
 
     private fun saveString(key: String, value: String): String {
         preferences.edit { putString(key, value) }
