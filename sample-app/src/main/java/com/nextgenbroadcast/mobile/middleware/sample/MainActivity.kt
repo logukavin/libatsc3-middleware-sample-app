@@ -36,6 +36,7 @@ import com.nextgenbroadcast.mobile.view.ReceiverMediaPlayer
 import com.nextgenbroadcast.mobile.view.UserAgentView
 import dagger.android.AndroidInjection
 import kotlinx.android.synthetic.main.activity_main.*
+import java.io.File
 
 class MainActivity : Atsc3Activity() {
     private lateinit var binding: ActivityMainBinding
@@ -265,8 +266,10 @@ class MainActivity : Atsc3Activity() {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         if (requestCode == FILE_REQUEST_CODE && data != null) {
-            data.data?.let { uri ->
-                FileUtils.getPath(applicationContext, uri)?.let { filePath ->
+            val uri = if (data.data != null) data.data else Uri.fromFile(File(data.getStringExtra("FILE")))
+
+            uri?.let { it ->
+                FileUtils.getPath(applicationContext, it)?.let { filePath ->
                     Atsc3ForegroundService.openFile(this, filePath)
                 }
             }
