@@ -24,6 +24,7 @@ import org.eclipse.jetty.util.resource.Resource
 import org.eclipse.jetty.util.ssl.SslContextFactory
 import org.eclipse.jetty.websocket.api.WebSocketAdapter
 import org.eclipse.jetty.websocket.server.WebSocketHandler
+import org.eclipse.jetty.websocket.servlet.ServletUpgradeRequest
 import org.eclipse.jetty.websocket.servlet.WebSocketCreator
 import org.eclipse.jetty.websocket.servlet.WebSocketServletFactory
 import java.io.IOException
@@ -175,7 +176,7 @@ class MiddlewareWebServer constructor(
                     add(object : WebSocketHandler() {
                         override fun configure(factory: WebSocketServletFactory) {
                             factory.creator = WebSocketCreator { req, resp ->
-                                createWebSocket(req, resp, rpcGateway) ?: resp.sendError(404, "Not Found")
+                                createWebSocket(req, rpcGateway) ?: resp.sendError(404, "Not Found")
                             }
                         }
                     })
@@ -194,7 +195,7 @@ class MiddlewareWebServer constructor(
     }
 }
 
-private fun createWebSocket(req: ServletUpgradeRequest, resp: ServletUpgradeResponse, rpcGateway: IRPCGateway): WebSocketAdapter? {
+private fun createWebSocket(req: ServletUpgradeRequest, rpcGateway: IRPCGateway): WebSocketAdapter? {
     return when (req.httpServletRequest.pathInfo) {
         ATSC_CMD_PATH -> MiddlewareWebSocket(rpcGateway)
         else -> null
