@@ -24,8 +24,6 @@ import org.eclipse.jetty.util.resource.Resource
 import org.eclipse.jetty.util.ssl.SslContextFactory
 import org.eclipse.jetty.websocket.api.WebSocketAdapter
 import org.eclipse.jetty.websocket.server.WebSocketHandler
-import org.eclipse.jetty.websocket.servlet.ServletUpgradeRequest
-import org.eclipse.jetty.websocket.servlet.ServletUpgradeResponse
 import org.eclipse.jetty.websocket.servlet.WebSocketCreator
 import org.eclipse.jetty.websocket.servlet.WebSocketServletFactory
 import java.io.IOException
