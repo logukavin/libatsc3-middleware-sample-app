@@ -22,7 +22,10 @@ import org.eclipse.jetty.servlet.ServletContextHandler
 import org.eclipse.jetty.servlet.ServletHolder
 import org.eclipse.jetty.util.resource.Resource
 import org.eclipse.jetty.util.ssl.SslContextFactory
+import org.eclipse.jetty.websocket.api.WebSocketAdapter
 import org.eclipse.jetty.websocket.server.WebSocketHandler
+import org.eclipse.jetty.websocket.servlet.ServletUpgradeRequest
+import org.eclipse.jetty.websocket.servlet.ServletUpgradeResponse
 import org.eclipse.jetty.websocket.servlet.WebSocketCreator
 import org.eclipse.jetty.websocket.servlet.WebSocketServletFactory
 import java.io.IOException
@@ -173,7 +176,9 @@ class MiddlewareWebServer constructor(
                 rpcGateway?.let { rpcGateway ->
                     add(object : WebSocketHandler() {
                         override fun configure(factory: WebSocketServletFactory) {
-                            factory.creator = getWebSocketCreator(rpcGateway)
+                            factory.creator = WebSocketCreator { req, resp ->
+                                createWebSocket(req, resp, rpcGateway) ?: resp.sendError(404, "Not Found")
+                            }
                         }
                     })
                 }
@@ -191,12 +196,10 @@ class MiddlewareWebServer constructor(
     }
 }
 
-private fun getWebSocketCreator(rpcGateway: IRPCGateway): WebSocketCreator {
-    return WebSocketCreator { request, response ->
-        when (request.httpServletRequest.pathInfo) {
-            ATSC_CMD_PATH -> MiddlewareWebSocket(rpcGateway)
-            else -> response.sendError(404, "Not Found")
-        }
+private fun createWebSocket(req: ServletUpgradeRequest, resp: ServletUpgradeResponse, rpcGateway: IRPCGateway): WebSocketAdapter? {
+    return when (req.httpServletRequest.pathInfo) {
+        ATSC_CMD_PATH -> MiddlewareWebSocket(rpcGateway)
+        else -> null
     }
 }
 
