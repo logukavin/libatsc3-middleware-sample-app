@@ -9,6 +9,7 @@ import com.nextgenbroadcast.mobile.core.md5
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import com.nextgenbroadcast.mobile.middleware.gateway.rpc.IRPCGateway
 import com.nextgenbroadcast.mobile.middleware.gateway.web.IWebGateway
+import com.nextgenbroadcast.mobile.middleware.server.ServerConstants.ATSC_CMD_PATH
 import com.nextgenbroadcast.mobile.middleware.server.ws.MiddlewareWebSocket
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -21,7 +22,9 @@ import org.eclipse.jetty.servlet.ServletContextHandler
 import org.eclipse.jetty.servlet.ServletHolder
 import org.eclipse.jetty.util.resource.Resource
 import org.eclipse.jetty.util.ssl.SslContextFactory
+import org.eclipse.jetty.websocket.api.WebSocketAdapter
 import org.eclipse.jetty.websocket.server.WebSocketHandler
+import org.eclipse.jetty.websocket.servlet.ServletUpgradeRequest
 import org.eclipse.jetty.websocket.servlet.WebSocketCreator
 import org.eclipse.jetty.websocket.servlet.WebSocketServletFactory
 import java.io.IOException
@@ -172,7 +175,9 @@ class MiddlewareWebServer constructor(
                 rpcGateway?.let { rpcGateway ->
                     add(object : WebSocketHandler() {
                         override fun configure(factory: WebSocketServletFactory) {
-                            factory.creator = WebSocketCreator { _, _ -> MiddlewareWebSocket(rpcGateway) }
+                            factory.creator = WebSocketCreator { req, resp ->
+                                createWebSocket(req, rpcGateway) ?: resp.sendError(404, "Not Found")
+                            }
                         }
                     })
                 }
@@ -187,6 +192,13 @@ class MiddlewareWebServer constructor(
 
             return MiddlewareWebServer(server, webGateway)
         }
+    }
+}
+
+private fun createWebSocket(req: ServletUpgradeRequest, rpcGateway: IRPCGateway): WebSocketAdapter? {
+    return when (req.httpServletRequest.pathInfo) {
+        ATSC_CMD_PATH -> MiddlewareWebSocket(rpcGateway)
+        else -> null
     }
 }
 

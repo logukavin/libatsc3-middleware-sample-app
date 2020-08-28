@@ -7,4 +7,5 @@ internal object ServerConstants {
     const val WS_PORT = 9998
     const val WSS_PORT = 9999
     const val REVISION = 20200107
+    const val ATSC_CMD_PATH = "/atscCmd"
 }
