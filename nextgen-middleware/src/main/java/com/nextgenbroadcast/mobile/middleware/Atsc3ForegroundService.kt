@@ -166,7 +166,7 @@ class Atsc3ForegroundService : BindableForegroundService() {
             startForeground()
             unregisterDeviceReceiver()
 
-            serviceController.openRoute(device, usbManager)
+            serviceController.openRoute(device)
 
             // Register BroadcastReceiver to detect when device is disconnected
             deviceReceiver = Atsc3DeviceReceiver(device.deviceName).also { receiver ->
