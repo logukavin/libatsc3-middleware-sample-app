@@ -1,7 +1,6 @@
 package com.nextgenbroadcast.mobile.middleware.controller.service
 
 import android.hardware.usb.UsbDevice
-import android.hardware.usb.UsbManager
 import androidx.lifecycle.MutableLiveData
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.model.SLSService
@@ -9,7 +8,6 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3Module
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPackage
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.service.Atsc3Service
-import com.nextgenbroadcast.mobile.middleware.phy.DeviceUtils
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
 import kotlinx.coroutines.*
 
@@ -65,8 +63,12 @@ internal class ServiceControllerImpl (
         setMediaUrlWithDelay(mpdPath)
     }
 
-    override fun openRoute(pcapFile: String): Boolean {
-        return atsc3Module.openPcapFile(pcapFile)
+    override fun openRoute(path: String): Boolean {
+        return if (path.startsWith("srt://")) {
+            atsc3Module.openSRTStream(path)
+        } else {
+            atsc3Module.openPcapFile(path)
+        }
     }
 
     override fun openRoute(device: UsbDevice): Boolean {
