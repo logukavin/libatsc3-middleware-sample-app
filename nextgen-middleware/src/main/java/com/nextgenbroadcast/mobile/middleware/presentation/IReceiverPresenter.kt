@@ -6,6 +6,6 @@ import com.nextgenbroadcast.mobile.core.model.ReceiverState
 interface IReceiverPresenter {
     val receiverState: LiveData<ReceiverState>
 
-    fun openRoute(pcapFile: String): Boolean
+    fun openRoute(path: String): Boolean
     fun closeRoute()
 }
