@@ -71,9 +71,18 @@ def powermock_version = "2.0.7"
 dependencies {
     implementation fileTree(dir: "libs", include: ["*.jar"])
 
+    implementation project(":atsc3_core")
+    implementation project(":atsc3_bridge")
+    implementation project(":atsc3_phy_virtual")
+    implementation project(":atsc3_phy_saankhya")
+    implementation project(":atsc3_phy_lowasis")
+
     implementation project(":nextgen-core")
+
     implementation project(":jsonrpc-core")
     implementation project(":jsonrpc-jackson")
+
+    implementation 'org.apache.commons:commons-lang3:3.9'
 
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
     implementation 'androidx.core:core-ktx:1.3.1'

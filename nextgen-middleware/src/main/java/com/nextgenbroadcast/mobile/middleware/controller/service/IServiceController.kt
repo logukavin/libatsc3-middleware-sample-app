@@ -10,6 +10,6 @@ import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.Urls
 interface IServiceController : IReceiverPresenter, ISelectorPresenter {
     val serviceGuidUrls: LiveData<List<Urls>?>
 
-    fun openRoute(device: UsbDevice, manager: UsbManager): Boolean
+    fun openRoute(device: UsbDevice): Boolean
     fun stopRoute()
 }
