@@ -73,8 +73,9 @@ internal class ServiceDialogActivity : AppCompatActivity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         if (requestCode == FILE_REQUEST_CODE && data != null) {
             val path = data.getStringExtra("FILE") ?: data.data?.let { FileUtils.getPath(applicationContext, it) }
-            path?.let { Atsc3ForegroundService.openFile(this, it) }
+            path?.let { Atsc3ForegroundService.openRoute(this, it) }
 
+            finish()
             return
         }
 
