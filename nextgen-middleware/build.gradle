@@ -74,7 +74,7 @@ dependencies {
     implementation project(":atsc3_core")
     implementation project(":atsc3_bridge")
     implementation project(":atsc3_phy_virtual")
-    implementation project(":atsc3_phy_saankhya")
+    //implementation project(":atsc3_phy_saankhya")
     implementation project(":atsc3_phy_lowasis")
 
     implementation project(":nextgen-core")
