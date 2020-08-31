@@ -141,6 +141,9 @@ internal class Atsc3Module(
                     atsc3NdkPHYClientInstance = atsc3NdkPHYClientBaseCandidate
                     setState(State.OPENED)
 
+                    //jjustman-2020-08-31 - hack - tune to 593000 - CH34
+
+                    atsc3NdkPHYClientInstance?.tune(593000, 0)
                     return true
                 }
             }
