@@ -1,6 +1,6 @@
 [submodule "libatsc3"]
 	path = libatsc3
-	url = https://NGWP@dev.azure.com/NGWP/Middleware/_git/libatsc3
+	url = https://dev.azure.com/NGWP/Middleware/_git/libatsc3
 	branch = lowaSIS
 	update = rebase
 [submodule "jsonrpc2"]
