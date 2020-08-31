@@ -1,6 +1,7 @@
 package com.nextgenbroadcast.mobile.middleware.controller.service
 
 import android.hardware.usb.UsbDevice
+import android.util.Log
 import androidx.lifecycle.MutableLiveData
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.model.SLSService
@@ -50,6 +51,7 @@ internal class ServiceControllerImpl (
     }
 
     override fun onPackageReceived(appPackage: Atsc3Application) {
+        Log.d("ServiceControllerImpl", "onPackageReceived - appPackage: "+appPackage);
         repository.addOrUpdateApplication(appPackage)
     }
 
