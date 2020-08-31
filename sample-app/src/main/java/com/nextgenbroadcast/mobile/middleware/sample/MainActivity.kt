@@ -12,6 +12,8 @@ import android.util.Log
 import android.view.GestureDetector
 import android.view.View
 import android.view.WindowManager
+import android.widget.ArrayAdapter
+import android.widget.ListAdapter
 import android.widget.Toast
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.databinding.DataBindingUtil
@@ -50,7 +52,8 @@ class MainActivity : Atsc3Activity() {
 
     private val updateMediaTimeHandler = Handler(Looper.getMainLooper())
 
-    private lateinit var selectorAdapter: ServiceAdapter
+    private lateinit var serviceAdapter: ServiceAdapter
+    private lateinit var sourceAdapter: ListAdapter
     private lateinit var bottomSheetBehavior: BottomSheetBehavior<View>
 
     override fun onBind(binder: Atsc3ForegroundService.ServiceBinder) {
@@ -107,7 +110,11 @@ class MainActivity : Atsc3Activity() {
             lifecycleOwner = this@MainActivity
         }
 
-        selectorAdapter = ServiceAdapter(this).also { adapter ->
+        serviceAdapter = ServiceAdapter(this)
+
+        sourceAdapter = ArrayAdapter<String>(this, R.layout.service_list_item).apply {
+            addAll(sourceMap.map { (name, _) -> name })
+        }.also { adapter ->
             serviceList.adapter = adapter
         }
 
@@ -134,9 +141,16 @@ class MainActivity : Atsc3Activity() {
 
         serviceList.setOnItemClickListener { _, _, position, _ ->
             bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
-            servicesList?.getOrNull(position)?.let {item ->
+
+            servicesList?.getOrNull(position)?.let { item ->
                 setSelectedService(item.id, item.shortName)
-            } ?: showFileChooser()
+            } ?: if (position == 0) {
+                showFileChooser()
+            } else {
+                sourceMap.getOrNull(position)?.let { (_, path) ->
+                    Atsc3ForegroundService.openRoute(this, path)
+                }
+            }
         }
 
         receiver_media_player.setListener(object : ReceiverMediaPlayer.EventListener {
@@ -162,13 +176,12 @@ class MainActivity : Atsc3Activity() {
         })
 
         bottom_sheet_title.setOnClickListener {
-            when(bottomSheetBehavior.state) {
+            when (bottomSheetBehavior.state) {
                 BottomSheetBehavior.STATE_COLLAPSED -> bottomSheetBehavior.state = BottomSheetBehavior.STATE_EXPANDED
                 BottomSheetBehavior.STATE_EXPANDED -> bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
             }
         }
     }
-
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
@@ -229,14 +242,18 @@ class MainActivity : Atsc3Activity() {
     private fun bindSelector(selectorViewModel: SelectorViewModel) {
         selectorViewModel.services.observe(this, Observer { services ->
             servicesList = services
-            selectorAdapter.setServices(services)
 
             if (services.isNotEmpty()) {
+                serviceList.adapter = serviceAdapter
+                serviceAdapter.setServices(services)
+
                 val selectedServiceId = selectorViewModel.getSelectedServiceId()
                 val service = services.firstOrNull { it.id == selectedServiceId }
                         ?: services.first()
                 setSelectedService(service.id, service.shortName)
             } else {
+                serviceList.adapter = sourceAdapter
+
                 setSelectedService(-1, getString(R.string.no_service_available))
             }
         })
@@ -266,7 +283,7 @@ class MainActivity : Atsc3Activity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         if (requestCode == FILE_REQUEST_CODE && data != null) {
             val path = data.getStringExtra("FILE") ?: data.data?.let { FileUtils.getPath(applicationContext, it) }
-            path?.let { Atsc3ForegroundService.openFile(this, it) }
+            path?.let { Atsc3ForegroundService.openRoute(this, it) }
 
             return
         }
@@ -361,5 +378,13 @@ class MainActivity : Atsc3Activity() {
 
         private const val FILE_REQUEST_CODE = 133
         private const val MEDIA_TIME_UPDATE_DELAY = 500L
+
+        private val sourceMap = listOf(
+                Pair("Select pcap file...", ""),
+                Pair("las", "srt://las.srt.atsc3.com:31350?passphrase=A166AC45-DB7C-4B68-B957-09B8452C76A4"),
+                Pair("bna", "srt://bna.srt.atsc3.com:31347?passphrase=88731837-0EB5-4951-83AA-F515B3BEBC20"),
+                Pair("slc", "srt://slc.srt.atsc3.com:31341?passphrase=B9E4F7B8-3CDD-4BA2-ACA6-13088AB855C0"),
+                Pair("lab", "srt://lab.srt.atsc3.com:31340?passphrase=03760631-667B-4ADB-9E04-E4491B0A7CF1")
+        )
     }
 }

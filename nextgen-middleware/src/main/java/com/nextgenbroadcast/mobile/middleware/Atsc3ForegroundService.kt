@@ -100,7 +100,7 @@ class Atsc3ForegroundService : BindableForegroundService() {
 
                 ACTION_RMP_PAUSE -> viewController?.rmpPause()
 
-                ACTION_OPEN_FILE -> openFileSource(intent.getStringExtra(EXTRA_FILE_PATH))
+                ACTION_OPEN_ROUTE -> openRoute(intent.getStringExtra(EXTRA_ROUTE_PATH))
 
                 ACTION_CLOSE_ROUTE -> closeRoute()
 
@@ -118,7 +118,7 @@ class Atsc3ForegroundService : BindableForegroundService() {
         return ServiceBinder()
     }
 
-    private fun openFileSource(filePath: String?) {
+    private fun openRoute(filePath: String?) {
         // change source to file. So, let's unregister device receiver
         unregisterDeviceReceiver()
 
@@ -272,8 +272,8 @@ class Atsc3ForegroundService : BindableForegroundService() {
         fun getReceiverPresenter(): IReceiverPresenter = object : IReceiverPresenter {
             override val receiverState = serviceController.receiverState
 
-            override fun openRoute(pcapFile: String): Boolean {
-                openFile(this@Atsc3ForegroundService, pcapFile)
+            override fun openRoute(path: String): Boolean {
+                openRoute(this@Atsc3ForegroundService, path)
                 return true
             }
 
@@ -299,11 +299,11 @@ class Atsc3ForegroundService : BindableForegroundService() {
         const val ACTION_DEVICE_DETACHED = "$SERVICE_ACTION.USB_DETACHED"
         const val ACTION_RMP_PLAY = "$SERVICE_ACTION.RMP_PLAY"
         const val ACTION_RMP_PAUSE = "$SERVICE_ACTION.RMP_PAUSE"
-        const val ACTION_OPEN_FILE = "$SERVICE_ACTION.OPEN_FILE"
+        const val ACTION_OPEN_ROUTE = "$SERVICE_ACTION.OPEN_FILE"
         const val ACTION_CLOSE_ROUTE = "$SERVICE_ACTION.CLOSE_ROUTE"
 
         const val EXTRA_DEVICE = "device"
-        const val EXTRA_FILE_PATH = "file_path"
+        const val EXTRA_ROUTE_PATH = "file_path"
 
         @Deprecated("old implementation")
         fun startService(context: Context) {
@@ -329,9 +329,9 @@ class Atsc3ForegroundService : BindableForegroundService() {
             }
         }
 
-        fun openFile(context: Context, filePath: String) {
-            newIntent(context, ACTION_OPEN_FILE).let { serviceIntent ->
-                serviceIntent.putExtra(EXTRA_FILE_PATH, filePath)
+        fun openRoute(context: Context, filePath: String) {
+            newIntent(context, ACTION_OPEN_ROUTE).let { serviceIntent ->
+                serviceIntent.putExtra(EXTRA_ROUTE_PATH, filePath)
                 ContextCompat.startForegroundService(context, serviceIntent)
             }
         }
