@@ -18,8 +18,6 @@ import org.ngbp.libatsc3.middleware.android.application.sync.mmt.MfuByteBufferFr
 import org.ngbp.libatsc3.middleware.android.application.sync.mmt.MpuMetadata_HEVC_NAL_Payload
 import org.ngbp.libatsc3.middleware.android.phy.Atsc3NdkPHYClientBase
 import org.ngbp.libatsc3.middleware.android.phy.Atsc3UsbDevice
-import org.ngbp.libatsc3.middleware.android.phy.LowaSISPHYAndroid
-import org.ngbp.libatsc3.middleware.android.phy.SaankhyaPHYAndroid
 import org.ngbp.libatsc3.middleware.android.phy.virtual.PcapDemuxedPHYVirtualAndroid
 import org.ngbp.libatsc3.middleware.android.phy.virtual.srt.SRTRxSTLTPVirtualPHYAndroid
 import java.io.File
