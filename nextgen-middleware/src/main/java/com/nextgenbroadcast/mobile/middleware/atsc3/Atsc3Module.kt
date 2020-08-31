@@ -103,9 +103,16 @@ internal class Atsc3Module(
     fun openUsbDevice(device: UsbDevice): Boolean {
         log("Opening USB device: ${device.deviceName}")
 
-        Atsc3UsbDevice.FindFromUsbDevice(device)?.let {
-            log("usbPHYLayerDeviceTryToInstantiateFromRegisteredPHYNDKs", "Atsc3UsbDevice already instantiated: $device")
-            return false
+        Atsc3UsbDevice.DumpAllAtsc3UsbDevices();
+
+          Atsc3UsbDevice.FindFromUsbDevice(device)?.let {
+            if(it != null ) {
+                log("usbPHYLayerDeviceTryToInstantiateFromRegisteredPHYNDKs: Atsc3UsbDevice already instantiated: $device, instance: $it")
+                return false
+            } else {
+                log("usbPHYLayerDeviceTryToInstantiateFromRegisteredPHYNDKs: Atsc3UsbDevice map returned : $device, but null instance? instance: $it")
+
+            }
         }
 
         close()
@@ -128,6 +135,7 @@ internal class Atsc3Module(
                     log("prepareDevices: download_bootloader_firmware with $atsc3NdkPHYClientBaseCandidate for path: ${atsc3UsbDevice.deviceName}, fd: ${atsc3UsbDevice.fd}, success")
                     //pre-boot devices should re-enumerate, so don't track this connection just yet...
                 }
+
             } else {
                 val r = atsc3NdkPHYClientBaseCandidate.open(atsc3UsbDevice.fd, atsc3UsbDevice.deviceName)
                 if (r < 0) {
@@ -141,7 +149,7 @@ internal class Atsc3Module(
                     atsc3NdkPHYClientInstance = atsc3NdkPHYClientBaseCandidate
                     setState(State.OPENED)
 
-                    //jjustman-2020-08-31 - hack - tune to 593000 - CH34
+                    //jjustman-2020-08-31 - hack for LowaSIS - tune to 593000 - CH34
 
                     atsc3NdkPHYClientInstance?.tune(593000, 0)
                     return true
@@ -150,6 +158,25 @@ internal class Atsc3Module(
         }
 
         atsc3UsbDevice.destroy()
+
+        return false
+    }
+
+    fun closeUsbDevice(device: UsbDevice): Boolean {
+
+        log("closeUsbDevice -- before FindFromUsbDevice")
+        Atsc3UsbDevice.DumpAllAtsc3UsbDevices();
+
+        Atsc3UsbDevice.FindFromUsbDevice(device)?.let {
+            log("closeUsbDevice USB device: ${device.deviceName}, Atsc3UsbDevice.FindFromUsbDevice returned $it, destroying")
+            it.destroy()
+
+            Atsc3UsbDevice.DumpAllAtsc3UsbDevices();
+
+            return true
+        }
+
+        log("closeUsbDevice USB device: ${device.deviceName}, unable to find instantiated reference from Atsc3UsbDevice.FindFromUsbDevice!")
 
         return false
     }

@@ -181,6 +181,10 @@ class Atsc3ForegroundService : BindableForegroundService() {
     }
 
     private fun onDeviceDetached(device: UsbDevice?) {
+        if(device != null) {
+            serviceController.closeRoute(device)
+        }
+
         closeRoute()
     }
 

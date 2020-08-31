@@ -77,6 +77,10 @@ internal class ServiceControllerImpl (
         return atsc3Module.openUsbDevice(device)
     }
 
+    override fun closeRoute(device: UsbDevice): Boolean {
+        return atsc3Module.closeUsbDevice(device)
+    }
+
     override fun stopRoute() {
         atsc3Module.stop()
     }
