@@ -257,6 +257,8 @@ internal class Atsc3Module(
     override fun jni_getCacheDir(): File = context.cacheDir
 
     override fun onSlsTablePresent(sls_payload_xml: String) {
+        log("onSlsTablePresent, $sls_payload_xml");
+
         val services = LLSParserSLT().parseXML(sls_payload_xml)
 
         serviceMap.putAll(services.map { it.serviceId to it }.toMap())
