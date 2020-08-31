@@ -5,6 +5,7 @@ import com.nextgenbroadcast.mobile.middleware.server.web.MiddlewareWebServer
 import com.nextgenbroadcast.mobile.middleware.server.web.MiddlewareWebServerError
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestCoroutineDispatcher
 import kotlinx.coroutines.test.runBlockingTest
 import okhttp3.ConnectionSpec
@@ -12,10 +13,17 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.eclipse.jetty.servlet.ServletContextHandler
 import org.eclipse.jetty.servlet.ServletHolder
-import org.junit.*
+import org.junit.After
+import org.junit.Assert
+import org.junit.Before
+import org.junit.Test
 import org.junit.runner.RunWith
 import org.powermock.modules.junit4.PowerMockRunner
 import java.io.IOException
+import java.security.KeyStore
+import javax.net.ssl.TrustManager
+import javax.net.ssl.TrustManagerFactory
+import javax.net.ssl.X509TrustManager
 import javax.servlet.ServletException
 import javax.servlet.http.HttpServlet
 import javax.servlet.http.HttpServletRequest
@@ -72,9 +80,11 @@ class WebServerTests : ServerTest() {
         Assert.assertEquals(true, response.isSuccessful)
     }
 
+    @ExperimentalCoroutinesApi
     @Test
-    fun makeHttpErrorCall() {
+    fun makeHttpErrorCall() = testDispatcher.runBlockingTest {
         val client = OkHttpClient.Builder().connectionSpecs(listOf(ConnectionSpec.CLEARTEXT)).build()
+        launch { delay(500) }
         val request: Request = Request.Builder().url("http://localhost:8080/index1.html").build()
         val response = client.newCall(request).execute()
         val serverMessage = response.body()?.string()
@@ -87,7 +97,7 @@ class WebServerTests : ServerTest() {
     @Test
     fun makeHttpsCall() {
         val sslContext = UserAgentSSLContext(mockApplicationContext).getInitializedSSLContext("MY_PASSWORD")
-        val client = OkHttpClient().newBuilder().sslSocketFactory(sslContext.socketFactory).build()
+        val client = OkHttpClient().newBuilder().sslSocketFactory(sslContext.socketFactory, getTrustManager()).build()
         val request: Request = Request.Builder().url("https://localhost:8443/index.html").build()
         val response = client.newCall(request).execute()
         val serverMessage = response.body()?.string()
@@ -99,7 +109,7 @@ class WebServerTests : ServerTest() {
     @Test
     fun makeHttpsErrorCall() {
         val sslContext = UserAgentSSLContext(mockApplicationContext).getInitializedSSLContext("MY_PASSWORD")
-        val client = OkHttpClient().newBuilder().sslSocketFactory(sslContext.socketFactory).build()
+        val client = OkHttpClient().newBuilder().sslSocketFactory(sslContext.socketFactory, getTrustManager()).build()
         val request: Request = Request.Builder().url("https://localhost:8443/index1.html").build()
         val response = client.newCall(request).execute()
         val serverMessage = response.body()?.string()
@@ -107,6 +117,14 @@ class WebServerTests : ServerTest() {
         Assert.assertNotEquals(SERVER_MESSAGE, serverMessage)
         Assert.assertEquals(404, code)
         Assert.assertEquals(false, response.isSuccessful)
+    }
+
+    private fun getTrustManager(): X509TrustManager {
+        val trustManagerFactory: TrustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
+        trustManagerFactory.init(null as KeyStore?)
+        val trustManagers: Array<TrustManager> = trustManagerFactory.trustManagers
+        check(!(trustManagers.size != 1 || trustManagers[0] !is X509TrustManager)) { "Unexpected default trust managers:${trustManagers.contentToString()}" }
+        return trustManagers[0] as X509TrustManager
     }
 
     companion object {
