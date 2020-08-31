@@ -242,16 +242,19 @@ internal class Atsc3Module(
     }
 
     override fun onSlsHeldEmissionPresent(serviceId: Int, heldPayloadXML: String) {
+        log("onSlsHeldEmissionPresent, $serviceId, selectedServiceID: $selectedServiceId");
+
         if (serviceId == selectedServiceId) {
             if (heldPayloadXML != selectedServiceHeldXml) {
                 selectedServiceHeldXml = heldPayloadXML
 
-                val held = HeldXmlParser().parseXML(heldPayloadXML).also { held ->
+                val held = HeldXmlParser().parseXML(serviceId, heldPayloadXML).also { held ->
                     selectedServiceHeld = held
                 }
 
                 if (held != null) {
                     val pkg = held.findActivePackage(serviceId)
+                    log("onSlsHeldEmissionPresent, pkg: $pkg");
 
                     if (pkg != selectedServicePackage) {
                         selectedServicePackage = pkg
@@ -275,6 +278,8 @@ internal class Atsc3Module(
     }
 
     override fun onPackageExtractCompleted(packageMetadata: PackageExtractEnvelopeMetadataAndPayload) {
+        log("onPackageExtractCompleted with packageMetadata.appContextIdList: "+packageMetadata.appContextIdList);
+
         val appPackage = packageMap[packageMetadata.appContextIdList]
         if (appPackage == null) {
             val pkg = metadataToPackage(packageMetadata).also {

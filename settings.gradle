@@ -1,4 +1,4 @@
-rootProject.name='jsonrpc4j test harness'
+rootProject.name='Android ATSC 3.0 Sample App (A344 and PHY support)'
 include ':sample-app', ':nextgen-core', ':nextgen-middleware', ':nextgen-view'
 
 include ':atsc3_core'
