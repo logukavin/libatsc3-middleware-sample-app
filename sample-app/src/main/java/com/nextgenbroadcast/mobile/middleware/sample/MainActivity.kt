@@ -115,7 +115,7 @@ class MainActivity : Atsc3Activity() {
         super.onCreate(savedInstanceState)
 
         savedInstanceState?.let {
-            isPreviewMode = it.getBoolean("isPreviewMode")
+            isPreviewMode = it.getBoolean(MODE_PREVIEW)
         } ?: run {
             isPreviewMode = intent.action == ACTION_MODE_PREVIEW
         }
@@ -199,7 +199,7 @@ class MainActivity : Atsc3Activity() {
 
     override fun onSaveInstanceState(outState: Bundle, outPersistentState: PersistableBundle) {
         super.onSaveInstanceState(outState, outPersistentState)
-        outState.putBoolean("isPreviewMode", isPreviewMode)
+        outState.putBoolean(MODE_PREVIEW, isPreviewMode)
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
@@ -394,6 +394,7 @@ class MainActivity : Atsc3Activity() {
         val TAG: String = MainActivity::class.java.simpleName
 
         private const val ACTION_MODE_PREVIEW = "android.intent.action.PREVIEW"
+        private const val MODE_PREVIEW = "isPreviewMode"
 
         private const val FILE_REQUEST_CODE = 133
         private const val MEDIA_TIME_UPDATE_DELAY = 500L
