@@ -2,10 +2,14 @@
 <layout xmlns:android="http://schemas.android.com/apk/res/android">
 
     <data>
+        <import type="android.view.View"/>
 
         <variable
             name="receiverModel"
             type="com.nextgenbroadcast.mobile.middleware.sample.lifecycle.ReceiverViewModel" />
+        <variable
+            name="isPreviewMode"
+            type="java.lang.Boolean"/>
     </data>
 
     <androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -56,6 +60,7 @@
                 android:paddingStart="10dp"
                 android:paddingEnd="10dp"
                 android:text="@{receiverModel.appDataLog}"
+                android:visibility="@{isPreviewMode ? View.GONE : View.VISIBLE}"
                 android:textColor="@color/white"
                 android:textSize="10sp"
                 app:layout_constraintEnd_toEndOf="parent"
