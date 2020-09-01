@@ -3,8 +3,6 @@ package com.nextgenbroadcast.mobile.middleware.atsc3.entities.held
 import java.time.ZonedDateTime
 
 data class Atsc3HeldPackage(
-        var ParsedServiceID: Int? = null,
-
         var appContextId: String? = null,
         var requiredCapabilities: Long? = null,
         var bcastEntryPackageUrl: String? = null,

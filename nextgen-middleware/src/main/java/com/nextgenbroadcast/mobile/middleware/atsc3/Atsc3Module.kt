@@ -97,23 +97,20 @@ internal class Atsc3Module(
             client.run()
         }
 
+        setState(State.OPENED)
+
         return true
     }
 
     fun openUsbDevice(device: UsbDevice): Boolean {
         log("Opening USB device: ${device.deviceName}")
 
-        Atsc3UsbDevice.DumpAllAtsc3UsbDevices();
+        Atsc3UsbDevice.DumpAllAtsc3UsbDevices()
 
-          Atsc3UsbDevice.FindFromUsbDevice(device)?.let {
-            if(it != null ) {
-                log("usbPHYLayerDeviceTryToInstantiateFromRegisteredPHYNDKs: Atsc3UsbDevice already instantiated: $device, instance: $it")
-                return false
-            } else {
-                log("usbPHYLayerDeviceTryToInstantiateFromRegisteredPHYNDKs: Atsc3UsbDevice map returned : $device, but null instance? instance: $it")
-
-            }
-        }
+        Atsc3UsbDevice.FindFromUsbDevice(device)?.let {
+            log("usbPHYLayerDeviceTryToInstantiateFromRegisteredPHYNDKs: Atsc3UsbDevice already instantiated: $device, instance: $it")
+            return false
+        } ?: log("usbPHYLayerDeviceTryToInstantiateFromRegisteredPHYNDKs: Atsc3UsbDevice map returned : $device, but null instance?")
 
         close()
 
@@ -145,38 +142,17 @@ internal class Atsc3Module(
 
                     atsc3NdkPHYClientBaseCandidate.setAtsc3UsbDevice(atsc3UsbDevice)
                     atsc3UsbDevice.setAtsc3NdkPHYClientBase(atsc3NdkPHYClientBaseCandidate)
+                    //jjustman-2020-08-31 - hack for LowaSIS - tune to 593000 - CH34
+                    atsc3NdkPHYClientBaseCandidate.tune(593000, 0)
 
                     atsc3NdkPHYClientInstance = atsc3NdkPHYClientBaseCandidate
                     setState(State.OPENED)
-
-                    //jjustman-2020-08-31 - hack for LowaSIS - tune to 593000 - CH34
-
-                    atsc3NdkPHYClientInstance?.tune(593000, 0)
                     return true
                 }
             }
         }
 
         atsc3UsbDevice.destroy()
-
-        return false
-    }
-
-    fun closeUsbDevice(device: UsbDevice): Boolean {
-
-        log("closeUsbDevice -- before FindFromUsbDevice")
-        Atsc3UsbDevice.DumpAllAtsc3UsbDevices();
-
-        Atsc3UsbDevice.FindFromUsbDevice(device)?.let {
-            log("closeUsbDevice USB device: ${device.deviceName}, Atsc3UsbDevice.FindFromUsbDevice returned $it, destroying")
-            it.destroy()
-
-            Atsc3UsbDevice.DumpAllAtsc3UsbDevices();
-
-            return true
-        }
-
-        log("closeUsbDevice USB device: ${device.deviceName}, unable to find instantiated reference from Atsc3UsbDevice.FindFromUsbDevice!")
 
         return false
     }
@@ -198,6 +174,14 @@ internal class Atsc3Module(
 
     fun close() {
         atsc3NdkPHYClientInstance?.let { client ->
+            client.atsc3UsbDevice?.let { device ->
+                log("closeUsbDevice -- before FindFromUsbDevice")
+                Atsc3UsbDevice.DumpAllAtsc3UsbDevices();
+
+                device.destroy()
+
+                Atsc3UsbDevice.DumpAllAtsc3UsbDevices();
+            }
             client.stop()
             client.deinit()
 //            try {
@@ -277,12 +261,12 @@ internal class Atsc3Module(
             if (heldPayloadXML != selectedServiceHeldXml) {
                 selectedServiceHeldXml = heldPayloadXML
 
-                val held = HeldXmlParser().parseXML(serviceId, heldPayloadXML).also { held ->
+                val held = HeldXmlParser().parseXML(heldPayloadXML).also { held ->
                     selectedServiceHeld = held
                 }
 
                 if (held != null) {
-                    val pkg = held.findActivePackage(serviceId)
+                    val pkg = held.findActivePackage()
                     log("onSlsHeldEmissionPresent, pkg: $pkg");
 
                     if (pkg != selectedServicePackage) {
@@ -307,7 +291,7 @@ internal class Atsc3Module(
     }
 
     override fun onPackageExtractCompleted(packageMetadata: PackageExtractEnvelopeMetadataAndPayload) {
-        log("onPackageExtractCompleted with packageMetadata.appContextIdList: "+packageMetadata.appContextIdList);
+        log("onPackageExtractCompleted with packageMetadata.appContextIdList: ${packageMetadata.appContextIdList}")
 
         val appPackage = packageMap[packageMetadata.appContextIdList]
         if (appPackage == null) {

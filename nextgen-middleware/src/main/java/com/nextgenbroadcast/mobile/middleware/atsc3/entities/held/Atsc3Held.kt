@@ -6,9 +6,9 @@ class Atsc3Held(
         val packages: List<Atsc3HeldPackage>
 ) {
     //jjustman-2020-08-31 - copuledServices is not applicable for only one serviceID...
-    fun findActivePackage(serviceId: Int): Atsc3HeldPackage? {
+    fun findActivePackage(): Atsc3HeldPackage? {
         return packages.firstOrNull { pkg ->
-            isValid(pkg) && pkg.ParsedServiceID == serviceId
+            isValid(pkg)
         }
     }
 

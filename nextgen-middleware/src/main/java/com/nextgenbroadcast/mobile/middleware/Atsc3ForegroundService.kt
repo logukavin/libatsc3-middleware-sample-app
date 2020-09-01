@@ -130,9 +130,9 @@ class Atsc3ForegroundService : BindableForegroundService() {
 
     private fun closeRoute() {
         unregisterDeviceReceiver()
+
+        serviceController.stopRoute() // call to stopRoute is not a mistake. We use it to close previously opened file
         serviceController.closeRoute()
-        // call to stopRoute is not a mistake. We use it to close previously opened file
-        serviceController.stopRoute()
 
         if (isBinded) {
             stopSelf()
@@ -176,15 +176,12 @@ class Atsc3ForegroundService : BindableForegroundService() {
                 })
             }
         } else {
-            usbManager.requestPermission(device, PendingIntent.getBroadcast(this, 0, Intent(ACTION_USB_PERMISSION), 0))
+            //TODO: If we need this request then add ACTION_USB_PERMISSION action processing
+            usbManager.requestPermission(device, PendingIntent.getService(this, 0, Intent(ACTION_USB_PERMISSION), 0))
         }
     }
 
     private fun onDeviceDetached(device: UsbDevice?) {
-        if(device != null) {
-            serviceController.closeRoute(device)
-        }
-
         closeRoute()
     }
 
