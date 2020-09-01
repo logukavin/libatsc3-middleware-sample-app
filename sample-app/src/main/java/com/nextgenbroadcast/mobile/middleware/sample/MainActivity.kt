@@ -8,6 +8,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.PersistableBundle
 import android.util.Log
 import android.view.GestureDetector
 import android.view.View
@@ -40,6 +41,7 @@ import dagger.android.AndroidInjection
 import kotlinx.android.synthetic.main.activity_main.*
 
 class MainActivity : Atsc3Activity() {
+
     private lateinit var binding: ActivityMainBinding
 
     private var rmpViewModel: RMPViewModel? = null
@@ -49,6 +51,7 @@ class MainActivity : Atsc3Activity() {
 
     private var servicesList: List<SLSService>? = null
     private var currentAppData: AppData? = null
+    private var isPreviewMode = false
 
     private val updateMediaTimeHandler = Handler(Looper.getMainLooper())
 
@@ -70,6 +73,9 @@ class MainActivity : Atsc3Activity() {
             bindUserAgent(userAgent)
             bindMediaPlayer(rmp)
         }
+        if(isPreviewMode) {
+            Atsc3ForegroundService.openRoute(this, sourceMap[2].second)
+        }
     }
 
     private fun bindViewModels(provider: ViewModelProvider): Triple<RMPViewModel, UserAgentViewModel, SelectorViewModel> {
@@ -85,8 +91,10 @@ class MainActivity : Atsc3Activity() {
             selectorViewModel = it
         }
 
-        binding.receiverModel = provider.get(ReceiverViewModel::class.java).also {
-            receiverViewModel = it
+        if(!isPreviewMode) {
+            binding.receiverModel = provider.get(ReceiverViewModel::class.java).also {
+                receiverViewModel = it
+            }
         }
 
         return Triple(rmp, userAgent, selector)
@@ -105,6 +113,12 @@ class MainActivity : Atsc3Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         AndroidInjection.inject(this)
         super.onCreate(savedInstanceState)
+
+        savedInstanceState?.let {
+            isPreviewMode = it.getBoolean("isPreviewMode")
+        } ?: run {
+            isPreviewMode = intent.action == ACTION_MODE_PREVIEW
+        }
 
         binding = DataBindingUtil.setContentView<ActivityMainBinding>(this, R.layout.activity_main).apply {
             lifecycleOwner = this@MainActivity
@@ -183,6 +197,11 @@ class MainActivity : Atsc3Activity() {
         }
     }
 
+    override fun onSaveInstanceState(outState: Bundle, outPersistentState: PersistableBundle) {
+        super.onSaveInstanceState(outState, outPersistentState)
+        outState.putBoolean("isPreviewMode", isPreviewMode)
+    }
+
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
 
@@ -242,7 +261,6 @@ class MainActivity : Atsc3Activity() {
     private fun bindSelector(selectorViewModel: SelectorViewModel) {
         selectorViewModel.services.observe(this, Observer { services ->
             servicesList = services
-
             if (services.isNotEmpty()) {
                 serviceList.adapter = serviceAdapter
                 serviceAdapter.setServices(services)
@@ -253,7 +271,6 @@ class MainActivity : Atsc3Activity() {
                 setSelectedService(service.id, service.shortName)
             } else {
                 serviceList.adapter = sourceAdapter
-
                 setSelectedService(-1, getString(R.string.no_service_available))
             }
         })
@@ -375,6 +392,8 @@ class MainActivity : Atsc3Activity() {
 
     companion object {
         val TAG: String = MainActivity::class.java.simpleName
+
+        private const val ACTION_MODE_PREVIEW = "android.intent.action.PREVIEW"
 
         private const val FILE_REQUEST_CODE = 133
         private const val MEDIA_TIME_UPDATE_DELAY = 500L
