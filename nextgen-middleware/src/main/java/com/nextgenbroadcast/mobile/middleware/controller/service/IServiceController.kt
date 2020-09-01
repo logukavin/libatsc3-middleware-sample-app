@@ -11,6 +11,5 @@ interface IServiceController : IReceiverPresenter, ISelectorPresenter {
     val serviceGuidUrls: LiveData<List<Urls>?>
 
     fun openRoute(device: UsbDevice): Boolean
-    fun closeRoute(device: UsbDevice): Boolean
     fun stopRoute()
 }

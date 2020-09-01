@@ -7,7 +7,7 @@ import org.xmlpull.v1.XmlPullParserException
 import java.io.IOException
 
 class HeldXmlParser {
-    fun parseXML(serviceId: Int, xmlPayload: String): Atsc3Held? {
+    fun parseXML(xmlPayload: String): Atsc3Held? {
         val packages = arrayListOf<Atsc3HeldPackage>()
         try {
             val parser = XmlUtils.newParser(xmlPayload)
@@ -21,7 +21,7 @@ class HeldXmlParser {
                 }
 
                 if (parser.name == ENTRY_HELD_PACKAGE) {
-                    packages.add(readHeld(serviceId, parser))
+                    packages.add(readHeld(parser))
                 } else {
                     XmlUtils.skip(parser)
                 }
@@ -38,11 +38,10 @@ class HeldXmlParser {
     }
 
     @Throws(IOException::class, XmlPullParserException::class)
-    private fun readHeld(serviceId: Int, parser: XmlPullParser): Atsc3HeldPackage {
+    private fun readHeld(parser: XmlPullParser): Atsc3HeldPackage {
         parser.require(XmlPullParser.START_TAG, null, ENTRY_HELD_PACKAGE)
 
         val pkg = Atsc3HeldPackage()
-        pkg.ParsedServiceID = serviceId;
 
         val attrCount = parser.attributeCount
         for (i in 0 until attrCount) {
