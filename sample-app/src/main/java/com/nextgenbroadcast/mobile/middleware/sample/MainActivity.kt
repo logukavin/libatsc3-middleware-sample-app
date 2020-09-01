@@ -73,9 +73,6 @@ class MainActivity : Atsc3Activity() {
             bindUserAgent(userAgent)
             bindMediaPlayer(rmp)
         }
-        if(isPreviewMode) {
-            Atsc3ForegroundService.openRoute(this, sourceMap[2].second)
-        }
     }
 
     private fun bindViewModels(provider: ViewModelProvider): Triple<RMPViewModel, UserAgentViewModel, SelectorViewModel> {
@@ -91,10 +88,8 @@ class MainActivity : Atsc3Activity() {
             selectorViewModel = it
         }
 
-        if(!isPreviewMode) {
-            binding.receiverModel = provider.get(ReceiverViewModel::class.java).also {
-                receiverViewModel = it
-            }
+        binding.receiverModel = provider.get(ReceiverViewModel::class.java).also {
+            receiverViewModel = it
         }
 
         return Triple(rmp, userAgent, selector)
@@ -114,10 +109,10 @@ class MainActivity : Atsc3Activity() {
         AndroidInjection.inject(this)
         super.onCreate(savedInstanceState)
 
-        savedInstanceState?.let {
-            isPreviewMode = it.getBoolean(MODE_PREVIEW)
+        isPreviewMode = savedInstanceState?.let {
+            it.getBoolean(MODE_PREVIEW)
         } ?: run {
-            isPreviewMode = intent.action == ACTION_MODE_PREVIEW
+            intent.action == ACTION_MODE_PREVIEW
         }
 
         binding = DataBindingUtil.setContentView<ActivityMainBinding>(this, R.layout.activity_main).apply {
@@ -195,6 +190,11 @@ class MainActivity : Atsc3Activity() {
                 BottomSheetBehavior.STATE_EXPANDED -> bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
             }
         }
+
+        binding.isPreviewMode = isPreviewMode
+        if(isPreviewMode) {
+            Atsc3ForegroundService.openRoute(this, sourceMap[2].second)
+        }
     }
 
     override fun onSaveInstanceState(outState: Bundle, outPersistentState: PersistableBundle) {
@@ -261,6 +261,7 @@ class MainActivity : Atsc3Activity() {
     private fun bindSelector(selectorViewModel: SelectorViewModel) {
         selectorViewModel.services.observe(this, Observer { services ->
             servicesList = services
+
             if (services.isNotEmpty()) {
                 serviceList.adapter = serviceAdapter
                 serviceAdapter.setServices(services)
@@ -393,7 +394,7 @@ class MainActivity : Atsc3Activity() {
     companion object {
         val TAG: String = MainActivity::class.java.simpleName
 
-        private const val ACTION_MODE_PREVIEW = "android.intent.action.PREVIEW"
+        private const val ACTION_MODE_PREVIEW = "com.nextgenbroadcast.mobile.middleware.sample.MODE_PREVIEW"
         private const val MODE_PREVIEW = "isPreviewMode"
 
         private const val FILE_REQUEST_CODE = 133

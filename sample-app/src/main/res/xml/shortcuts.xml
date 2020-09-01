@@ -6,13 +6,8 @@
         android:icon="@drawable/ic_preview_mode"
         android:shortcutShortLabel="@string/shortcut_preview_mode">
         <intent
-            android:action="android.intent.action.PREVIEW"
+            android:action="com.nextgenbroadcast.mobile.middleware.sample.MODE_PREVIEW"
             android:targetPackage="com.nextgenbroadcast.mobile.middleware.sample"
             android:targetClass="com.nextgenbroadcast.mobile.middleware.sample.MainActivity" />
-<!--        &lt;!&ndash; If your shortcut is associated with multiple intents, include them
-             here. The last intent in the list determines what the user sees when
-             they launch this shortcut. &ndash;&gt;
-        <categories android:name="android.shortcut.conversation" />-->
     </shortcut>
-    <!-- Specify more shortcuts here. -->
 </shortcuts>
