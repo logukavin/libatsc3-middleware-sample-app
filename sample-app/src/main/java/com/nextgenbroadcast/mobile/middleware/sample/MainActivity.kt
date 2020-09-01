@@ -108,7 +108,6 @@ class MainActivity : Atsc3Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         AndroidInjection.inject(this)
         super.onCreate(savedInstanceState)
-
         isPreviewMode = savedInstanceState?.let {
             it.getBoolean(MODE_PREVIEW)
         } ?: run {
@@ -394,7 +393,7 @@ class MainActivity : Atsc3Activity() {
     companion object {
         val TAG: String = MainActivity::class.java.simpleName
 
-        private const val ACTION_MODE_PREVIEW = "com.nextgenbroadcast.mobile.middleware.sample.MODE_PREVIEW"
+        private const val ACTION_MODE_PREVIEW = "${BuildConfig.APPLICATION_ID}.MODE_PREVIEW"
         private const val MODE_PREVIEW = "isPreviewMode"
 
         private const val FILE_REQUEST_CODE = 133
