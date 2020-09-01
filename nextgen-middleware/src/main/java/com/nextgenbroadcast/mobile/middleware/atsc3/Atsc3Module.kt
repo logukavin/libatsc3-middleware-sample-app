@@ -97,16 +97,20 @@ internal class Atsc3Module(
             client.run()
         }
 
+        setState(State.OPENED)
+
         return true
     }
 
     fun openUsbDevice(device: UsbDevice): Boolean {
         log("Opening USB device: ${device.deviceName}")
 
+        Atsc3UsbDevice.DumpAllAtsc3UsbDevices()
+
         Atsc3UsbDevice.FindFromUsbDevice(device)?.let {
-            log("usbPHYLayerDeviceTryToInstantiateFromRegisteredPHYNDKs", "Atsc3UsbDevice already instantiated: $device")
+            log("usbPHYLayerDeviceTryToInstantiateFromRegisteredPHYNDKs: Atsc3UsbDevice already instantiated: $device, instance: $it")
             return false
-        }
+        } ?: log("usbPHYLayerDeviceTryToInstantiateFromRegisteredPHYNDKs: Atsc3UsbDevice map returned : $device, but null instance?")
 
         close()
 
@@ -128,6 +132,7 @@ internal class Atsc3Module(
                     log("prepareDevices: download_bootloader_firmware with $atsc3NdkPHYClientBaseCandidate for path: ${atsc3UsbDevice.deviceName}, fd: ${atsc3UsbDevice.fd}, success")
                     //pre-boot devices should re-enumerate, so don't track this connection just yet...
                 }
+
             } else {
                 val r = atsc3NdkPHYClientBaseCandidate.open(atsc3UsbDevice.fd, atsc3UsbDevice.deviceName)
                 if (r < 0) {
@@ -137,10 +142,11 @@ internal class Atsc3Module(
 
                     atsc3NdkPHYClientBaseCandidate.setAtsc3UsbDevice(atsc3UsbDevice)
                     atsc3UsbDevice.setAtsc3NdkPHYClientBase(atsc3NdkPHYClientBaseCandidate)
+                    //jjustman-2020-08-31 - hack for LowaSIS - tune to 593000 - CH34
+                    atsc3NdkPHYClientBaseCandidate.tune(593000, 0)
 
                     atsc3NdkPHYClientInstance = atsc3NdkPHYClientBaseCandidate
                     setState(State.OPENED)
-
                     return true
                 }
             }
@@ -168,6 +174,14 @@ internal class Atsc3Module(
 
     fun close() {
         atsc3NdkPHYClientInstance?.let { client ->
+            client.atsc3UsbDevice?.let { device ->
+                log("closeUsbDevice -- before FindFromUsbDevice")
+                Atsc3UsbDevice.DumpAllAtsc3UsbDevices();
+
+                device.destroy()
+
+                Atsc3UsbDevice.DumpAllAtsc3UsbDevices();
+            }
             client.stop()
             client.deinit()
 //            try {
@@ -227,6 +241,8 @@ internal class Atsc3Module(
     override fun jni_getCacheDir(): File = context.cacheDir
 
     override fun onSlsTablePresent(sls_payload_xml: String) {
+        log("onSlsTablePresent, $sls_payload_xml");
+
         val services = LLSParserSLT().parseXML(sls_payload_xml)
 
         serviceMap.putAll(services.map { it.serviceId to it }.toMap())
@@ -239,6 +255,8 @@ internal class Atsc3Module(
     }
 
     override fun onSlsHeldEmissionPresent(serviceId: Int, heldPayloadXML: String) {
+        log("onSlsHeldEmissionPresent, $serviceId, selectedServiceID: $selectedServiceId");
+
         if (serviceId == selectedServiceId) {
             if (heldPayloadXML != selectedServiceHeldXml) {
                 selectedServiceHeldXml = heldPayloadXML
@@ -248,7 +266,8 @@ internal class Atsc3Module(
                 }
 
                 if (held != null) {
-                    val pkg = held.findActivePackage(serviceId)
+                    val pkg = held.findActivePackage()
+                    log("onSlsHeldEmissionPresent, pkg: $pkg");
 
                     if (pkg != selectedServicePackage) {
                         selectedServicePackage = pkg
@@ -272,6 +291,8 @@ internal class Atsc3Module(
     }
 
     override fun onPackageExtractCompleted(packageMetadata: PackageExtractEnvelopeMetadataAndPayload) {
+        log("onPackageExtractCompleted with packageMetadata.appContextIdList: ${packageMetadata.appContextIdList}")
+
         val appPackage = packageMap[packageMetadata.appContextIdList]
         if (appPackage == null) {
             val pkg = metadataToPackage(packageMetadata).also {
