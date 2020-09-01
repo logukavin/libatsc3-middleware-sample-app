@@ -1,5 +1,6 @@
 package com.nextgenbroadcast.mobile.middleware
 
+import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -129,9 +130,9 @@ class Atsc3ForegroundService : BindableForegroundService() {
 
     private fun closeRoute() {
         unregisterDeviceReceiver()
+
+        serviceController.stopRoute() // call to stopRoute is not a mistake. We use it to close previously opened file
         serviceController.closeRoute()
-        // call to stopRoute is not a mistake. We use it to close previously opened file
-        serviceController.stopRoute()
 
         if (isBinded) {
             stopSelf()
@@ -174,6 +175,9 @@ class Atsc3ForegroundService : BindableForegroundService() {
                     addAction(UsbManager.ACTION_USB_DEVICE_DETACHED)
                 })
             }
+        } else {
+            //TODO: If we need this request then add ACTION_USB_PERMISSION action processing
+            usbManager.requestPermission(device, PendingIntent.getService(this, 0, Intent(ACTION_USB_PERMISSION), 0))
         }
     }
 
@@ -297,6 +301,7 @@ class Atsc3ForegroundService : BindableForegroundService() {
         const val ACTION_STOP = "$SERVICE_ACTION.STOP"
         const val ACTION_DEVICE_ATTACHED = "$SERVICE_ACTION.USB_ATTACHED"
         const val ACTION_DEVICE_DETACHED = "$SERVICE_ACTION.USB_DETACHED"
+        const val ACTION_USB_PERMISSION = "$SERVICE_ACTION.USB_PERMISSION"
         const val ACTION_RMP_PLAY = "$SERVICE_ACTION.RMP_PLAY"
         const val ACTION_RMP_PAUSE = "$SERVICE_ACTION.RMP_PAUSE"
         const val ACTION_OPEN_ROUTE = "$SERVICE_ACTION.OPEN_FILE"
