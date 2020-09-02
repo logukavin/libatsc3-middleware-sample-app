@@ -3,5 +3,5 @@
     <string name="no_service_available">No service available</string>
     <string name="select_source">Select Atsc3 source</string>
     <string name="ba_loading_problem">Failed to load the media application</string>
-    <string name="shortcut_preview_mode">Preview Mode</string>
+    <string name="shortcut_preview_mode">Preview Mode %s</string>
 </resources>

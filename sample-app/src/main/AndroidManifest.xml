@@ -26,7 +26,6 @@
                 <action android:name="com.nextgenbroadcast.mobile.tv" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
-            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
         </activity>
 
     </application>
