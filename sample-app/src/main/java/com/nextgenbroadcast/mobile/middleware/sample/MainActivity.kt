@@ -115,8 +115,8 @@ class MainActivity : Atsc3Activity() {
         buildShortcuts(sourceMap.filter { (name, _) -> name in listOf("las", "bna") })
 
         val isPreviewMode = intent.action == ACTION_MODE_PREVIEW
-        intent.getStringExtra(PARAM_MODE_PREVIEW)?.let { source ->
-            if (savedInstanceState == null && isPreviewMode) {
+        if (isPreviewMode && savedInstanceState == null) {
+            intent.getStringExtra(PARAM_MODE_PREVIEW)?.let { source ->
                 sourceMap.find { pair -> pair.first == source }?.let { (_, path) ->
                     Atsc3ForegroundService.openRoute(this, path)
                 }
