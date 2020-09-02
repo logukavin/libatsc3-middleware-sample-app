@@ -116,7 +116,7 @@ class MainActivity : Atsc3Activity() {
 
         val isPreviewMode = intent.action == ACTION_MODE_PREVIEW
         intent.getStringExtra(PARAM_MODE_PREVIEW)?.let { source ->
-            if (isPreviewMode && savedInstanceState == null) {
+            if (savedInstanceState == null && isPreviewMode) {
                 sourceMap.find { pair -> pair.first == source }?.let { (_, path) ->
                     Atsc3ForegroundService.openRoute(this, path)
                 }
@@ -393,7 +393,7 @@ class MainActivity : Atsc3Activity() {
 
     private fun buildShortcuts(sourceMap: List<Pair<String, String>>) {
         getSystemService(ShortcutManager::class.java)?.let { shortcutManager ->
-            shortcutManager.dynamicShortcuts = sourceMap.map { (name, path) ->
+            shortcutManager.dynamicShortcuts = sourceMap.filter { (_, path) -> !path.isNullOrBlank() }.map { (name, path) ->
                 ShortcutInfo.Builder(this, name)
                         .setShortLabel(getString(R.string.shortcut_preview_mode, name))
                         .setIcon(Icon.createWithResource(this, R.drawable.ic_preview_mode))
