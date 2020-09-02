@@ -1,10 +1,12 @@
 package com.nextgenbroadcast.mobile.middleware.sample
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.pm.ShortcutInfo
 import android.content.pm.ShortcutManager
+import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.graphics.drawable.Icon
 import android.net.Uri
@@ -21,6 +23,8 @@ import android.widget.ListAdapter
 import android.widget.Toast
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.os.bundleOf
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.databinding.DataBindingUtil
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
@@ -200,6 +204,11 @@ class MainActivity : Atsc3Activity() {
                 BottomSheetBehavior.STATE_EXPANDED -> bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
             }
         }
+
+        //make sure we can read from device pcap files
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE), PERMISSION_REQUEST)
+        }
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
@@ -212,6 +221,19 @@ class MainActivity : Atsc3Activity() {
         super.onConfigurationChanged(newConfig)
 
         updateSystemUi(newConfig)
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+
+        if (requestCode == PERMISSION_REQUEST) {
+            val index = permissions.indexOf(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+            val granted = (index >= 0) && grantResults[index] == PackageManager.PERMISSION_GRANTED
+
+            if (!granted) {
+                Toast.makeText(this, getText(R.string.warning_external_stortage_permission), Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     private fun updateSystemUi(config: Configuration) {
@@ -414,6 +436,8 @@ class MainActivity : Atsc3Activity() {
 
         private const val FILE_REQUEST_CODE = 133
         private const val MEDIA_TIME_UPDATE_DELAY = 500L
+
+        private const val PERMISSION_REQUEST = 1000
 
         private val sourceMap = listOf(
                 Pair("Select pcap file...", ""),
