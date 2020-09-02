@@ -18,7 +18,8 @@ import org.ngbp.libatsc3.middleware.android.application.sync.mmt.MfuByteBufferFr
 import org.ngbp.libatsc3.middleware.android.application.sync.mmt.MpuMetadata_HEVC_NAL_Payload
 import org.ngbp.libatsc3.middleware.android.phy.Atsc3NdkPHYClientBase
 import org.ngbp.libatsc3.middleware.android.phy.Atsc3UsbDevice
-import org.ngbp.libatsc3.middleware.android.phy.virtual.PcapDemuxedPHYVirtualAndroid
+import org.ngbp.libatsc3.middleware.android.phy.virtual.PcapDemuxedVirtualPHYAndroid
+import org.ngbp.libatsc3.middleware.android.phy.virtual.PcapSTLTPVirtualPHYAndroid
 import org.ngbp.libatsc3.middleware.android.phy.virtual.srt.SRTRxSTLTPVirtualPHYAndroid
 import java.io.File
 import java.util.*
@@ -31,6 +32,10 @@ internal class Atsc3Module(
 
     enum class State {
         OPENED, PAUSED, IDLE
+    }
+
+    enum class PcapType {
+        DEMUXED, STLTP
     }
 
     interface Listener {
@@ -65,15 +70,18 @@ internal class Atsc3Module(
         this.listener = listener
     }
 
-    fun openPcapFile(filename: String): Boolean {
+    fun openPcapFile(filename: String, type: PcapType): Boolean {
         log("Opening PCAP file: $filename")
 
         close()
 
-        atsc3NdkPHYClientInstance = PcapDemuxedPHYVirtualAndroid().apply {
+        atsc3NdkPHYClientInstance = when (type) {
+            PcapType.DEMUXED -> PcapDemuxedVirtualPHYAndroid()
+            PcapType.STLTP -> PcapSTLTPVirtualPHYAndroid()
+        }.apply {
             init()
         }.also { client ->
-            val res = client.atsc3_pcap_open_for_replay(filename)
+            val res = client.open_from_capture(filename)
 
             //TODO: for assets mAt3DrvIntf.atsc3_pcap_open_for_replay_from_assetManager(filename, assetManager);
             if (res == RES_OK) {

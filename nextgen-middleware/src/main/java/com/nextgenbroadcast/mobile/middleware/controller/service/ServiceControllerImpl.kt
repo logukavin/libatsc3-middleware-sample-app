@@ -51,7 +51,8 @@ internal class ServiceControllerImpl (
     }
 
     override fun onPackageReceived(appPackage: Atsc3Application) {
-        Log.d("ServiceControllerImpl", "onPackageReceived - appPackage: "+appPackage);
+        Log.d("ServiceControllerImpl", "onPackageReceived - appPackage: $appPackage")
+
         repository.addOrUpdateApplication(appPackage)
     }
 
@@ -69,7 +70,9 @@ internal class ServiceControllerImpl (
         return if (path.startsWith("srt://")) {
             atsc3Module.openSRTStream(path)
         } else {
-            atsc3Module.openPcapFile(path)
+            //TODO: temporary solution
+            val type = if (path.contains(".demux.")) Atsc3Module.PcapType.DEMUXED else Atsc3Module.PcapType.STLTP
+            atsc3Module.openPcapFile(path, type)
         }
     }
 
