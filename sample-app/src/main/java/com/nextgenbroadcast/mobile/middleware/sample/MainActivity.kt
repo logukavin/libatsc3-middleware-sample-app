@@ -3,11 +3,15 @@ package com.nextgenbroadcast.mobile.middleware.sample
 import android.annotation.SuppressLint
 import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.content.pm.ShortcutInfo
+import android.content.pm.ShortcutManager
 import android.content.res.Configuration
+import android.graphics.drawable.Icon
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.PersistableBundle
 import android.util.Log
 import android.view.GestureDetector
 import android.view.View
@@ -16,6 +20,7 @@ import android.widget.ArrayAdapter
 import android.widget.ListAdapter
 import android.widget.Toast
 import androidx.constraintlayout.widget.ConstraintSet
+import androidx.core.os.bundleOf
 import androidx.databinding.DataBindingUtil
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
@@ -40,6 +45,7 @@ import dagger.android.AndroidInjection
 import kotlinx.android.synthetic.main.activity_main.*
 
 class MainActivity : Atsc3Activity() {
+
     private lateinit var binding: ActivityMainBinding
 
     private var rmpViewModel: RMPViewModel? = null
@@ -106,9 +112,22 @@ class MainActivity : Atsc3Activity() {
         AndroidInjection.inject(this)
         super.onCreate(savedInstanceState)
 
+        buildShortcuts(sourceMap.filter { (name, _) -> name in listOf("las", "bna") })
+
+        val isPreviewMode = intent.action == ACTION_MODE_PREVIEW
+        if (isPreviewMode && savedInstanceState == null) {
+            intent.getStringExtra(PARAM_MODE_PREVIEW)?.let { source ->
+                sourceMap.find { pair -> pair.first == source }?.let { (_, path) ->
+                    Atsc3ForegroundService.openRoute(this, path)
+                }
+            }
+        }
+
         binding = DataBindingUtil.setContentView<ActivityMainBinding>(this, R.layout.activity_main).apply {
             lifecycleOwner = this@MainActivity
         }
+
+        binding.isPreviewMode = isPreviewMode
 
         serviceAdapter = ServiceAdapter(this)
 
@@ -253,7 +272,6 @@ class MainActivity : Atsc3Activity() {
                 setSelectedService(service.id, service.shortName)
             } else {
                 serviceList.adapter = sourceAdapter
-
                 setSelectedService(-1, getString(R.string.no_service_available))
             }
         })
@@ -373,8 +391,26 @@ class MainActivity : Atsc3Activity() {
         updateMediaTimeHandler.removeCallbacks(updateMediaTimeRunnable)
     }
 
+    private fun buildShortcuts(sources: List<Pair<String, String>>) {
+        getSystemService(ShortcutManager::class.java)?.let { shortcutManager ->
+            shortcutManager.dynamicShortcuts = sources.map { (name, path) ->
+                ShortcutInfo.Builder(this, name)
+                        .setShortLabel(getString(R.string.shortcut_preview_mode, name))
+                        .setIcon(Icon.createWithResource(this, R.drawable.ic_preview_mode))
+                        .setIntent(Intent(this, MainActivity::class.java).apply {
+                            action = ACTION_MODE_PREVIEW
+                            putExtras(bundleOf(PARAM_MODE_PREVIEW to name))
+                        })
+                        .build()
+            }
+        }
+    }
+
     companion object {
         val TAG: String = MainActivity::class.java.simpleName
+
+        const val ACTION_MODE_PREVIEW = "${BuildConfig.APPLICATION_ID}.MODE_PREVIEW"
+        const val PARAM_MODE_PREVIEW = "PARAM_MODE_PREVIEW"
 
         private const val FILE_REQUEST_CODE = 133
         private const val MEDIA_TIME_UPDATE_DELAY = 500L
