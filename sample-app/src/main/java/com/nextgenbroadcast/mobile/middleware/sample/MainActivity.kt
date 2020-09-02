@@ -3,7 +3,10 @@ package com.nextgenbroadcast.mobile.middleware.sample
 import android.annotation.SuppressLint
 import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.content.pm.ShortcutInfo
+import android.content.pm.ShortcutManager
 import android.content.res.Configuration
+import android.graphics.drawable.Icon
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
@@ -17,6 +20,7 @@ import android.widget.ArrayAdapter
 import android.widget.ListAdapter
 import android.widget.Toast
 import androidx.constraintlayout.widget.ConstraintSet
+import androidx.core.os.bundleOf
 import androidx.databinding.DataBindingUtil
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
@@ -51,7 +55,6 @@ class MainActivity : Atsc3Activity() {
 
     private var servicesList: List<SLSService>? = null
     private var currentAppData: AppData? = null
-    private var isPreviewMode = false
 
     private val updateMediaTimeHandler = Handler(Looper.getMainLooper())
 
@@ -108,15 +111,23 @@ class MainActivity : Atsc3Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         AndroidInjection.inject(this)
         super.onCreate(savedInstanceState)
-        isPreviewMode = savedInstanceState?.let {
-            it.getBoolean(MODE_PREVIEW)
-        } ?: run {
-            intent.action == ACTION_MODE_PREVIEW
+
+        buildShortcuts(sourceMap.filter { (name, _) -> name in listOf("las", "bna") })
+
+        val isPreviewMode = intent.action == ACTION_MODE_PREVIEW
+        intent.getStringExtra(PARAM_MODE_PREVIEW)?.let { source ->
+            if (isPreviewMode && savedInstanceState == null) {
+                sourceMap.find { pair -> pair.first == source }?.let { (_, path) ->
+                    Atsc3ForegroundService.openRoute(this, path)
+                }
+            }
         }
 
         binding = DataBindingUtil.setContentView<ActivityMainBinding>(this, R.layout.activity_main).apply {
             lifecycleOwner = this@MainActivity
         }
+
+        binding.isPreviewMode = isPreviewMode
 
         serviceAdapter = ServiceAdapter(this)
 
@@ -189,16 +200,6 @@ class MainActivity : Atsc3Activity() {
                 BottomSheetBehavior.STATE_EXPANDED -> bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
             }
         }
-
-        binding.isPreviewMode = isPreviewMode
-        if(isPreviewMode) {
-            Atsc3ForegroundService.openRoute(this, sourceMap[2].second)
-        }
-    }
-
-    override fun onSaveInstanceState(outState: Bundle, outPersistentState: PersistableBundle) {
-        super.onSaveInstanceState(outState, outPersistentState)
-        outState.putBoolean(MODE_PREVIEW, isPreviewMode)
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
@@ -390,11 +391,26 @@ class MainActivity : Atsc3Activity() {
         updateMediaTimeHandler.removeCallbacks(updateMediaTimeRunnable)
     }
 
+    private fun buildShortcuts(sourceMap: List<Pair<String, String>>) {
+        getSystemService(ShortcutManager::class.java)?.let { shortcutManager ->
+            shortcutManager.dynamicShortcuts = sourceMap.map { (name, path) ->
+                ShortcutInfo.Builder(this, name)
+                        .setShortLabel(getString(R.string.shortcut_preview_mode, name))
+                        .setIcon(Icon.createWithResource(this, R.drawable.ic_preview_mode))
+                        .setIntent(Intent(this, MainActivity::class.java).apply {
+                            action = ACTION_MODE_PREVIEW
+                            putExtras(bundleOf(PARAM_MODE_PREVIEW to name))
+                        })
+                        .build()
+            }
+        }
+    }
+
     companion object {
         val TAG: String = MainActivity::class.java.simpleName
 
-        private const val ACTION_MODE_PREVIEW = "${BuildConfig.APPLICATION_ID}.MODE_PREVIEW"
-        private const val MODE_PREVIEW = "isPreviewMode"
+        const val ACTION_MODE_PREVIEW = "${BuildConfig.APPLICATION_ID}.MODE_PREVIEW"
+        const val PARAM_MODE_PREVIEW = "PARAM_MODE_PREVIEW"
 
         private const val FILE_REQUEST_CODE = 133
         private const val MEDIA_TIME_UPDATE_DELAY = 500L
