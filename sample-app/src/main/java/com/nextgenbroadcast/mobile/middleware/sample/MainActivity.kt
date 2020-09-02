@@ -391,9 +391,9 @@ class MainActivity : Atsc3Activity() {
         updateMediaTimeHandler.removeCallbacks(updateMediaTimeRunnable)
     }
 
-    private fun buildShortcuts(sourceMap: List<Pair<String, String>>) {
+    private fun buildShortcuts(sources: List<Pair<String, String>>) {
         getSystemService(ShortcutManager::class.java)?.let { shortcutManager ->
-            shortcutManager.dynamicShortcuts = sourceMap.filter { (_, path) -> !path.isNullOrBlank() }.map { (name, path) ->
+            shortcutManager.dynamicShortcuts = sources.map { (name, path) ->
                 ShortcutInfo.Builder(this, name)
                         .setShortLabel(getString(R.string.shortcut_preview_mode, name))
                         .setIcon(Icon.createWithResource(this, R.drawable.ic_preview_mode))
