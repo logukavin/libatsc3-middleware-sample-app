@@ -23,7 +23,7 @@ internal class ServiceControllerImpl (
     private var heldResetJob: Job? = null
     private var mediaUrlAssignmentJob: Job? = null
 
-    override val receiverState = MutableLiveData<ReceiverState>()
+    override val receiverState = MutableLiveData<ReceiverState>(ReceiverState.IDLE)
 
     override val selectedService = repository.selectedService
     override val serviceGuidUrls = repository.serviceGuideUrls

@@ -13,7 +13,6 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.os.PersistableBundle
 import android.util.Log
 import android.view.GestureDetector
 import android.view.View
@@ -31,6 +30,7 @@ import androidx.lifecycle.ViewModelProvider
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
+import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.model.SLSService
 import com.nextgenbroadcast.mobile.middleware.Atsc3Activity
 import com.nextgenbroadcast.mobile.middleware.Atsc3ForegroundService
@@ -47,6 +47,7 @@ import com.nextgenbroadcast.mobile.view.ReceiverMediaPlayer
 import com.nextgenbroadcast.mobile.view.UserAgentView
 import dagger.android.AndroidInjection
 import kotlinx.android.synthetic.main.activity_main.*
+import java.util.*
 
 class MainActivity : Atsc3Activity() {
 
@@ -59,6 +60,8 @@ class MainActivity : Atsc3Activity() {
 
     private var servicesList: List<SLSService>? = null
     private var currentAppData: AppData? = null
+    private var previewMode = false
+    private var previewName: String? = null
 
     private val updateMediaTimeHandler = Handler(Looper.getMainLooper())
 
@@ -79,6 +82,18 @@ class MainActivity : Atsc3Activity() {
             bindSelector(selector)
             bindUserAgent(userAgent)
             bindMediaPlayer(rmp)
+        }
+
+        if (previewMode) {
+            binder.getReceiverPresenter().receiverState.observe(this, Observer { state ->
+                if (state == null || state == ReceiverState.IDLE) {
+                    previewName?.let { source ->
+                        sourceMap.find { (name, _, _) -> name == source }?.let { (_, path, _) ->
+                            Atsc3ForegroundService.openRoute(this, path)
+                        }
+                    }
+                }
+            })
         }
     }
 
@@ -116,22 +131,17 @@ class MainActivity : Atsc3Activity() {
         AndroidInjection.inject(this)
         super.onCreate(savedInstanceState)
 
-        buildShortcuts(sourceMap.filter { (name, _) -> name in listOf("las", "bna") })
+        buildShortcuts(sourceMap.filter { (_, _, isShortcut) -> isShortcut }.map { (name, _, _) -> name })
 
-        val isPreviewMode = intent.action == ACTION_MODE_PREVIEW
-        if (isPreviewMode && savedInstanceState == null) {
-            intent.getStringExtra(PARAM_MODE_PREVIEW)?.let { source ->
-                sourceMap.find { pair -> pair.first == source }?.let { (_, path) ->
-                    Atsc3ForegroundService.openRoute(this, path)
-                }
-            }
+        with(intent) {
+            previewName = getStringExtra(PARAM_MODE_PREVIEW)
+            previewMode = action == ACTION_MODE_PREVIEW && !previewName.isNullOrBlank()
         }
 
         binding = DataBindingUtil.setContentView<ActivityMainBinding>(this, R.layout.activity_main).apply {
             lifecycleOwner = this@MainActivity
+            isPreviewMode = previewMode
         }
-
-        binding.isPreviewMode = isPreviewMode
 
         serviceAdapter = ServiceAdapter(this)
 
@@ -293,8 +303,13 @@ class MainActivity : Atsc3Activity() {
                         ?: services.first()
                 setSelectedService(service.id, service.shortName)
             } else {
-                serviceList.adapter = sourceAdapter
-                setSelectedService(-1, getString(R.string.no_service_available))
+                if (previewMode) {
+                    serviceList.adapter = null
+                    setSelectedService(-1, getString(R.string.source_loading, previewName?.toUpperCase(Locale.ROOT)))
+                } else {
+                    serviceList.adapter = sourceAdapter
+                    setSelectedService(-1, getString(R.string.no_service_available))
+                }
             }
         })
     }
@@ -413,11 +428,11 @@ class MainActivity : Atsc3Activity() {
         updateMediaTimeHandler.removeCallbacks(updateMediaTimeRunnable)
     }
 
-    private fun buildShortcuts(sources: List<Pair<String, String>>) {
+    private fun buildShortcuts(sources: List<String>) {
         getSystemService(ShortcutManager::class.java)?.let { shortcutManager ->
-            shortcutManager.dynamicShortcuts = sources.map { (name, path) ->
+            shortcutManager.dynamicShortcuts = sources.map { name ->
                 ShortcutInfo.Builder(this, name)
-                        .setShortLabel(getString(R.string.shortcut_preview_mode, name))
+                        .setShortLabel(getString(R.string.shortcut_preview_mode, name.toUpperCase(Locale.ROOT)))
                         .setIcon(Icon.createWithResource(this, R.drawable.ic_preview_mode))
                         .setIntent(Intent(this, MainActivity::class.java).apply {
                             action = ACTION_MODE_PREVIEW
@@ -440,11 +455,11 @@ class MainActivity : Atsc3Activity() {
         private const val PERMISSION_REQUEST = 1000
 
         private val sourceMap = listOf(
-                Pair("Select pcap file...", ""),
-                Pair("las", "srt://las.srt.atsc3.com:31350?passphrase=A166AC45-DB7C-4B68-B957-09B8452C76A4"),
-                Pair("bna", "srt://bna.srt.atsc3.com:31347?passphrase=88731837-0EB5-4951-83AA-F515B3BEBC20"),
-                Pair("slc", "srt://slc.srt.atsc3.com:31341?passphrase=B9E4F7B8-3CDD-4BA2-ACA6-13088AB855C0"),
-                Pair("lab", "srt://lab.srt.atsc3.com:31340?passphrase=03760631-667B-4ADB-9E04-E4491B0A7CF1")
+                Triple("Select pcap file...", "", false),
+                Triple("las", "srt://las.srt.atsc3.com:31350?passphrase=A166AC45-DB7C-4B68-B957-09B8452C76A4", true),
+                Triple("bna", "srt://bna.srt.atsc3.com:31347?passphrase=88731837-0EB5-4951-83AA-F515B3BEBC20", true),
+                Triple("slc", "srt://slc.srt.atsc3.com:31341?passphrase=B9E4F7B8-3CDD-4BA2-ACA6-13088AB855C0", false),
+                Triple("lab", "srt://lab.srt.atsc3.com:31340?passphrase=03760631-667B-4ADB-9E04-E4491B0A7CF1", false)
         )
     }
 }
