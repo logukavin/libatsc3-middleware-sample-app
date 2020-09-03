@@ -109,6 +109,10 @@ internal class ServiceControllerImpl (
                     repository.setHeldPackage(null)
                 }
             }
+
+            if (atsc3Module.slsProtocol == Atsc3Module.SLS_PROTOCOL_MMT) {
+                repository.setMediaUrl("mmt")
+            }
         } else {
             // Reset HELD and service if service can't be selected
             repository.setHeldPackage(null)
