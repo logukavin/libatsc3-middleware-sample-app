@@ -11,8 +11,10 @@ import com.nextgenbroadcast.mobile.middleware.gateway.rpc.IRPCGateway
 import com.nextgenbroadcast.mobile.middleware.gateway.web.IWebGateway
 import com.nextgenbroadcast.mobile.middleware.server.ServerConstants.ATSC_CMD_PATH
 import com.nextgenbroadcast.mobile.middleware.server.ws.MiddlewareWebSocket
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.eclipse.jetty.http.HttpVersion
 import org.eclipse.jetty.server.*
 import org.eclipse.jetty.server.handler.HandlerCollection
@@ -51,10 +53,21 @@ class MiddlewareWebServer constructor(
     fun isRunning() = server.isRunning
 
     @Throws(MiddlewareWebServerError::class)
-    fun start() {
+    fun start(callback: (selectedPort: Int) -> Unit) {
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_START)
         GlobalScope.launch {
-            server.start()
+            try {
+                server.start()
+                withContext(Dispatchers.Main) {
+                    callback.invoke((server.connectors[0] as ServerConnector).localPort)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    close()
+                    callback.invoke(-1)
+                }
+                e.printStackTrace()
+            }
         }
     }
 
