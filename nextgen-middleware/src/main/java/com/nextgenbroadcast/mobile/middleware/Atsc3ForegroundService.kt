@@ -10,6 +10,7 @@ import android.os.Binder
 import android.os.IBinder
 import android.os.PowerManager
 import android.os.PowerManager.WakeLock
+import android.util.Log
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.Observer
@@ -192,7 +193,7 @@ class Atsc3ForegroundService : BindableForegroundService() {
         }
     }
 
-    private fun startWebServer(rpc: IRPCGateway, web: IWebGateway) {
+    private fun startWebServer(rpc: IRPCGateway, web: IWebGateway, callback: (selectedPort: Int) -> Unit) {
         webServer = MiddlewareWebServer.Builder()
                 .hostName(web.hostName)
                 .httpsPort(web.httpsPort)
@@ -202,8 +203,10 @@ class Atsc3ForegroundService : BindableForegroundService() {
                 .rpcGateway(rpc)
                 .webGateway(web)
                 .sslContext(UserAgentSSLContext(applicationContext))
-                .build().also {
-                    it.start()
+                .build().also { server ->
+                    server.start { selectedPort ->
+                        callback.invoke(selectedPort)
+                    }
                 }
     }
 
@@ -239,7 +242,11 @@ class Atsc3ForegroundService : BindableForegroundService() {
             state.value = newState(playbackState = playbackState)
         }
 
-        startWebServer(rpc, web)
+        startWebServer(rpc, web) { selectedPort ->
+            web.httpPort = selectedPort
+            //webGateway?.httpPort
+            Log.d("TEST", "selectedPort: $selectedPort")
+        }
 
         //TODO: add lock limitation??
         wakeLock.acquire()

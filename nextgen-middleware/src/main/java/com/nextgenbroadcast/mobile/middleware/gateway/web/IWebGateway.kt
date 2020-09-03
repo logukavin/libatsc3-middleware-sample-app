@@ -6,7 +6,7 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Applicatio
 
 interface IWebGateway {
     val hostName: String
-    val httpPort: Int
+    var httpPort: Int
     val httpsPort: Int
     val wsPort: Int
     val wssPort: Int

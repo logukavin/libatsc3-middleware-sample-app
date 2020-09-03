@@ -12,7 +12,7 @@ internal class WebGatewayImpl (
         settings: IServerSettings
 ) : IWebGateway {
     override val hostName = settings.hostName
-    override val httpPort = settings.httpPort
+    override var httpPort = settings.httpPort
     override val httpsPort = settings.httpsPort
     override val wsPort = settings.wsPort
     override val wssPort = settings.wssPort
