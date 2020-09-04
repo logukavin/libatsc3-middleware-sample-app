@@ -37,7 +37,7 @@ class RMPViewModel(
     }
 
     fun reset() {
-        presenter.rmpReset()
+        presenter.rmpLayoutReset()
         _playWhenReady.value = true
     }
 
