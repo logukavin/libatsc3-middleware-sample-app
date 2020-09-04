@@ -193,7 +193,7 @@ class Atsc3ForegroundService : BindableForegroundService() {
         }
     }
 
-    private fun startWebServer(rpc: IRPCGateway, web: IWebGateway, callback: (selectedPort: Int) -> Unit) {
+    private fun startWebServer(rpc: IRPCGateway, web: IWebGateway) {
         webServer = MiddlewareWebServer.Builder()
                 .hostName(web.hostName)
                 .httpsPort(web.httpsPort)
@@ -203,10 +203,8 @@ class Atsc3ForegroundService : BindableForegroundService() {
                 .rpcGateway(rpc)
                 .webGateway(web)
                 .sslContext(UserAgentSSLContext(applicationContext))
-                .build().also { server ->
-                    server.start { selectedPort ->
-                        callback.invoke(selectedPort)
-                    }
+                .build().also {
+                    it.start()
                 }
     }
 
@@ -242,11 +240,7 @@ class Atsc3ForegroundService : BindableForegroundService() {
             state.value = newState(playbackState = playbackState)
         }
 
-        startWebServer(rpc, web) { selectedPort ->
-            web.httpPort = selectedPort
-            //webGateway?.httpPort
-            Log.d("TEST", "selectedPort: $selectedPort")
-        }
+        startWebServer(rpc, web)
 
         //TODO: add lock limitation??
         wakeLock.acquire()
