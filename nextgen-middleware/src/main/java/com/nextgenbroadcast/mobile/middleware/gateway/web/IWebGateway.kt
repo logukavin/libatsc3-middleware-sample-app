@@ -6,11 +6,13 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Applicatio
 
 interface IWebGateway {
     val hostName: String
-    val httpPort: Int
-    val httpsPort: Int
-    val wsPort: Int
-    val wssPort: Int
+    var httpPort: Int
+    var httpsPort: Int
+    var wsPort: Int
+    var wssPort: Int
 
     val selectedService: LiveData<SLSService?>
     val appCache: LiveData<List<Atsc3Application>>
+
+    fun setPortByType(connectionType: ConnectionType, port: Int)
 }

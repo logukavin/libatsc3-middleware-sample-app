@@ -20,10 +20,10 @@ internal class MiddlewareSettingsImpl(context: Context) : IMiddlewareSettings {
         }
 
     override val hostName = ServerConstants.HOST_NAME
-    override val httpPort = ServerConstants.HTTP_PORT
-    override val httpsPort = ServerConstants.HTTPS_PORT
-    override val wsPort = ServerConstants.WS_PORT
-    override val wssPort = ServerConstants.WSS_PORT
+    override val httpPort = ServerConstants.PORT_AUTOFIT
+    override val httpsPort = ServerConstants.PORT_AUTOFIT
+    override val wsPort = ServerConstants.PORT_AUTOFIT
+    override val wssPort = ServerConstants.PORT_AUTOFIT
 
     private fun saveString(key: String, value: String): String {
         preferences.edit { putString(key, value) }
