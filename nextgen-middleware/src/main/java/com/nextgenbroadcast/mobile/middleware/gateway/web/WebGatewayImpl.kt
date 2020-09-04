@@ -20,12 +20,12 @@ internal class WebGatewayImpl (
     override val selectedService = serviceController.selectedService.distinctUntilChanged()
     override val appCache = repository.applications.map { it ?: emptyList() }
 
-    override fun setPortByName(name: String, port: Int) {
-        when (name) {
-            IWebGateway.TYPE_HTTP -> httpPort = port
-            IWebGateway.TYPE_WS -> wsPort = port
-            IWebGateway.TYPE_HTTPS -> httpPort = port
-            IWebGateway.TYPE_WSS -> wssPort = port
+    override fun setPortByType(connectionType: ConnectionType, port: Int) {
+        when (connectionType) {
+            ConnectionType.HTTP -> httpPort = port
+            ConnectionType.WS -> wsPort = port
+            ConnectionType.HTTPS -> httpPort = port
+            ConnectionType.WSS -> wssPort = port
         }
     }
 }
