@@ -263,7 +263,7 @@ internal class Atsc3Module(
     }
 
     override fun onSlsHeldEmissionPresent(serviceId: Int, heldPayloadXML: String) {
-        log("onSlsHeldEmissionPresent, $serviceId, selectedServiceID: $selectedServiceId");
+        log("onSlsHeldEmissionPresent, $serviceId, selectedServiceID: $selectedServiceId, HELD: $heldPayloadXML")
 
         if (serviceId == selectedServiceId) {
             if (heldPayloadXML != selectedServiceHeldXml) {
@@ -275,7 +275,7 @@ internal class Atsc3Module(
 
                 if (held != null) {
                     val pkg = held.findActivePackage()
-                    log("onSlsHeldEmissionPresent, pkg: $pkg");
+                    log("onSlsHeldEmissionPresent, pkg: $pkg")
 
                     if (pkg != selectedServicePackage) {
                         selectedServicePackage = pkg
