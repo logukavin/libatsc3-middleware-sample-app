@@ -36,7 +36,7 @@ import java.util.*
 
 class MiddlewareWebServer constructor(
         private val server: Server,
-        webGateway: IWebGateway?
+        private val webGateway: IWebGateway?
 ) : AutoCloseable, LifecycleOwner {
 
     private val lifecycleRegistry = LifecycleRegistry(this)
@@ -53,20 +53,12 @@ class MiddlewareWebServer constructor(
     fun isRunning() = server.isRunning
 
     @Throws(MiddlewareWebServerError::class)
-    fun start(callback: (selectedPort: Int) -> Unit) {
+    fun start() {
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_START)
         GlobalScope.launch {
-            try {
-                server.start()
-                withContext(Dispatchers.Main) {
-                    callback.invoke((server.connectors[0] as ServerConnector).localPort)
-                }
-            } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    close()
-                    callback.invoke(-1)
-                }
-                e.printStackTrace()
+            server.start()
+            withContext(Dispatchers.Main) {
+                setSelectedPorts(server.connectors.asList())
             }
         }
     }
@@ -166,19 +158,19 @@ class MiddlewareWebServer constructor(
             val connectorArray = hostName?.let { hostName ->
                 ArrayList<Connector>().apply {
                     httpPort?.let { port ->
-                        add(getServerConnector(server, hostName, port))
+                        add(getServerConnector(IWebGateway.TYPE_HTTP, server, hostName, port))
                     }
                     wsPort?.let { port ->
-                        add(getServerConnector(server, hostName, port))
+                        add(getServerConnector(IWebGateway.TYPE_WS, server, hostName, port))
                     }
                     generatedSSLContext?.let { generatedSSLContext ->
                         val sslContextFactory = configureSSLFactory(generatedSSLContext)
 
                         httpsPort?.let { port ->
-                            add(getSecureServerConnector(server, hostName, port, sslContextFactory))
+                            add(getSecureServerConnector(IWebGateway.TYPE_HTTPS, server, hostName, port, sslContextFactory))
                         }
                         wssPort?.let { port ->
-                            add(getSecureServerConnector(server, hostName, port, sslContextFactory))
+                            add(getSecureServerConnector(IWebGateway.TYPE_WSS, server, hostName, port, sslContextFactory))
                         }
                     }
                 }.toTypedArray()
@@ -206,6 +198,16 @@ class MiddlewareWebServer constructor(
             return MiddlewareWebServer(server, webGateway)
         }
     }
+
+    private fun setSelectedPorts(connectors: List<Connector>) {
+        webGateway?.let { gateway ->
+            connectors.forEach { connector ->
+                (connector as ServerConnector).also { serverConnector ->
+                    gateway.setPortByName(serverConnector.name, serverConnector.localPort)
+                }
+            }
+        }
+    }
 }
 
 private fun createWebSocket(req: ServletUpgradeRequest, rpcGateway: IRPCGateway): WebSocketAdapter? {
@@ -227,14 +229,15 @@ fun configureSSLFactory(generatedSSLContext: IUserAgentSSLContext): SslContextFa
     }
 }
 
-fun getServerConnector(server: Server, serverHost: String, serverPort: Int): ServerConnector {
+fun getServerConnector(connectorName: String, server: Server, serverHost: String, serverPort: Int): ServerConnector {
     return ServerConnector(server).apply {
+        name = connectorName
         port = serverPort
         host = serverHost
     }
 }
 
-fun getSecureServerConnector(server: Server, serverHost: String, serverPort: Int, sslContextFactory: SslContextFactory): ServerConnector {
+fun getSecureServerConnector(connectorName: String, server: Server, serverHost: String, serverPort: Int, sslContextFactory: SslContextFactory): ServerConnector {
     val config = HttpConfiguration().apply {
         addCustomizer(SecureRequestCustomizer())
         securePort = serverPort
@@ -242,6 +245,7 @@ fun getSecureServerConnector(server: Server, serverHost: String, serverPort: Int
 
     // Configuring the secure connector
     return ServerConnector(server, SslConnectionFactory(sslContextFactory, HttpVersion.HTTP_1_1.toString()), HttpConnectionFactory(config)).apply {
+        name = connectorName
         port = serverPort
         host = serverHost
     }
