@@ -9,7 +9,7 @@ interface IMediaPlayerPresenter: IObservablePlayer {
     val rmpLayoutParams: LiveData<RPMParams>
     val rmpMediaUrl: LiveData<String?>
 
-    fun rmpReset()
+    fun rmpLayoutReset()
     fun rmpPlaybackChanged(state: PlaybackState)
     fun rmpPlaybackRateChanged(speed: Float)
     fun rmpMediaTimeChanged(currentTime: Long)

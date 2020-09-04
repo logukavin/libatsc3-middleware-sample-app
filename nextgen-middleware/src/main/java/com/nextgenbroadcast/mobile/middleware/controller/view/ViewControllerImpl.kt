@@ -59,11 +59,17 @@ internal class ViewControllerImpl(
 
     init {
         repository.selectedService.distinctUntilChanged().observeForever {
-            rmpReset()
+            rmpLayoutReset()
+        }
+        repository.heldPackage.distinctUntilChanged().observeForever {
+            rmpLayoutReset()
+            if (rmpState.value == PlaybackState.PAUSED) {
+                rmpResume()
+            }
         }
     }
 
-    override fun rmpReset() {
+    override fun rmpLayoutReset() {
         rmpLayoutParams.postValue(RPMParams())
     }
 
