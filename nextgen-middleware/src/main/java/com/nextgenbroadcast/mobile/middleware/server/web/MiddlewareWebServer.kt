@@ -8,6 +8,7 @@ import com.nextgenbroadcast.mobile.core.cert.IUserAgentSSLContext
 import com.nextgenbroadcast.mobile.core.md5
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import com.nextgenbroadcast.mobile.middleware.gateway.rpc.IRPCGateway
+import com.nextgenbroadcast.mobile.middleware.gateway.web.ConnectionType
 import com.nextgenbroadcast.mobile.middleware.gateway.web.IWebGateway
 import com.nextgenbroadcast.mobile.middleware.server.ServerConstants.ATSC_CMD_PATH
 import com.nextgenbroadcast.mobile.middleware.server.ws.MiddlewareWebSocket
@@ -158,19 +159,19 @@ class MiddlewareWebServer constructor(
             val connectorArray = hostName?.let { hostName ->
                 ArrayList<Connector>().apply {
                     httpPort?.let { port ->
-                        add(getServerConnector(IWebGateway.TYPE_HTTP, server, hostName, port))
+                        add(getServerConnector(ConnectionType.HTTP, server, hostName, port))
                     }
                     wsPort?.let { port ->
-                        add(getServerConnector(IWebGateway.TYPE_WS, server, hostName, port))
+                        add(getServerConnector(ConnectionType.WS, server, hostName, port))
                     }
                     generatedSSLContext?.let { generatedSSLContext ->
                         val sslContextFactory = configureSSLFactory(generatedSSLContext)
 
                         httpsPort?.let { port ->
-                            add(getSecureServerConnector(IWebGateway.TYPE_HTTPS, server, hostName, port, sslContextFactory))
+                            add(getSecureServerConnector(ConnectionType.HTTPS, server, hostName, port, sslContextFactory))
                         }
                         wssPort?.let { port ->
-                            add(getSecureServerConnector(IWebGateway.TYPE_WSS, server, hostName, port, sslContextFactory))
+                            add(getSecureServerConnector(ConnectionType.WSS, server, hostName, port, sslContextFactory))
                         }
                     }
                 }.toTypedArray()
@@ -202,8 +203,8 @@ class MiddlewareWebServer constructor(
     private fun setSelectedPorts(connectors: List<Connector>) {
         webGateway?.let { gateway ->
             connectors.forEach { connector ->
-                (connector as ServerConnector).also { serverConnector ->
-                    gateway.setPortByName(serverConnector.name, serverConnector.localPort)
+                (connector as? ServerConnector?)?.also { serverConnector ->
+                    gateway.setPortByType(ConnectionType.valueOf(serverConnector.name), serverConnector.localPort)
                 }
             }
         }
@@ -229,15 +230,15 @@ fun configureSSLFactory(generatedSSLContext: IUserAgentSSLContext): SslContextFa
     }
 }
 
-fun getServerConnector(connectorName: String, server: Server, serverHost: String, serverPort: Int): ServerConnector {
+fun getServerConnector(connectionType: ConnectionType, server: Server, serverHost: String, serverPort: Int): ServerConnector {
     return ServerConnector(server).apply {
-        name = connectorName
+        name = connectionType.type
         port = serverPort
         host = serverHost
     }
 }
 
-fun getSecureServerConnector(connectorName: String, server: Server, serverHost: String, serverPort: Int, sslContextFactory: SslContextFactory): ServerConnector {
+fun getSecureServerConnector(connectionType: ConnectionType, server: Server, serverHost: String, serverPort: Int, sslContextFactory: SslContextFactory): ServerConnector {
     val config = HttpConfiguration().apply {
         addCustomizer(SecureRequestCustomizer())
         securePort = serverPort
@@ -245,7 +246,7 @@ fun getSecureServerConnector(connectorName: String, server: Server, serverHost: 
 
     // Configuring the secure connector
     return ServerConnector(server, SslConnectionFactory(sslContextFactory, HttpVersion.HTTP_1_1.toString()), HttpConnectionFactory(config)).apply {
-        name = connectorName
+        name = connectionType.type
         port = serverPort
         host = serverHost
     }
