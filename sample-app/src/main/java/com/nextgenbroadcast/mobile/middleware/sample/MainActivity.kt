@@ -70,8 +70,9 @@ class MainActivity : Atsc3Activity(){
     private lateinit var sourceAdapter: ListAdapter
     private lateinit var bottomSheetBehavior: BottomSheetBehavior<View>
 
-    private val pictureInPictureParamsBuilder = PictureInPictureParams.Builder()
-    private var isReadyForPIP = false
+    private val hasFeaturePIP: Boolean by lazy {
+        packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)
+    }
 
     override fun onBind(binder: Atsc3ForegroundService.ServiceBinder) {
         val provider = UserAgentViewModelFactory(
@@ -197,9 +198,7 @@ class MainActivity : Atsc3Activity(){
                 if (state == PlaybackState.PLAYING) {
                     window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
                     startMediaTimeUpdate()
-                    isReadyForPIP = true
                 } else {
-                    isReadyForPIP = false
                     window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
                     cancelMediaTimeUpdate()
                 }
@@ -253,8 +252,8 @@ class MainActivity : Atsc3Activity(){
     }
 
     override fun onUserLeaveHint() {
-        if (isReadyForPIP && packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)) {
-            enterPictureInPictureMode(pictureInPictureParamsBuilder.build())
+        if (receiver_media_player?.rmpState == PlaybackState.PLAYING && hasFeaturePIP) {
+            enterPictureInPictureMode(PictureInPictureParams.Builder().build())
         }
     }
 

@@ -20,10 +20,9 @@ class ReceiverMediaPlayer @JvmOverloads constructor(
 
     private lateinit var simpleExoPlayer: SimpleExoPlayer
     private lateinit var dashMediaSourceFactory: DashMediaSource.Factory
-
-    private var rmpState: PlaybackState? = null
     private var listener: EventListener? = null
 
+    var rmpState: PlaybackState? = null
     val playbackPosition
         get() = simpleExoPlayer.currentPosition
 
