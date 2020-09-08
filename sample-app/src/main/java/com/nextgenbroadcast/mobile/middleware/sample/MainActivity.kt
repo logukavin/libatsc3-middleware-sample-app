@@ -4,15 +4,13 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.content.pm.ShortcutInfo
 import android.content.pm.ShortcutManager
-import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.graphics.drawable.Icon
 import android.net.Uri
-import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
+import android.os.*
 import android.util.Log
 import android.view.GestureDetector
 import android.view.View
@@ -21,9 +19,9 @@ import android.widget.ArrayAdapter
 import android.widget.ListAdapter
 import android.widget.Toast
 import androidx.constraintlayout.widget.ConstraintSet
-import androidx.core.os.bundleOf
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.os.bundleOf
 import androidx.databinding.DataBindingUtil
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
@@ -34,6 +32,7 @@ import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.model.SLSService
 import com.nextgenbroadcast.mobile.middleware.Atsc3Activity
 import com.nextgenbroadcast.mobile.middleware.Atsc3ForegroundService
+import com.nextgenbroadcast.mobile.middleware.IServiceBinder
 import com.nextgenbroadcast.mobile.middleware.core.FileUtils
 import com.nextgenbroadcast.mobile.middleware.sample.core.SwipeGestureDetector
 import com.nextgenbroadcast.mobile.middleware.sample.databinding.ActivityMainBinding
@@ -69,7 +68,7 @@ class MainActivity : Atsc3Activity() {
     private lateinit var sourceAdapter: ListAdapter
     private lateinit var bottomSheetBehavior: BottomSheetBehavior<View>
 
-    override fun onBind(binder: Atsc3ForegroundService.ServiceBinder) {
+    override fun onBind(binder: IServiceBinder) {
         val provider = UserAgentViewModelFactory(
                 binder.getUserAgentPresenter(),
                 binder.getMediaPlayerPresenter(),
@@ -89,7 +88,8 @@ class MainActivity : Atsc3Activity() {
                 if (state == null || state == ReceiverState.IDLE) {
                     previewName?.let { source ->
                         sourceMap.find { (name, _, _) -> name == source }?.let { (_, path, _) ->
-                            Atsc3ForegroundService.openRoute(this, path)
+                            handlerBinder.getReceiverPresenter().openRoute(path)
+                            //Atsc3ForegroundService.openRoute(this, path)
                         }
                     }
                 }
@@ -181,7 +181,8 @@ class MainActivity : Atsc3Activity() {
                 showFileChooser()
             } else {
                 sourceMap.getOrNull(position)?.let { (_, path) ->
-                    Atsc3ForegroundService.openRoute(this, path)
+                    handlerBinder.getReceiverPresenter().openRoute(path)
+                    //Atsc3ForegroundService.openRoute(this, path)
                 }
             }
         }
@@ -338,7 +339,10 @@ class MainActivity : Atsc3Activity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         if (requestCode == FILE_REQUEST_CODE && data != null) {
             val path = data.getStringExtra("FILE") ?: data.data?.let { FileUtils.getPath(applicationContext, it) }
-            path?.let { Atsc3ForegroundService.openRoute(this, it) }
+            path?.let {
+                handlerBinder.getReceiverPresenter().openRoute(it)
+                //Atsc3ForegroundService.openRoute(this, it)
+            }
 
             return
         }
