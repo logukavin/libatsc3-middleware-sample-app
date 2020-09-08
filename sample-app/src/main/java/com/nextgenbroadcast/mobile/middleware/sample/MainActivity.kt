@@ -2,11 +2,12 @@ package com.nextgenbroadcast.mobile.middleware.sample
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.PictureInPictureParams
 import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.content.pm.ShortcutInfo
 import android.content.pm.ShortcutManager
-import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.graphics.drawable.Icon
 import android.net.Uri
@@ -21,9 +22,9 @@ import android.widget.ArrayAdapter
 import android.widget.ListAdapter
 import android.widget.Toast
 import androidx.constraintlayout.widget.ConstraintSet
-import androidx.core.os.bundleOf
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.os.bundleOf
 import androidx.databinding.DataBindingUtil
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
@@ -49,7 +50,7 @@ import dagger.android.AndroidInjection
 import kotlinx.android.synthetic.main.activity_main.*
 import java.util.*
 
-class MainActivity : Atsc3Activity() {
+class MainActivity : Atsc3Activity(){
 
     private lateinit var binding: ActivityMainBinding
 
@@ -68,6 +69,9 @@ class MainActivity : Atsc3Activity() {
     private lateinit var serviceAdapter: ServiceAdapter
     private lateinit var sourceAdapter: ListAdapter
     private lateinit var bottomSheetBehavior: BottomSheetBehavior<View>
+
+    private val pictureInPictureParamsBuilder = PictureInPictureParams.Builder()
+    private var isReadyForPIP = false
 
     override fun onBind(binder: Atsc3ForegroundService.ServiceBinder) {
         val provider = UserAgentViewModelFactory(
@@ -193,7 +197,9 @@ class MainActivity : Atsc3Activity() {
                 if (state == PlaybackState.PLAYING) {
                     window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
                     startMediaTimeUpdate()
+                    isReadyForPIP = true
                 } else {
+                    isReadyForPIP = false
                     window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
                     cancelMediaTimeUpdate()
                 }
@@ -244,6 +250,18 @@ class MainActivity : Atsc3Activity() {
                 Toast.makeText(this, getText(R.string.warning_external_stortage_permission), Toast.LENGTH_SHORT).show()
             }
         }
+    }
+
+    override fun onUserLeaveHint() {
+        if (isReadyForPIP && packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)) {
+            enterPictureInPictureMode(pictureInPictureParamsBuilder.build())
+        }
+    }
+
+    override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: Configuration) {
+        val visibility = if (isInPictureInPictureMode) View.INVISIBLE else View.VISIBLE
+        atsc3_data_log.visibility = visibility
+        bottom_sheet.visibility = visibility
     }
 
     private fun updateSystemUi(config: Configuration) {
