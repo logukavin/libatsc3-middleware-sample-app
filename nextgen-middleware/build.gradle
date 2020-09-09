@@ -3,19 +3,6 @@ apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-android-extensions'
 apply plugin: 'kotlin-kapt'
 
-apply plugin: 'maven-publish'
-
-repositories {
-    maven {
-        url 'https://pkgs.dev.azure.com/NGWP/Middleware/_packaging/jsonrpc2/maven/v1'
-        name 'jsonrpc2'
-        credentials {
-            username "Azure DevOps Services"
-            password System.getenv("AZURE_ARTIFACTS_ENV_ACCESS_TOKEN") != null ? System.getenv("AZURE_ARTIFACTS_ENV_ACCESS_TOKEN") : vstsMavenAccessToken
-        }
-    }
-}
-
 android {
     compileSdkVersion rootProject.compileSdkVersion
     buildToolsVersion rootProject.buildToolsVersion
@@ -92,8 +79,8 @@ dependencies {
 
     implementation project(":nextgen-core")
 
-    implementation group: 'com.github.nmuzhichin', name: 'jsonrpc-core', version: '1.0.4.2'
-    implementation group: 'com.github.nmuzhichin', name: 'jsonrpc-jackson-extension', version: '1.0.4.2'
+    implementation 'com.github.nmuzhichin:jsonrpc-core:1.0.4.2'
+    implementation 'com.github.nmuzhichin:jsonrpc-jackson-extension:1.0.4.2'
 
     implementation 'org.apache.commons:commons-lang3:3.9'
 
