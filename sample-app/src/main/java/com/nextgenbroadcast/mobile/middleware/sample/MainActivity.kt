@@ -31,7 +31,6 @@ import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.model.SLSService
 import com.nextgenbroadcast.mobile.middleware.Atsc3Activity
-import com.nextgenbroadcast.mobile.middleware.Atsc3ForegroundService
 import com.nextgenbroadcast.mobile.middleware.IServiceBinder
 import com.nextgenbroadcast.mobile.middleware.core.FileUtils
 import com.nextgenbroadcast.mobile.middleware.sample.core.SwipeGestureDetector
@@ -52,6 +51,7 @@ class MainActivity : Atsc3Activity() {
 
     private lateinit var binding: ActivityMainBinding
 
+    private var serviceBinder: IServiceBinder? = null
     private var rmpViewModel: RMPViewModel? = null
     private var userAgentViewModel: UserAgentViewModel? = null
     private var selectorViewModel: SelectorViewModel? = null
@@ -69,10 +69,11 @@ class MainActivity : Atsc3Activity() {
     private lateinit var bottomSheetBehavior: BottomSheetBehavior<View>
 
     override fun onBind(binder: IServiceBinder) {
+        serviceBinder = binder
         val provider = UserAgentViewModelFactory(
-                binder.getUserAgentPresenter(),
-                binder.getMediaPlayerPresenter(),
-                binder.getSelectorPresenter()
+                binder.userAgentPresenter,
+                binder.mediaPlayerPresenter,
+                binder.selectorPresenter
         ).let { userAgentViewModelFactory ->
             ViewModelProvider(viewModelStore, userAgentViewModelFactory)
         }
@@ -84,12 +85,11 @@ class MainActivity : Atsc3Activity() {
         }
 
         if (previewMode) {
-            binder.getReceiverPresenter().receiverState.observe(this, Observer { state ->
+            binder.receiverPresenter.receiverState.observe(this, Observer { state ->
                 if (state == null || state == ReceiverState.IDLE) {
                     previewName?.let { source ->
                         sourceMap.find { (name, _, _) -> name == source }?.let { (_, path, _) ->
-                            handlerBinder.getReceiverPresenter().openRoute(path)
-                            //Atsc3ForegroundService.openRoute(this, path)
+                            serviceBinder?.receiverPresenter?.openRoute(path)
                         }
                     }
                 }
@@ -181,8 +181,7 @@ class MainActivity : Atsc3Activity() {
                 showFileChooser()
             } else {
                 sourceMap.getOrNull(position)?.let { (_, path) ->
-                    handlerBinder.getReceiverPresenter().openRoute(path)
-                    //Atsc3ForegroundService.openRoute(this, path)
+                    serviceBinder?.receiverPresenter?.openRoute(path)
                 }
             }
         }
@@ -340,8 +339,7 @@ class MainActivity : Atsc3Activity() {
         if (requestCode == FILE_REQUEST_CODE && data != null) {
             val path = data.getStringExtra("FILE") ?: data.data?.let { FileUtils.getPath(applicationContext, it) }
             path?.let {
-                handlerBinder.getReceiverPresenter().openRoute(it)
-                //Atsc3ForegroundService.openRoute(this, it)
+                serviceBinder?.receiverPresenter?.openRoute(it)
             }
 
             return
