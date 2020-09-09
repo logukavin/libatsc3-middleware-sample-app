@@ -46,7 +46,7 @@ class MiddlewareWebServer constructor(
     init {
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
 
-        webGateway?.appCache?.observe(this, androidx.lifecycle.Observer { applications ->
+        webGateway?.appCache?.observe(this, { applications ->
             onCacheChanged(applications)
         })
     }
@@ -204,7 +204,12 @@ class MiddlewareWebServer constructor(
         webGateway?.let { gateway ->
             connectors.forEach { connector ->
                 (connector as? ServerConnector?)?.also { serverConnector ->
-                    gateway.setPortByType(ConnectionType.valueOf(serverConnector.name), serverConnector.localPort)
+                    when (ConnectionType.valueOf(serverConnector.name)) {
+                        ConnectionType.HTTP -> gateway.httpPort = serverConnector.localPort
+                        ConnectionType.WS -> gateway.wsPort = serverConnector.localPort
+                        ConnectionType.HTTPS -> gateway.httpsPort = serverConnector.localPort
+                        ConnectionType.WSS -> gateway.wssPort = serverConnector.localPort
+                    }
                 }
             }
         }
