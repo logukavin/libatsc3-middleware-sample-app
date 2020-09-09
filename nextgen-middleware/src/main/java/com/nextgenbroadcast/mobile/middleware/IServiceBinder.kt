@@ -6,8 +6,8 @@ import com.nextgenbroadcast.mobile.middleware.presentation.ISelectorPresenter
 import com.nextgenbroadcast.mobile.middleware.presentation.IUserAgentPresenter
 
 interface IServiceBinder {
-    fun getReceiverPresenter(): IReceiverPresenter
-    fun getSelectorPresenter(): ISelectorPresenter
-    fun getUserAgentPresenter(): IUserAgentPresenter
-    fun getMediaPlayerPresenter(): IMediaPlayerPresenter
+    val receiverPresenter: IReceiverPresenter
+    val selectorPresenter: ISelectorPresenter
+    val userAgentPresenter: IUserAgentPresenter
+    val mediaPlayerPresenter: IMediaPlayerPresenter
 }

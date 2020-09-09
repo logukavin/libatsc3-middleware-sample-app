@@ -6,15 +6,13 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
-import android.os.*
+import android.os.PowerManager
 import android.os.PowerManager.WakeLock
-import android.util.Log
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.Observer
 import com.nextgenbroadcast.mobile.core.cert.UserAgentSSLContext
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
-import com.nextgenbroadcast.mobile.core.model.RPMParams
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.model.SLSService
 import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3Module
@@ -27,24 +25,19 @@ import com.nextgenbroadcast.mobile.middleware.gateway.rpc.RPCGatewayImpl
 import com.nextgenbroadcast.mobile.middleware.gateway.web.IWebGateway
 import com.nextgenbroadcast.mobile.middleware.gateway.web.WebGatewayImpl
 import com.nextgenbroadcast.mobile.middleware.phy.Atsc3DeviceReceiver
-import com.nextgenbroadcast.mobile.middleware.presentation.IMediaPlayerPresenter
-import com.nextgenbroadcast.mobile.middleware.presentation.IReceiverPresenter
-import com.nextgenbroadcast.mobile.middleware.presentation.ISelectorPresenter
-import com.nextgenbroadcast.mobile.middleware.presentation.IUserAgentPresenter
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
-import com.nextgenbroadcast.mobile.middleware.repository.RepositoryImpl
-import com.nextgenbroadcast.mobile.middleware.server.web.MiddlewareWebServer
 import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
 import com.nextgenbroadcast.mobile.middleware.settings.MiddlewareSettingsImpl
+import com.nextgenbroadcast.mobile.middleware.repository.RepositoryImpl
+import com.nextgenbroadcast.mobile.middleware.server.web.MiddlewareWebServer
 import kotlinx.coroutines.Dispatchers
 
-
-class Atsc3ForegroundService : BindableForegroundService() {
+abstract class Atsc3ForegroundService : BindableForegroundService() {
     private lateinit var wakeLock: WakeLock
     private lateinit var settings: IMiddlewareSettings
     private lateinit var repository: IRepository
     private lateinit var atsc3Module: Atsc3Module
-    private lateinit var serviceController: IServiceController
+    protected lateinit var serviceController: IServiceController
     private lateinit var state: MediatorLiveData<Triple<ReceiverState?, SLSService?, PlaybackState?>>
 
     private var viewController: IViewController? = null
@@ -112,12 +105,6 @@ class Atsc3ForegroundService : BindableForegroundService() {
         }
 
         return START_NOT_STICKY
-    }
-
-    override fun onBind(intent: Intent): IBinder? {
-        super.onBind(intent)
-        return mMessenger.binder
-        //return ServiceBinder()
     }
 
     private fun openRoute(filePath: String?) {
@@ -260,7 +247,7 @@ class Atsc3ForegroundService : BindableForegroundService() {
         viewController = null
     }
 
-    private fun requireViewController(): IViewController {
+    protected fun requireViewController(): IViewController {
         if (viewController == null) {
             createViewPresentationAndStartService()
         }
@@ -272,164 +259,6 @@ class Atsc3ForegroundService : BindableForegroundService() {
             selectedService ?: serviceController.selectedService.value,
             playbackState ?: viewController?.rmpState?.value
     )
-
-    inner class ServiceBinder : Binder(), IServiceBinder {
-        override fun getReceiverPresenter(): IReceiverPresenter = object : IReceiverPresenter {
-            override val receiverState = serviceController.receiverState
-
-            override fun openRoute(path: String): Boolean {
-                openRoute(this@Atsc3ForegroundService, path)
-                return true
-            }
-
-            override fun closeRoute() {
-                closeRoute(this@Atsc3ForegroundService)
-            }
-        }
-        override fun getSelectorPresenter(): ISelectorPresenter = serviceController
-        override fun getUserAgentPresenter(): IUserAgentPresenter = requireViewController()
-        override fun getMediaPlayerPresenter(): IMediaPlayerPresenter = requireViewController()
-    }
-
-    val mMessenger = Messenger(IncomingHandler())
-
-    inner class IncomingHandler : Handler() {
-
-        override fun handleMessage(msg: Message) {
-            super.handleMessage(msg)
-            Log.d("TEST", "to service msg: ${msg.what}")
-            when (msg.what) {
-                RECEIVER_STATE -> sendReceiverState(msg.replyTo)
-                OPEN_ROUTE_STATE -> {
-                    val path = msg.data.getString("OPEN_ROUTE_STATE")
-                    Log.d("TEST", "path: $path")
-                    path?.let {
-                        openRoute(this@Atsc3ForegroundService, path)
-                    }
-                }
-                CLOSE_ROUTE_STATE -> {
-                    closeRoute(this@Atsc3ForegroundService)
-                }
-                SLT_SERVICE_STATE -> sendSltServiceState(msg.replyTo)
-                SELECTED_SERVICE_STATE -> sendSelectedServiceState(msg.replyTo)
-                SELECT_SERVICE_STATE -> {
-                    msg.data.classLoader = SLSService::class.java.classLoader
-                    val service = msg.data.getParcelable<SLSService?>("SELECT_SERVICE_STATE")
-                    service?.let {
-                        Log.d("TEST", "Select: ${service.shortName}")
-                        serviceController.selectService(service)
-                    }
-                }
-                APP_DATA_SERVICE_STATE -> {
-                    sendAppData(msg.replyTo)
-                }
-                RMP_LAYOUT_PARAMS -> sendRPMLayoutParams(msg.replyTo)
-                RMP_MEDIA_URL -> sendRPMMediaUrl(msg.replyTo)
-                RMP_LAYOUT_RESET -> {
-                    requireViewController().rmpLayoutReset()
-                }
-                RMP_PLAYBACK_CHECKED -> {
-                    msg.data.classLoader = PlaybackState::class.java.classLoader
-                    val playBackState = msg.data.getParcelable<PlaybackState?>("RMP_PLAYBACK_CHECKED")
-                    playBackState?.let {
-                        requireViewController().rmpPlaybackChanged(playBackState)
-                    }
-                }
-                RMP_PLAYBACK_RATE_CHANGED -> {
-                    val speed = msg.data.getFloat("RMP_PLAYBACK_RATE_CHANGED")
-                    requireViewController().rmpPlaybackRateChanged(speed)
-                }
-                RMP_MEDIA_TIME_CHANGED -> {
-                    val currentTime = msg.data.getLong("RMP_MEDIA_TIME_CHANGED")
-                    requireViewController().rmpMediaTimeChanged(currentTime)
-                }
-                else -> super.handleMessage(msg)
-            }
-        }
-    }
-
-    private fun sendReceiverState(messenger: Messenger) {
-        serviceController.receiverState.observe(this, Observer { state ->
-            val msg: Message = Message.obtain(null, RECEIVER_STATE, 0, 0)
-            msg.data.classLoader = ReceiverState::class.java.classLoader
-            msg.data.putParcelable("RECEIVER_STATE", state)
-            Log.d("TEST", "Send state: ${state.name}")
-            try {
-                messenger.send(msg)
-            } catch (e: RemoteException) {
-                e.printStackTrace()
-            }
-        })
-    }
-
-    private fun sendSltServiceState(messenger: Messenger) {
-        serviceController.sltServices.observe(this, Observer { services ->
-            val msg: Message = Message.obtain(null, SLT_SERVICE_STATE, 0, 0)
-            msg.data.classLoader = SLSService::class.java.classLoader
-            msg.data.putParcelableArrayList("SLT_SERVICE_STATE", ArrayList<SLSService>(services))
-            Log.d("TEST", "Send services: $services")
-            try {
-                messenger.send(msg)
-            } catch (e: RemoteException) {
-                e.printStackTrace()
-            }
-        })
-    }
-
-    private fun sendSelectedServiceState(messenger: Messenger) {
-        serviceController.selectedService.observe(this, Observer { selectedService ->
-            val msg: Message = Message.obtain(null, SELECTED_SERVICE_STATE, 0, 0)
-            msg.data.classLoader = SLSService::class.java.classLoader
-            msg.data.putParcelable("SELECTED_SERVICE_STATE", selectedService)
-            Log.d("TEST", "Send selected: $selectedService")
-            try {
-                messenger.send(msg)
-            } catch (e: RemoteException) {
-                e.printStackTrace()
-            }
-        })
-    }
-
-    private fun sendAppData(messenger: Messenger) {
-        requireViewController().appData.observe(this, Observer { appData ->
-            val msg: Message = Message.obtain(null, APP_DATA_SERVICE_STATE, 0, 0)
-            msg.data.putParcelable("app_data", appData)
-            Log.d("TEST", "Send appData: $appData")
-            try {
-                messenger.send(msg)
-            } catch (e: RemoteException) {
-                e.printStackTrace()
-            }
-        })
-    }
-
-    private fun sendRPMLayoutParams(messenger: Messenger) {
-        requireViewController().rmpLayoutParams.observe(this, Observer { rpmLayoutParams ->
-            val msg: Message = Message.obtain(null, RMP_LAYOUT_PARAMS, 0, 0)
-            msg.data.classLoader = RPMParams::class.java.classLoader
-            msg.data.putParcelable("rpm_layout_params", rpmLayoutParams)
-            Log.d("TEST", "Send rpm layout params: $rpmLayoutParams")
-            try {
-                messenger.send(msg)
-            } catch (e: RemoteException) {
-                e.printStackTrace()
-            }
-        })
-    }
-
-    private fun sendRPMMediaUrl(messenger: Messenger) {
-        requireViewController().rmpMediaUrl.observe(this, Observer { rmpMediaUrl ->
-            val msg: Message = Message.obtain(null, RMP_MEDIA_URL, 0, 0)
-            msg.data.classLoader = String::class.java.classLoader
-            msg.data.putString("rpm_media_url", rmpMediaUrl)
-            Log.d("TEST", "Send rpm media url: $rmpMediaUrl")
-            try {
-                messenger.send(msg)
-            } catch (e: RemoteException) {
-                e.printStackTrace()
-            }
-        })
-    }
 
     class InitializationException : RuntimeException()
 
@@ -486,7 +315,7 @@ class Atsc3ForegroundService : BindableForegroundService() {
             ContextCompat.startForegroundService(context, newIntent(context, ACTION_CLOSE_ROUTE))
         }
 
-        private fun newIntent(context: Context, serviceAction: String) = Intent(context, Atsc3ForegroundService::class.java).apply {
+        private fun newIntent(context: Context, serviceAction: String) = Intent(context, Atsc3Activity.SERVICE_CLASS).apply {
             action = serviceAction
             putExtra(EXTRA_FOREGROUND, true)
         }

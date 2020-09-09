@@ -124,20 +124,5 @@ abstract class BindableForegroundService : LifecycleService() {
         private const val NOTIFICATION_ID = 1
 
         const val EXTRA_FOREGROUND = "foreground"
-
-
-        const val RECEIVER_STATE = 1
-        const val OPEN_ROUTE_STATE = 2
-        const val CLOSE_ROUTE_STATE = 3
-        const val SLT_SERVICE_STATE = 4
-        const val SELECTED_SERVICE_STATE = 5
-        const val SELECT_SERVICE_STATE = 6
-        const val APP_DATA_SERVICE_STATE = 7
-        const val RMP_LAYOUT_PARAMS = 8
-        const val RMP_MEDIA_URL = 9
-        const val RMP_LAYOUT_RESET = 10
-        const val RMP_PLAYBACK_CHECKED = 11
-        const val RMP_PLAYBACK_RATE_CHANGED = 12
-        const val RMP_MEDIA_TIME_CHANGED = 13
     }
 }
