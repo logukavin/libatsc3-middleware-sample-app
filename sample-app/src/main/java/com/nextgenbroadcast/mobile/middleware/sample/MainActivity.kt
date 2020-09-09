@@ -252,18 +252,25 @@ class MainActivity : Atsc3Activity(){
     }
 
     override fun onUserLeaveHint() {
-        if (receiver_media_player?.rmpState == PlaybackState.PLAYING && hasFeaturePIP) {
+        if (receiver_media_player.isPlaying && hasFeaturePIP) {
             enterPictureInPictureMode(PictureInPictureParams.Builder().build())
         }
     }
 
     override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: Configuration) {
-        val visibility = if (isInPictureInPictureMode) View.INVISIBLE else View.VISIBLE
+        val visibility = if (isInPictureInPictureMode) {
+            user_agent_web_view.closeMenu()
+            View.INVISIBLE
+        } else {
+            View.VISIBLE
+        }
         atsc3_data_log.visibility = visibility
         bottom_sheet.visibility = visibility
     }
 
     private fun updateSystemUi(config: Configuration) {
+        if (isInPictureInPictureMode) return
+
         if (config.orientation == Configuration.ORIENTATION_LANDSCAPE) {
             window.decorView.systemUiVisibility = (View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
                     or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
