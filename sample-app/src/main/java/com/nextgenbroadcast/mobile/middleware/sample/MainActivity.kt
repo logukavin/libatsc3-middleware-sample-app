@@ -2,11 +2,12 @@ package com.nextgenbroadcast.mobile.middleware.sample
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.PictureInPictureParams
 import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.content.pm.ShortcutInfo
 import android.content.pm.ShortcutManager
-import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.graphics.drawable.Icon
 import android.net.Uri
@@ -21,9 +22,9 @@ import android.widget.ArrayAdapter
 import android.widget.ListAdapter
 import android.widget.Toast
 import androidx.constraintlayout.widget.ConstraintSet
-import androidx.core.os.bundleOf
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.os.bundleOf
 import androidx.databinding.DataBindingUtil
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
@@ -49,7 +50,7 @@ import dagger.android.AndroidInjection
 import kotlinx.android.synthetic.main.activity_main.*
 import java.util.*
 
-class MainActivity : Atsc3Activity() {
+class MainActivity : Atsc3Activity(){
 
     private lateinit var binding: ActivityMainBinding
 
@@ -68,6 +69,10 @@ class MainActivity : Atsc3Activity() {
     private lateinit var serviceAdapter: ServiceAdapter
     private lateinit var sourceAdapter: ListAdapter
     private lateinit var bottomSheetBehavior: BottomSheetBehavior<View>
+
+    private val hasFeaturePIP: Boolean by lazy {
+        packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)
+    }
 
     override fun onBind(binder: Atsc3ForegroundService.ServiceBinder) {
         val provider = UserAgentViewModelFactory(
@@ -246,7 +251,26 @@ class MainActivity : Atsc3Activity() {
         }
     }
 
+    override fun onUserLeaveHint() {
+        if (receiver_media_player.isPlaying && hasFeaturePIP) {
+            enterPictureInPictureMode(PictureInPictureParams.Builder().build())
+        }
+    }
+
+    override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: Configuration) {
+        val visibility = if (isInPictureInPictureMode) {
+            user_agent_web_view.closeMenu()
+            View.INVISIBLE
+        } else {
+            View.VISIBLE
+        }
+        atsc3_data_log.visibility = visibility
+        bottom_sheet.visibility = visibility
+    }
+
     private fun updateSystemUi(config: Configuration) {
+        if (isInPictureInPictureMode) return
+
         if (config.orientation == Configuration.ORIENTATION_LANDSCAPE) {
             window.decorView.systemUiVisibility = (View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
                     or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
