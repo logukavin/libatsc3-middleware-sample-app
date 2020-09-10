@@ -79,8 +79,8 @@ dependencies {
 
     implementation project(":nextgen-core")
 
-    implementation project(":jsonrpc-core")
-    implementation project(":jsonrpc-jackson")
+    implementation 'com.github.nmuzhichin:jsonrpc-core:1.0.4.2'
+    implementation 'com.github.nmuzhichin:jsonrpc-jackson-extension:1.0.4.2'
 
     implementation 'org.apache.commons:commons-lang3:3.9'
 
