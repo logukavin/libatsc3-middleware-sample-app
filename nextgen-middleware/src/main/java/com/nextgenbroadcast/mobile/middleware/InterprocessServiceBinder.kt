@@ -14,6 +14,8 @@ class InterprocessServiceBinder(
         private val service: IBinder
 ) : IServiceBinder {
 
+    private var playerStateListener: IObservablePlayer.IPlayerStateListener? = null
+
     inner class SelectorPresenter : ISelectorPresenter {
         override val sltServices = MutableLiveData<List<SLSService>>()
         override val selectedService = MutableLiveData<SLSService?>()
@@ -69,15 +71,16 @@ class InterprocessServiceBinder(
             sendAction(ACTION_RMP_MEDIA_TIME_CHANGED, bundleOf(
                     PARAM_RMP_MEDIA_TIME to currentTime
             ))
-
         }
 
         override fun addOnPlayerSateChangedCallback(callback: IObservablePlayer.IPlayerStateListener) {
-            //TODO("Not yet implemented")
+            playerStateListener = callback
+            sendAction(CALLBACK_ADD_PLAYER_STATE_CHANGE)
         }
 
         override fun removeOnPlayerSateChangedCallback(callback: IObservablePlayer.IPlayerStateListener) {
-            //TODO("Not yet implemented")
+            playerStateListener = null
+            sendAction(CALLBACK_REMOVE_PLAYER_STATE_CHANGE)
         }
     }
 
@@ -92,6 +95,7 @@ class InterprocessServiceBinder(
     private val sendingMessenger = Messenger(service)
 
     private val incomingMessenger = Messenger(Atsc3ActivityIncomingHandler(object : OnIncomingDataListener {
+
         override fun onReceiverState(receiverState: ReceiverState) {
             receiverPresenter.receiverState.postValue(receiverState)
         }
@@ -114,6 +118,14 @@ class InterprocessServiceBinder(
 
         override fun onRPMMediaUrl(rpmMediaUrl: String) {
             mediaPlayerPresenter.rmpMediaUrl.postValue(rpmMediaUrl)
+        }
+
+        override fun onPlayerStatePause() {
+            playerStateListener?.onPause(mediaPlayerPresenter)
+        }
+
+        override fun onPlayerStateResume() {
+            playerStateListener?.onResume(mediaPlayerPresenter)
         }
 
     }))
@@ -158,6 +170,12 @@ class InterprocessServiceBinder(
         const val ACTION_RMP_PLAYBACK_STATE_CHANGED = 11
         const val ACTION_RMP_PLAYBACK_RATE_CHANGED = 12
         const val ACTION_RMP_MEDIA_TIME_CHANGED = 13
+
+        const val CALLBACK_ADD_PLAYER_STATE_CHANGE = 14
+        const val CALLBACK_REMOVE_PLAYER_STATE_CHANGE = 15
+
+        const val ACTION_PLAYER_STATE_CHANGE_PAUSE = 16
+        const val ACTION_PLAYER_STATE_CHANGE_RESUME = 17
 
         const val PARAM_RECEIVER_STATE = "PARAM_RECEIVER_STATE"
         const val PARAM_SERVICE_LIST = "PARAM_SERVICE_LIST"

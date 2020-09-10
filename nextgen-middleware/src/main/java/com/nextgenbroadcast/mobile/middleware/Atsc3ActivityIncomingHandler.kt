@@ -51,8 +51,14 @@ class Atsc3ActivityIncomingHandler(
                 }
             }
 
+            InterprocessServiceBinder.ACTION_PLAYER_STATE_CHANGE_PAUSE -> {
+                callback.onPlayerStatePause()
+            }
+
+            InterprocessServiceBinder.ACTION_PLAYER_STATE_CHANGE_RESUME -> {
+                callback.onPlayerStateResume()
+            }
+
         }
     }
-
-
 }

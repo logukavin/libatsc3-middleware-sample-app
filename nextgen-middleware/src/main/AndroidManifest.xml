@@ -28,11 +28,11 @@
             android:theme="@style/Theme.AppCompat.Light.Dialog" />
 
         <service
-            android:name=".LinkedAtsc3ForegroundService"
+            android:name=".EmbeddedAtsc3Service"
             android:exported="false" />
 
         <service
-            android:name=".StandaloneAtsc3ForegroundService"
+            android:name=".StandaloneAtsc3Service"
             android:process=":atsc3foreground"
             android:exported="false" />
 
