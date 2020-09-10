@@ -94,52 +94,24 @@ class InterprocessServiceBinder(
 
     private val sendingMessenger = Messenger(service)
 
-    private val incomingMessenger = Messenger(Atsc3ActivityIncomingHandler(object : OnIncomingDataListener {
+    private val incomingMessenger = Messenger(Atsc3ActivityIncomingHandler(
+            selectorPresenter,
+            receiverPresenter,
+            userAgentPresenter,
+            mediaPlayerPresenter,
+            object : OnIncomingPlayerStateListener {
+                override fun onPlayerStatePause() {
+                    playerStateListener?.onPause(mediaPlayerPresenter)
+                }
 
-        override fun onReceiverState(receiverState: ReceiverState) {
-            receiverPresenter.receiverState.postValue(receiverState)
-        }
-
-        override fun onSLSServices(slsServices: List<SLSService>) {
-            selectorPresenter.sltServices.postValue(slsServices)
-        }
-
-        override fun onSelectSLSService(slsService: SLSService?) {
-            selectorPresenter.selectedService.postValue(slsService)
-        }
-
-        override fun onAppData(appData: AppData?) {
-            userAgentPresenter.appData.postValue(appData)
-        }
-
-        override fun onRPMParams(ppmParams: RPMParams) {
-            mediaPlayerPresenter.rmpLayoutParams.postValue(ppmParams)
-        }
-
-        override fun onRPMMediaUrl(rpmMediaUrl: String) {
-            mediaPlayerPresenter.rmpMediaUrl.postValue(rpmMediaUrl)
-        }
-
-        override fun onPlayerStatePause() {
-            playerStateListener?.onPause(mediaPlayerPresenter)
-        }
-
-        override fun onPlayerStateResume() {
-            playerStateListener?.onResume(mediaPlayerPresenter)
-        }
-
-    }))
+                override fun onPlayerStateResume() {
+                    playerStateListener?.onResume(mediaPlayerPresenter)
+                }
+            }
+    ))
 
     init {
-        listOf(
-                LIVEDATA_RECEIVER_STATE,
-                LIVEDATA_SERVICE_LIST,
-                LIVEDATA_SERVICE_SELECTED,
-                LIVEDATA_APPDATA,
-                LIVEDATA_RMP_LAYOUT_PARAMS,
-                LIVEDATA_RMP_MEDIA_URL).forEach {
-            subscribe(it)
-        }
+        subscribe(LIVEDATA_ALL)
     }
 
     private fun subscribe(dataType: Int) {
@@ -156,26 +128,29 @@ class InterprocessServiceBinder(
     }
 
     companion object {
-        const val LIVEDATA_RECEIVER_STATE = 1
-        const val LIVEDATA_SERVICE_LIST = 2
-        const val LIVEDATA_SERVICE_SELECTED = 3
-        const val LIVEDATA_APPDATA = 4
-        const val LIVEDATA_RMP_LAYOUT_PARAMS = 5
-        const val LIVEDATA_RMP_MEDIA_URL = 6
 
-        const val ACTION_OPEN_ROUTE = 7
-        const val ACTION_CLOSE_ROUTE = 8
-        const val ACTION_SELECT_SERVICE = 9
-        const val ACTION_RMP_LAYOUT_RESET = 10
-        const val ACTION_RMP_PLAYBACK_STATE_CHANGED = 11
-        const val ACTION_RMP_PLAYBACK_RATE_CHANGED = 12
-        const val ACTION_RMP_MEDIA_TIME_CHANGED = 13
+        const val LIVEDATA_ALL = 1
 
-        const val CALLBACK_ADD_PLAYER_STATE_CHANGE = 14
-        const val CALLBACK_REMOVE_PLAYER_STATE_CHANGE = 15
+        const val LIVEDATA_RECEIVER_STATE = 2
+        const val LIVEDATA_SERVICE_LIST = 3
+        const val LIVEDATA_SERVICE_SELECTED = 4
+        const val LIVEDATA_APPDATA = 5
+        const val LIVEDATA_RMP_LAYOUT_PARAMS = 6
+        const val LIVEDATA_RMP_MEDIA_URL = 7
 
-        const val ACTION_PLAYER_STATE_CHANGE_PAUSE = 16
-        const val ACTION_PLAYER_STATE_CHANGE_RESUME = 17
+        const val ACTION_OPEN_ROUTE = 8
+        const val ACTION_CLOSE_ROUTE = 9
+        const val ACTION_SELECT_SERVICE = 10
+        const val ACTION_RMP_LAYOUT_RESET = 11
+        const val ACTION_RMP_PLAYBACK_STATE_CHANGED = 12
+        const val ACTION_RMP_PLAYBACK_RATE_CHANGED = 13
+        const val ACTION_RMP_MEDIA_TIME_CHANGED = 14
+
+        const val CALLBACK_ADD_PLAYER_STATE_CHANGE = 15
+        const val CALLBACK_REMOVE_PLAYER_STATE_CHANGE = 16
+
+        const val ACTION_PLAYER_STATE_CHANGE_PAUSE = 17
+        const val ACTION_PLAYER_STATE_CHANGE_RESUME = 18
 
         const val PARAM_RECEIVER_STATE = "PARAM_RECEIVER_STATE"
         const val PARAM_SERVICE_LIST = "PARAM_SERVICE_LIST"

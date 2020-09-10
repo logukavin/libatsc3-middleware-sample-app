@@ -6,6 +6,8 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
+import android.os.Binder
+import android.os.IBinder
 import android.os.PowerManager
 import android.os.PowerManager.WakeLock
 import androidx.core.content.ContextCompat
@@ -25,6 +27,7 @@ import com.nextgenbroadcast.mobile.middleware.gateway.rpc.RPCGatewayImpl
 import com.nextgenbroadcast.mobile.middleware.gateway.web.IWebGateway
 import com.nextgenbroadcast.mobile.middleware.gateway.web.WebGatewayImpl
 import com.nextgenbroadcast.mobile.middleware.phy.Atsc3DeviceReceiver
+import com.nextgenbroadcast.mobile.middleware.presentation.IUserAgentPresenter
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
 import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
 import com.nextgenbroadcast.mobile.middleware.settings.MiddlewareSettingsImpl
@@ -37,7 +40,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     private lateinit var settings: IMiddlewareSettings
     private lateinit var repository: IRepository
     private lateinit var atsc3Module: Atsc3Module
-    protected lateinit var serviceController: IServiceController
+    private lateinit var serviceController: IServiceController
     private lateinit var state: MediatorLiveData<Triple<ReceiverState?, SLSService?, PlaybackState?>>
 
     private var viewController: IViewController? = null
@@ -45,6 +48,14 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     private var rpcGateway: IRPCGateway? = null
     private var webServer: MiddlewareWebServer? = null
     private var deviceReceiver: Atsc3DeviceReceiver? = null
+
+    abstract fun createServiceBinder(serviceController: IServiceController, viewController: IViewController) : IBinder
+
+    override fun onBind(intent: Intent): IBinder? {
+        super.onBind(intent)
+
+        return createServiceBinder(serviceController, requireViewController())
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -247,7 +258,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         viewController = null
     }
 
-    protected fun requireViewController(): IViewController {
+    private fun requireViewController(): IViewController {
         if (viewController == null) {
             createViewPresentationAndStartService()
         }
