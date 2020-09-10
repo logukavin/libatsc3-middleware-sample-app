@@ -12,4 +12,6 @@ interface OnIncomingDataListener {
     fun onAppData(appData: AppData?)
     fun onRPMParams(ppmParams: RPMParams)
     fun onRPMMediaUrl(rpmMediaUrl: String)
+    fun onPlayerStatePause()
+    fun onPlayerStateResume()
 }

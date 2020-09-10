@@ -5,8 +5,10 @@ import androidx.core.os.bundleOf
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.Observer
 import com.nextgenbroadcast.mobile.core.model.*
+import com.nextgenbroadcast.mobile.middleware.controller.media.IObservablePlayer
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
 import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
+import com.nextgenbroadcast.mobile.middleware.presentation.IMediaPlayerPresenter
 import com.nextgenbroadcast.mobile.middleware.presentation.IReceiverPresenter
 
 class Atsc3ServiceIncomingHandler(
@@ -18,6 +20,9 @@ class Atsc3ServiceIncomingHandler(
 
     override fun handleMessage(msg: Message) {
         super.handleMessage(msg)
+
+        val playerStateListener: IObservablePlayer.IPlayerStateListener = PlayerStateListener(msg.replyTo)
+
         when (msg.what) {
 
             InterprocessServiceBinder.LIVEDATA_RECEIVER_STATE -> observReceiverState(msg.replyTo)
@@ -68,7 +73,28 @@ class Atsc3ServiceIncomingHandler(
                 viewController.rmpMediaTimeChanged(currentTime)
             }
 
+            InterprocessServiceBinder.CALLBACK_ADD_PLAYER_STATE_CHANGE -> {
+                viewController.addOnPlayerSateChangedCallback(playerStateListener)
+            }
+
+            InterprocessServiceBinder.CALLBACK_REMOVE_PLAYER_STATE_CHANGE -> {
+                viewController.addOnPlayerSateChangedCallback(playerStateListener)
+            }
+
             else -> super.handleMessage(msg)
+        }
+    }
+
+    inner class PlayerStateListener(
+            private val sendToMessenger: Messenger
+    ) : IObservablePlayer.IPlayerStateListener {
+
+        override fun onPause(mediaController: IMediaPlayerPresenter) {
+            sendToMessenger.send(buildMessage(InterprocessServiceBinder.ACTION_PLAYER_STATE_CHANGE_PAUSE))
+        }
+
+        override fun onResume(mediaController: IMediaPlayerPresenter) {
+            sendToMessenger.send(buildMessage(InterprocessServiceBinder.ACTION_PLAYER_STATE_CHANGE_RESUME))
         }
     }
 

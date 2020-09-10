@@ -4,21 +4,21 @@ import android.content.Intent
 import android.os.*
 import com.nextgenbroadcast.mobile.middleware.presentation.IReceiverPresenter
 
-class StandaloneAtsc3ForegroundService: Atsc3ForegroundService() {
+class StandaloneAtsc3Service: Atsc3ForegroundService() {
 
     private val messenger: Messenger by lazy {
         Messenger(Atsc3ServiceIncomingHandler(
-            lifecycleOwner = this@StandaloneAtsc3ForegroundService,
+            lifecycleOwner = this@StandaloneAtsc3Service,
             receiverPresenter = object : IReceiverPresenter {
                 override val receiverState = serviceController.receiverState
 
                 override fun openRoute(path: String): Boolean {
-                    openRoute(this@StandaloneAtsc3ForegroundService, path)
+                    openRoute(this@StandaloneAtsc3Service, path)
                     return true
                 }
 
                 override fun closeRoute() {
-                    closeRoute(this@StandaloneAtsc3ForegroundService)
+                    closeRoute(this@StandaloneAtsc3Service)
                 }
             },
             serviceController = serviceController,

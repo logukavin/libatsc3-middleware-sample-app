@@ -8,7 +8,7 @@ import com.nextgenbroadcast.mobile.middleware.presentation.IReceiverPresenter
 import com.nextgenbroadcast.mobile.middleware.presentation.ISelectorPresenter
 import com.nextgenbroadcast.mobile.middleware.presentation.IUserAgentPresenter
 
-class LinkedAtsc3ForegroundService : Atsc3ForegroundService() {
+class EmbeddedAtsc3Service : Atsc3ForegroundService() {
 
     override fun onBind(intent: Intent): IBinder? {
         super.onBind(intent)
@@ -21,12 +21,12 @@ class LinkedAtsc3ForegroundService : Atsc3ForegroundService() {
             override val receiverState = serviceController.receiverState
 
             override fun openRoute(path: String): Boolean {
-                openRoute(this@LinkedAtsc3ForegroundService, path)
+                openRoute(this@EmbeddedAtsc3Service, path)
                 return true
             }
 
             override fun closeRoute() {
-                closeRoute(this@LinkedAtsc3ForegroundService)
+                closeRoute(this@EmbeddedAtsc3Service)
             }
         }
         override val selectorPresenter: ISelectorPresenter = serviceController
