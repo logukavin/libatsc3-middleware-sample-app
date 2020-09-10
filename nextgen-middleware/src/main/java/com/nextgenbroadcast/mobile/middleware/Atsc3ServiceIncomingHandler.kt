@@ -25,17 +25,14 @@ class Atsc3ServiceIncomingHandler(
 
         when (msg.what) {
 
-            InterprocessServiceBinder.LIVEDATA_RECEIVER_STATE -> observReceiverState(msg.replyTo)
-
-            InterprocessServiceBinder.LIVEDATA_SERVICE_LIST -> observServiceState(msg.replyTo)
-
-            InterprocessServiceBinder.LIVEDATA_SERVICE_SELECTED -> observSelectedService(msg.replyTo)
-
-            InterprocessServiceBinder.LIVEDATA_APPDATA -> observAppData(msg.replyTo)
-
-            InterprocessServiceBinder.LIVEDATA_RMP_LAYOUT_PARAMS -> observRPMLayoutParams(msg.replyTo)
-
-            InterprocessServiceBinder.LIVEDATA_RMP_MEDIA_URL -> observRPMMediaUrl(msg.replyTo)
+            InterprocessServiceBinder.LIVEDATA_ALL -> {
+                observReceiverState(msg.replyTo)
+                observServiceState(msg.replyTo)
+                observSelectedService(msg.replyTo)
+                observAppData(msg.replyTo)
+                observRPMLayoutParams(msg.replyTo)
+                observRPMMediaUrl(msg.replyTo)
+            }
 
             InterprocessServiceBinder.ACTION_OPEN_ROUTE -> {
                 msg.data.getString(InterprocessServiceBinder.PARAM_OPEN_ROUTE_PATH)?.let { path ->

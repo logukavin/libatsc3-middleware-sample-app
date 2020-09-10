@@ -33,17 +33,18 @@ abstract class Atsc3Activity : AppCompatActivity() {
 
     private val connection = object : ServiceConnection {
         override fun onServiceConnected(className: ComponentName, service: IBinder) {
-            when(SERVICE_CLASS) {
+
+            val binder = when(SERVICE_CLASS) {
                 EmbeddedAtsc3Service::class.java -> {
-                    val binder = service as? IServiceBinder ?: return
-                    isBound = true
-                    onBind(binder)
+                    service as? IServiceBinder
                 }
                 StandaloneAtsc3Service::class.java -> {
-                    isBound = true
-                    onBind(InterprocessServiceBinder(service))
+                    InterprocessServiceBinder(service)
                 }
-            }
+                else -> null
+            } ?: return
+            onBind(binder)
+            isBound = true
         }
 
         override fun onServiceDisconnected(arg0: ComponentName) {
@@ -53,7 +54,6 @@ abstract class Atsc3Activity : AppCompatActivity() {
 
 
     companion object {
-        //val SERVICE_CLASS = StandaloneAtsc3Service::class.java
-        val SERVICE_CLASS = EmbeddedAtsc3Service::class.java
+        val SERVICE_CLASS = StandaloneAtsc3Service::class.java
     }
 }
