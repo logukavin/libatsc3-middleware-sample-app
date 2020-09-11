@@ -51,6 +51,7 @@ dependencies {
     implementation project(":nextgen-core")
     implementation project(":nextgen-middleware")
     implementation project(":nextgen-view")
+    implementation project(":nextgen-mmt")
 
     implementation "androidx.core:core-ktx:+"
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"

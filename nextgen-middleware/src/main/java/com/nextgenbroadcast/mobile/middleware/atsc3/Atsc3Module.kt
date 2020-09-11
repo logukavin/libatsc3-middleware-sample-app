@@ -11,7 +11,10 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPacka
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.HeldXmlParser
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.service.Atsc3Service
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.service.LLSParserSLT
+import com.nextgenbroadcast.mobile.mmt.atsc3.media.ATSC3PlayerMMTFragments
+import com.nextgenbroadcast.mobile.mmt.atsc3.media.MfuByteBufferHandler
 import org.ngbp.libatsc3.middleware.Atsc3NdkApplicationBridge
+import org.ngbp.libatsc3.middleware.android.ATSC3PlayerFlags
 import org.ngbp.libatsc3.middleware.android.a331.PackageExtractEnvelopeMetadataAndPayload
 import org.ngbp.libatsc3.middleware.android.application.interfaces.IAtsc3NdkApplicationBridgeCallbacks
 import org.ngbp.libatsc3.middleware.android.application.sync.mmt.MfuByteBufferFragment
@@ -61,6 +64,9 @@ internal class Atsc3Module(
     private var selectedServiceHeld: Atsc3Held? = null
     private var selectedServicePackage: Atsc3HeldPackage? = null
     private var selectedServiceHeldXml: String? = null //TODO: use TOI instead
+
+    val slsProtocol: Int
+        get() = selectedServiceSLSProtocol
 
     @Volatile
     private var listener: Listener? = null
@@ -205,9 +211,9 @@ internal class Atsc3Module(
         setState(State.IDLE)
     }
 
-    fun getSelectedServiceMediaUri(): String? {
+    private fun getSelectedServiceMediaUri(): String? {
         var mediaUri: String? = null
-        if (selectedServiceSLSProtocol == 1) {
+        if (selectedServiceSLSProtocol == SLS_PROTOCOL_DASH) {
             val routeMPDFileName = atsc3NdkApplicationBridge.atsc3_slt_alc_get_sls_metadata_fragments_content_locations_from_monitor_service_id(selectedServiceId, DASH_CONTENT_TYPE)
             if (routeMPDFileName.isNotEmpty()) {
                 mediaUri = String.format("%s/%s", jni_getCacheDir(), routeMPDFileName[0])
@@ -286,12 +292,16 @@ internal class Atsc3Module(
         }
     }
 
-    override fun pushMfuByteBufferFragment(mfuByteBufferFragment: MfuByteBufferFragment?) {
-        //TODO("Not yet implemented")
+    override fun pushMfuByteBufferFragment(mfuByteBufferFragment: MfuByteBufferFragment) {
+        MfuByteBufferHandler.PushMfuByteBufferFragment(mfuByteBufferFragment)
     }
 
-    override fun pushMpuMetadata_HEVC_NAL_Payload(mpuMetadata_hevc_nal_payload: MpuMetadata_HEVC_NAL_Payload?) {
-        //TODO("Not yet implemented")
+    override fun pushMpuMetadata_HEVC_NAL_Payload(mpuMetadata_hevc_nal_payload: MpuMetadata_HEVC_NAL_Payload) {
+        if (ATSC3PlayerFlags.ATSC3PlayerStartPlayback && ATSC3PlayerMMTFragments.InitMpuMetadata_HEVC_NAL_Payload == null) {
+            ATSC3PlayerMMTFragments.InitMpuMetadata_HEVC_NAL_Payload = mpuMetadata_hevc_nal_payload
+        } else {
+            mpuMetadata_hevc_nal_payload.releaseByteBuffer()
+        }
     }
 
     override fun onAlcObjectStatusMessage(alc_object_status_message: String) {
@@ -365,5 +375,8 @@ internal class Atsc3Module(
 
         private const val DASH_CONTENT_TYPE = "application/dash+xml"
         private const val RES_OK = 0
+
+        const val SLS_PROTOCOL_DASH = 1
+        const val SLS_PROTOCOL_MMT = 2
     }
 }
