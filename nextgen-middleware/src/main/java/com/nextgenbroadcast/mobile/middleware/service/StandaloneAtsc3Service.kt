@@ -28,7 +28,7 @@ class StandaloneAtsc3Service : Atsc3ForegroundService() {
             )).binder
 
     companion object {
-        fun init() {
+        init {
             clazz = StandaloneAtsc3Service::class.java
         }
     }
