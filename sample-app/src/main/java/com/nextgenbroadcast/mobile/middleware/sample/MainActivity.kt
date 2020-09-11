@@ -2,6 +2,7 @@ package com.nextgenbroadcast.mobile.middleware.sample
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.PictureInPictureParams
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -10,7 +11,9 @@ import android.content.pm.ShortcutManager
 import android.content.res.Configuration
 import android.graphics.drawable.Icon
 import android.net.Uri
-import android.os.*
+import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.view.GestureDetector
 import android.view.View
@@ -67,6 +70,10 @@ class MainActivity : Atsc3Activity() {
     private lateinit var serviceAdapter: ServiceAdapter
     private lateinit var sourceAdapter: ListAdapter
     private lateinit var bottomSheetBehavior: BottomSheetBehavior<View>
+
+    private val hasFeaturePIP: Boolean by lazy {
+        packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)
+    }
 
     override fun onBind(binder: IServiceBinder) {
         val provider = UserAgentViewModelFactory(
@@ -245,7 +252,26 @@ class MainActivity : Atsc3Activity() {
         }
     }
 
+    override fun onUserLeaveHint() {
+        if (receiver_media_player.isPlaying && hasFeaturePIP) {
+            enterPictureInPictureMode(PictureInPictureParams.Builder().build())
+        }
+    }
+
+    override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: Configuration) {
+        val visibility = if (isInPictureInPictureMode) {
+            user_agent_web_view.closeMenu()
+            View.INVISIBLE
+        } else {
+            View.VISIBLE
+        }
+        atsc3_data_log.visibility = visibility
+        bottom_sheet.visibility = visibility
+    }
+
     private fun updateSystemUi(config: Configuration) {
+        if (isInPictureInPictureMode) return
+
         if (config.orientation == Configuration.ORIENTATION_LANDSCAPE) {
             window.decorView.systemUiVisibility = (View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
                     or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
