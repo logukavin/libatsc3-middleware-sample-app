@@ -15,9 +15,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
-import android.view.GestureDetector
-import android.view.View
-import android.view.WindowManager
+import android.view.*
 import android.widget.ArrayAdapter
 import android.widget.ListAdapter
 import android.widget.Toast
@@ -426,13 +424,23 @@ class MainActivity : Atsc3Activity(){
     }
 
     private fun startPlayback(mpdPath: String) {
-        receiver_media_player.play(Uri.parse(mpdPath))
-        progress_bar.visibility = View.GONE
+        if (mpdPath == "mmt") {
+            mmt_player_view.start()
+
+            receiver_media_player.visibility = View.INVISIBLE
+            progress_bar.visibility = View.GONE
+        } else {
+            receiver_media_player.visibility = View.VISIBLE
+            receiver_media_player.play(Uri.parse(mpdPath))
+            progress_bar.visibility = View.GONE
+        }
     }
 
     private fun stopPlayback() {
         receiver_media_player.stop()
         progress_bar.visibility = View.VISIBLE
+
+        mmt_player_view.stop()
     }
 
     private val updateMediaTimeRunnable = object : Runnable {
