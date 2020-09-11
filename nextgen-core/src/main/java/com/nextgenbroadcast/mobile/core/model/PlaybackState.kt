@@ -4,7 +4,10 @@ import android.os.Parcelable
 import kotlinx.android.parcel.Parcelize
 
 @Parcelize
-enum class PlaybackState(val state: Int) : Parcelable {
+enum class PlaybackState(
+        val state: Int
+) : Parcelable {
+
     PLAYING(0),
     PAUSED(1),
     IDLE(2);

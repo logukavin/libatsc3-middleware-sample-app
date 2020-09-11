@@ -1,10 +1,11 @@
-package com.nextgenbroadcast.mobile.middleware
+package com.nextgenbroadcast.mobile.middleware.service.handler
 
 import android.os.*
 import androidx.core.os.bundleOf
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.Observer
 import com.nextgenbroadcast.mobile.core.model.*
+import com.nextgenbroadcast.mobile.middleware.service.binder.InterprocessServiceBinder
 import com.nextgenbroadcast.mobile.middleware.controller.media.IObservablePlayer
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
 import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
@@ -28,10 +29,10 @@ class Atsc3ServiceIncomingHandler(
             InterprocessServiceBinder.LIVEDATA_ALL -> {
                 observReceiverState(msg.replyTo)
                 observServiceState(msg.replyTo)
-                observSelectedService(msg.replyTo)
-                observAppData(msg.replyTo)
-                observRPMLayoutParams(msg.replyTo)
-                observRPMMediaUrl(msg.replyTo)
+                observeSelectedService(msg.replyTo)
+                observeAppData(msg.replyTo)
+                observeRPMLayoutParams(msg.replyTo)
+                observeRPMMediaUrl(msg.replyTo)
             }
 
             InterprocessServiceBinder.ACTION_OPEN_ROUTE -> {
@@ -40,23 +41,19 @@ class Atsc3ServiceIncomingHandler(
                 }
             }
 
-            InterprocessServiceBinder.ACTION_CLOSE_ROUTE ->  receiverPresenter.closeRoute()
+            InterprocessServiceBinder.ACTION_CLOSE_ROUTE -> receiverPresenter.closeRoute()
 
             InterprocessServiceBinder.ACTION_SELECT_SERVICE -> {
-                msg.data.classLoader = SLSService::class.java.classLoader
-                val service = msg.data.getParcelable<SLSService?>(InterprocessServiceBinder.PARAM_SELECT_SERVICE)
-                service?.let {
-                    serviceController.selectService(service)
+                msg.data.getParcelable(SLSService::class.java, InterprocessServiceBinder.PARAM_SELECT_SERVICE)?.let {
+                    serviceController.selectService(it)
                 }
             }
 
-            InterprocessServiceBinder.ACTION_RMP_LAYOUT_RESET ->  viewController.rmpLayoutReset()
+            InterprocessServiceBinder.ACTION_RMP_LAYOUT_RESET -> viewController.rmpLayoutReset()
 
             InterprocessServiceBinder.ACTION_RMP_PLAYBACK_STATE_CHANGED -> {
-                msg.data.classLoader = PlaybackState::class.java.classLoader
-                val playBackState = msg.data.getParcelable<PlaybackState?>(InterprocessServiceBinder.PARAM_RMP_PLAYBACK_STATE)
-                playBackState?.let {
-                    viewController.rmpPlaybackChanged(playBackState)
+                msg.data.getParcelable(PlaybackState::class.java, InterprocessServiceBinder.PARAM_RMP_PLAYBACK_STATE)?.let {
+                    viewController.rmpPlaybackChanged(it)
                 }
             }
 
@@ -119,7 +116,7 @@ class Atsc3ServiceIncomingHandler(
         })
     }
 
-    private fun observSelectedService(sendToMessenger: Messenger) {
+    private fun observeSelectedService(sendToMessenger: Messenger) {
         serviceController.selectedService.observe(lifecycleOwner, Observer { selectedService ->
             sendToMessenger.send(buildMessage(
                     InterprocessServiceBinder.LIVEDATA_SERVICE_SELECTED,
@@ -131,7 +128,7 @@ class Atsc3ServiceIncomingHandler(
         })
     }
 
-    private fun observAppData(sendToMessenger: Messenger) {
+    private fun observeAppData(sendToMessenger: Messenger) {
         viewController.appData.observe(lifecycleOwner, Observer { appData ->
             sendToMessenger.send(buildMessage(
                     InterprocessServiceBinder.LIVEDATA_APPDATA,
@@ -143,7 +140,7 @@ class Atsc3ServiceIncomingHandler(
         })
     }
 
-    private fun observRPMLayoutParams(sendToMessenger: Messenger) {
+    private fun observeRPMLayoutParams(sendToMessenger: Messenger) {
         viewController.rmpLayoutParams.observe(lifecycleOwner, Observer { rpmLayoutParams ->
             sendToMessenger.send(buildMessage(
                     InterprocessServiceBinder.LIVEDATA_RMP_LAYOUT_PARAMS,
@@ -155,7 +152,7 @@ class Atsc3ServiceIncomingHandler(
         })
     }
 
-    private fun observRPMMediaUrl(sendToMessenger: Messenger) {
+    private fun observeRPMMediaUrl(sendToMessenger: Messenger) {
         viewController.rmpMediaUrl.observe(lifecycleOwner, Observer { rmpMediaUrl ->
             sendToMessenger.send(buildMessage(
                     InterprocessServiceBinder.LIVEDATA_RMP_MEDIA_URL,
@@ -166,7 +163,7 @@ class Atsc3ServiceIncomingHandler(
         })
     }
 
-    private fun buildMessage(dataType: Int, args: Bundle? = null, classLoader: ClassLoader? = null) : Message = Message.obtain(null, dataType).apply {
+    private fun buildMessage(dataType: Int, args: Bundle? = null, classLoader: ClassLoader? = null): Message = Message.obtain(null, dataType).apply {
         args?.let {
             data = args
         }

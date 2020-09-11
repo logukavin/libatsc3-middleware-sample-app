@@ -1,4 +1,4 @@
-package com.nextgenbroadcast.mobile.middleware
+package com.nextgenbroadcast.mobile.middleware.service.binder
 
 import com.nextgenbroadcast.mobile.middleware.presentation.IMediaPlayerPresenter
 import com.nextgenbroadcast.mobile.middleware.presentation.IReceiverPresenter
