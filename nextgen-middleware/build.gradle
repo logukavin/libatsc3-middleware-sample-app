@@ -103,6 +103,10 @@ dependencies {
     implementation "androidx.lifecycle:lifecycle-livedata-ktx:$lifecycleVersion"
     implementation "androidx.lifecycle:lifecycle-service:$lifecycleVersion"
 
+    implementation("androidx.startup:startup-runtime:1.0.0-alpha03") {
+        transitive = true
+    }
+
     testImplementation 'junit:junit:4.12'
     androidTestImplementation 'androidx.test.ext:junit:1.1.2'
     testImplementation 'androidx.test:core:1.3.0'
