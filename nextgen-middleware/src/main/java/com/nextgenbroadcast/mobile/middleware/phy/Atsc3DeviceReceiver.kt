@@ -5,7 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
-import com.nextgenbroadcast.mobile.middleware.Atsc3ForegroundService
+import com.nextgenbroadcast.mobile.middleware.service.Atsc3ForegroundService
 
 class Atsc3DeviceReceiver(
         private val deviceName: String

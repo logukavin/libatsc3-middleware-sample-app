@@ -4,8 +4,13 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
-import android.os.IBinder
+import android.os.*
 import androidx.appcompat.app.AppCompatActivity
+import com.nextgenbroadcast.mobile.middleware.service.Atsc3ForegroundService
+import com.nextgenbroadcast.mobile.middleware.service.EmbeddedAtsc3Service
+import com.nextgenbroadcast.mobile.middleware.service.StandaloneAtsc3Service
+import com.nextgenbroadcast.mobile.middleware.service.binder.IServiceBinder
+import com.nextgenbroadcast.mobile.middleware.service.binder.InterprocessServiceBinder
 
 abstract class Atsc3Activity : AppCompatActivity() {
     var isBound: Boolean = false
@@ -14,7 +19,7 @@ abstract class Atsc3Activity : AppCompatActivity() {
     override fun onStart() {
         super.onStart()
 
-        Intent(this, Atsc3ForegroundService::class.java).also { intent ->
+        Intent(this, Atsc3ForegroundService.clazz).also { intent ->
             bindService(intent, connection, Context.BIND_AUTO_CREATE)
         }
     }
@@ -27,12 +32,22 @@ abstract class Atsc3Activity : AppCompatActivity() {
         onUnbind()
     }
 
-    abstract fun onBind(binder: Atsc3ForegroundService.ServiceBinder)
+    abstract fun onBind(binder: IServiceBinder)
     abstract fun onUnbind()
 
     private val connection = object : ServiceConnection {
         override fun onServiceConnected(className: ComponentName, service: IBinder) {
-            val binder = service as? Atsc3ForegroundService.ServiceBinder ?: return
+
+            val binder = when (Atsc3ForegroundService.clazz) {
+                EmbeddedAtsc3Service::class.java -> {
+                    service as? IServiceBinder
+                }
+                StandaloneAtsc3Service::class.java -> {
+                    InterprocessServiceBinder(service)
+                }
+                else -> null
+            } ?: return
+
             onBind(binder)
             isBound = true
         }

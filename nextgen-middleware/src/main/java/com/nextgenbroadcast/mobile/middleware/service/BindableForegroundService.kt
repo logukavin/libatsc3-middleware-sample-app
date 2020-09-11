@@ -1,4 +1,4 @@
-package com.nextgenbroadcast.mobile.middleware
+package com.nextgenbroadcast.mobile.middleware.service
 
 import android.app.Notification
 import android.content.Intent
@@ -7,6 +7,7 @@ import androidx.lifecycle.LifecycleService
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.model.SLSService
+import com.nextgenbroadcast.mobile.middleware.R
 import com.nextgenbroadcast.mobile.middleware.notification.NotificationHelper
 import kotlinx.coroutines.*
 
