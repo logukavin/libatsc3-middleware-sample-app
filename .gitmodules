@@ -3,11 +3,6 @@
 	url = https://dev.azure.com/NGWP/Middleware/_git/libatsc3
 	branch = lowaSIS
 	update = rebase
-[submodule "jsonrpc2"]
-	path = jsonrpc2
-	url = https://dev.azure.com/NGWP/Middleware/_git/jsonrpc2
-	branch = master
-	update = rebase
 [submodule "ExoPlayer"]
 	path = ExoPlayer
 	url = https://dev.azure.com/NGWP/Middleware/_git/ExoPlayer

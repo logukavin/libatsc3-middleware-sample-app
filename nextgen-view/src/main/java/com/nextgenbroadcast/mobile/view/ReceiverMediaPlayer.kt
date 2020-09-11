@@ -24,6 +24,9 @@ class ReceiverMediaPlayer @JvmOverloads constructor(
     private var rmpState: PlaybackState? = null
     private var listener: EventListener? = null
 
+    val isPlaying: Boolean
+        get() = rmpState == PlaybackState.PLAYING
+
     val playbackPosition
         get() = simpleExoPlayer.currentPosition
 

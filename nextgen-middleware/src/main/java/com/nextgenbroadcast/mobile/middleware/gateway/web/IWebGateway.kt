@@ -13,6 +13,4 @@ interface IWebGateway {
 
     val selectedService: LiveData<SLSService?>
     val appCache: LiveData<List<Atsc3Application>>
-
-    fun setPortByType(connectionType: ConnectionType, port: Int)
 }

@@ -16,12 +16,6 @@ project(':atsc3_phy_virtual').projectDir = new File(rootProject.projectDir, 'lib
 include ':atsc3_phy_lowasis'
 project(':atsc3_phy_lowasis').projectDir = new File(rootProject.projectDir, 'libatsc3/android/atsc3_phy_lowasis')
 
-include ':jsonrpc-core'
-project(':jsonrpc-core').projectDir = new File(rootProject.projectDir, 'jsonrpc2/jsonrpc-core')
-
-include ':jsonrpc-jackson'
-project(':jsonrpc-jackson').projectDir = new File(rootProject.projectDir, 'jsonrpc2/jsonrpc-jackson-extension')
-
 gradle.ext.exoplayerRoot = 'ExoPlayer'
 gradle.ext.exoplayerModulePrefix = 'exoplayer-'
 apply from: new File(gradle.ext.exoplayerRoot, 'core_settings.gradle')
