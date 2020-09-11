@@ -1,13 +1,14 @@
-package com.nextgenbroadcast.mobile.middleware
+package com.nextgenbroadcast.mobile.middleware.service
 
 import android.os.*
+import com.nextgenbroadcast.mobile.middleware.service.handler.Atsc3ServiceIncomingHandler
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
 import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
 import com.nextgenbroadcast.mobile.middleware.presentation.IReceiverPresenter
 
-class StandaloneAtsc3Service: Atsc3ForegroundService() {
+class StandaloneAtsc3Service : Atsc3ForegroundService() {
 
-    override fun createServiceBinder(serviceController: IServiceController, viewController: IViewController) : IBinder =
+    override fun createServiceBinder(serviceController: IServiceController, viewController: IViewController): IBinder =
             Messenger(Atsc3ServiceIncomingHandler(
                     lifecycleOwner = this@StandaloneAtsc3Service,
                     receiverPresenter = object : IReceiverPresenter {
@@ -25,4 +26,10 @@ class StandaloneAtsc3Service: Atsc3ForegroundService() {
                     serviceController = serviceController,
                     viewController = viewController
             )).binder
+
+    companion object {
+        fun init() {
+            clazz = StandaloneAtsc3Service::class.java
+        }
+    }
 }

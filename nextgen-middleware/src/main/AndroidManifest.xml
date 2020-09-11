@@ -27,15 +27,6 @@
             android:exported="false"
             android:theme="@style/Theme.AppCompat.Light.Dialog" />
 
-        <service
-            android:name=".EmbeddedAtsc3Service"
-            android:exported="false" />
-
-        <service
-            android:name=".StandaloneAtsc3Service"
-            android:process=":atsc3foreground"
-            android:exported="true" />
-
         <uses-library
             android:name="org.apache.http.legacy"
             android:required="false" />

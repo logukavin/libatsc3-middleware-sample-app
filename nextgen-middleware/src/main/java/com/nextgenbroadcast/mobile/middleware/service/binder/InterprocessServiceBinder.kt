@@ -1,4 +1,4 @@
-package com.nextgenbroadcast.mobile.middleware
+package com.nextgenbroadcast.mobile.middleware.service.binder
 
 import android.os.*
 import androidx.core.os.bundleOf
@@ -9,9 +9,11 @@ import com.nextgenbroadcast.mobile.middleware.presentation.IMediaPlayerPresenter
 import com.nextgenbroadcast.mobile.middleware.presentation.IReceiverPresenter
 import com.nextgenbroadcast.mobile.middleware.presentation.ISelectorPresenter
 import com.nextgenbroadcast.mobile.middleware.presentation.IUserAgentPresenter
+import com.nextgenbroadcast.mobile.middleware.service.handler.Atsc3ActivityIncomingHandler
+import com.nextgenbroadcast.mobile.middleware.service.handler.OnIncomingPlayerStateListener
 
 class InterprocessServiceBinder(
-        private val service: IBinder
+        service: IBinder
 ) : IServiceBinder {
 
     private var playerStateListener: IObservablePlayer.IPlayerStateListener? = null

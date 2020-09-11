@@ -31,8 +31,8 @@ import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.model.SLSService
 import com.nextgenbroadcast.mobile.middleware.Atsc3Activity
-import com.nextgenbroadcast.mobile.middleware.Atsc3ForegroundService
-import com.nextgenbroadcast.mobile.middleware.IServiceBinder
+import com.nextgenbroadcast.mobile.middleware.service.Atsc3ForegroundService
+import com.nextgenbroadcast.mobile.middleware.service.binder.IServiceBinder
 import com.nextgenbroadcast.mobile.middleware.core.FileUtils
 import com.nextgenbroadcast.mobile.middleware.sample.core.SwipeGestureDetector
 import com.nextgenbroadcast.mobile.middleware.sample.databinding.ActivityMainBinding
