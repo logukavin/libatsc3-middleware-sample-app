@@ -117,16 +117,24 @@ class InterprocessServiceBinder(
     }
 
     private fun subscribe(dataType: Int) {
-        sendingMessenger.send(Message.obtain(null, dataType).apply {
-            replyTo = incomingMessenger
-        })
+        try {
+            sendingMessenger.send(Message.obtain(null, dataType).apply {
+                replyTo = incomingMessenger
+            })
+        } catch (e: DeadObjectException) {
+            e.printStackTrace()
+        }
     }
 
     private fun sendAction(actionType: Int, args: Bundle? = null) {
+        try {
         sendingMessenger.send(Message.obtain(null, actionType).apply {
             data = args
             replyTo = incomingMessenger
         })
+        } catch (e: DeadObjectException) {
+            e.printStackTrace()
+        }
     }
 
     companion object {
