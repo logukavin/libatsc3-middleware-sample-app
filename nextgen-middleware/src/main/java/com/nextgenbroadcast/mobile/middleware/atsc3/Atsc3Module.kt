@@ -4,6 +4,7 @@ import android.content.Context
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import android.util.Log
+import com.nextgenbroadcast.mobile.core.media.IMMTDataConsumer
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3ApplicationFile
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3Held
@@ -11,10 +12,8 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPacka
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.HeldXmlParser
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.service.Atsc3Service
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.service.LLSParserSLT
-import com.nextgenbroadcast.mobile.mmt.atsc3.media.ATSC3PlayerMMTFragments
-import com.nextgenbroadcast.mobile.mmt.atsc3.media.MfuByteBufferHandler
+import com.nextgenbroadcast.mobile.core.media.IMMTDataProducer
 import org.ngbp.libatsc3.middleware.Atsc3NdkApplicationBridge
-import org.ngbp.libatsc3.middleware.android.ATSC3PlayerFlags
 import org.ngbp.libatsc3.middleware.android.a331.PackageExtractEnvelopeMetadataAndPayload
 import org.ngbp.libatsc3.middleware.android.application.interfaces.IAtsc3NdkApplicationBridgeCallbacks
 import org.ngbp.libatsc3.middleware.android.application.sync.mmt.MfuByteBufferFragment
@@ -28,10 +27,12 @@ import java.io.File
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
+typealias MMTDataConsumerType = IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payload, MfuByteBufferFragment>
+
 //TODO: multithreading requests
 internal class Atsc3Module(
         private val context: Context
-) : IAtsc3NdkApplicationBridgeCallbacks {
+) : IMMTDataProducer<MpuMetadata_HEVC_NAL_Payload, MfuByteBufferFragment>, IAtsc3NdkApplicationBridgeCallbacks {
 
     enum class State {
         OPENED, PAUSED, IDLE
@@ -64,6 +65,8 @@ internal class Atsc3Module(
     private var selectedServiceHeld: Atsc3Held? = null
     private var selectedServicePackage: Atsc3HeldPackage? = null
     private var selectedServiceHeldXml: String? = null //TODO: use TOI instead
+    @Volatile
+    private var mmtSource: MMTDataConsumerType? = null
 
     val slsProtocol: Int
         get() = selectedServiceSLSProtocol
@@ -211,6 +214,16 @@ internal class Atsc3Module(
         setState(State.IDLE)
     }
 
+    override fun setMMTSource(source: MMTDataConsumerType) {
+        mmtSource = source
+    }
+
+    override fun resetMMTSource(source: MMTDataConsumerType) {
+        if (mmtSource == source) {
+            mmtSource = null
+        }
+    }
+
     private fun getSelectedServiceMediaUri(): String? {
         var mediaUri: String? = null
         if (selectedServiceSLSProtocol == SLS_PROTOCOL_DASH) {
@@ -233,6 +246,7 @@ internal class Atsc3Module(
         clearHeld()
         clearService()
         serviceMap.clear()
+        mmtSource = null
     }
 
     private fun clearService() {
@@ -293,15 +307,11 @@ internal class Atsc3Module(
     }
 
     override fun pushMfuByteBufferFragment(mfuByteBufferFragment: MfuByteBufferFragment) {
-        MfuByteBufferHandler.PushMfuByteBufferFragment(mfuByteBufferFragment)
+        mmtSource?.PushMfuByteBufferFragment(mfuByteBufferFragment)
     }
 
     override fun pushMpuMetadata_HEVC_NAL_Payload(mpuMetadata_hevc_nal_payload: MpuMetadata_HEVC_NAL_Payload) {
-        if (ATSC3PlayerFlags.ATSC3PlayerStartPlayback && ATSC3PlayerMMTFragments.InitMpuMetadata_HEVC_NAL_Payload == null) {
-            ATSC3PlayerMMTFragments.InitMpuMetadata_HEVC_NAL_Payload = mpuMetadata_hevc_nal_payload
-        } else {
-            mpuMetadata_hevc_nal_payload.releaseByteBuffer()
-        }
+        mmtSource?.InitMpuMetadata_HEVC_NAL_Payload(mpuMetadata_hevc_nal_payload)
     }
 
     override fun onAlcObjectStatusMessage(alc_object_status_message: String) {
