@@ -31,8 +31,19 @@
         </activity>
 
         <service
-            android:name="com.nextgenbroadcast.mobile.middleware.service.EmbeddedAtsc3Service"
-            android:exported="false" />
+            android:name="com.nextgenbroadcast.mobile.middleware.service.StandaloneAtsc3Service"
+            android:process=":atsc3Service"
+            android:enabled="true"
+            android:exported="true" />
+
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false">
+            <meta-data
+                android:name="com.nextgenbroadcast.mobile.middleware.StandaloneServiceInitializer"
+                android:value="androidx.startup" />
+        </provider>
 
     </application>
 

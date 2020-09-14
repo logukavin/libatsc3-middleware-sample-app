@@ -93,7 +93,7 @@ class Atsc3ServiceIncomingHandler(
     }
 
     private fun observReceiverState(sendToMessenger: Messenger) {
-        serviceController.receiverState.observe(lifecycleOwner, Observer { state ->
+        serviceController.receiverState.observe(lifecycleOwner, { state ->
             sendToMessenger.send(buildMessage(
                     InterprocessServiceBinder.LIVEDATA_RECEIVER_STATE,
                     bundleOf(
@@ -105,7 +105,7 @@ class Atsc3ServiceIncomingHandler(
     }
 
     private fun observServiceState(sendToMessenger: Messenger) {
-        serviceController.sltServices.observe(lifecycleOwner, Observer { services ->
+        serviceController.sltServices.observe(lifecycleOwner, { services ->
             sendToMessenger.send(buildMessage(
                     InterprocessServiceBinder.LIVEDATA_SERVICE_LIST,
                     bundleOf(
@@ -117,7 +117,7 @@ class Atsc3ServiceIncomingHandler(
     }
 
     private fun observeSelectedService(sendToMessenger: Messenger) {
-        serviceController.selectedService.observe(lifecycleOwner, Observer { selectedService ->
+        serviceController.selectedService.observe(lifecycleOwner, { selectedService ->
             sendToMessenger.send(buildMessage(
                     InterprocessServiceBinder.LIVEDATA_SERVICE_SELECTED,
                     bundleOf(
@@ -129,7 +129,7 @@ class Atsc3ServiceIncomingHandler(
     }
 
     private fun observeAppData(sendToMessenger: Messenger) {
-        viewController.appData.observe(lifecycleOwner, Observer { appData ->
+        viewController.appData.observe(lifecycleOwner, { appData ->
             sendToMessenger.send(buildMessage(
                     InterprocessServiceBinder.LIVEDATA_APPDATA,
                     bundleOf(
@@ -141,7 +141,7 @@ class Atsc3ServiceIncomingHandler(
     }
 
     private fun observeRPMLayoutParams(sendToMessenger: Messenger) {
-        viewController.rmpLayoutParams.observe(lifecycleOwner, Observer { rpmLayoutParams ->
+        viewController.rmpLayoutParams.observe(lifecycleOwner, { rpmLayoutParams ->
             sendToMessenger.send(buildMessage(
                     InterprocessServiceBinder.LIVEDATA_RMP_LAYOUT_PARAMS,
                     bundleOf(
@@ -153,7 +153,7 @@ class Atsc3ServiceIncomingHandler(
     }
 
     private fun observeRPMMediaUrl(sendToMessenger: Messenger) {
-        viewController.rmpMediaUrl.observe(lifecycleOwner, Observer { rmpMediaUrl ->
+        viewController.rmpMediaUrl.observe(lifecycleOwner, { rmpMediaUrl ->
             sendToMessenger.send(buildMessage(
                     InterprocessServiceBinder.LIVEDATA_RMP_MEDIA_URL,
                     bundleOf(

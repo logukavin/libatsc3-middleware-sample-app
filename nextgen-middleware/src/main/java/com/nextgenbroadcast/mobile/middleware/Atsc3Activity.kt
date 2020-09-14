@@ -4,7 +4,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
-import android.os.*
+import android.os.IBinder
 import androidx.appcompat.app.AppCompatActivity
 import com.nextgenbroadcast.mobile.middleware.service.Atsc3ForegroundService
 import com.nextgenbroadcast.mobile.middleware.service.EmbeddedAtsc3Service
@@ -18,8 +18,12 @@ abstract class Atsc3Activity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
-
-        Intent(this, Atsc3ForegroundService.clazz).also { intent ->
+        Intent().apply {
+            component = ComponentName(
+                    "${BuildConfig.LIBRARY_PACKAGE_NAME}.sample.standalone",
+                    "${Atsc3ForegroundService.clazz.canonicalName}"
+            )
+        }.also { intent ->
             bindService(intent, connection, Context.BIND_AUTO_CREATE)
         }
     }
