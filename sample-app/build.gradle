@@ -33,6 +33,22 @@ android {
         }
     }
 
+    flavorDimensions "service_type"
+    productFlavors {
+        embedded {
+            dimension "service_type"
+            applicationIdSuffix ".embedded"
+        }
+        standalone {
+            dimension "service_type"
+            applicationIdSuffix ".standalone"
+        }
+        light {
+            dimension "service_type"
+            applicationIdSuffix ".light"
+        }
+    }
+
     buildFeatures {
         dataBinding = true
     }

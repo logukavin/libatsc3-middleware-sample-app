@@ -37,7 +37,7 @@ class EmbeddedAtsc3Service : Atsc3ForegroundService() {
     }
 
     companion object {
-        fun init() {
+        init {
             clazz = EmbeddedAtsc3Service::class.java
         }
     }
