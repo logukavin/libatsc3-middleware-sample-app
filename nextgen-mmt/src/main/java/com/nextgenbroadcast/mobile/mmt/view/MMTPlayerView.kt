@@ -17,6 +17,9 @@ class MMTPlayerView @JvmOverloads constructor(
 
     private var player: DecoderHandlerThread? = null
 
+    val isPlaying: Boolean
+        get() = player?.isPlaybackStarted ?: false
+
     fun start(source: MMTDataSource) {
         stop()
 

@@ -258,9 +258,13 @@ class MainActivity : Atsc3Activity() {
     }
 
     override fun onUserLeaveHint() {
-        if (receiver_media_player.isPlaying && hasFeaturePIP) {
+        if (hasFeaturePIP && isPlaying()) {
             enterPictureInPictureMode(PictureInPictureParams.Builder().build())
         }
+    }
+
+    private fun isPlaying(): Boolean {
+        return receiver_media_player.isPlaying || mmt_player_view.isPlaying
     }
 
     override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: Configuration) {

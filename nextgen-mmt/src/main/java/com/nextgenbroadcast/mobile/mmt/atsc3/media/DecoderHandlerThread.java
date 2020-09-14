@@ -124,6 +124,10 @@ public class DecoderHandlerThread {
         return new Size(MmtPacketIdContext.video_packet_statistics.width, MmtPacketIdContext.video_packet_statistics.height);
     }
 
+    public boolean isPlaybackStarted() {
+        return ATSC3PlayerFlags.ATSC3PlayerStartPlayback;
+    }
+
     private void notifyPlayerReady() {
         serviceHandler.sendMessageDelayed(serviceHandler.obtainMessage(ServiceHandler.VIDEO_RESIZE), 1);
     }
