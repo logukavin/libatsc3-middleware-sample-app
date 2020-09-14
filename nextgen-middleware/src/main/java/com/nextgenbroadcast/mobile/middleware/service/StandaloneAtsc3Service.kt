@@ -5,6 +5,8 @@ import com.nextgenbroadcast.mobile.middleware.service.handler.Atsc3ServiceIncomi
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
 import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
 import com.nextgenbroadcast.mobile.middleware.presentation.IReceiverPresenter
+import com.nextgenbroadcast.mobile.mmt.atsc3.media.MMTDataSource
+import java.lang.UnsupportedOperationException
 
 class StandaloneAtsc3Service : Atsc3ForegroundService() {
 
@@ -21,6 +23,10 @@ class StandaloneAtsc3Service : Atsc3ForegroundService() {
 
                         override fun closeRoute() {
                             closeRoute(this@StandaloneAtsc3Service)
+                        }
+
+                        override fun createMMTSource(): MMTDataSource {
+                            throw UnsupportedOperationException("MMT playback is not supported with standalone service")
                         }
                     },
                     serviceController = serviceController,

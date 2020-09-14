@@ -43,9 +43,10 @@ public class DecoderHandlerThread {
     private final Handler decoderHandler;
     private final Handler serviceHandler;
 
+    private MMTDataSource dataSource;
     private Surface myDecoderSurface;
 
-    public static MediaSync sync;
+    private MediaSync sync;
 
     //todo: investigate int64_t MediaSync::getRealTime(int64_t mediaTimeUs, int64_t nowUs) {
     private Surface syncSurface;
@@ -83,9 +84,17 @@ public class DecoderHandlerThread {
         serviceHandler = new ServiceHandler(Looper.getMainLooper(), listener);
     }
 
+    public void setMediaSource(MMTDataSource source) {
+        dataSource = source;
+    }
+
+    MMTDataSource getMediaSource() {
+        return dataSource;
+    }
+
     public void createMediaCodec() {
         if (!ATSC3PlayerFlags.ATSC3PlayerStartPlayback) {
-            MfuByteBufferHandler.clearQueues();
+            dataSource.clearQueues();
             decoderHandler.sendMessage(decoderHandler.obtainMessage(DecoderHandlerThread.CREATE_CODEC));
         }
     }
@@ -94,6 +103,7 @@ public class DecoderHandlerThread {
         if (ATSC3PlayerFlags.ATSC3PlayerStartPlayback) {
             ATSC3PlayerFlags.ATSC3PlayerStartPlayback = false;
             ATSC3PlayerFlags.ATSC3PlayerStopPlayback = true;
+            dataSource.release();
             decoderHandler.sendMessage(decoderHandler.obtainMessage(DecoderHandlerThread.DESTROY));
         }
     }
@@ -147,6 +157,7 @@ public class DecoderHandlerThread {
             // must be destroyed after Codec
             if (sync != null) {
                 sync.setPlaybackParams(new PlaybackParams().setSpeed(0.0f));
+                sync.setSurface(null);
                 //sync.flush();
                 sync.release();
                 Log.d("DecoderHandlerThread", String.format("destroyCodec - released sync"));
@@ -158,13 +169,11 @@ public class DecoderHandlerThread {
                 syncSurface = null;
             }
 
-            ATSC3PlayerMMTFragments.mfuBufferQueueVideo.clear();
-            ATSC3PlayerMMTFragments.mfuBufferQueueAudio.clear();
+            dataSource.clearQueues();
 
             ATSC3PlayerFlags.FirstMfuBufferVideoKeyframeSent = false;
             ATSC3PlayerFlags.FirstMfuBuffer_presentation_time_us_mpu = 0;
         } finally {
-            ATSC3PlayerMMTFragments.InitMpuMetadata_HEVC_NAL_Payload = null;
             ATSC3PlayerFlags.FirstMfuBufferVideoKeyframeSent = false;
             ATSC3PlayerFlags.FirstMfuBuffer_presentation_time_us_mpu = 0;
 
@@ -183,7 +192,7 @@ public class DecoderHandlerThread {
             ATSC3PlayerFlags.FirstMfuBuffer_presentation_time_us_mpu = 0;
 
             //TODO: remove this...spinlock...
-            while (!ATSC3PlayerFlags.ATSC3PlayerStopPlayback && ATSC3PlayerMMTFragments.InitMpuMetadata_HEVC_NAL_Payload == null) {
+            while (!ATSC3PlayerFlags.ATSC3PlayerStopPlayback && !dataSource.hasMpuMetadata()) {
                 Log.d("createMfuOuterMediaCodec", "waiting for initMpuMetadata_HEVC_NAL_Payload != null");
                 try {
                     Thread.sleep(100);
@@ -192,8 +201,8 @@ public class DecoderHandlerThread {
                 }
             }
             //spin for at least one video and one audio frame
-            while (!ATSC3PlayerFlags.ATSC3PlayerStopPlayback && (ATSC3PlayerMMTFragments.mfuBufferQueueVideo.peek() == null || ATSC3PlayerMMTFragments.mfuBufferQueueAudio.peek() == null)) {
-                Log.d("createMfuOuterMediaCodec", String.format("waiting for mfuBufferQueueVideo, size: %d, mfuBufferQueueAudio, size: %d", ATSC3PlayerMMTFragments.mfuBufferQueueVideo.size(), ATSC3PlayerMMTFragments.mfuBufferQueueAudio.size()));
+            while (!ATSC3PlayerFlags.ATSC3PlayerStopPlayback && (dataSource.mfuBufferQueueVideo.peek() == null || dataSource.mfuBufferQueueAudio.peek() == null)) {
+                Log.d("createMfuOuterMediaCodec", String.format("waiting for mfuBufferQueueVideo, size: %d, mfuBufferQueueAudio, size: %d", dataSource.mfuBufferQueueVideo.size(), dataSource.mfuBufferQueueAudio.size()));
                 try {
                     Thread.sleep(100);
                 } catch (Exception ex) {
@@ -245,7 +254,7 @@ public class DecoderHandlerThread {
 
             Log.d("createMfuOuterMediaCodec", String.format("video format: %s, audio format: %s", videoInputFormat.toString(), audioInputFormat.toString()));
 
-            videoInputFragmentRunnableThread = new MediaCodecInputBufferMfuByteBufferFragmentWorker("video", MmtPacketIdContext.video_packet_statistics, videoCodec, mediaCodecInputBufferVideoQueue, ATSC3PlayerMMTFragments.mfuBufferQueueVideo) {
+            videoInputFragmentRunnableThread = new MediaCodecInputBufferMfuByteBufferFragmentWorker(this, "video", MmtPacketIdContext.video_packet_statistics, videoCodec, mediaCodecInputBufferVideoQueue, dataSource.mfuBufferQueueVideo) {
                 @Override
                 public void onIteration(MfuByteBufferFragment toProcessMfuByteBufferFragment, long computedPresentationTimestampUs) {
                     if (DebuggingFlags.MFU_STATS_RENDERING) {
@@ -254,7 +263,7 @@ public class DecoderHandlerThread {
                                         toProcessMfuByteBufferFragment.mpu_sequence_number,
                                         toProcessMfuByteBufferFragment.sample_number,
                                         MmtPacketIdContext.video_packet_statistics.decoder_buffer_queue_input_count,
-                                        ATSC3PlayerMMTFragments.mfuBufferQueueVideo.size(),
+                                        dataSource.mfuBufferQueueVideo.size(),
                                         computedPresentationTimestampUs
                                 )
                         );
@@ -265,7 +274,7 @@ public class DecoderHandlerThread {
             videoInputFragmentRunnableThread.setName("videoMediaCodecInputMfuByteBufferThread");
             videoInputFragmentRunnableThread.start();
 
-            audioInputFragmentRunnableThread = new MediaCodecInputBufferMfuByteBufferFragmentWorker("audio", MmtPacketIdContext.audio_packet_statistics, audioCodec, mediaCodecInputBufferAudioQueue, ATSC3PlayerMMTFragments.mfuBufferQueueAudio) {
+            audioInputFragmentRunnableThread = new MediaCodecInputBufferMfuByteBufferFragmentWorker(this, "audio", MmtPacketIdContext.audio_packet_statistics, audioCodec, mediaCodecInputBufferAudioQueue, dataSource.mfuBufferQueueAudio) {
                 @Override
                 public void onIteration(MfuByteBufferFragment toProcessMfuByteBufferFragment, long computedPresentationTimestampUs) {
                     if (DebuggingFlags.MFU_STATS_RENDERING) {
@@ -274,7 +283,7 @@ public class DecoderHandlerThread {
                                         toProcessMfuByteBufferFragment.mpu_sequence_number,
                                         toProcessMfuByteBufferFragment.sample_number,
                                         MmtPacketIdContext.audio_packet_statistics.decoder_buffer_queue_input_count,
-                                        ATSC3PlayerMMTFragments.mfuBufferQueueAudio.size(),
+                                        dataSource.mfuBufferQueueAudio.size(),
                                         computedPresentationTimestampUs
                                 )
                         );
@@ -318,7 +327,7 @@ public class DecoderHandlerThread {
         sync.setCallback(new MediaSync.Callback() {
             @Override
             public void onAudioBufferConsumed(@NonNull MediaSync mediaSync, @NonNull ByteBuffer byteBuffer, int i) {
-                if (MediaCodecInputBufferMfuByteBufferFragmentWorker.IsSoftFlushingFromAVPtsDiscontinuity.get()) {
+                if (dataSource.IsSoftFlushingFromAVPtsDiscontinuity.get()) {
                     return;
                 }
                 try {
@@ -376,15 +385,8 @@ public class DecoderHandlerThread {
         //mf.setFeatureEnabled(MediaCodecInfo.CodecCapabilities.FEATURE_TunneledPlayback, true);
 
 
-        byte[] nal_check = new byte[8];
-        ATSC3PlayerMMTFragments.InitMpuMetadata_HEVC_NAL_Payload.myByteBuffer.get(nal_check, 0, 8);
-        Log.d("createMfuOuterMediaCodec", String.format("HEVC NAL is: 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x, len: %d",
-                nal_check[0], nal_check[1], nal_check[2], nal_check[3],
-                nal_check[4], nal_check[5], nal_check[6], nal_check[7], ATSC3PlayerMMTFragments.InitMpuMetadata_HEVC_NAL_Payload.myByteBuffer.capacity()));
+        dataSource.getMediaFormat(videoMediaFormat);
 
-        ATSC3PlayerMMTFragments.InitMpuMetadata_HEVC_NAL_Payload.myByteBuffer.rewind();
-
-        videoMediaFormat.setByteBuffer("csd-0", ATSC3PlayerMMTFragments.InitMpuMetadata_HEVC_NAL_Payload.myByteBuffer);
         //jjustman-2019-10-19 - for testing
         //videoMediaFormat.setInteger(MediaFormat.KEY_MAX_INPUT_SIZE, 0);
         videoMediaFormat.setInteger("allow-frame-drop", 0);
@@ -411,7 +413,7 @@ public class DecoderHandlerThread {
 
             @Override
             public void onOutputBufferAvailable(@NonNull MediaCodec mediaCodec, int i, @NonNull MediaCodec.BufferInfo bufferInfo) {
-                if (MediaCodecInputBufferMfuByteBufferFragmentWorker.IsSoftFlushingFromAVPtsDiscontinuity.get()) {
+                if (dataSource.IsSoftFlushingFromAVPtsDiscontinuity.get()) {
                     return;
                 }
                 MediaTimestamp mediaTimestamp = sync.getTimestamp();
@@ -476,7 +478,7 @@ public class DecoderHandlerThread {
                 MmtPacketIdContext.video_packet_statistics.last_mfu_release_microseconds.put(i, bufferInfo.presentationTimeUs);
                 //jjustman-2019-10-20: imsc1 queue iteration
                 MfuByteBufferFragment imscFragment = null;
-                if ((imscFragment = ATSC3PlayerMMTFragments.mfuBufferQueueStpp.poll()) != null) {
+                if ((imscFragment = dataSource.mfuBufferQueueStpp.poll()) != null) {
                     serviceHandler.sendMessage(serviceHandler.obtainMessage(ServiceHandler.STPP_IMSC1_AVAILABLE, imscFragment));
                 }
             }
@@ -536,7 +538,7 @@ public class DecoderHandlerThread {
             @Override
             public void onOutputBufferAvailable(@NonNull MediaCodec mediaCodec, int i, @NonNull MediaCodec.BufferInfo bufferInfo) {
 
-                if (MediaCodecInputBufferMfuByteBufferFragmentWorker.IsSoftFlushingFromAVPtsDiscontinuity.get()) {
+                if (dataSource.IsSoftFlushingFromAVPtsDiscontinuity.get()) {
                     return;
                 }
                 MediaTimestamp mediaTimestamp = sync.getTimestamp();
@@ -610,6 +612,64 @@ public class DecoderHandlerThread {
         forcedInvalidate.start();
     }
 
+    void softFlushAVPtsDiscontinuity() {
+        if (!dataSource.IsSoftFlushingFromAVPtsDiscontinuity.compareAndSet(false, true)) return;
+
+        try {
+            //IsSoftFlushingFromAVPtsDiscontinuity = true;
+            dataSource.clearQueues();
+            dataSource.clearTimeCache();
+
+            videoCodec.flush();
+            audioCodec.flush();
+            Thread.sleep(1000);
+
+            //DecoderHandlerThread.sync.flush();
+
+            //DecoderHandlerThread.sync.setPlaybackParams(new PlaybackParams().setSpeed(1.0f));
+            sync.setPlaybackParams(new PlaybackParams().setSpeed(1.0f));
+
+            MmtPacketIdContext.video_packet_statistics.first_queueInputBuffer_mfu_essenceRenderUs = null;
+            MmtPacketIdContext.video_packet_statistics.first_mfu_presentation_time = null;
+            MmtPacketIdContext.video_packet_statistics.last_mfu_presentation_time = null;
+            MmtPacketIdContext.video_packet_statistics.first_mfu_essenceRenderUs = null;
+            MmtPacketIdContext.video_packet_statistics.first_mfu_forced_from_keyframe = false;
+            //do NOT reset this value when we are flushing and using clock sync?
+            MmtPacketIdContext.video_packet_statistics.first_queueInputBuffer_mfu_nanoTime = null;
+            MmtPacketIdContext.video_packet_statistics.first_mfu_nanoTime = null;
+            MmtPacketIdContext.video_packet_statistics.last_mpu_sequence_number_input_buffer = null;
+            MmtPacketIdContext.video_packet_statistics.last_mpu_sequence_number_inputBufferQueued = null;
+
+            MmtPacketIdContext.audio_packet_statistics.first_queueInputBuffer_mfu_essenceRenderUs = null;
+            MmtPacketIdContext.audio_packet_statistics.first_mfu_presentation_time = null;
+            MmtPacketIdContext.audio_packet_statistics.last_mfu_presentation_time = null;
+            MmtPacketIdContext.audio_packet_statistics.first_mfu_essenceRenderUs = null;
+            //do NOT reset this value when we are flushing and using clock sync?
+            MmtPacketIdContext.audio_packet_statistics.first_queueInputBuffer_mfu_nanoTime = null;
+            MmtPacketIdContext.audio_packet_statistics.first_mfu_nanoTime = null;
+            MmtPacketIdContext.audio_packet_statistics.last_mpu_sequence_number_input_buffer = null;
+            MmtPacketIdContext.audio_packet_statistics.last_mpu_sequence_number_inputBufferQueued = null;
+
+            //VideoMediaCodecInputBufferQueue.clear();
+
+            //AudioMediaCodecInputBufferQueue.clear();
+
+            dataSource.clearQueues();
+
+            //IsSoftFlushingFromAVPtsDiscontinuity.set(false);
+            videoCodec.start();
+            audioCodec.start();
+
+            //todo - mark any onOutputBufferAvailable as invalidated until we restart the codec
+            Log.d("MediaCodecInputBuffer", "softFlushAVPtsDiscontinuity: Flushing complete");
+
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } finally {
+            dataSource.IsSoftFlushingFromAVPtsDiscontinuity.set(false);
+        }
+    }
+
     private static class DecoderHandler extends Handler {
         private final WeakReference<DecoderHandlerThread> decoderRef;
 
@@ -629,7 +689,7 @@ public class DecoderHandlerThread {
             switch (msg.what) {
                 case CREATE_CODEC:
                     if (!ATSC3PlayerFlags.ATSC3PlayerStartPlayback) {
-                        Log.d("DecoderHandlerThread", "CREATE_CODEC: mfuBufferQueueVideo size: " + ATSC3PlayerMMTFragments.mfuBufferQueueVideo.size() + "mfuBufferQueueAudio size: " + ATSC3PlayerMMTFragments.mfuBufferQueueAudio.size());
+                        Log.d("DecoderHandlerThread", "CREATE_CODEC: mfuBufferQueueVideo size: " + decoder.dataSource.mfuBufferQueueVideo.size() + "mfuBufferQueueAudio size: " + decoder.dataSource.mfuBufferQueueAudio.size());
 
                         try {
                             decoder.createMfuOuterMediaCodec();

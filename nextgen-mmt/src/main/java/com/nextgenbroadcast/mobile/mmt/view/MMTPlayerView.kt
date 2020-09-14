@@ -9,6 +9,7 @@ import android.view.SurfaceView
 import android.view.View
 import androidx.core.view.postDelayed
 import com.nextgenbroadcast.mobile.mmt.atsc3.media.DecoderHandlerThread
+import com.nextgenbroadcast.mobile.mmt.atsc3.media.MMTDataSource
 
 class MMTPlayerView @JvmOverloads constructor(
         context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
@@ -16,8 +17,11 @@ class MMTPlayerView @JvmOverloads constructor(
 
     private var player: DecoderHandlerThread? = null
 
-    fun start() {
+    fun start(source: MMTDataSource) {
+        stop()
+
         player = DecoderHandlerThread(this, this).also {
+            it.setMediaSource(source)
             it.setOutputSurface(holder.surface)
             it.createMediaCodec()
         }
