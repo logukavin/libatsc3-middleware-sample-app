@@ -24,7 +24,11 @@ abstract class Atsc3Activity : AppCompatActivity() {
                     "${Atsc3ForegroundService.clazz.canonicalName}"
             )
         }.also { intent ->
-            bindService(intent, connection, Context.BIND_AUTO_CREATE)
+            try {
+                bindService(intent, connection, Context.BIND_AUTO_CREATE)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 

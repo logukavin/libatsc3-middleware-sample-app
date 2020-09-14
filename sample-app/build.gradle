@@ -38,14 +38,17 @@ android {
         embedded {
             dimension "service_type"
             applicationIdSuffix ".embedded"
+            resValue "string", "app_name", "Atsc3 Sample App Embedded"
         }
         standalone {
             dimension "service_type"
             applicationIdSuffix ".standalone"
+            resValue "string", "app_name", "Atsc3 Sample App Standalone"
         }
         light {
             dimension "service_type"
             applicationIdSuffix ".light"
+            resValue "string", "app_name", "Atsc3 Sample App Light"
         }
     }
 
