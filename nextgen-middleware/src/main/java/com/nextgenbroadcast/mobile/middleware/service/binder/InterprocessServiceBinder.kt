@@ -11,6 +11,8 @@ import com.nextgenbroadcast.mobile.middleware.presentation.ISelectorPresenter
 import com.nextgenbroadcast.mobile.middleware.presentation.IUserAgentPresenter
 import com.nextgenbroadcast.mobile.middleware.service.handler.Atsc3ActivityIncomingHandler
 import com.nextgenbroadcast.mobile.middleware.service.handler.OnIncomingPlayerStateListener
+import com.nextgenbroadcast.mobile.mmt.atsc3.media.MMTDataSource
+import java.lang.UnsupportedOperationException
 
 class InterprocessServiceBinder(
         service: IBinder
@@ -41,7 +43,10 @@ class InterprocessServiceBinder(
 
         override fun closeRoute() {
             sendAction(ACTION_CLOSE_ROUTE)
+        }
 
+        override fun createMMTSource(): MMTDataSource {
+            throw UnsupportedOperationException("MMT playback is not supported with standalone service")
         }
     }
 

@@ -30,6 +30,8 @@ class EmbeddedAtsc3Service : Atsc3ForegroundService() {
             override fun closeRoute() {
                 closeRoute(this@EmbeddedAtsc3Service)
             }
+
+            override fun createMMTSource() = serviceController.createMMTSource()
         }
         override val selectorPresenter: ISelectorPresenter = serviceController
         override val userAgentPresenter: IUserAgentPresenter = viewController
