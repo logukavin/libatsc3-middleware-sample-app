@@ -333,6 +333,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         private fun newIntent(serviceAction: String): Intent {
             return Intent().apply {
                 action = serviceAction
+                putExtra(EXTRA_FOREGROUND, true)
                 component = ComponentName(
                         "${BuildConfig.LIBRARY_PACKAGE_NAME}.sample.standalone",
                         "${clazz.canonicalName}"
