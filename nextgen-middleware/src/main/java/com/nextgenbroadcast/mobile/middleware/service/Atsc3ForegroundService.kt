@@ -32,6 +32,7 @@ import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
 import com.nextgenbroadcast.mobile.middleware.settings.MiddlewareSettingsImpl
 import com.nextgenbroadcast.mobile.middleware.repository.RepositoryImpl
 import com.nextgenbroadcast.mobile.middleware.server.web.MiddlewareWebServer
+import com.nextgenbroadcast.mobile.mmt.atsc3.media.MMTDataSource
 import kotlinx.coroutines.Dispatchers
 
 abstract class Atsc3ForegroundService : BindableForegroundService() {
