@@ -15,9 +15,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
-import android.view.GestureDetector
-import android.view.View
-import android.view.WindowManager
+import android.view.*
 import android.widget.ArrayAdapter
 import android.widget.ListAdapter
 import android.widget.Toast
@@ -34,7 +32,8 @@ import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.model.SLSService
 import com.nextgenbroadcast.mobile.middleware.Atsc3Activity
-import com.nextgenbroadcast.mobile.middleware.Atsc3ForegroundService
+import com.nextgenbroadcast.mobile.middleware.service.Atsc3ForegroundService
+import com.nextgenbroadcast.mobile.middleware.service.binder.IServiceBinder
 import com.nextgenbroadcast.mobile.middleware.core.FileUtils
 import com.nextgenbroadcast.mobile.middleware.sample.core.SwipeGestureDetector
 import com.nextgenbroadcast.mobile.middleware.sample.databinding.ActivityMainBinding
@@ -50,7 +49,7 @@ import dagger.android.AndroidInjection
 import kotlinx.android.synthetic.main.activity_main.*
 import java.util.*
 
-class MainActivity : Atsc3Activity(){
+class MainActivity : Atsc3Activity() {
 
     private lateinit var binding: ActivityMainBinding
 
@@ -74,11 +73,11 @@ class MainActivity : Atsc3Activity(){
         packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)
     }
 
-    override fun onBind(binder: Atsc3ForegroundService.ServiceBinder) {
+    override fun onBind(binder: IServiceBinder) {
         val provider = UserAgentViewModelFactory(
-                binder.getUserAgentPresenter(),
-                binder.getMediaPlayerPresenter(),
-                binder.getSelectorPresenter()
+                binder.userAgentPresenter,
+                binder.mediaPlayerPresenter,
+                binder.selectorPresenter
         ).let { userAgentViewModelFactory ->
             ViewModelProvider(viewModelStore, userAgentViewModelFactory)
         }
@@ -90,7 +89,7 @@ class MainActivity : Atsc3Activity(){
         }
 
         if (previewMode) {
-            binder.getReceiverPresenter().receiverState.observe(this, Observer { state ->
+            binder.receiverPresenter.receiverState.observe(this, Observer { state ->
                 if (state == null || state == ReceiverState.IDLE) {
                     previewName?.let { source ->
                         sourceMap.find { (name, _, _) -> name == source }?.let { (_, path, _) ->
@@ -426,13 +425,23 @@ class MainActivity : Atsc3Activity(){
     }
 
     private fun startPlayback(mpdPath: String) {
-        receiver_media_player.play(Uri.parse(mpdPath))
-        progress_bar.visibility = View.GONE
+        if (mpdPath == "mmt") {
+            mmt_player_view.start()
+
+            receiver_media_player.visibility = View.INVISIBLE
+            progress_bar.visibility = View.GONE
+        } else {
+            receiver_media_player.visibility = View.VISIBLE
+            receiver_media_player.play(Uri.parse(mpdPath))
+            progress_bar.visibility = View.GONE
+        }
     }
 
     private fun stopPlayback() {
         receiver_media_player.stop()
         progress_bar.visibility = View.VISIBLE
+
+        mmt_player_view.stop()
     }
 
     private val updateMediaTimeRunnable = object : Runnable {

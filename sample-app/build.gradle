@@ -51,6 +51,7 @@ dependencies {
     implementation project(":nextgen-core")
     implementation project(":nextgen-middleware")
     implementation project(":nextgen-view")
+    implementation project(":nextgen-mmt")
 
     implementation "androidx.core:core-ktx:+"
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
@@ -74,6 +75,8 @@ dependencies {
 
     implementation "androidx.coordinatorlayout:coordinatorlayout:1.1.0"
     implementation 'com.google.android.material:material:1.2.0'
+
+    //implementation "androidx.startup:startup-runtime:1.0.0-alpha03"
 
     androidTestImplementation 'androidx.test.ext:junit:1.1.2'
     testImplementation 'junit:junit:4.12'

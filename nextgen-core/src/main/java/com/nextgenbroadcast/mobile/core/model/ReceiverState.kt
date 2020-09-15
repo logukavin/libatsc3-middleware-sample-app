@@ -1,5 +1,9 @@
 package com.nextgenbroadcast.mobile.core.model
 
-enum class ReceiverState {
+import android.os.Parcelable
+import kotlinx.android.parcel.Parcelize
+
+@Parcelize
+enum class ReceiverState : Parcelable {
     OPENED, PAUSED, IDLE
 }

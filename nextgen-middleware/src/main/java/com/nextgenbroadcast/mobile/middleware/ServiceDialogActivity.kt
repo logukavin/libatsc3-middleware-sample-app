@@ -7,6 +7,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import com.nextgenbroadcast.mobile.middleware.core.FileUtils
+import com.nextgenbroadcast.mobile.middleware.service.Atsc3ForegroundService
 import kotlinx.android.synthetic.main.activity_dialog.*
 
 internal class ServiceDialogActivity : AppCompatActivity() {

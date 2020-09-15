@@ -78,6 +78,9 @@ dependencies {
     implementation project(":atsc3_phy_lowasis")
 
     implementation project(":nextgen-core")
+    implementation(project(":nextgen-mmt")) {
+        transitive = true
+    }
 
     implementation 'com.github.nmuzhichin:jsonrpc-core:1.0.4.3'
     implementation 'com.github.nmuzhichin:jsonrpc-jackson-extension:1.0.4.3'
@@ -99,6 +102,10 @@ dependencies {
 
     implementation "androidx.lifecycle:lifecycle-livedata-ktx:$lifecycleVersion"
     implementation "androidx.lifecycle:lifecycle-service:$lifecycleVersion"
+
+    implementation("androidx.startup:startup-runtime:1.0.0-alpha03") {
+        transitive = true
+    }
 
     testImplementation 'junit:junit:4.12'
     androidTestImplementation 'androidx.test.ext:junit:1.1.2'

@@ -1,6 +1,13 @@
 package com.nextgenbroadcast.mobile.core.model
 
-enum class PlaybackState(val state: Int) {
+import android.os.Parcelable
+import kotlinx.android.parcel.Parcelize
+
+@Parcelize
+enum class PlaybackState(
+        val state: Int
+) : Parcelable {
+
     PLAYING(0),
     PAUSED(1),
     IDLE(2);
