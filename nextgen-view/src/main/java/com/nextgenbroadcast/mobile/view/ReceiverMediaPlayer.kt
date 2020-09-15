@@ -117,6 +117,10 @@ class ReceiverMediaPlayer @JvmOverloads constructor(
                     //jjustman-2019-11-07 - retry every 1s for exoplayer errors from ROUTE/DASH
                     return 1000
                 }
+
+                override fun getMinimumLoadableRetryCount(dataType: Int): Int {
+                    return 1
+                }
             })
         }
     }

@@ -1,5 +1,5 @@
 rootProject.name='Android ATSC 3.0 Sample App (A344 and PHY support)'
-include ':sample-app', ':nextgen-core', ':nextgen-middleware', ':nextgen-view'
+include ':sample-app', ':nextgen-core', ':nextgen-middleware', ':nextgen-view', ':nextgen-mmt'
 
 include ':atsc3_core'
 project(':atsc3_core').projectDir = new File(rootProject.projectDir, 'libatsc3/android/atsc3_core')

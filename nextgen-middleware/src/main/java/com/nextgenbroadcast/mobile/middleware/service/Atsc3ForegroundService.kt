@@ -1,4 +1,4 @@
-package com.nextgenbroadcast.mobile.middleware
+package com.nextgenbroadcast.mobile.middleware.service
 
 import android.app.PendingIntent
 import android.content.Context
@@ -6,7 +6,6 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
-import android.os.Binder
 import android.os.IBinder
 import android.os.PowerManager
 import android.os.PowerManager.WakeLock
@@ -17,6 +16,7 @@ import com.nextgenbroadcast.mobile.core.cert.UserAgentSSLContext
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.model.SLSService
+import com.nextgenbroadcast.mobile.middleware.BuildConfig
 import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3Module
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
 import com.nextgenbroadcast.mobile.middleware.controller.service.ServiceControllerImpl
@@ -27,10 +27,6 @@ import com.nextgenbroadcast.mobile.middleware.gateway.rpc.RPCGatewayImpl
 import com.nextgenbroadcast.mobile.middleware.gateway.web.IWebGateway
 import com.nextgenbroadcast.mobile.middleware.gateway.web.WebGatewayImpl
 import com.nextgenbroadcast.mobile.middleware.phy.Atsc3DeviceReceiver
-import com.nextgenbroadcast.mobile.middleware.presentation.IMediaPlayerPresenter
-import com.nextgenbroadcast.mobile.middleware.presentation.IReceiverPresenter
-import com.nextgenbroadcast.mobile.middleware.presentation.ISelectorPresenter
-import com.nextgenbroadcast.mobile.middleware.presentation.IUserAgentPresenter
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
 import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
 import com.nextgenbroadcast.mobile.middleware.settings.MiddlewareSettingsImpl
@@ -38,7 +34,7 @@ import com.nextgenbroadcast.mobile.middleware.repository.RepositoryImpl
 import com.nextgenbroadcast.mobile.middleware.server.web.MiddlewareWebServer
 import kotlinx.coroutines.Dispatchers
 
-class Atsc3ForegroundService : BindableForegroundService() {
+abstract class Atsc3ForegroundService : BindableForegroundService() {
     private lateinit var wakeLock: WakeLock
     private lateinit var settings: IMiddlewareSettings
     private lateinit var repository: IRepository
@@ -51,6 +47,8 @@ class Atsc3ForegroundService : BindableForegroundService() {
     private var rpcGateway: IRPCGateway? = null
     private var webServer: MiddlewareWebServer? = null
     private var deviceReceiver: Atsc3DeviceReceiver? = null
+
+    abstract fun createServiceBinder(serviceController: IServiceController, viewController: IViewController) : IBinder
 
     override fun onCreate() {
         super.onCreate()
@@ -84,6 +82,12 @@ class Atsc3ForegroundService : BindableForegroundService() {
         }
     }
 
+    override fun onBind(intent: Intent): IBinder? {
+        super.onBind(intent)
+
+        return createServiceBinder(serviceController, requireViewController())
+    }
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
 
@@ -111,12 +115,6 @@ class Atsc3ForegroundService : BindableForegroundService() {
         }
 
         return START_NOT_STICKY
-    }
-
-    override fun onBind(intent: Intent): IBinder? {
-        super.onBind(intent)
-
-        return ServiceBinder()
     }
 
     private fun openRoute(filePath: String?) {
@@ -250,7 +248,9 @@ class Atsc3ForegroundService : BindableForegroundService() {
             state.removeSource(view.rmpState)
         }
 
-        wakeLock.release()
+        if (wakeLock.isHeld) {
+            wakeLock.release()
+        }
 
         stopWebServer()
 
@@ -272,24 +272,6 @@ class Atsc3ForegroundService : BindableForegroundService() {
             playbackState ?: viewController?.rmpState?.value
     )
 
-    inner class ServiceBinder : Binder() {
-        fun getReceiverPresenter(): IReceiverPresenter = object : IReceiverPresenter {
-            override val receiverState = serviceController.receiverState
-
-            override fun openRoute(path: String): Boolean {
-                openRoute(this@Atsc3ForegroundService, path)
-                return true
-            }
-
-            override fun closeRoute() {
-                closeRoute(this@Atsc3ForegroundService)
-            }
-        }
-        fun getSelectorPresenter(): ISelectorPresenter = serviceController
-        fun getUserAgentPresenter(): IUserAgentPresenter = requireViewController()
-        fun getMediaPlayerPresenter(): IMediaPlayerPresenter = requireViewController()
-    }
-
     class InitializationException : RuntimeException()
 
     companion object {
@@ -309,6 +291,8 @@ class Atsc3ForegroundService : BindableForegroundService() {
 
         const val EXTRA_DEVICE = "device"
         const val EXTRA_ROUTE_PATH = "file_path"
+
+        internal lateinit var clazz: Class<*>
 
         @Deprecated("old implementation")
         fun startService(context: Context) {
@@ -345,7 +329,7 @@ class Atsc3ForegroundService : BindableForegroundService() {
             ContextCompat.startForegroundService(context, newIntent(context, ACTION_CLOSE_ROUTE))
         }
 
-        private fun newIntent(context: Context, serviceAction: String) = Intent(context, Atsc3ForegroundService::class.java).apply {
+        private fun newIntent(context: Context, serviceAction: String) = Intent(context, clazz).apply {
             action = serviceAction
             putExtra(EXTRA_FOREGROUND, true)
         }

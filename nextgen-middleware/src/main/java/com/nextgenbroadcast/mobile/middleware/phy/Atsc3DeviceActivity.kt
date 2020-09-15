@@ -4,7 +4,7 @@ import android.app.Activity
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import android.os.Bundle
-import com.nextgenbroadcast.mobile.middleware.Atsc3ForegroundService
+import com.nextgenbroadcast.mobile.middleware.service.Atsc3ForegroundService
 
 class Atsc3DeviceActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
