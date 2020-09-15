@@ -78,9 +78,7 @@ dependencies {
     implementation project(":atsc3_phy_lowasis")
 
     implementation project(":nextgen-core")
-    implementation(project(":nextgen-mmt")) {
-        transitive = true
-    }
+    compileOnly project(":nextgen-mmt")
 
     implementation 'com.github.nmuzhichin:jsonrpc-core:1.0.4.2'
     implementation 'com.github.nmuzhichin:jsonrpc-jackson-extension:1.0.4.2'

@@ -35,6 +35,7 @@ import com.nextgenbroadcast.mobile.middleware.Atsc3Activity
 import com.nextgenbroadcast.mobile.middleware.service.Atsc3ForegroundService
 import com.nextgenbroadcast.mobile.middleware.service.binder.IServiceBinder
 import com.nextgenbroadcast.mobile.middleware.core.FileUtils
+import com.nextgenbroadcast.mobile.middleware.presentation.IReceiverPresenter
 import com.nextgenbroadcast.mobile.middleware.sample.core.SwipeGestureDetector
 import com.nextgenbroadcast.mobile.middleware.sample.databinding.ActivityMainBinding
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.RMPViewModel
@@ -57,6 +58,8 @@ class MainActivity : Atsc3Activity() {
     private var userAgentViewModel: UserAgentViewModel? = null
     private var selectorViewModel: SelectorViewModel? = null
     private var receiverViewModel: ReceiverViewModel? = null
+
+    private var receiverPresenter: IReceiverPresenter? = null
 
     private var servicesList: List<SLSService>? = null
     private var currentAppData: AppData? = null
@@ -88,8 +91,12 @@ class MainActivity : Atsc3Activity() {
             bindMediaPlayer(rmp)
         }
 
+        val receiver = binder.receiverPresenter.also {
+            receiverPresenter = it
+        }
+
         if (previewMode) {
-            binder.receiverPresenter.receiverState.observe(this, Observer { state ->
+            receiver.receiverState.observe(this, { state ->
                 if (state == null || state == ReceiverState.IDLE) {
                     previewName?.let { source ->
                         sourceMap.find { (name, _, _) -> name == source }?.let { (_, path, _) ->
@@ -251,9 +258,13 @@ class MainActivity : Atsc3Activity() {
     }
 
     override fun onUserLeaveHint() {
-        if (receiver_media_player.isPlaying && hasFeaturePIP) {
+        if (hasFeaturePIP && isPlaying()) {
             enterPictureInPictureMode(PictureInPictureParams.Builder().build())
         }
+    }
+
+    private fun isPlaying(): Boolean {
+        return receiver_media_player.isPlaying || mmt_player_view.isPlaying
     }
 
     override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: Configuration) {
@@ -426,7 +437,9 @@ class MainActivity : Atsc3Activity() {
 
     private fun startPlayback(mpdPath: String) {
         if (mpdPath == "mmt") {
-            mmt_player_view.start()
+            receiverPresenter?.createMMTSource()?.let { source ->
+                mmt_player_view.start(source)
+            }
 
             receiver_media_player.visibility = View.INVISIBLE
             progress_bar.visibility = View.GONE
