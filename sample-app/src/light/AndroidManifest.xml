@@ -5,43 +5,4 @@
     <permission android:name="com.nextgenbroadcast.mobile.middleware.service.ATSC3_SECURITY_SERVICE_PERMISSION"/>
     <uses-permission android:name="com.nextgenbroadcast.mobile.middleware.service.ATSC3_SECURITY_SERVICE_PERMISSION"/>
 
-    <application
-        android:name="com.nextgenbroadcast.mobile.middleware.sample.App"
-        android:allowBackup="true"
-        android:icon="@mipmap/ic_launcher"
-        android:label="@string/app_name"
-        android:requestLegacyExternalStorage="true"
-        android:roundIcon="@mipmap/ic_launcher_round"
-        android:supportsRtl="true"
-        android:theme="@style/AppTheme"
-        android:usesCleartextTraffic="true">
-
-        <activity
-            android:name=".MainActivity"
-            android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout"
-            android:resizeableActivity="true"
-            android:supportsPictureInPicture="true">
-
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-
-            <intent-filter>
-                <action android:name="com.nextgenbroadcast.mobile.tv" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
-        </activity>
-
-        <provider
-            android:name="androidx.startup.InitializationProvider"
-            android:authorities="${applicationId}.androidx-startup"
-            android:exported="false">
-            <meta-data
-                android:name="com.nextgenbroadcast.mobile.middleware.StandaloneServiceInitializer"
-                android:value="androidx.startup" />
-        </provider>
-
-    </application>
-
 </manifest>

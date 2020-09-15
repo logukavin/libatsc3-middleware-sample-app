@@ -1,7 +1,6 @@
 package com.nextgenbroadcast.mobile.middleware.service
 
 import android.app.PendingIntent
-import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -29,11 +28,10 @@ import com.nextgenbroadcast.mobile.middleware.gateway.web.IWebGateway
 import com.nextgenbroadcast.mobile.middleware.gateway.web.WebGatewayImpl
 import com.nextgenbroadcast.mobile.middleware.phy.Atsc3DeviceReceiver
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
-import com.nextgenbroadcast.mobile.middleware.repository.RepositoryImpl
-import com.nextgenbroadcast.mobile.middleware.server.web.MiddlewareWebServer
 import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
 import com.nextgenbroadcast.mobile.middleware.settings.MiddlewareSettingsImpl
-import com.nextgenbroadcast.mobile.mmt.atsc3.media.MMTDataSource
+import com.nextgenbroadcast.mobile.middleware.repository.RepositoryImpl
+import com.nextgenbroadcast.mobile.middleware.server.web.MiddlewareWebServer
 import kotlinx.coroutines.Dispatchers
 
 abstract class Atsc3ForegroundService : BindableForegroundService() {
@@ -298,48 +296,42 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
         @Deprecated("old implementation")
         fun startService(context: Context) {
-            ContextCompat.startForegroundService(context, newIntent(ACTION_START))
+            ContextCompat.startForegroundService(context, newIntent(context, ACTION_START))
         }
 
         @Deprecated("old implementation")
         fun stopService(context: Context) {
-            ContextCompat.startForegroundService(context, newIntent(ACTION_STOP))
+            ContextCompat.startForegroundService(context, newIntent(context, ACTION_STOP))
         }
 
         fun startForDevice(context: Context, device: UsbDevice) {
-            newIntent(ACTION_DEVICE_ATTACHED).let { serviceIntent ->
+            newIntent(context, ACTION_DEVICE_ATTACHED).let { serviceIntent ->
                 serviceIntent.putExtra(EXTRA_DEVICE, device)
                 ContextCompat.startForegroundService(context, serviceIntent)
             }
         }
 
         fun stopForDevice(context: Context, device: UsbDevice) {
-            newIntent(ACTION_DEVICE_DETACHED).let { serviceIntent ->
+            newIntent(context, ACTION_DEVICE_DETACHED).let { serviceIntent ->
                 serviceIntent.putExtra(EXTRA_DEVICE, device)
                 ContextCompat.startForegroundService(context, serviceIntent)
             }
         }
 
         fun openRoute(context: Context, filePath: String) {
-            newIntent(ACTION_OPEN_ROUTE).let { serviceIntent ->
+            newIntent(context, ACTION_OPEN_ROUTE).let { serviceIntent ->
                 serviceIntent.putExtra(EXTRA_ROUTE_PATH, filePath)
                 ContextCompat.startForegroundService(context, serviceIntent)
             }
         }
 
         fun closeRoute(context: Context) {
-            ContextCompat.startForegroundService(context, newIntent(ACTION_CLOSE_ROUTE))
+            ContextCompat.startForegroundService(context, newIntent(context, ACTION_CLOSE_ROUTE))
         }
 
-        private fun newIntent(serviceAction: String): Intent {
-            return Intent().apply {
-                action = serviceAction
-                putExtra(EXTRA_FOREGROUND, true)
-                component = ComponentName(
-                        "${BuildConfig.LIBRARY_PACKAGE_NAME}.sample.standalone",
-                        "${clazz.canonicalName}"
-                )
-            }
+        private fun newIntent(context: Context, serviceAction: String) = Intent(context, clazz).apply {
+            action = serviceAction
+            putExtra(EXTRA_FOREGROUND, true)
         }
     }
 }

@@ -50,7 +50,7 @@ import dagger.android.AndroidInjection
 import kotlinx.android.synthetic.main.activity_main.*
 import java.util.*
 
-class MainActivity : Atsc3Activity() {
+class MainActivity : BaseActivity() {
 
     private lateinit var binding: ActivityMainBinding
 
@@ -100,7 +100,7 @@ class MainActivity : Atsc3Activity() {
                 if (state == null || state == ReceiverState.IDLE) {
                     previewName?.let { source ->
                         sourceMap.find { (name, _, _) -> name == source }?.let { (_, path, _) ->
-                            Atsc3ForegroundService.openRoute(this, path)
+                            openRoute(path)
                         }
                     }
                 }
@@ -192,7 +192,7 @@ class MainActivity : Atsc3Activity() {
                 showFileChooser()
             } else {
                 sourceMap.getOrNull(position)?.let { (_, path) ->
-                    Atsc3ForegroundService.openRoute(this, path)
+                    openRoute(path)
                 }
             }
         }
@@ -372,7 +372,7 @@ class MainActivity : Atsc3Activity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         if (requestCode == FILE_REQUEST_CODE && data != null) {
             val path = data.getStringExtra("FILE") ?: data.data?.let { FileUtils.getPath(applicationContext, it) }
-            path?.let { Atsc3ForegroundService.openRoute(this, it) }
+            path?.let { openRoute(it) }
 
             return
         }

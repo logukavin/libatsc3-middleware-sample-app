@@ -2,40 +2,14 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.nextgenbroadcast.mobile.middleware.sample">
 
-    <application
-        android:name="com.nextgenbroadcast.mobile.middleware.sample.App"
-        android:allowBackup="true"
-        android:icon="@mipmap/ic_launcher"
-        android:label="@string/app_name"
-        android:requestLegacyExternalStorage="true"
-        android:roundIcon="@mipmap/ic_launcher_round"
-        android:supportsRtl="true"
-        android:theme="@style/AppTheme"
-        android:usesCleartextTraffic="true">
-
-        <activity
-            android:name=".MainActivity"
-            android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout"
-            android:resizeableActivity="true"
-            android:supportsPictureInPicture="true">
-
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-
-            <intent-filter>
-                <action android:name="com.nextgenbroadcast.mobile.tv" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
-        </activity>
+    <application>
 
         <service
             android:name="com.nextgenbroadcast.mobile.middleware.service.StandaloneAtsc3Service"
-            android:process=":atsc3Service"
-            android:permission="com.nextgenbroadcast.mobile.middleware.service.ATSC3_SECURITY_SERVICE_PERMISSION"
             android:enabled="true"
-            android:exported="true" />
+            android:exported="true"
+            android:permission="com.nextgenbroadcast.mobile.middleware.service.ATSC3_SECURITY_SERVICE_PERMISSION"
+            android:process=":atsc3Service" />
 
         <provider
             android:name="androidx.startup.InitializationProvider"

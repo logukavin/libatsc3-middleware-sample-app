@@ -4,7 +4,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
-import android.os.IBinder
+import android.os.*
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.nextgenbroadcast.mobile.middleware.service.Atsc3ForegroundService
@@ -19,17 +19,9 @@ abstract class Atsc3Activity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
-        Intent().apply {
-            component = ComponentName(
-                    "${BuildConfig.LIBRARY_PACKAGE_NAME}.sample.standalone",
-                    "${Atsc3ForegroundService.clazz.canonicalName}"
-            )
-        }.also { intent ->
-            try {
-                bindService(intent, connection, Context.BIND_AUTO_CREATE)
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
+
+        Intent(this, Atsc3ForegroundService.clazz).also { intent ->
+            bindService(intent, connection, Context.BIND_AUTO_CREATE)
         }
     }
 
@@ -59,6 +51,7 @@ abstract class Atsc3Activity : AppCompatActivity() {
                 Toast.makeText(this@Atsc3Activity, R.string.service_action_disconnect, Toast.LENGTH_LONG).show()
                 return
             }
+
             onBind(binder)
             isBound = true
         }
