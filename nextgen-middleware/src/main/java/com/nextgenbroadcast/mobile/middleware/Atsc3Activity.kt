@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.os.IBinder
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.nextgenbroadcast.mobile.middleware.service.Atsc3ForegroundService
 import com.nextgenbroadcast.mobile.middleware.service.EmbeddedAtsc3Service
@@ -54,8 +55,10 @@ abstract class Atsc3Activity : AppCompatActivity() {
                     InterprocessServiceBinder(service)
                 }
                 else -> null
-            } ?: return
-
+            } ?: run {
+                Toast.makeText(this@Atsc3Activity, R.string.service_action_disconnect, Toast.LENGTH_LONG).show()
+                return
+            }
             onBind(binder)
             isBound = true
         }
