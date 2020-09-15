@@ -46,9 +46,8 @@ class Atsc3ActivityIncomingHandler(
             }
 
             InterprocessServiceBinder.LIVEDATA_RMP_MEDIA_URL -> {
-                msg.data.getString(InterprocessServiceBinder.PARAM_RMP_MEDIA_URL)?.let {
-                    mediaPlayerPresenter.rmpMediaUrl.postValue(it)
-                }
+                val mediaUrl = msg.data.getString(InterprocessServiceBinder.PARAM_RMP_MEDIA_URL)
+                mediaPlayerPresenter.rmpMediaUrl.postValue(mediaUrl)
             }
 
             InterprocessServiceBinder.ACTION_PLAYER_STATE_CHANGE_PAUSE -> {

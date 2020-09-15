@@ -37,18 +37,19 @@ android {
     productFlavors {
         embedded {
             dimension "service_type"
-            applicationIdSuffix ".embedded"
-            resValue "string", "app_name", "Atsc3 Sample App Embedded"
+            resValue "string", "app_name", "Atsc3 Sample App"
         }
+
         standalone {
             dimension "service_type"
             applicationIdSuffix ".standalone"
-            resValue "string", "app_name", "Atsc3 Sample App Standalone"
+            resValue "string", "app_name", "Atsc3 Standalone Sample App"
         }
+
         light {
             dimension "service_type"
             applicationIdSuffix ".light"
-            resValue "string", "app_name", "Atsc3 Sample App Light"
+            resValue "string", "app_name", "Atsc3 Light Sample App"
         }
     }
 
@@ -95,7 +96,7 @@ dependencies {
     implementation "androidx.coordinatorlayout:coordinatorlayout:1.1.0"
     implementation 'com.google.android.material:material:1.2.0'
 
-    //implementation "androidx.startup:startup-runtime:1.0.0-alpha03"
+    standaloneImplementation "androidx.startup:startup-runtime:1.0.0-alpha03"
 
     androidTestImplementation 'androidx.test.ext:junit:1.1.2'
     testImplementation 'junit:junit:4.12'
