@@ -2,9 +2,9 @@ package com.nextgenbroadcast.mobile.middleware.sample.lifecycle.factory
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import com.nextgenbroadcast.mobile.middleware.presentation.IMediaPlayerPresenter
-import com.nextgenbroadcast.mobile.middleware.presentation.ISelectorPresenter
-import com.nextgenbroadcast.mobile.middleware.presentation.IUserAgentPresenter
+import com.nextgenbroadcast.mobile.core.presentation.IMediaPlayerPresenter
+import com.nextgenbroadcast.mobile.core.presentation.ISelectorPresenter
+import com.nextgenbroadcast.mobile.core.presentation.IUserAgentPresenter
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.RMPViewModel
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.ReceiverViewModel
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.SelectorViewModel

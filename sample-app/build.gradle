@@ -69,9 +69,12 @@ dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
 
     implementation project(":nextgen-core")
-    implementation project(":nextgen-middleware")
     implementation project(":nextgen-view")
-    implementation project(":nextgen-mmt")
+
+    embeddedImplementation project(":nextgen-middleware")
+    embeddedImplementation project(":nextgen-mmt")
+
+    standaloneImplementation project(":nextgen-middleware")
 
     implementation "androidx.core:core-ktx:+"
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"

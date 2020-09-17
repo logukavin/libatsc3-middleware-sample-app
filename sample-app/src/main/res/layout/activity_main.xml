@@ -2,14 +2,16 @@
 <layout xmlns:android="http://schemas.android.com/apk/res/android">
 
     <data>
-        <import type="android.view.View"/>
+
+        <import type="android.view.View" />
 
         <variable
             name="receiverModel"
             type="com.nextgenbroadcast.mobile.middleware.sample.lifecycle.ReceiverViewModel" />
+
         <variable
             name="isPreviewMode"
-            type="java.lang.Boolean"/>
+            type="java.lang.Boolean" />
     </data>
 
     <androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -24,35 +26,14 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent">
 
-            <com.nextgenbroadcast.mobile.mmt.view.MMTPlayerView
-                android:id="@+id/mmt_player_view"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
-
-            <com.nextgenbroadcast.mobile.view.ReceiverMediaPlayer
-                android:id="@+id/receiver_media_player"
+            <com.nextgenbroadcast.mobile.middleware.sample.view.ReceiverPlayerView
+                android:id="@+id/receiver_player"
                 android:layout_width="0dp"
                 android:layout_height="0dp"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent"
-                app:resize_mode="fixed_width"
-                app:show_buffering="always"
-                app:use_controller="false" />
-
-            <ProgressBar
-                android:id="@+id/progress_bar"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                app:layout_constraintBottom_toBottomOf="@id/receiver_media_player"
-                app:layout_constraintEnd_toEndOf="@id/receiver_media_player"
-                app:layout_constraintStart_toStartOf="@id/receiver_media_player"
-                app:layout_constraintTop_toTopOf="@id/receiver_media_player" />
+                app:layout_constraintTop_toTopOf="parent" />
 
             <com.nextgenbroadcast.mobile.view.UserAgentView
                 android:id="@+id/user_agent_web_view"
@@ -69,11 +50,11 @@
                 android:paddingStart="10dp"
                 android:paddingEnd="10dp"
                 android:text="@{receiverModel.appDataLog}"
-                android:visibility="@{isPreviewMode ? View.GONE : View.VISIBLE}"
                 android:textColor="@color/white"
                 android:textSize="10sp"
+                android:visibility="@{isPreviewMode ? View.GONE : View.VISIBLE}"
                 app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="@+id/receiver_media_player"
+                app:layout_constraintStart_toStartOf="@+id/receiver_player"
                 app:layout_constraintTop_toTopOf="parent" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>

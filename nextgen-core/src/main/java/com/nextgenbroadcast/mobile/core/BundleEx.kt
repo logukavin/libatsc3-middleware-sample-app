@@ -1,16 +1,16 @@
-package com.nextgenbroadcast.mobile.middleware.service.handler
+package com.nextgenbroadcast.mobile.core
 
 import android.os.Bundle
 import android.os.Parcelable
 
 
-internal fun <T : Parcelable> Bundle?.getParcelable(clazz: Class<T>, key: String): T? {
+fun <T : Parcelable> Bundle?.getParcelable(clazz: Class<T>, key: String): T? {
     if (this == null) return null
     classLoader = clazz.classLoader
     return getParcelable(key)
 }
 
-internal fun <T : Parcelable> Bundle?.getParcelableArrayList(clazz: Class<T>, key: String): ArrayList<T>? {
+fun <T : Parcelable> Bundle?.getParcelableArrayList(clazz: Class<T>, key: String): ArrayList<T>? {
     if (this == null) return null
     classLoader = clazz.classLoader
     return getParcelableArrayList(key)
