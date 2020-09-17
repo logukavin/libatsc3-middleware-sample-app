@@ -1,6 +1,6 @@
-package com.nextgenbroadcast.mobile.middleware.controller.media
+package com.nextgenbroadcast.mobile.core.presentation.media
 
-import com.nextgenbroadcast.mobile.middleware.presentation.IMediaPlayerPresenter
+import com.nextgenbroadcast.mobile.core.presentation.IMediaPlayerPresenter
 
 interface IObservablePlayer {
     fun addOnPlayerSateChangedCallback(callback: IPlayerStateListener)

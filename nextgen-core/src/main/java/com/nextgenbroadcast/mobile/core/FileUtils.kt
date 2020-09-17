@@ -1,4 +1,4 @@
-package com.nextgenbroadcast.mobile.middleware.core
+package com.nextgenbroadcast.mobile.core
 
 import android.content.ContentUris
 import android.content.Context
