@@ -1,6 +1,11 @@
 package com.nextgenbroadcast.mobile.middleware.service.handler
 
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.os.*
+import android.util.Log
+import androidx.core.content.FileProvider
 import androidx.core.os.bundleOf
 import androidx.lifecycle.LifecycleOwner
 import com.nextgenbroadcast.mobile.core.getParcelable
@@ -11,8 +16,10 @@ import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
 import com.nextgenbroadcast.mobile.core.presentation.IMediaPlayerPresenter
 import com.nextgenbroadcast.mobile.core.presentation.IReceiverPresenter
 import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
+import java.io.File
 
 internal class StandaloneServiceHandler(
+        private val context: Context,
         private val lifecycleOwner: LifecycleOwner,
         private val receiverPresenter: IReceiverPresenter,
         private val serviceController: IServiceController,
@@ -154,10 +161,22 @@ internal class StandaloneServiceHandler(
 
     private fun observeRPMMediaUrl(sendToMessenger: Messenger) {
         viewController.rmpMediaUrl.observe(lifecycleOwner, { rmpMediaUrl ->
+            val contentUri: Uri? = rmpMediaUrl?.let {
+                val file = File(rmpMediaUrl)
+                val uri = FileProvider.getUriForFile(context, "com.nextgenbroadcast.mobile.middleware.provider", file)
+                context.grantUriPermission("com.nextgenbroadcast.mobile.middleware.sample.light", uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+
+                val file2 = File(file.path,"video-init.mp4v")
+                Log.d("TEST", "file exists: ${file2.exists()}")
+                val uri2 = FileProvider.getUriForFile(context, "com.nextgenbroadcast.mobile.middleware.provider", file2)
+                context.grantUriPermission("com.nextgenbroadcast.mobile.middleware.sample.light", uri2, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+
+                uri
+            }
             sendToMessenger.send(buildMessage(
-                    IServiceBinder.LIVEDATA_RMP_MEDIA_URL,
+                    IServiceBinder.LIVEDATA_RMP_MEDIA_URI,
                     bundleOf(
-                            IServiceBinder.PARAM_RMP_MEDIA_URL to rmpMediaUrl
+                            IServiceBinder.PARAM_RMP_MEDIA_URI to contentUri
                     )
             ))
         })
