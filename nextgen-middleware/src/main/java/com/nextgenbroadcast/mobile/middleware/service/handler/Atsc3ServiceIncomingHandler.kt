@@ -164,7 +164,7 @@ class Atsc3ServiceIncomingHandler(
     private fun observeRPMMediaUrl(sendToMessenger: Messenger) {
         viewController.rmpMediaUrl.observe(lifecycleOwner, { rmpMediaUrl ->
             val contentUri: Uri? = rmpMediaUrl?.let {
-                val file = File("file://$rmpMediaUrl")
+                val file = File(rmpMediaUrl)
                 Log.d("TEST", "file exists: ${file.exists()}")
                 Log.d("TEST", "Context.getCacheDir(${context.cacheDir})")
                 val uri = getUriForFile(context, "com.nextgenbroadcast.mobile.middleware.provider", file)
