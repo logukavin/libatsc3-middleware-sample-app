@@ -290,7 +290,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         const val ACTION_CLOSE_ROUTE = "$SERVICE_ACTION.CLOSE_ROUTE"
 
         const val EXTRA_DEVICE = "device"
-        const val EXTRA_ROUTE_PATH = "file_path"
+        const val EXTRA_ROUTE_PATH = "route_path"
 
         internal lateinit var clazz: Class<out Atsc3ForegroundService>
 

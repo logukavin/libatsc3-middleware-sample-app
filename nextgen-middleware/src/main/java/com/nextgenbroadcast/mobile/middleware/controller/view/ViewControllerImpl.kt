@@ -6,8 +6,8 @@ import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.RPMParams
 import com.nextgenbroadcast.mobile.middleware.server.ServerUtils
-import com.nextgenbroadcast.mobile.middleware.controller.media.IObservablePlayer
-import com.nextgenbroadcast.mobile.middleware.controller.media.PlayerStateRegistry
+import com.nextgenbroadcast.mobile.core.presentation.media.IObservablePlayer
+import com.nextgenbroadcast.mobile.core.presentation.media.PlayerStateRegistry
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
 import com.nextgenbroadcast.mobile.middleware.settings.IClientSettings
 

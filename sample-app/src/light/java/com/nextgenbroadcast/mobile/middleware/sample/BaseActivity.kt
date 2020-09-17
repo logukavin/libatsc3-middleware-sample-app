@@ -7,10 +7,8 @@ import android.content.ServiceConnection
 import android.os.IBinder
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
-import com.nextgenbroadcast.mobile.middleware.service.Atsc3ForegroundService
-import com.nextgenbroadcast.mobile.middleware.service.BindableForegroundService
-import com.nextgenbroadcast.mobile.middleware.service.binder.IServiceBinder
-import com.nextgenbroadcast.mobile.middleware.service.binder.InterprocessServiceBinder
+import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
+import com.nextgenbroadcast.mobile.service.binder.InterprocessServiceBinder
 
 abstract class BaseActivity : AppCompatActivity() {
 
@@ -35,9 +33,9 @@ abstract class BaseActivity : AppCompatActivity() {
 
     fun openRoute(path: String) {
         newServiceIntent().apply {
-            action = Atsc3ForegroundService.ACTION_OPEN_ROUTE
-            putExtra(BindableForegroundService.EXTRA_FOREGROUND, true)
-            putExtra(Atsc3ForegroundService.EXTRA_ROUTE_PATH, path)
+            action = /*Atsc3ForegroundService.ACTION_OPEN_ROUTE*/ "com.nextgenbroadcast.mobile.middleware.intent.action.OPEN_ROUTE"
+            putExtra(/*BindableForegroundService.EXTRA_FOREGROUND*/"foreground", true)
+            putExtra(/*Atsc3ForegroundService.EXTRA_ROUTE_PATH*/ "route_path", path)
         }.also { intent ->
             ContextCompat.startForegroundService(this, intent)
         }

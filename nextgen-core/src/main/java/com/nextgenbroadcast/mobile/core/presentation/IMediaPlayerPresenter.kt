@@ -1,9 +1,9 @@
-package com.nextgenbroadcast.mobile.middleware.presentation
+package com.nextgenbroadcast.mobile.core.presentation
 
 import androidx.lifecycle.LiveData
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.RPMParams
-import com.nextgenbroadcast.mobile.middleware.controller.media.IObservablePlayer
+import com.nextgenbroadcast.mobile.core.presentation.media.IObservablePlayer
 
 interface IMediaPlayerPresenter: IObservablePlayer {
     val rmpLayoutParams: LiveData<RPMParams>

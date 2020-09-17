@@ -2,7 +2,7 @@ package com.nextgenbroadcast.mobile.middleware.sample.lifecycle
 
 import androidx.lifecycle.Transformations
 import androidx.lifecycle.ViewModel
-import com.nextgenbroadcast.mobile.middleware.presentation.ISelectorPresenter
+import com.nextgenbroadcast.mobile.core.presentation.ISelectorPresenter
 
 class SelectorViewModel(
         private val presenter: ISelectorPresenter
