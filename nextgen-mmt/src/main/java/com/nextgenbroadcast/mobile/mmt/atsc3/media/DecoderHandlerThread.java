@@ -412,7 +412,7 @@ public class DecoderHandlerThread {
                     }
                 */
                 mediaCodecInputBufferVideoQueue.add(i);
-                Log.d("Video", String.format("onInputBufferAvailable: %d", i));
+                //Log.d("Video", String.format("onInputBufferAvailable: %d", i));
             }
 
             @Override
@@ -421,7 +421,7 @@ public class DecoderHandlerThread {
                     return;
                 }
                 MediaTimestamp mediaTimestamp = sync.getTimestamp();
-                if (mediaTimestamp != null) {
+                if (mediaTimestamp != null && i == 0) {
                     Log.d("\tVideo", String.format("\tmediaTimestamp\tbufPts deltaMS:\t%f\tdelta anchorMedia-anchorSysMS:\t%f\tanchorMedia:\t%d\tanchorSystem:\t%d\trate:\t%f",
                             (bufferInfo.presentationTimeUs * 1000 - mediaTimestamp.getAnchorSytemNanoTime()) / 1000000.0, ((mediaTimestamp.getAnchorMediaTimeUs() * 1000) - mediaTimestamp.getAnchorSytemNanoTime()) / 1000000.0, mediaTimestamp.getAnchorMediaTimeUs() * 1000, mediaTimestamp.getAnchorSytemNanoTime(), mediaTimestamp.getMediaClockRate()));
 
@@ -435,7 +435,7 @@ public class DecoderHandlerThread {
                     //remap from bufferInfo.presentationTimeUs
                     long deltaNanoTime = ((33 + bufferInfo.presentationTimeUs) * 1000) - nanoTime;
 
-                    if (true || DebuggingFlags.OutputBuferLoggingEnabled) {
+                    if (DebuggingFlags.OutputBuferLoggingEnabled) {
                         Log.e("\tVideo\tonOutputBufferAvailable", String.format("\tbufferInfoNs:\t%d\tbufferInfoMS:\t%d\tnanoTime:\t%d\tnanoTimeMS:\t%f\tdeltaNanoTime\t%d\tdeltaNanoTimeMS\t%f",
                                 bufferInfo.presentationTimeUs * 1000,
                                 bufferInfo.presentationTimeUs / 1000,
@@ -515,7 +515,7 @@ public class DecoderHandlerThread {
             audioMediaFormat.setInteger(MediaFormat.KEY_CHANNEL_COUNT, 2);
             audioMediaFormat.setInteger(MediaFormat.KEY_SAMPLE_RATE, audioSampleRate);
             //mediaFormat.setInteger("ac4-is-sync", 1); ?
-            //audioMediaFormat.setInteger("ac4-is-sync", 0);
+            audioMediaFormat.setInteger("ac4-is-sync", 1);
         }
 
         final MediaCodec codec;
@@ -536,7 +536,7 @@ public class DecoderHandlerThread {
             @Override
             public void onInputBufferAvailable(@NonNull MediaCodec mediaCodec, int i) {
                 mediaCodecInputBufferAudioQueue.add(i);
-                Log.d("Audio", String.format("onInputBufferAvailable: %d", i));
+                //Log.d("Audio", String.format("onInputBufferAvailable: %d", i));
             }
 
             @Override
@@ -556,7 +556,7 @@ public class DecoderHandlerThread {
                     //remap from bufferInfo.presentationTimeUs
                     long deltaNanoTime = ((33 + bufferInfo.presentationTimeUs) * 1000) - nanoTime;
 
-                    if (true || DebuggingFlags.OutputBuferLoggingEnabled) {
+                    if (DebuggingFlags.OutputBuferLoggingEnabled) {
                         Log.e("\tAudio\tonOutputBufferAvailable", String.format("\tbufferInfoNs:\t%d\tbufferInfoMS:\t%d\tnanoTime:\t%d\tnanoTimeMS:\t%f\tdeltaNanoTime\t%d\tdeltaNanoTimeMS\t%f",
                                 bufferInfo.presentationTimeUs * 1000,
                                 bufferInfo.presentationTimeUs / 1000,

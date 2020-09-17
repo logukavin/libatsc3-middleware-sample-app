@@ -76,13 +76,15 @@ public class MediaCodecInputBufferMfuByteBufferFragmentWorker extends Thread {
 
                 long computedPresentationTimestampUs = player.getMediaSource().getPresentationTimestampUs(toProcessMfuByteBufferFragment);
 
-                Log.d("computePresentationTimestampUs", String.format("type: %s, mpu_sequence_number: %d, sample_number: %d, mpu_ts: %d, mfu_ts: %d, computedPtsUs: %d",
-                        this.type,
-                        toProcessMfuByteBufferFragment.mpu_sequence_number,
-                        toProcessMfuByteBufferFragment.sample_number,
-                        toProcessMfuByteBufferFragment.mpu_presentation_time_uS_from_SI,
-                        toProcessMfuByteBufferFragment.mfu_presentation_time_uS_computed,
-                        computedPresentationTimestampUs));
+                if(toProcessMfuByteBufferFragment.sample_number % 15 == 0) {
+                    Log.d("computePresentationTimestampUs", String.format("type: %s, mpu_sequence_number: %d, sample_number: %d, mpu_ts: %d, mfu_ts: %d, computedPtsUs: %d",
+                            this.type,
+                            toProcessMfuByteBufferFragment.mpu_sequence_number,
+                            toProcessMfuByteBufferFragment.sample_number,
+                            toProcessMfuByteBufferFragment.mpu_presentation_time_uS_from_SI,
+                            toProcessMfuByteBufferFragment.mfu_presentation_time_uS_computed,
+                            computedPresentationTimestampUs));
+                }
 
                 //timestamp discontinuity > 1000000 (1s) or mpu_sequence_number in the past, flush mediaCodec to reset
                 if ((mmtMfuStatistics.last_computedPresentationTimestampUs != null && computedPresentationTimestampUs < (mmtMfuStatistics.last_computedPresentationTimestampUs - 1000000)) ||
