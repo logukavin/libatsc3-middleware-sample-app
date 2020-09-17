@@ -316,7 +316,10 @@ class MainActivity : BaseActivity() {
                 )
             })
             mediaUri.observe(this@MainActivity, Observer { mediaUri ->
-                mediaUri?.let { startPlayback(mediaUri) } ?: stopPlayback()
+                mediaUri?.let {
+                    Log.d("TEST", "mediaUri: $mediaUri")
+                    startPlayback(mediaUri)
+                } ?: stopPlayback()
             })
             playWhenReady.observe(this@MainActivity, Observer { playWhenReady ->
                 receiver_media_player.playWhenReady = playWhenReady
@@ -433,6 +436,12 @@ class MainActivity : BaseActivity() {
             constrainPercentHeight(R.id.receiver_media_player, scale)
             constrainPercentWidth(R.id.receiver_media_player, scale)
         }.applyTo(user_agent_root)
+    }
+
+    private fun startPlayback(mpdUri: Uri) {
+        receiver_media_player.visibility = View.VISIBLE
+        receiver_media_player.play(mpdUri)
+        progress_bar.visibility = View.GONE
     }
 
     private fun startPlayback(mpdPath: String) {

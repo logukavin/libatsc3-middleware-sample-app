@@ -1,5 +1,6 @@
 package com.nextgenbroadcast.mobile.middleware.service.handler
 
+import android.net.Uri
 import android.os.Handler
 import android.os.Message
 import com.nextgenbroadcast.mobile.core.model.*
@@ -46,8 +47,9 @@ class Atsc3ActivityIncomingHandler(
             }
 
             InterprocessServiceBinder.LIVEDATA_RMP_MEDIA_URL -> {
-                val mediaUrl = msg.data.getString(InterprocessServiceBinder.PARAM_RMP_MEDIA_URL)
-                mediaPlayerPresenter.rmpMediaUrl.postValue(mediaUrl)
+                msg.data.getParcelable(Uri::class.java, InterprocessServiceBinder.PARAM_RMP_MEDIA_URI)?.let { mediaUri ->
+                    mediaPlayerPresenter.rmpMediaUri.postValue(mediaUri)
+                }
             }
 
             InterprocessServiceBinder.ACTION_PLAYER_STATE_CHANGE_PAUSE -> {

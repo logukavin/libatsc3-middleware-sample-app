@@ -1,5 +1,6 @@
 package com.nextgenbroadcast.mobile.middleware.service.binder
 
+import android.net.Uri
 import android.os.*
 import androidx.core.os.bundleOf
 import androidx.lifecycle.MutableLiveData
@@ -57,6 +58,7 @@ class InterprocessServiceBinder(
     inner class MediaPlayerPresenter : IMediaPlayerPresenter {
         override val rmpLayoutParams = MutableLiveData<RPMParams>()
         override val rmpMediaUrl = MutableLiveData<String?>()
+        override val rmpMediaUri = MutableLiveData<Uri?>()
 
         override fun rmpLayoutReset() {
             sendAction(ACTION_RMP_LAYOUT_RESET)
@@ -168,7 +170,7 @@ class InterprocessServiceBinder(
         const val PARAM_SERVICE_SELECTED = "PARAM_SERVICE_SELECTED"
         const val PARAM_APPDATA = "PARAM_APPDATA"
         const val PARAM_RMP_LAYOUT_PARAMS = "PARAM_RMP_LAYOUT_PARAMS"
-        const val PARAM_RMP_MEDIA_URL = "PARAM_RMP_MEDIA_URL"
+        const val PARAM_RMP_MEDIA_URI = "PARAM_RMP_MEDIA_URI"
 
         const val PARAM_OPEN_ROUTE_PATH = "PARAM_OPEN_ROUTE_PATH"
         const val PARAM_SELECT_SERVICE = "PARAM_SELECT_SERVICE"
