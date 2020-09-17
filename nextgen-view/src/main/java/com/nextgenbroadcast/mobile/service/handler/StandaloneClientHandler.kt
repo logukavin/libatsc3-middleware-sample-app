@@ -1,5 +1,6 @@
 package com.nextgenbroadcast.mobile.service.handler
 
+import android.net.Uri
 import android.os.Handler
 import android.os.Message
 import com.nextgenbroadcast.mobile.core.getParcelable
@@ -47,9 +48,10 @@ internal class StandaloneClientHandler(
                 }
             }
 
-            IServiceBinder.LIVEDATA_RMP_MEDIA_URL -> {
-                val mediaUrl = msg.data.getString(IServiceBinder.PARAM_RMP_MEDIA_URL)
-                mediaPlayerPresenter.rmpMediaUrl.postValue(mediaUrl)
+            IServiceBinder.LIVEDATA_RMP_MEDIA_URI -> {
+                msg.data.getParcelable(Uri::class.java, IServiceBinder.PARAM_RMP_MEDIA_URI)?.let {
+                    mediaPlayerPresenter.rmpMediaUri.postValue(it)
+                }
             }
 
             IServiceBinder.ACTION_PLAYER_STATE_CHANGE_PAUSE -> {

@@ -20,6 +20,7 @@ interface IServiceBinder {
         const val LIVEDATA_APPDATA = 5
         const val LIVEDATA_RMP_LAYOUT_PARAMS = 6
         const val LIVEDATA_RMP_MEDIA_URL = 7
+        const val LIVEDATA_RMP_MEDIA_URI = 71
 
         const val ACTION_OPEN_ROUTE = 8
         const val ACTION_CLOSE_ROUTE = 9
@@ -41,6 +42,7 @@ interface IServiceBinder {
         const val PARAM_APPDATA = "PARAM_APPDATA"
         const val PARAM_RMP_LAYOUT_PARAMS = "PARAM_RMP_LAYOUT_PARAMS"
         const val PARAM_RMP_MEDIA_URL = "PARAM_RMP_MEDIA_URL"
+        const val PARAM_RMP_MEDIA_URI = "PARAM_RMP_MEDIA_URI"
 
         const val PARAM_OPEN_ROUTE_PATH = "PARAM_OPEN_ROUTE_PATH"
         const val PARAM_SELECT_SERVICE = "PARAM_SELECT_SERVICE"

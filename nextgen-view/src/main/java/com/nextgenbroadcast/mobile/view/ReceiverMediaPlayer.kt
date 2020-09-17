@@ -53,6 +53,7 @@ class ReceiverMediaPlayer @JvmOverloads constructor(
     }
 
     fun play(mediaUri: Uri) {
+        Log.d("TEST", "Try read from $mediaUri")
         val dashMediaSource = dashMediaSourceFactory.createMediaSource(mediaUri)
         player = simpleExoPlayer
         simpleExoPlayer.prepare(dashMediaSource)
