@@ -4,8 +4,8 @@ import android.text.Html
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.ViewModel
-import com.nextgenbroadcast.mobile.middleware.presentation.IMediaPlayerPresenter
-import com.nextgenbroadcast.mobile.middleware.presentation.IUserAgentPresenter
+import com.nextgenbroadcast.mobile.core.presentation.IMediaPlayerPresenter
+import com.nextgenbroadcast.mobile.core.presentation.IUserAgentPresenter
 import com.nextgenbroadcast.mobile.core.model.AppData
 
 class ReceiverViewModel(
