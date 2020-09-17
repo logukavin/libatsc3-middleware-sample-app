@@ -1,5 +1,6 @@
 package com.nextgenbroadcast.mobile.middleware.controller.view
 
+import android.net.Uri
 import androidx.lifecycle.*
 import com.nextgenbroadcast.mobile.core.mapWith
 import com.nextgenbroadcast.mobile.core.model.AppData
@@ -52,6 +53,8 @@ internal class ViewControllerImpl(
             externalMediaUrl
         }
     }
+
+    override val rmpMediaUri = MutableLiveData<Uri?>()
 
     override val rmpState = MutableLiveData<PlaybackState>(PlaybackState.IDLE)
     override val rmpMediaTime = MutableLiveData<Long>()

@@ -1,18 +1,27 @@
 package com.nextgenbroadcast.mobile.middleware.service.handler
 
-import android.os.*
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.os.Bundle
+import android.os.Handler
+import android.os.Message
+import android.os.Messenger
+import android.util.Log
+import androidx.core.content.FileProvider.getUriForFile
 import androidx.core.os.bundleOf
 import androidx.lifecycle.LifecycleOwner
-import androidx.lifecycle.Observer
 import com.nextgenbroadcast.mobile.core.model.*
-import com.nextgenbroadcast.mobile.middleware.service.binder.InterprocessServiceBinder
 import com.nextgenbroadcast.mobile.middleware.controller.media.IObservablePlayer
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
 import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
 import com.nextgenbroadcast.mobile.middleware.presentation.IMediaPlayerPresenter
 import com.nextgenbroadcast.mobile.middleware.presentation.IReceiverPresenter
+import com.nextgenbroadcast.mobile.middleware.service.binder.InterprocessServiceBinder
+import java.io.File
 
 class Atsc3ServiceIncomingHandler(
+        private val context: Context,
         private val lifecycleOwner: LifecycleOwner,
         private val receiverPresenter: IReceiverPresenter,
         private val serviceController: IServiceController,
@@ -154,10 +163,20 @@ class Atsc3ServiceIncomingHandler(
 
     private fun observeRPMMediaUrl(sendToMessenger: Messenger) {
         viewController.rmpMediaUrl.observe(lifecycleOwner, { rmpMediaUrl ->
+            val contentUri: Uri? = rmpMediaUrl?.let {
+                val file = File("file://$rmpMediaUrl")
+                Log.d("TEST", "file exists: ${file.exists()}")
+                Log.d("TEST", "Context.getCacheDir(${context.cacheDir})")
+                val uri = getUriForFile(context, "com.nextgenbroadcast.mobile.middleware.provider", file)
+                context.grantUriPermission("com.nextgenbroadcast.mobile.middleware.simple", uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                context.grantUriPermission("com.nextgenbroadcast.mobile.middleware.simple.light", uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                context.grantUriPermission("com.nextgenbroadcast.mobile.middleware.simple.standalone", uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                uri
+            }
             sendToMessenger.send(buildMessage(
                     InterprocessServiceBinder.LIVEDATA_RMP_MEDIA_URL,
                     bundleOf(
-                            InterprocessServiceBinder.PARAM_RMP_MEDIA_URL to rmpMediaUrl
+                            InterprocessServiceBinder.PARAM_RMP_MEDIA_URI to contentUri
                     )
             ))
         })

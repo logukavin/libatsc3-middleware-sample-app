@@ -12,6 +12,7 @@ class StandaloneAtsc3Service : Atsc3ForegroundService() {
 
     override fun createServiceBinder(serviceController: IServiceController, viewController: IViewController): IBinder =
             Messenger(Atsc3ServiceIncomingHandler(
+                    this,
                     lifecycleOwner = this@StandaloneAtsc3Service,
                     receiverPresenter = object : IReceiverPresenter {
                         override val receiverState = serviceController.receiverState
