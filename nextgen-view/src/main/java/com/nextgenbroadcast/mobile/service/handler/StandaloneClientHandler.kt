@@ -3,6 +3,7 @@ package com.nextgenbroadcast.mobile.service.handler
 import android.net.Uri
 import android.os.Handler
 import android.os.Message
+import com.nextgenbroadcast.mobile.permission.UriPermissionProvider
 import com.nextgenbroadcast.mobile.core.getParcelable
 import com.nextgenbroadcast.mobile.core.getParcelableArrayList
 import com.nextgenbroadcast.mobile.core.model.*
@@ -10,6 +11,7 @@ import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
 import com.nextgenbroadcast.mobile.service.binder.InterprocessServiceBinder
 
 internal class StandaloneClientHandler(
+        private val uriPermissionProvider: UriPermissionProvider?,
         private val selectorPresenter: InterprocessServiceBinder.SelectorPresenter,
         private val receiverPresenter: InterprocessServiceBinder.ReceiverPresenter,
         private val userAgentPresenter: InterprocessServiceBinder.UserAgentPresenter,
@@ -64,7 +66,7 @@ internal class StandaloneClientHandler(
 
             IServiceBinder.ACTION_NEED_URI_PERMISSION -> {
                 msg.data.getString(IServiceBinder.PARAM_URI_NEED_PERMISSION)?.let { uriPath ->
-                    mediaPlayerPresenter.onPermissionGranted(uriPath)
+                    uriPermissionProvider?.permissionGranted(uriPath)
                 }
             }
 

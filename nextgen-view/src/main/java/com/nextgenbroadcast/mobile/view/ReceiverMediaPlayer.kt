@@ -10,7 +10,7 @@ import com.google.android.exoplayer2.source.dash.DefaultDashChunkSource
 import com.google.android.exoplayer2.ui.PlayerView
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
 import com.google.android.exoplayer2.upstream.DefaultLoadErrorHandlingPolicy
-import com.nextgenbroadcast.mobile.UriPermissionProvider
+import com.nextgenbroadcast.mobile.permission.UriPermissionProvider
 import com.nextgenbroadcast.mobile.core.AppUtils
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import java.io.IOException
@@ -20,7 +20,10 @@ class ReceiverMediaPlayer @JvmOverloads constructor(
 ) : PlayerView(context, attrs, defStyleAttr) {
 
     private lateinit var simpleExoPlayer: SimpleExoPlayer
-    private lateinit var dashMediaSourceFactory: DashMediaSource.Factory
+
+    private val dashMediaSourceFactory: DashMediaSource.Factory by lazy {
+        createMediaSourceFactory()
+    }
 
     private var rmpState: PlaybackState? = null
     private var listener: EventListener? = null
@@ -46,8 +49,6 @@ class ReceiverMediaPlayer @JvmOverloads constructor(
         simpleExoPlayer = createExoPlayer().also {
             player = it
         }
-
-        //dashMediaSourceFactory = createMediaSourceFactory()
     }
 
     fun setListener(listener: EventListener) {
@@ -56,7 +57,6 @@ class ReceiverMediaPlayer @JvmOverloads constructor(
 
     fun setUriPermissionProvider(uriPermissionProvider: UriPermissionProvider?) {
         this.uriPermissionProvider = uriPermissionProvider
-        dashMediaSourceFactory = createMediaSourceFactory()
     }
 
     fun play(mediaUri: Uri) {
@@ -112,7 +112,7 @@ class ReceiverMediaPlayer @JvmOverloads constructor(
     private fun createMediaSourceFactory(): DashMediaSource.Factory {
         val userAgent = AppUtils.getUserAgent(context)
         val manifestDataSourceFactory = DefaultDataSourceFactory(context, userAgent)
-        val mediaDataSourceFactory = CustomDataSourceFactory(context, uriPermissionProvider, userAgent)
+        val mediaDataSourceFactory = CustomDataSourceFactory(context, uriPermissionProvider)
 
         return DashMediaSource.Factory(
                 DefaultDashChunkSource.Factory(mediaDataSourceFactory),

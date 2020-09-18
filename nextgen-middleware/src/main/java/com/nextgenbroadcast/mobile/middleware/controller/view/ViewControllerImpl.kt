@@ -108,15 +108,6 @@ internal class ViewControllerImpl(
         rmpMediaTime.postValue(currentTime)
     }
 
-/*    override fun requestUriPermissions(uri: Uri): Object? {
-        //TODO("Not yet implemented")
-        return null
-    }*/
-
-    override fun havePermissions(uriPath: String) {
-        //TODO("Not yet implemented")
-    }
-
     //TODO: currently delay not supported and blocked on RPC level
     override fun requestMediaPlay(mediaUrl: String?, delay: Long) {
         rmpPause()
