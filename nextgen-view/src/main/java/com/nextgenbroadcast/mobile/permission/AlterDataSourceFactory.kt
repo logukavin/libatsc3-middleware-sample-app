@@ -1,31 +1,17 @@
-package com.nextgenbroadcast.mobile.view;
+package com.nextgenbroadcast.mobile.permission
 
-import android.content.Context;
-import androidx.annotation.Nullable;
-import com.google.android.exoplayer2.upstream.DataSource;
-import com.google.android.exoplayer2.upstream.DataSource.Factory;
-import com.google.android.exoplayer2.upstream.DefaultHttpDataSourceFactory;
-import com.google.android.exoplayer2.upstream.TransferListener;
-import com.nextgenbroadcast.mobile.permission.UriPermissionProvider;
+import android.content.Context
+import com.google.android.exoplayer2.upstream.DataSource
+import com.google.android.exoplayer2.upstream.DefaultHttpDataSourceFactory
 
-public final class CustomDataSourceFactory implements Factory {
+class AlterDataSourceFactory(
+        private val context: Context,
+        private val userAgent: String,
+        private val uriPermissionProvider: UriPermissionProvider?
+) : DataSource.Factory {
 
-  private final Context context;
-  private final @Nullable TransferListener listener;
-  private UriPermissionProvider uriPermissionProvider;
-
-  public CustomDataSourceFactory(Context context, UriPermissionProvider uriPermissionProvider) {
-    this.context = context.getApplicationContext();
-    this.listener = null;
-    this.uriPermissionProvider = uriPermissionProvider;
-  }
-
-  @Override
-  public DataSource createDataSource() {
-    DataSource dataSource = new CustomContentDataSource(context, uriPermissionProvider);
-    if (listener != null) {
-      dataSource.addTransferListener(listener);
-    }
-    return dataSource;
-  }
+    override fun createDataSource(): DataSource = AlterDefaultDataSource(
+            context,
+            DefaultHttpDataSourceFactory(userAgent, null).createDataSource(),
+            uriPermissionProvider)
 }
