@@ -108,10 +108,10 @@ internal class ViewControllerImpl(
         rmpMediaTime.postValue(currentTime)
     }
 
-    override fun requestUriPermissions(uri: Uri): Object? {
+/*    override fun requestUriPermissions(uri: Uri): Object? {
         //TODO("Not yet implemented")
         return null
-    }
+    }*/
 
     override fun havePermissions(uriPath: String) {
         //TODO("Not yet implemented")

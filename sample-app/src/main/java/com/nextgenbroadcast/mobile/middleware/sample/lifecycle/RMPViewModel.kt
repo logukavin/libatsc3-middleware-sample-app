@@ -1,6 +1,5 @@
 package com.nextgenbroadcast.mobile.middleware.sample.lifecycle
 
-import android.net.Uri
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Transformations
@@ -15,7 +14,6 @@ class RMPViewModel(
     private val _playWhenReady = MutableLiveData<Boolean>(true)
 
     val layoutParams = Transformations.distinctUntilChanged(presenter.rmpLayoutParams)
-    val mediaUrl = Transformations.distinctUntilChanged(presenter.rmpMediaUrl)
     val mediaUri = Transformations.distinctUntilChanged(presenter.rmpMediaUri)
 
     val playWhenReady: LiveData<Boolean> = _playWhenReady
@@ -53,10 +51,6 @@ class RMPViewModel(
 
     fun setCurrentMediaTime(currentTime: Long) {
         presenter.rmpMediaTimeChanged(currentTime)
-    }
-
-    fun requestUriPermissions(uri: Uri): Object? {
-        return presenter.requestUriPermissions(uri)
     }
 }
 

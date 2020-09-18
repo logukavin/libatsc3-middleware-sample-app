@@ -20,8 +20,7 @@
                 android:value="androidx.startup" />
         </provider>
 
-<!--
-        <provider
+<!--        <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="com.nextgenbroadcast.mobile.middleware.provider"
             android:enabled="true"
@@ -30,8 +29,7 @@
             <meta-data
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_provider_path" />
-        </provider>
--->
+        </provider>-->
 
     </application>
 

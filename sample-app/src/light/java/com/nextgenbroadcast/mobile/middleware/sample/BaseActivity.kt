@@ -7,6 +7,7 @@ import android.content.ServiceConnection
 import android.os.IBinder
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import com.nextgenbroadcast.mobile.UriPermissionProvider
 import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
 import com.nextgenbroadcast.mobile.service.binder.InterprocessServiceBinder
 
@@ -14,6 +15,8 @@ abstract class BaseActivity : AppCompatActivity() {
 
     var isBound: Boolean = false
         private set
+
+    val uriPermissionProvider: UriPermissionProvider? = UriPermissionProvider()
 
     override fun onStart() {
         super.onStart()
@@ -48,7 +51,7 @@ abstract class BaseActivity : AppCompatActivity() {
         private var binder: InterprocessServiceBinder? = null
 
         override fun onServiceConnected(className: ComponentName, service: IBinder) {
-            binder = InterprocessServiceBinder(service).also {
+            binder = InterprocessServiceBinder(service, uriPermissionProvider).also {
                 onBind(it)
             }
             isBound = true
