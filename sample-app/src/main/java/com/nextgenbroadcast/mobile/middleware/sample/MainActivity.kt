@@ -287,7 +287,7 @@ class MainActivity : BaseActivity() {
                 mediaUrl?.let { startPlayback(mediaUrl) } ?: receiver_player.stopPlayback()
             })*/
             mediaUri.observe(this@MainActivity, { mediaUri ->
-                Log.d("TEST", "path: $mediaUri")
+                //Log.d("TEST", "path: $mediaUri")
                 mediaUri?.let { receiver_player.startPlayback(it) } ?: receiver_player.stopPlayback()
             })
             playWhenReady.observe(this@MainActivity, { playWhenReady ->

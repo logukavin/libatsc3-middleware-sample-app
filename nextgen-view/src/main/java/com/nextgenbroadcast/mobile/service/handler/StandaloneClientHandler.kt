@@ -62,6 +62,10 @@ internal class StandaloneClientHandler(
                 incomingDataListener.onPlayerStateResume()
             }
 
+            IServiceBinder.ACTION_NEED_URI_PERMISSION -> {
+                mediaPlayerPresenter.havPermissions()
+            }
+
         }
     }
 

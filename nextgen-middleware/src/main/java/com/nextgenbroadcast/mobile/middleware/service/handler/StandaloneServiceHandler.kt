@@ -82,6 +82,14 @@ internal class StandaloneServiceHandler(
                 viewController.addOnPlayerSateChangedCallback(playerStateListener)
             }
 
+            IServiceBinder.ACTION_NEED_URI_PERMISSION -> {
+                msg.data.getParcelable(Uri::class.java, IServiceBinder.PARAM_URI_NEED_PERMISSION)?.let {
+                    context.grantUriPermission("com.nextgenbroadcast.mobile.middleware.sample.light", it, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    Log.d("TEST", "getting uri and give permission $it")
+                    sendHavePermissions(msg.replyTo)
+                }
+            }
+
             else -> super.handleMessage(msg)
         }
     }
@@ -166,10 +174,18 @@ internal class StandaloneServiceHandler(
                 val uri = FileProvider.getUriForFile(context, "com.nextgenbroadcast.mobile.middleware.provider", file)
                 context.grantUriPermission("com.nextgenbroadcast.mobile.middleware.sample.light", uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
 
-                val file2 = File(file.path,"video-init.mp4v")
-                Log.d("TEST", "file exists: ${file2.exists()}")
+/*
+                val file2 = File("/data/user/0/com.nextgenbroadcast.mobile.middleware.sample.standalone/cache/route/5001/video-init.mp4v")
+                Log.d("TEST", "file ${file2.absolutePath} exists: ${file2.exists()}")
                 val uri2 = FileProvider.getUriForFile(context, "com.nextgenbroadcast.mobile.middleware.provider", file2)
                 context.grantUriPermission("com.nextgenbroadcast.mobile.middleware.sample.light", uri2, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+
+
+                val file3 = File("/data/user/0/com.nextgenbroadcast.mobile.middleware.sample.standalone/cache/route/5001/d4_4-init.mp4")
+                Log.d("TEST", "file ${file3.absolutePath} exists: ${file3.exists()}")
+                val uri3 = FileProvider.getUriForFile(context, "com.nextgenbroadcast.mobile.middleware.provider", file3)
+                context.grantUriPermission("com.nextgenbroadcast.mobile.middleware.sample.light", uri3, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+*/
 
                 uri
             }
@@ -180,6 +196,10 @@ internal class StandaloneServiceHandler(
                     )
             ))
         })
+    }
+
+    private fun sendHavePermissions(sendToMessenger: Messenger) {
+        sendToMessenger.send(buildMessage(IServiceBinder.ACTION_NEED_URI_PERMISSION,))
     }
 
     private fun buildMessage(dataType: Int, args: Bundle? = null, classLoader: ClassLoader? = null): Message = Message.obtain(null, dataType).apply {
