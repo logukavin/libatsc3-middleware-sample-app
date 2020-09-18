@@ -1,0 +1,45 @@
+
+apply plugin: 'maven-publish'
+apply plugin: 'net.linguica.maven-settings'
+
+repositories {
+    maven {
+        url 'https://pkgs.dev.azure.com/NGWP/Middleware/_packaging/nextgen/maven/v1'
+        name 'nextgen'
+        authentication {
+            basic(BasicAuthentication)
+        }
+    }
+    maven {
+        url 'https://pkgs.dev.azure.com/NGWP/Middleware/_packaging/middleware/maven/v1'
+        name 'middleware'
+        authentication {
+            basic(BasicAuthentication)
+        }
+    }
+}
+
+publishing {
+    repositories {
+        maven {
+            url 'https://pkgs.dev.azure.com/NGWP/Middleware/_packaging/nextgen/maven/v1'
+            name 'nextgen'
+            authentication {
+                basic(BasicAuthentication)
+            }
+        }
+    }
+}
+
+afterEvaluate {
+    publishing {
+        publications {
+            release(MavenPublication) {
+                groupId = 'com.nextgenbroadcast.mobile'
+                version = project.hasProperty('artifactVersion') ? artifactVersion : null
+                artifactId = project.name
+                from components.release
+            }
+        }
+    }
+}
