@@ -41,9 +41,9 @@ steps:
       javaHomeOption: 'JDKVersion'
       publishJUnitResults: true
       testResultsFiles: '**/TEST-*.xml'
-      tasks: ':nextgen-core:assembleRelease :nextgen-middleware:assembleRelease :nextgen-mmt:assembleRelease :nextgen-view:assembleRelease :nextgen-middleware:testReleaseUnitTest :nextgen-core:publish :nextgen-middleware:publish :nextgen-mmt:publish :nextgen-view:publish -PartifactVersion=$(ARTIFACT_VERSION)'
+      tasks: 'clean :nextgen-core:assembleRelease :nextgen-middleware:assembleRelease :nextgen-mmt:assembleRelease :nextgen-view:assembleRelease :nextgen-middleware:testReleaseUnitTest :nextgen-core:publish :nextgen-middleware:publish :nextgen-mmt:publish :nextgen-view:publish -PartifactVersion=$(ARTIFACT_VERSION)'
 
-    displayName: gradlew assembleRelease
+    displayName: gradlew build, test and publish
 
   - task: CopyFiles@2
     displayName: 'Copy .aar files to artifact staging directory'
