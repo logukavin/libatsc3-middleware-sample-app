@@ -286,7 +286,7 @@ class MainActivity : BaseActivity() {
                 mediaUrl?.let { startPlayback(mediaUrl) } ?: receiver_player.stopPlayback()
             })*/
             Log.d("TEST", "Set uriPermissionProvider ($receiver_player) to receiver_player")
-            receiver_player.setUriPermissionProvider(uriPermissionProvider)
+            preparePlayerView(receiver_player)
             mediaUri.observe(this@MainActivity, { mediaUri ->
                 //Log.d("TEST", "path: $mediaUri")
                 mediaUri?.let { receiver_player.startPlayback(it) } ?: receiver_player.stopPlayback()

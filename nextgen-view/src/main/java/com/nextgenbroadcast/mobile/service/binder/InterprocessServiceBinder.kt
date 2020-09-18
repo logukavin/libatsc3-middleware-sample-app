@@ -4,26 +4,22 @@ import android.net.Uri
 import android.os.*
 import androidx.core.os.bundleOf
 import androidx.lifecycle.MutableLiveData
-import com.nextgenbroadcast.mobile.OnSendRequestPermissionListener
-import com.nextgenbroadcast.mobile.UriPermissionProvider
+import com.nextgenbroadcast.mobile.permission.UriPermissionProvider
 import com.nextgenbroadcast.mobile.core.model.*
 import com.nextgenbroadcast.mobile.core.presentation.*
 import com.nextgenbroadcast.mobile.core.presentation.media.IObservablePlayer
 import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
 import com.nextgenbroadcast.mobile.service.handler.StandaloneClientHandler
 import com.nextgenbroadcast.mobile.service.handler.OnIncomingPlayerStateListener
+import com.nextgenbroadcast.mobile.permission.IUriPermissionRequester
 import java.lang.UnsupportedOperationException
 
 class InterprocessServiceBinder(
         service: IBinder,
-        private val uriPermissionProvider: UriPermissionProvider? = null,
-) : IServiceBinder, OnSendRequestPermissionListener {
+        uriPermissionProvider: UriPermissionProvider? = null
+) : IServiceBinder, IUriPermissionRequester {
 
     private var playerStateListener: IObservablePlayer.IPlayerStateListener? = null
-
-    init {
-        uriPermissionProvider?.onSendRequestPermissionListener = this
-    }
 
     inner class SelectorPresenter : ISelectorPresenter {
         override val sltServices = MutableLiveData<List<SLSService>>()
@@ -95,10 +91,6 @@ class InterprocessServiceBinder(
             playerStateListener = null
             sendAction(IServiceBinder.CALLBACK_REMOVE_PLAYER_STATE_CHANGE)
         }
-
-        override fun onPermissionGranted(uriPath: String) {
-            uriPermissionProvider?.permissionGranted(uriPath)
-        }
     }
 
     override val selectorPresenter = SelectorPresenter()
@@ -112,6 +104,7 @@ class InterprocessServiceBinder(
     private var sendingMessenger: Messenger? = Messenger(service)
 
     private val incomingMessenger = Messenger(StandaloneClientHandler(
+            uriPermissionProvider,
             selectorPresenter,
             receiverPresenter,
             userAgentPresenter,
@@ -148,10 +141,9 @@ class InterprocessServiceBinder(
         })
     }
 
-    override fun onSendRequestPermission(uri: Uri) {
+    override fun requestUriPermission(uri: Uri) {
         sendAction(IServiceBinder.ACTION_NEED_URI_PERMISSION, bundleOf(
                 IServiceBinder.PARAM_URI_NEED_PERMISSION to uri
         ))
     }
-
 }
