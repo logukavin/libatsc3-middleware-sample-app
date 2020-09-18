@@ -84,7 +84,7 @@ class WebServerTests : ServerTest() {
     @Test
     fun makeHttpErrorCall() = testDispatcher.runBlockingTest {
         val client = OkHttpClient.Builder().connectionSpecs(listOf(ConnectionSpec.CLEARTEXT)).build()
-        launch { delay(500) }
+        launch { delay(1000) }
         val request: Request = Request.Builder().url("http://localhost:8080/index1.html").build()
         val response = client.newCall(request).execute()
         val serverMessage = response.body()?.string()
