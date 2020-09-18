@@ -6,6 +6,7 @@ import com.nextgenbroadcast.mobile.core.mapWith
 import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.RPMParams
+import com.nextgenbroadcast.mobile.core.presentation.UriPermissionsObtainedListener
 import com.nextgenbroadcast.mobile.middleware.server.ServerUtils
 import com.nextgenbroadcast.mobile.core.presentation.media.IObservablePlayer
 import com.nextgenbroadcast.mobile.core.presentation.media.PlayerStateRegistry
@@ -106,6 +107,14 @@ internal class ViewControllerImpl(
 
     override fun rmpMediaTimeChanged(currentTime: Long) {
         rmpMediaTime.postValue(currentTime)
+    }
+
+    override fun needPermissions(uri: Uri, callback: UriPermissionsObtainedListener) {
+        //TODO("Not yet implemented")
+    }
+
+    override fun havPermissions() {
+        //TODO("Not yet implemented")
     }
 
     //TODO: currently delay not supported and blocked on RPC level

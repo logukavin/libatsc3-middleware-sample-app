@@ -1,5 +1,6 @@
 package com.nextgenbroadcast.mobile.middleware.sample.lifecycle
 
+import android.net.Uri
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Transformations
@@ -7,6 +8,8 @@ import androidx.lifecycle.ViewModel
 import com.nextgenbroadcast.mobile.core.presentation.media.IObservablePlayer
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.presentation.IMediaPlayerPresenter
+import com.nextgenbroadcast.mobile.core.presentation.UriPermissionsObtainedListener
+import com.nextgenbroadcast.mobile.view.UriPermissionsListener
 
 class RMPViewModel(
         private val presenter: IMediaPlayerPresenter
@@ -52,6 +55,10 @@ class RMPViewModel(
 
     fun setCurrentMediaTime(currentTime: Long) {
         presenter.rmpMediaTimeChanged(currentTime)
+    }
+
+    fun setNeedPermissions(uri: Uri, callback: UriPermissionsObtainedListener) {
+        presenter.needPermissions(uri, callback)
     }
 }
 

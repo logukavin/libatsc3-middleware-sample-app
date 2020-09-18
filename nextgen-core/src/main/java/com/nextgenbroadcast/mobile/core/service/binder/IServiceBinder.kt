@@ -29,6 +29,7 @@ interface IServiceBinder {
         const val ACTION_RMP_PLAYBACK_STATE_CHANGED = 12
         const val ACTION_RMP_PLAYBACK_RATE_CHANGED = 13
         const val ACTION_RMP_MEDIA_TIME_CHANGED = 14
+        const val ACTION_NEED_URI_PERMISSION = 141
 
         const val CALLBACK_ADD_PLAYER_STATE_CHANGE = 15
         const val CALLBACK_REMOVE_PLAYER_STATE_CHANGE = 16
@@ -49,5 +50,6 @@ interface IServiceBinder {
         const val PARAM_RMP_PLAYBACK_STATE = "PARAM_RMP_PLAYBACK_STATE"
         const val PARAM_RMP_PLAYBACK_RATE = "PARAM_RMP_PLAYBACK_RATE"
         const val PARAM_RMP_MEDIA_TIME = "PARAM_RMP_MEDIA_TIME"
+        const val PARAM_URI_NEED_PERMISSION = "URI_NEED_PERMISSION"
     }
 }
