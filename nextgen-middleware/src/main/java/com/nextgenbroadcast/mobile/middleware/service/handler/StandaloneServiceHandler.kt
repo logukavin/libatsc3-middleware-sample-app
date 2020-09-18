@@ -83,10 +83,12 @@ internal class StandaloneServiceHandler(
             }
 
             IServiceBinder.ACTION_NEED_URI_PERMISSION -> {
-                msg.data.getParcelable(Uri::class.java, IServiceBinder.PARAM_URI_NEED_PERMISSION)?.let {
-                    context.grantUriPermission("com.nextgenbroadcast.mobile.middleware.sample.light", it, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                    Log.d("TEST", "getting uri and give permission $it")
-                    sendHavePermissions(msg.replyTo)
+                msg.data.getParcelable(Uri::class.java, IServiceBinder.PARAM_URI_NEED_PERMISSION)?.let { uri ->
+                    context.grantUriPermission("com.nextgenbroadcast.mobile.middleware.sample.light", uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    Log.d("TEST", "getting uri and give permission $uri")
+                    uri.path?.let { uriPath ->
+                        sendHavePermissions(msg.replyTo, uriPath)
+                    }
                 }
             }
 
@@ -198,8 +200,10 @@ internal class StandaloneServiceHandler(
         })
     }
 
-    private fun sendHavePermissions(sendToMessenger: Messenger) {
-        sendToMessenger.send(buildMessage(IServiceBinder.ACTION_NEED_URI_PERMISSION,))
+    private fun sendHavePermissions(sendToMessenger: Messenger, uriPath: String) {
+        sendToMessenger.send(buildMessage(IServiceBinder.ACTION_NEED_URI_PERMISSION,bundleOf(
+                IServiceBinder.PARAM_URI_NEED_PERMISSION to uriPath
+        )))
     }
 
     private fun buildMessage(dataType: Int, args: Bundle? = null, classLoader: ClassLoader? = null): Message = Message.obtain(null, dataType).apply {

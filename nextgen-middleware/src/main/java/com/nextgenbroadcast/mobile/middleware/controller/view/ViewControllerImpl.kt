@@ -6,7 +6,6 @@ import com.nextgenbroadcast.mobile.core.mapWith
 import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.RPMParams
-import com.nextgenbroadcast.mobile.core.presentation.UriPermissionsObtainedListener
 import com.nextgenbroadcast.mobile.middleware.server.ServerUtils
 import com.nextgenbroadcast.mobile.core.presentation.media.IObservablePlayer
 import com.nextgenbroadcast.mobile.core.presentation.media.PlayerStateRegistry
@@ -109,11 +108,12 @@ internal class ViewControllerImpl(
         rmpMediaTime.postValue(currentTime)
     }
 
-    override fun needPermissions(uri: Uri, callback: UriPermissionsObtainedListener) {
+    override fun requestUriPermissions(uri: Uri): Object? {
         //TODO("Not yet implemented")
+        return null
     }
 
-    override fun havPermissions() {
+    override fun havePermissions(uriPath: String) {
         //TODO("Not yet implemented")
     }
 
