@@ -71,11 +71,10 @@ def powermock_version = "2.0.7"
 dependencies {
     implementation fileTree(dir: "libs", include: ["*.jar"])
 
-    implementation project(":atsc3_core")
-    implementation project(":atsc3_bridge")
-    implementation project(":atsc3_phy_virtual")
-    //implementation project(":atsc3_phy_saankhya")
-    implementation project(":atsc3_phy_lowasis")
+    implementation 'org.ngbp.libatsc3:atsc3_core:1.0.0.1'
+    implementation 'org.ngbp.libatsc3:atsc3_bridge:1.0.0.1'
+    implementation 'org.ngbp.libatsc3:atsc3_phy_virtual:1.0.0.1'
+    implementation 'org.ngbp.libatsc3:atsc3_phy_lowasis:1.0.0.1'
 
     implementation project(":nextgen-core")
     compileOnly project(":nextgen-mmt")
