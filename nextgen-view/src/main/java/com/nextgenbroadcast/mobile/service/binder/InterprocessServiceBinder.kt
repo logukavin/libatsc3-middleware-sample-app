@@ -2,10 +2,10 @@ package com.nextgenbroadcast.mobile.service.binder
 
 import android.net.Uri
 import android.os.*
-import android.util.Log
 import androidx.core.os.bundleOf
-import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import com.nextgenbroadcast.mobile.OnSendRequestPermissionListener
+import com.nextgenbroadcast.mobile.UriPermissionProvider
 import com.nextgenbroadcast.mobile.core.model.*
 import com.nextgenbroadcast.mobile.core.presentation.*
 import com.nextgenbroadcast.mobile.core.presentation.media.IObservablePlayer
@@ -13,13 +13,17 @@ import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
 import com.nextgenbroadcast.mobile.service.handler.StandaloneClientHandler
 import com.nextgenbroadcast.mobile.service.handler.OnIncomingPlayerStateListener
 import java.lang.UnsupportedOperationException
-import java.util.concurrent.ConcurrentHashMap
 
 class InterprocessServiceBinder(
-        service: IBinder
-) : IServiceBinder {
+        service: IBinder,
+        private val uriPermissionProvider: UriPermissionProvider? = null,
+) : IServiceBinder, OnSendRequestPermissionListener {
 
     private var playerStateListener: IObservablePlayer.IPlayerStateListener? = null
+
+    init {
+        uriPermissionProvider?.onSendRequestPermissionListener = this
+    }
 
     inner class SelectorPresenter : ISelectorPresenter {
         override val sltServices = MutableLiveData<List<SLSService>>()
@@ -60,8 +64,6 @@ class InterprocessServiceBinder(
         override val rmpMediaUrl = MutableLiveData<String?>()
         override val rmpMediaUri = MutableLiveData<Uri?>()
 
-        private var permussionRequests = ConcurrentHashMap<String, Object>()
-
         override fun rmpLayoutReset() {
             sendAction(IServiceBinder.ACTION_RMP_LAYOUT_RESET)
         }
@@ -94,25 +96,8 @@ class InterprocessServiceBinder(
             sendAction(IServiceBinder.CALLBACK_REMOVE_PLAYER_STATE_CHANGE)
         }
 
-        override fun requestUriPermissions(uri: Uri): Object? {
-            uri.path?.let { uriPath ->
-                val obj = Object()
-                permussionRequests[uriPath] = obj
-                sendAction(IServiceBinder.ACTION_NEED_URI_PERMISSION, bundleOf(
-                        IServiceBinder.PARAM_URI_NEED_PERMISSION to uri
-                ))
-                return obj
-            }
-            Log.d("TEST", "send uri need permissions $uri")
-            return null
-        }
-
-        override fun havePermissions(uriPath: String) {
-            permussionRequests.remove(uriPath)?.let { obj ->
-                synchronized (obj) {
-                    obj.notifyAll()
-                }
-            }
+        override fun onPermissionGranted(uriPath: String) {
+            uriPermissionProvider?.permissionGranted(uriPath)
         }
     }
 
@@ -161,6 +146,12 @@ class InterprocessServiceBinder(
             data = args
             replyTo = incomingMessenger
         })
+    }
+
+    override fun onSendRequestPermission(uri: Uri) {
+        sendAction(IServiceBinder.ACTION_NEED_URI_PERMISSION, bundleOf(
+                IServiceBinder.PARAM_URI_NEED_PERMISSION to uri
+        ))
     }
 
 }

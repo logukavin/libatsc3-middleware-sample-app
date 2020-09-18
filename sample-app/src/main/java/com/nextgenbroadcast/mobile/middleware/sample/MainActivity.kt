@@ -10,7 +10,6 @@ import android.content.pm.ShortcutInfo
 import android.content.pm.ShortcutManager
 import android.content.res.Configuration
 import android.graphics.drawable.Icon
-import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.view.*
@@ -286,6 +285,8 @@ class MainActivity : BaseActivity() {
 /*            mediaUrl.observe(this@MainActivity, { mediaUrl ->
                 mediaUrl?.let { startPlayback(mediaUrl) } ?: receiver_player.stopPlayback()
             })*/
+            Log.d("TEST", "Set uriPermissionProvider ($receiver_player) to receiver_player")
+            receiver_player.setUriPermissionProvider(uriPermissionProvider)
             mediaUri.observe(this@MainActivity, { mediaUri ->
                 //Log.d("TEST", "path: $mediaUri")
                 mediaUri?.let { receiver_player.startPlayback(it) } ?: receiver_player.stopPlayback()

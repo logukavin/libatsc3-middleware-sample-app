@@ -10,6 +10,7 @@ import com.google.android.exoplayer2.source.dash.DefaultDashChunkSource
 import com.google.android.exoplayer2.ui.PlayerView
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
 import com.google.android.exoplayer2.upstream.DefaultLoadErrorHandlingPolicy
+import com.nextgenbroadcast.mobile.UriPermissionProvider
 import com.nextgenbroadcast.mobile.core.AppUtils
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import java.io.IOException
@@ -23,6 +24,7 @@ class ReceiverMediaPlayer @JvmOverloads constructor(
 
     private var rmpState: PlaybackState? = null
     private var listener: EventListener? = null
+    private var uriPermissionProvider: UriPermissionProvider? = null
 
     val isPlaying: Boolean
         get() = rmpState == PlaybackState.PLAYING
@@ -45,11 +47,16 @@ class ReceiverMediaPlayer @JvmOverloads constructor(
             player = it
         }
 
-        dashMediaSourceFactory = createMediaSourceFactory()
+        //dashMediaSourceFactory = createMediaSourceFactory()
     }
 
     fun setListener(listener: EventListener) {
         this.listener = listener
+    }
+
+    fun setUriPermissionProvider(uriPermissionProvider: UriPermissionProvider?) {
+        this.uriPermissionProvider = uriPermissionProvider
+        dashMediaSourceFactory = createMediaSourceFactory()
     }
 
     fun play(mediaUri: Uri) {
@@ -105,12 +112,7 @@ class ReceiverMediaPlayer @JvmOverloads constructor(
     private fun createMediaSourceFactory(): DashMediaSource.Factory {
         val userAgent = AppUtils.getUserAgent(context)
         val manifestDataSourceFactory = DefaultDataSourceFactory(context, userAgent)
-        val mediaDataSourceFactory = CustomDataSourceFactory(context, object : UriPermissionsListener {
-            override fun requestUriPermissions(uri: Uri): Object? {
-                return listener?.requestUriPermission(uri)
-            }
-
-        }, userAgent)
+        val mediaDataSourceFactory = CustomDataSourceFactory(context, uriPermissionProvider, userAgent)
 
         return DashMediaSource.Factory(
                 DefaultDashChunkSource.Factory(mediaDataSourceFactory),
@@ -135,7 +137,5 @@ class ReceiverMediaPlayer @JvmOverloads constructor(
         fun onPlayerStateChanged(state: PlaybackState) {}
         fun onPlayerError(error: Exception) {}
         fun onPlaybackSpeedChanged(speed: Float) {}
-
-        fun requestUriPermission(uri: Uri): Object?
     }
 }

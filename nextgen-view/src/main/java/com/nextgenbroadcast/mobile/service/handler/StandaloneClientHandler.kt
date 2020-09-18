@@ -64,7 +64,7 @@ internal class StandaloneClientHandler(
 
             IServiceBinder.ACTION_NEED_URI_PERMISSION -> {
                 msg.data.getString(IServiceBinder.PARAM_URI_NEED_PERMISSION)?.let { uriPath ->
-                    mediaPlayerPresenter.havePermissions(uriPath)
+                    mediaPlayerPresenter.onPermissionGranted(uriPath)
                 }
             }
 
