@@ -10,9 +10,10 @@ import com.google.android.exoplayer2.source.dash.DefaultDashChunkSource
 import com.google.android.exoplayer2.ui.PlayerView
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
 import com.google.android.exoplayer2.upstream.DefaultLoadErrorHandlingPolicy
-import com.nextgenbroadcast.mobile.permission.UriPermissionProvider
 import com.nextgenbroadcast.mobile.core.AppUtils
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
+import com.nextgenbroadcast.mobile.permission.AlterDataSourceFactory
+import com.nextgenbroadcast.mobile.permission.UriPermissionProvider
 import java.io.IOException
 
 class ReceiverMediaPlayer @JvmOverloads constructor(
@@ -112,7 +113,7 @@ class ReceiverMediaPlayer @JvmOverloads constructor(
     private fun createMediaSourceFactory(): DashMediaSource.Factory {
         val userAgent = AppUtils.getUserAgent(context)
         val manifestDataSourceFactory = DefaultDataSourceFactory(context, userAgent)
-        val mediaDataSourceFactory = CustomDataSourceFactory(context, uriPermissionProvider)
+        val mediaDataSourceFactory = AlterDataSourceFactory(context, userAgent, uriPermissionProvider)
 
         return DashMediaSource.Factory(
                 DefaultDashChunkSource.Factory(mediaDataSourceFactory),
