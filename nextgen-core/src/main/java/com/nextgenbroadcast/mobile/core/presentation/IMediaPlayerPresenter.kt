@@ -15,6 +15,7 @@ interface IMediaPlayerPresenter: IObservablePlayer {
     fun rmpPlaybackChanged(state: PlaybackState)
     fun rmpPlaybackRateChanged(speed: Float)
     fun rmpMediaTimeChanged(currentTime: Long)
-    fun needPermissions(uri: Uri, callback: UriPermissionsObtainedListener)
-    fun havPermissions()
+
+    fun requestUriPermissions(uri: Uri): Object?
+    fun havePermissions(uriPath: String)
 }

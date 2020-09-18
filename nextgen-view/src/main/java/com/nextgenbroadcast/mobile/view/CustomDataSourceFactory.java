@@ -35,7 +35,6 @@ public final class CustomDataSourceFactory implements Factory {
 
   private final Context context;
   private final @Nullable TransferListener listener;
-  private final Factory baseDataSourceFactory;
   private UriPermissionsListener uriPermissionsListener;
 
   /**
@@ -80,13 +79,11 @@ public final class CustomDataSourceFactory implements Factory {
       Factory baseDataSourceFactory) {
     this.context = context.getApplicationContext();
     this.listener = listener;
-    this.baseDataSourceFactory = baseDataSourceFactory;
   }
 
   @Override
-  public CustomDataSource createDataSource() {
-    CustomDataSource dataSource =
-        new CustomDataSource(context, baseDataSourceFactory.createDataSource(), uriPermissionsListener);
+  public DataSource createDataSource() {
+    DataSource dataSource = new CustomContentDataSource(context, uriPermissionsListener);
     if (listener != null) {
       dataSource.addTransferListener(listener);
     }

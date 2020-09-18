@@ -13,6 +13,7 @@ import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
 import com.nextgenbroadcast.mobile.service.handler.StandaloneClientHandler
 import com.nextgenbroadcast.mobile.service.handler.OnIncomingPlayerStateListener
 import java.lang.UnsupportedOperationException
+import java.util.concurrent.ConcurrentHashMap
 
 class InterprocessServiceBinder(
         service: IBinder
@@ -59,7 +60,7 @@ class InterprocessServiceBinder(
         override val rmpMediaUrl = MutableLiveData<String?>()
         override val rmpMediaUri = MutableLiveData<Uri?>()
 
-        private var callback: UriPermissionsObtainedListener? = null
+        private var permussionRequests = ConcurrentHashMap<String, Object>()
 
         override fun rmpLayoutReset() {
             sendAction(IServiceBinder.ACTION_RMP_LAYOUT_RESET)
@@ -93,16 +94,25 @@ class InterprocessServiceBinder(
             sendAction(IServiceBinder.CALLBACK_REMOVE_PLAYER_STATE_CHANGE)
         }
 
-        override fun needPermissions(uri: Uri, callback: UriPermissionsObtainedListener) {
-            sendAction(IServiceBinder.ACTION_NEED_URI_PERMISSION, bundleOf(
-                    IServiceBinder.PARAM_URI_NEED_PERMISSION to uri
-            ))
-            this.callback = callback
+        override fun requestUriPermissions(uri: Uri): Object? {
+            uri.path?.let { uriPath ->
+                val obj = Object()
+                permussionRequests[uriPath] = obj
+                sendAction(IServiceBinder.ACTION_NEED_URI_PERMISSION, bundleOf(
+                        IServiceBinder.PARAM_URI_NEED_PERMISSION to uri
+                ))
+                return obj
+            }
             Log.d("TEST", "send uri need permissions $uri")
+            return null
         }
 
-        override fun havPermissions() {
-            callback?.onPermissionsObtained()
+        override fun havePermissions(uriPath: String) {
+            permussionRequests.remove(uriPath)?.let { obj ->
+                synchronized (obj) {
+                    obj.notifyAll()
+                }
+            }
         }
     }
 

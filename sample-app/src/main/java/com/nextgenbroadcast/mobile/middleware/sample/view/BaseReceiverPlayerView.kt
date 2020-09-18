@@ -10,12 +10,10 @@ import android.view.LayoutInflater
 import android.view.View
 import android.widget.FrameLayout
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
-import com.nextgenbroadcast.mobile.core.presentation.UriPermissionsObtainedListener
 import com.nextgenbroadcast.mobile.middleware.sample.MainActivity
 import com.nextgenbroadcast.mobile.middleware.sample.R
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.RMPViewModel
 import com.nextgenbroadcast.mobile.view.ReceiverMediaPlayer
-import com.nextgenbroadcast.mobile.view.UriPermissionsListener
 import kotlinx.android.synthetic.main.receiver_player_layout.view.progress_bar
 import kotlinx.android.synthetic.main.receiver_player_layout.view.receiver_media_player
 
@@ -59,8 +57,8 @@ open class BaseReceiverPlayerView : FrameLayout {
                 rmpViewModel?.setCurrentPlaybackRate(speed)
             }
 
-            override fun onNeedPermission(uri: Uri, callback: UriPermissionsObtainedListener) {
-                rmpViewModel?.setNeedPermissions(uri, callback)
+            override fun requestUriPermission(uri: Uri): Object? {
+                return rmpViewModel?.requestUriPermissions(uri)
             }
         })
     }

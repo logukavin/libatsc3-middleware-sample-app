@@ -12,7 +12,6 @@ import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
 import com.google.android.exoplayer2.upstream.DefaultLoadErrorHandlingPolicy
 import com.nextgenbroadcast.mobile.core.AppUtils
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
-import com.nextgenbroadcast.mobile.core.presentation.UriPermissionsObtainedListener
 import java.io.IOException
 
 class ReceiverMediaPlayer @JvmOverloads constructor(
@@ -107,11 +106,12 @@ class ReceiverMediaPlayer @JvmOverloads constructor(
         val userAgent = AppUtils.getUserAgent(context)
         val manifestDataSourceFactory = DefaultDataSourceFactory(context, userAgent)
         val mediaDataSourceFactory = CustomDataSourceFactory(context, object : UriPermissionsListener {
-            override fun onNeedPermissions(uri: Uri, callback: UriPermissionsObtainedListener) {
-                listener?.onNeedPermission(uri, callback)
+            override fun requestUriPermissions(uri: Uri): Object? {
+                return listener?.requestUriPermission(uri)
             }
 
         }, userAgent)
+
         return DashMediaSource.Factory(
                 DefaultDashChunkSource.Factory(mediaDataSourceFactory),
                 manifestDataSourceFactory
@@ -135,6 +135,7 @@ class ReceiverMediaPlayer @JvmOverloads constructor(
         fun onPlayerStateChanged(state: PlaybackState) {}
         fun onPlayerError(error: Exception) {}
         fun onPlaybackSpeedChanged(speed: Float) {}
-        fun onNeedPermission(uri: Uri, callback: UriPermissionsObtainedListener)
+
+        fun requestUriPermission(uri: Uri): Object?
     }
 }
