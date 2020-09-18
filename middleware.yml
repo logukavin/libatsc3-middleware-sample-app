@@ -16,10 +16,6 @@ variables:
     value: 0.0.0
 
 steps:
-  # - checkout: self
-  #   persistCredentials: true
-  #   submodules: true
-
   - powershell: |
       Write-Host "##vso[task.setvariable variable=ARTIFACT_VERSION]$(git describe --tags)"
     displayName: 'Setup ARTIFACT_VERSION from tag'
@@ -41,19 +37,20 @@ steps:
       javaHomeOption: 'JDKVersion'
       publishJUnitResults: true
       testResultsFiles: '**/TEST-*.xml'
-      tasks: 'clean :nextgen-core:assembleRelease :nextgen-middleware:assembleRelease :nextgen-mmt:assembleRelease :nextgen-view:assembleRelease :nextgen-middleware:testReleaseUnitTest :nextgen-core:publish :nextgen-middleware:publish :nextgen-mmt:publish :nextgen-view:publish -PartifactVersion=$(ARTIFACT_VERSION)'
+    #   tasks: 'clean :nextgen-core:assembleRelease :nextgen-middleware:assembleRelease :nextgen-mmt:assembleRelease :nextgen-view:assembleRelease :nextgen-middleware:testReleaseUnitTest :nextgen-core:publish :nextgen-middleware:publish :nextgen-mmt:publish :nextgen-view:publish -PartifactVersion=$(ARTIFACT_VERSION)'
+      tasks: 'clean :nextgen-middleware:testReleaseUnitTest'
     displayName: gradlew build, test and publish
 
-  - task: CopyFiles@2
-    displayName: 'Copy .aar files to artifact staging directory'
-    inputs:
-        SourceFolder: '$(system.defaultworkingdirectory)'
-        Contents: '**/*.aar'
-        TargetFolder: '$(build.artifactstagingdirectory)'
-    condition: succeededOrFailed()
+#   - task: CopyFiles@2
+#     displayName: 'Copy .aar files to artifact staging directory'
+#     inputs:
+#         SourceFolder: '$(system.defaultworkingdirectory)'
+#         Contents: '**/*.aar'
+#         TargetFolder: '$(build.artifactstagingdirectory)'
+#     condition: succeededOrFailed()
 
-  - task: PublishBuildArtifacts@1
-    displayName: 'Publish Artifact: drop'
-    inputs:
-        PathtoPublish: '$(build.artifactstagingdirectory)'
-    condition: succeededOrFailed()
+#   - task: PublishBuildArtifacts@1
+#     displayName: 'Publish Artifact: drop'
+#     inputs:
+#         PathtoPublish: '$(build.artifactstagingdirectory)'
+#     condition: succeededOrFailed()
