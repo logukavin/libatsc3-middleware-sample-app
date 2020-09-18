@@ -31,7 +31,8 @@ steps:
   - task: MavenAuthenticate@0
     displayName: 'Maven Authenticate'
     inputs:
-      artifactsFeeds: nextgen
+      artifactsFeeds: 'middleware, nextgen'
+ 
 
   - task: Gradle@2
     inputs:
