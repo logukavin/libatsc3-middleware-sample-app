@@ -35,8 +35,8 @@ steps:
 
   - task: Gradle@2
     inputs:
-      workingDirectory: 'android'
-      gradleWrapperFile: 'android/gradlew'
+      workingDirectory: ''
+      gradleWrapperFile: 'gradlew'
       javaHomeOption: 'JDKVersion'
       publishJUnitResults: true
       testResultsFiles: '**/TEST-*.xml'
