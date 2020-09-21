@@ -38,7 +38,7 @@ steps:
       publishJUnitResults: true
       testResultsFiles: '**/TEST-*.xml'
     #   tasks: 'clean :nextgen-core:assembleRelease :nextgen-middleware:assembleRelease :nextgen-mmt:assembleRelease :nextgen-view:assembleRelease :nextgen-middleware:testReleaseUnitTest :nextgen-core:publish :nextgen-middleware:publish :nextgen-mmt:publish :nextgen-view:publish -PartifactVersion=$(ARTIFACT_VERSION)'
-      tasks: 'clean :nextgen-middleware:testReleaseUnitTest'
+      tasks: 'clean :nextgen-middleware:testReleaseUnitTest --tests *.makeHttpErrorCall'
     displayName: gradlew build, test and publish
 
 #   - task: CopyFiles@2
