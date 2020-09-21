@@ -81,8 +81,7 @@ class WebServerTests : ServerTest() {
 
     @Test
     fun makeHttpErrorCall() {
-        println("server is running = ${webServer.isRunning()}")
-        val client = OkHttpClient.Builder().connectionSpecs(listOf(ConnectionSpec.CLEARTEXT)).build()
+        val client = OkHttpClient().newBuilder().build()
         val request: Request = Request.Builder().url("http://localhost:8080/index1.html").build()
         val response = client.newCall(request).execute()
         val serverMessage = response.body()?.string()
