@@ -21,6 +21,8 @@ class InterprocessServiceBinder(
 
     private var playerStateListener: IObservablePlayer.IPlayerStateListener? = null
 
+    private val clientPackage = uriPermissionProvider?.clientPackage
+
     inner class SelectorPresenter : ISelectorPresenter {
         override val sltServices = MutableLiveData<List<SLSService>>()
         override val selectedService = MutableLiveData<SLSService?>()
@@ -130,6 +132,7 @@ class InterprocessServiceBinder(
 
     private fun subscribe(dataType: Int) {
         sendingMessenger?.send(Message.obtain(null, dataType).apply {
+            data = bundleOf(IServiceBinder.PARAM_PERMISSION_PACKAGE to clientPackage)
             replyTo = incomingMessenger
         })
     }
@@ -141,9 +144,10 @@ class InterprocessServiceBinder(
         })
     }
 
-    override fun requestUriPermission(uri: Uri) {
+    override fun requestUriPermission(uri: Uri, clientPackage: String) {
         sendAction(IServiceBinder.ACTION_NEED_URI_PERMISSION, bundleOf(
-                IServiceBinder.PARAM_URI_NEED_PERMISSION to uri
+                IServiceBinder.PARAM_URI_NEED_PERMISSION to uri,
+                IServiceBinder.PARAM_PERMISSION_PACKAGE to clientPackage
         ))
     }
 }

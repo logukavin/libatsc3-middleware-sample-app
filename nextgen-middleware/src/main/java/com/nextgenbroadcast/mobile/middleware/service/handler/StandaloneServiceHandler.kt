@@ -39,7 +39,9 @@ internal class StandaloneServiceHandler(
                 observeSelectedService(msg.replyTo)
                 observeAppData(msg.replyTo)
                 observeRPMLayoutParams(msg.replyTo)
-                observeRPMMediaUrl(msg.replyTo)
+                msg.data.getString(IServiceBinder.PARAM_PERMISSION_PACKAGE)?.let { clientPackage ->
+                    observeRPMMediaUrl(msg.replyTo, clientPackage)
+                }
             }
 
             IServiceBinder.ACTION_OPEN_ROUTE -> {
@@ -84,10 +86,11 @@ internal class StandaloneServiceHandler(
 
             IServiceBinder.ACTION_NEED_URI_PERMISSION -> {
                 msg.data.getParcelable(Uri::class.java, IServiceBinder.PARAM_URI_NEED_PERMISSION)?.let { uri ->
-                    context.grantUriPermission("com.nextgenbroadcast.mobile.middleware.sample.light", uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                    Log.d("TEST", "getting uri and give permission $uri")
-                    uri.path?.let { uriPath ->
-                        sendHavePermissions(msg.replyTo, uriPath)
+                    msg.data.getString(IServiceBinder.PARAM_PERMISSION_PACKAGE)?.let { clientPackage ->
+                        context.grantUriPermission(clientPackage, uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        uri.path?.let { uriPath ->
+                            sendHavePermissions(msg.replyTo, uriPath)
+                        }
                     }
                 }
             }
@@ -169,26 +172,12 @@ internal class StandaloneServiceHandler(
         })
     }
 
-    private fun observeRPMMediaUrl(sendToMessenger: Messenger) {
+    private fun observeRPMMediaUrl(sendToMessenger: Messenger, clientPackage: String) {
         viewController.rmpMediaUrl.observe(lifecycleOwner, { rmpMediaUrl ->
             val contentUri: Uri? = rmpMediaUrl?.let {
                 val file = File(rmpMediaUrl)
                 val uri = FileProvider.getUriForFile(context, "com.nextgenbroadcast.mobile.middleware.provider", file)
-                context.grantUriPermission("com.nextgenbroadcast.mobile.middleware.sample.light", uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-
-/*
-                val file2 = File("/data/user/0/com.nextgenbroadcast.mobile.middleware.sample.standalone/cache/route/5001/video-init.mp4v")
-                Log.d("TEST", "file ${file2.absolutePath} exists: ${file2.exists()}")
-                val uri2 = FileProvider.getUriForFile(context, "com.nextgenbroadcast.mobile.middleware.provider", file2)
-                context.grantUriPermission("com.nextgenbroadcast.mobile.middleware.sample.light", uri2, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-
-
-                val file3 = File("/data/user/0/com.nextgenbroadcast.mobile.middleware.sample.standalone/cache/route/5001/d4_4-init.mp4")
-                Log.d("TEST", "file ${file3.absolutePath} exists: ${file3.exists()}")
-                val uri3 = FileProvider.getUriForFile(context, "com.nextgenbroadcast.mobile.middleware.provider", file3)
-                context.grantUriPermission("com.nextgenbroadcast.mobile.middleware.sample.light", uri3, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-*/
-
+                context.grantUriPermission(clientPackage, uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 uri
             }
             sendToMessenger.send(buildMessage(

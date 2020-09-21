@@ -3,18 +3,19 @@ package com.nextgenbroadcast.mobile.permission
 import android.net.Uri
 import java.util.concurrent.ConcurrentHashMap
 
-class UriPermissionProvider {
+class UriPermissionProvider(
+        val clientPackage: String
+) {
 
     private val permissionRequests = ConcurrentHashMap<String, Object>()
 
+    @Volatile
     private var permissionRequester: IUriPermissionRequester? = null
 
-    @Synchronized
     fun setPermissionRequester(permissionRequester: IUriPermissionRequester?) {
-        this.permissionRequester = permissionRequester;
+        this.permissionRequester = permissionRequester
     }
 
-    @Synchronized
     fun permissionGranted(uriPath: String) {
         permissionRequests.remove(uriPath)?.let { obj ->
             synchronized(obj) {
@@ -23,7 +24,6 @@ class UriPermissionProvider {
         }
     }
 
-    @Synchronized
     @Throws(InterruptedException::class)
     fun requestPermission(uri: Uri) {
         uri.path?.let { uriPath ->
@@ -31,7 +31,7 @@ class UriPermissionProvider {
             permissionRequests[uriPath] = obj
             permissionRequester?.let { requester ->
                 synchronized(obj) {
-                    requester.requestUriPermission(uri)
+                    requester.requestUriPermission(uri, clientPackage)
                     obj.wait(50)
                 }
             } ?: return

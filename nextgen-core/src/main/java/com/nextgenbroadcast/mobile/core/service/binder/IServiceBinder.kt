@@ -51,5 +51,6 @@ interface IServiceBinder {
         const val PARAM_RMP_PLAYBACK_RATE = "PARAM_RMP_PLAYBACK_RATE"
         const val PARAM_RMP_MEDIA_TIME = "PARAM_RMP_MEDIA_TIME"
         const val PARAM_URI_NEED_PERMISSION = "URI_NEED_PERMISSION"
+        const val PARAM_PERMISSION_PACKAGE = "PARAM_PERMISSION_PACKAGE"
     }
 }
