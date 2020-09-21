@@ -79,11 +79,10 @@ class WebServerTests : ServerTest() {
         Assert.assertEquals(true, response.isSuccessful)
     }
 
-    @ExperimentalCoroutinesApi
     @Test
-    fun makeHttpErrorCall() = testDispatcher.runBlockingTest {
+    fun makeHttpErrorCall() {
+        println("server is running = ${webServer.isRunning()}")
         val client = OkHttpClient.Builder().connectionSpecs(listOf(ConnectionSpec.CLEARTEXT)).build()
-        delay(500) // wait
         val request: Request = Request.Builder().url("http://localhost:8080/index1.html").build()
         val response = client.newCall(request).execute()
         val serverMessage = response.body()?.string()
