@@ -17,7 +17,7 @@ abstract class BaseActivity : AppCompatActivity() {
     var isBound: Boolean = false
         private set
 
-    private val uriPermissionProvider = UriPermissionProvider()
+    private val uriPermissionProvider = UriPermissionProvider(BuildConfig.APPLICATION_ID)
 
     override fun onStart() {
         super.onStart()
