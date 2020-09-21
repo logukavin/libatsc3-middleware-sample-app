@@ -173,17 +173,12 @@ internal class StandaloneServiceHandler(
     }
 
     private fun observeRPMMediaUrl(sendToMessenger: Messenger, clientPackage: String) {
-        viewController.rmpMediaUrl.observe(lifecycleOwner, { rmpMediaUrl ->
-            val contentUri: Uri? = rmpMediaUrl?.let {
-                val file = File(rmpMediaUrl)
-                val uri = FileProvider.getUriForFile(context, "com.nextgenbroadcast.mobile.middleware.provider", file)
-                context.grantUriPermission(clientPackage, uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                uri
-            }
+        viewController.rmpMediaUri.observe(lifecycleOwner, { rmpMediaUri ->
+            context.grantUriPermission(clientPackage, rmpMediaUri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
             sendToMessenger.send(buildMessage(
                     IServiceBinder.LIVEDATA_RMP_MEDIA_URI,
                     bundleOf(
-                            IServiceBinder.PARAM_RMP_MEDIA_URI to contentUri
+                            IServiceBinder.PARAM_RMP_MEDIA_URI to rmpMediaUri
                     )
             ))
         })

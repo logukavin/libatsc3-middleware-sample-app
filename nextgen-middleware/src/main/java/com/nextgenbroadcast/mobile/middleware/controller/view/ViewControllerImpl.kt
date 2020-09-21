@@ -1,15 +1,16 @@
 package com.nextgenbroadcast.mobile.middleware.controller.view
 
-import android.net.Uri
+import android.util.Log
+import androidx.core.net.toUri
 import androidx.lifecycle.*
 import com.nextgenbroadcast.mobile.core.mapWith
 import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.RPMParams
-import com.nextgenbroadcast.mobile.middleware.server.ServerUtils
 import com.nextgenbroadcast.mobile.core.presentation.media.IObservablePlayer
 import com.nextgenbroadcast.mobile.core.presentation.media.PlayerStateRegistry
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
+import com.nextgenbroadcast.mobile.middleware.server.ServerUtils
 import com.nextgenbroadcast.mobile.middleware.settings.IClientSettings
 
 internal class ViewControllerImpl(
@@ -22,7 +23,7 @@ internal class ViewControllerImpl(
     }
 
     private val playbackSource = MutableLiveData<PlaybackSource>(PlaybackSource.BROADCAST)
-    private val externalMediaUrl = MutableLiveData<String>()
+    private val externalMediaUrl = MutableLiveData<String?>()
     private val rmpListeners = PlayerStateRegistry()
 
     override val appData: LiveData<AppData?> = repository.heldPackage.mapWith(repository.applications) { (held, applications) ->
@@ -46,15 +47,13 @@ internal class ViewControllerImpl(
     }
 
     override val rmpLayoutParams = MutableLiveData<RPMParams>(RPMParams())
-    override val rmpMediaUrl = Transformations.switchMap(playbackSource) { source ->
+    override val rmpMediaUri = Transformations.switchMap(playbackSource) { source ->
         if (source == PlaybackSource.BROADCAST) {
-            repository.routeMediaUrl
+            Transformations.map(repository.routeMediaUrl) { input -> input?.toUri() }
         } else {
-            externalMediaUrl
+            Transformations.map(externalMediaUrl) { input -> input?.toUri() }
         }
     }
-
-    override val rmpMediaUri = MutableLiveData<Uri?>()
 
     override val rmpState = MutableLiveData<PlaybackState>(PlaybackState.IDLE)
     override val rmpMediaTime = MutableLiveData<Long>()
