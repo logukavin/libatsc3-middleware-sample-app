@@ -3,17 +3,4 @@
     <cache-path
         name="cache-path"
         path="/"/>
-    <files-path
-        name="files_path"
-        path="/"/>
-    <external-cache-path
-        name="external-cache-path"
-        path="/"/>
-    <external-files-path
-        name="external-files-path"
-        path="/"/>
-    <root-path
-        name="root-path"
-        path="/"/>
-    <!--/data/data/com.nextgenbroadcast.mobile.middleware.sample.standalone/cache/route/5001/mpd.mpd-->
 </paths>

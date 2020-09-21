@@ -59,7 +59,6 @@ class InterprocessServiceBinder(
 
     inner class MediaPlayerPresenter : IMediaPlayerPresenter {
         override val rmpLayoutParams = MutableLiveData<RPMParams>()
-        override val rmpMediaUrl = MutableLiveData<String?>()
         override val rmpMediaUri = MutableLiveData<Uri?>()
 
         override fun rmpLayoutReset() {
@@ -127,7 +126,7 @@ class InterprocessServiceBinder(
     }
 
     fun close() {
-        sendingMessenger = null;
+        sendingMessenger = null
     }
 
     private fun subscribe(dataType: Int) {
