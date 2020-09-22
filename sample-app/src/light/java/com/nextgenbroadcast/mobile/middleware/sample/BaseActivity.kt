@@ -56,7 +56,7 @@ abstract class BaseActivity : AppCompatActivity() {
         private var binder: InterprocessServiceBinder? = null
 
         override fun onServiceConnected(className: ComponentName, service: IBinder) {
-            binder = InterprocessServiceBinder(service, uriPermissionProvider).also {
+            binder = InterprocessServiceBinder(service, BuildConfig.APPLICATION_ID, uriPermissionProvider).also {
                 onBind(it)
                 uriPermissionProvider.setPermissionRequester(it)
             }

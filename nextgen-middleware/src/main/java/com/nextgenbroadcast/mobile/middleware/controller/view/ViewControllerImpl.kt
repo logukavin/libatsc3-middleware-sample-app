@@ -1,6 +1,5 @@
 package com.nextgenbroadcast.mobile.middleware.controller.view
 
-import android.util.Log
 import androidx.core.net.toUri
 import androidx.lifecycle.*
 import com.nextgenbroadcast.mobile.core.mapWith
@@ -9,13 +8,15 @@ import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.RPMParams
 import com.nextgenbroadcast.mobile.core.presentation.media.IObservablePlayer
 import com.nextgenbroadcast.mobile.core.presentation.media.PlayerStateRegistry
+import com.nextgenbroadcast.mobile.middleware.IMediaFileProvider
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
 import com.nextgenbroadcast.mobile.middleware.server.ServerUtils
 import com.nextgenbroadcast.mobile.middleware.settings.IClientSettings
 
 internal class ViewControllerImpl(
         private val repository: IRepository,
-        private val settings: IClientSettings
+        private val settings: IClientSettings,
+        private val fileProvider: IMediaFileProvider
 ) : IViewController {
 
     private enum class PlaybackSource {
@@ -49,7 +50,11 @@ internal class ViewControllerImpl(
     override val rmpLayoutParams = MutableLiveData<RPMParams>(RPMParams())
     override val rmpMediaUri = Transformations.switchMap(playbackSource) { source ->
         if (source == PlaybackSource.BROADCAST) {
-            Transformations.map(repository.routeMediaUrl) { input -> input?.toUri() }
+            Transformations.map(repository.routeMediaUrl) { input ->
+                input?.let {
+                    fileProvider.getFileProviderUri(input)
+                }
+            }
         } else {
             Transformations.map(externalMediaUrl) { input -> input?.toUri() }
         }

@@ -1,11 +1,13 @@
 package com.nextgenbroadcast.mobile.middleware.rpc
 
+import android.net.Uri
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.SLSService
+import com.nextgenbroadcast.mobile.middleware.IMediaFileProvider
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPackage
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
@@ -62,6 +64,9 @@ class IRPCControllerTest {
     @Mock
     private lateinit var iRPCGateway: IRPCGateway
 
+    @Mock
+    private lateinit var mediaFileProvider: IMediaFileProvider
+
     private lateinit var coordinator: RPCGatewayImpl
     private lateinit var mediaPlayerController: ViewControllerImpl
     private var scaleFactor: Double = 1.0
@@ -77,7 +82,7 @@ class IRPCControllerTest {
     val serviceGuidUrls: LiveData<List<Urls>?> = MutableLiveData()
     var selectedService: MutableLiveData<SLSService?> = MutableLiveData()
     val rmpState: LiveData<PlaybackState> = MutableLiveData()
-    val rmpMediaUrl: LiveData<String?> = MutableLiveData()
+    val rmpMediaUri: LiveData<Uri?> = MutableLiveData()
     val appDataViewController: LiveData<AppData?> = MutableLiveData()
 
     @ExperimentalCoroutinesApi
@@ -98,11 +103,11 @@ class IRPCControllerTest {
         Mockito.`when`(serviceController.selectedService).thenReturn(selectedService)
         Mockito.`when`(serviceController.serviceGuidUrls).thenReturn(serviceGuidUrls)
         Mockito.`when`(repository.selectedService).thenReturn(selectedService)
-        Mockito.`when`(viewController.rmpMediaUrl).thenReturn(rmpMediaUrl)
+        Mockito.`when`(viewController.rmpMediaUri).thenReturn(rmpMediaUri)
         Mockito.`when`(viewController.rmpState).thenReturn(rmpState)
         Mockito.`when`(viewController.appData).thenReturn(appDataViewController)
 
-        mediaPlayerController = ViewControllerImpl(repository, prefs)
+        mediaPlayerController = ViewControllerImpl(repository, prefs, mediaFileProvider)
         coordinator = RPCGatewayImpl(serviceController, mediaPlayerController, prefs, testDispatcher, testDispatcher)
         iRPCGateway = coordinator
         Dispatchers.setMain(testDispatcher)

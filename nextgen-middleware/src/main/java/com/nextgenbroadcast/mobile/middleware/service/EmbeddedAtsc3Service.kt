@@ -2,6 +2,7 @@ package com.nextgenbroadcast.mobile.middleware.service
 
 import android.os.Binder
 import android.os.IBinder
+import androidx.core.content.FileProvider
 import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
 import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
@@ -9,6 +10,8 @@ import com.nextgenbroadcast.mobile.core.presentation.IMediaPlayerPresenter
 import com.nextgenbroadcast.mobile.core.presentation.IReceiverPresenter
 import com.nextgenbroadcast.mobile.core.presentation.ISelectorPresenter
 import com.nextgenbroadcast.mobile.core.presentation.IUserAgentPresenter
+import com.nextgenbroadcast.mobile.middleware.IMediaFileProvider
+import java.io.File
 
 class EmbeddedAtsc3Service : Atsc3ForegroundService() {
 
@@ -36,6 +39,14 @@ class EmbeddedAtsc3Service : Atsc3ForegroundService() {
         override val selectorPresenter: ISelectorPresenter = serviceController
         override val userAgentPresenter: IUserAgentPresenter = viewController
         override val mediaPlayerPresenter: IMediaPlayerPresenter = viewController
+    }
+
+    override fun getFileProvider() = object : IMediaFileProvider {
+
+        override fun getFileProviderUri(path: String) = FileProvider.getUriForFile(
+                applicationContext,
+                "com.nextgenbroadcast.mobile.middleware.embedded.provider",
+                File(path))
     }
 
     companion object {
