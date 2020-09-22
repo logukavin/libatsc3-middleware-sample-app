@@ -16,12 +16,11 @@ import java.lang.UnsupportedOperationException
 
 class InterprocessServiceBinder(
         service: IBinder,
+        private val clientPackage: String,
         uriPermissionProvider: UriPermissionProvider? = null
 ) : IServiceBinder, IUriPermissionRequester {
 
     private var playerStateListener: IObservablePlayer.IPlayerStateListener? = null
-
-    private val clientPackage = uriPermissionProvider?.clientPackage
 
     inner class SelectorPresenter : ISelectorPresenter {
         override val sltServices = MutableLiveData<List<SLSService>>()
