@@ -6,7 +6,6 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
-import android.net.Uri
 import android.os.IBinder
 import android.os.PowerManager
 import android.os.PowerManager.WakeLock
@@ -20,6 +19,7 @@ import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.model.SLSService
 import com.nextgenbroadcast.mobile.middleware.BuildConfig
 import com.nextgenbroadcast.mobile.middleware.IMediaFileProvider
+import com.nextgenbroadcast.mobile.middleware.R
 import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3Module
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
 import com.nextgenbroadcast.mobile.middleware.controller.service.ServiceControllerImpl
@@ -53,7 +53,6 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     private var deviceReceiver: Atsc3DeviceReceiver? = null
 
     abstract fun createServiceBinder(serviceController: IServiceController, viewController: IViewController) : IBinder
-    abstract fun getFileProvider() : IMediaFileProvider
 
     override fun onCreate() {
         super.onCreate()
@@ -228,7 +227,13 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         // we release it only when destroy presentation layer
         if (wakeLock.isHeld) return
 
-        val view = ViewControllerImpl(repository, settings, getFileProvider()).also {
+        val view = ViewControllerImpl(repository, settings, object : IMediaFileProvider {
+            override fun getFileProviderUri(path: String) = FileProvider.getUriForFile(
+                        applicationContext,
+                        getString(R.string.fileProvider),
+                        File(path))
+
+        }).also {
             viewController = it
         }
         val web = WebGatewayImpl(serviceController, repository, settings).also {
