@@ -50,7 +50,7 @@ internal class ViewControllerImpl(
     override val rmpLayoutParams = MutableLiveData<RPMParams>(RPMParams())
     override val rmpMediaUri = Transformations.switchMap(playbackSource) { source ->
         if (source == PlaybackSource.BROADCAST) {
-            Transformations.map(repository.routeMediaUrl) { input ->
+            repository.routeMediaUrl.map { input ->
                 input?.let {
                     fileProvider.getFileProviderUri(input)
                 }
