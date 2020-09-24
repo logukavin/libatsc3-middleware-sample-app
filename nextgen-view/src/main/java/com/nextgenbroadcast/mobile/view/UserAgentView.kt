@@ -48,7 +48,7 @@ class UserAgentView @JvmOverloads constructor(
             javaScriptEnabled = true
             domStorageEnabled = true
         }
-        if (0 != context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) {
+        if (BuildConfig.DEBUG) {
             setWebContentsDebuggingEnabled(true)
         }
         clearSslPreferences()
