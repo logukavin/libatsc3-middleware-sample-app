@@ -7,6 +7,7 @@ import android.util.Log
 import com.google.android.exoplayer2.*
 import com.google.android.exoplayer2.source.dash.DashMediaSource
 import com.google.android.exoplayer2.source.dash.DefaultDashChunkSource
+import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
 import com.google.android.exoplayer2.ui.PlayerView
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
 import com.google.android.exoplayer2.upstream.DefaultLoadErrorHandlingPolicy
@@ -20,7 +21,7 @@ class ReceiverMediaPlayer @JvmOverloads constructor(
         context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
 ) : PlayerView(context, attrs, defStyleAttr) {
 
-    private lateinit var simpleExoPlayer: SimpleExoPlayer
+    /*private*/ lateinit var simpleExoPlayer: SimpleExoPlayer
 
     private val dashMediaSourceFactory: DashMediaSource.Factory by lazy {
         createMediaSourceFactory()
@@ -80,7 +81,21 @@ class ReceiverMediaPlayer @JvmOverloads constructor(
     }
 
     private fun createExoPlayer(): SimpleExoPlayer {
-        return ExoPlayerFactory.newSimpleInstance(context).apply {
+        val testRenderFactory = /*object :*/ DefaultRenderersFactory(context)/* {
+            override fun buildVideoRenderers(context: Context?, extensionRendererMode: Int, mediaCodecSelector: MediaCodecSelector?, drmSessionManager: DrmSessionManager<FrameworkMediaCrypto>?, playClearSamplesWithoutKeys: Boolean, enableDecoderFallback: Boolean, eventHandler: Handler?, eventListener: VideoRendererEventListener?, allowedVideoJoiningTimeMs: Long, out: ArrayList<Renderer>?) {
+                //  EXTENSION_RENDERER_MODE_OFF - to use only MediaCodecVideoRenderer
+                super.buildVideoRenderers(context, EXTENSION_RENDERER_MODE_OFF, mediaCodecSelector, drmSessionManager, playClearSamplesWithoutKeys, enableDecoderFallback, eventHandler, eventListener, allowedVideoJoiningTimeMs, out)
+            }
+        }*/
+
+        val testSelector = DefaultTrackSelector()
+
+        val loadingControl = DefaultLoadControl.Builder()
+                .setBufferDurationsMs(15000, 50000, 2500, 5000)
+                .createDefaultLoadControl()
+//        val loadingControl = DefaultLoadControl()
+
+        return ExoPlayerFactory.newSimpleInstance(context, testRenderFactory, testSelector, loadingControl).apply {
             addListener(object : Player.EventListener {
                 override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
                     val state = when (playbackState) {

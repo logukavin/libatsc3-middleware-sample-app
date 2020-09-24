@@ -9,7 +9,7 @@ import android.view.SurfaceView
 import android.view.View
 import androidx.core.view.postDelayed
 import com.nextgenbroadcast.mobile.mmt.atsc3.media.DecoderHandlerThread
-import com.nextgenbroadcast.mobile.mmt.atsc3.media.MMTDataSource
+import com.nextgenbroadcast.mobile.mmt.atsc3.media.MMTDataBuffer
 
 class MMTPlayerView @JvmOverloads constructor(
         context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
@@ -20,7 +20,7 @@ class MMTPlayerView @JvmOverloads constructor(
     val isPlaying: Boolean
         get() = player?.isPlaybackStarted ?: false
 
-    fun start(source: MMTDataSource) {
+    fun start(source: MMTDataBuffer) {
         stop()
 
         player = DecoderHandlerThread(this, this).also {
