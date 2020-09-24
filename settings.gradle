@@ -1,2 +1,6 @@
 rootProject.name='Android ATSC 3.0 Sample App (A344 and PHY support)'
 include ':sample-app', ':nextgen-core', ':nextgen-middleware', ':nextgen-view', ':nextgen-mmt'
+
+gradle.ext.exoplayerRoot = 'ExoPlayer'
+gradle.ext.exoplayerModulePrefix = 'exoplayer-'
+apply from: new File(gradle.ext.exoplayerRoot, 'core_settings.gradle')

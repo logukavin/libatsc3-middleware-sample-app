@@ -17,27 +17,27 @@ import java.util.Map;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public class MMTDataSource implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payload, MfuByteBufferFragment> {
+public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payload, MfuByteBufferFragment> {
     private final IMMTDataProducer<MpuMetadata_HEVC_NAL_Payload, MfuByteBufferFragment> sourceConsumer;
 
     private final LinkedHashMap<Long, Long> MapVideoMfuPresentationTimestampUsAnchorSystemTimeUs = new LinkedHashMap<>();
     private final LinkedHashMap<Long, Long> MapAudioMfuPresentationTimestampUsAnchorSystemTimeUs = new LinkedHashMap<>();
 
-    private MpuMetadata_HEVC_NAL_Payload InitMpuMetadata_HEVC_NAL_Payload = null;
+    public MpuMetadata_HEVC_NAL_Payload InitMpuMetadata_HEVC_NAL_Payload = null;
 
-    final LinkedBlockingDeque<MfuByteBufferFragment> mfuBufferQueueVideo = new LinkedBlockingDeque<>(); //Collections.synchronizedList(new ArrayList<MfuByteBufferFragment>());
-    final LinkedBlockingDeque<MfuByteBufferFragment> mfuBufferQueueAudio = new LinkedBlockingDeque<>(); //Collections.synchronizedList(new ArrayList<MfuByteBufferFragment>());
-    final LinkedBlockingDeque<MfuByteBufferFragment> mfuBufferQueueStpp = new LinkedBlockingDeque<>(); //Collections.synchronizedList(new ArrayList<MfuByteBufferFragment>());
+    public final LinkedBlockingDeque<MfuByteBufferFragment> mfuBufferQueueVideo = new LinkedBlockingDeque<>(); //Collections.synchronizedList(new ArrayList<MfuByteBufferFragment>());
+    public final LinkedBlockingDeque<MfuByteBufferFragment> mfuBufferQueueAudio = new LinkedBlockingDeque<>(); //Collections.synchronizedList(new ArrayList<MfuByteBufferFragment>());
+    public final LinkedBlockingDeque<MfuByteBufferFragment> mfuBufferQueueStpp = new LinkedBlockingDeque<>(); //Collections.synchronizedList(new ArrayList<MfuByteBufferFragment>());
 
     final AtomicBoolean IsSoftFlushingFromAVPtsDiscontinuity = new AtomicBoolean(false);    //only discard the next few inputBuffer and reset our anchors
 
-    public MMTDataSource(IMMTDataProducer<MpuMetadata_HEVC_NAL_Payload, MfuByteBufferFragment> consumer) {
+    public MMTDataBuffer(IMMTDataProducer<MpuMetadata_HEVC_NAL_Payload, MfuByteBufferFragment> consumer) {
         sourceConsumer = consumer;
 
         consumer.setMMTSource(this);
     }
 
-    void release() {
+    public void release() {
         sourceConsumer.resetMMTSource(this);
         clearQueues();
         clearTimeCache();
@@ -84,12 +84,12 @@ public class MMTDataSource implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payl
                     MmtPacketIdContext.audio_packet_statistics.extracted_sample_duration_us));
         }
 
-        if (IsSoftFlushingFromAVPtsDiscontinuity.get()
-                || MediaCodecInputBufferMfuByteBufferFragmentWorker.IsHardCodecFlushingFromAVPtsDiscontinuity
-                || MediaCodecInputBufferMfuByteBufferFragmentWorker.IsResettingCodecFromDiscontinuity) {
-            mfuByteBufferFragment.unreferenceByteBuffer();
-            return;
-        }
+//        if (IsSoftFlushingFromAVPtsDiscontinuity.get()
+//                || MediaCodecInputBufferMfuByteBufferFragmentWorker.IsHardCodecFlushingFromAVPtsDiscontinuity
+//                || MediaCodecInputBufferMfuByteBufferFragmentWorker.IsResettingCodecFromDiscontinuity) {
+//            mfuByteBufferFragment.unreferenceByteBuffer();
+//            return;
+//        }
 
         if (MmtPacketIdContext.video_packet_id == mfuByteBufferFragment.packet_id) {
             addVideoFragment(mfuByteBufferFragment);
@@ -231,11 +231,11 @@ public class MMTDataSource implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payl
         mediaFormat.setByteBuffer("csd-0", InitMpuMetadata_HEVC_NAL_Payload.myByteBuffer);
     }
 
-    boolean hasMpuMetadata() {
+    public boolean hasMpuMetadata() {
         return InitMpuMetadata_HEVC_NAL_Payload != null;
     }
 
-    long getPresentationTimestampUs(MfuByteBufferFragment toProcessMfuByteBufferFragment) {
+    public long getPresentationTimestampUs(MfuByteBufferFragment toProcessMfuByteBufferFragment) {
         long ptsOffsetUs = 66000L;
 
         //by default for any missing MMT SI emissions or flash-cut into MMT flow emission, use now_Us + 66000uS for our presentationTimestampUs
