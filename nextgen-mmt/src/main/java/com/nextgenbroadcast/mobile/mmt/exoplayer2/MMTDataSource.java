@@ -7,17 +7,12 @@ import androidx.annotation.Nullable;
 import com.google.android.exoplayer2.C;
 import com.google.android.exoplayer2.upstream.BaseDataSource;
 import com.google.android.exoplayer2.upstream.DataSpec;
-import com.google.android.exoplayer2.util.Log;
 import com.nextgenbroadcast.mobile.mmt.atsc3.media.MMTDataBuffer;
 
-import org.ngbp.libatsc3.middleware.android.ATSC3PlayerFlags;
 import org.ngbp.libatsc3.middleware.android.application.sync.mmt.MfuByteBufferFragment;
-import org.ngbp.libatsc3.middleware.android.application.sync.mmt.MmtPacketIdContext;
 
-import java.io.EOFException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.concurrent.TimeUnit;
 
 public class MMTDataSource extends BaseDataSource {
 
@@ -39,7 +34,7 @@ public class MMTDataSource extends BaseDataSource {
     private boolean readHeader = true;
     private boolean readSampleHeader = false;
     private ByteBuffer sampleHeaderBuffer = ByteBuffer.allocate(MMTDef.SIZE_SAMPLE_HEADER);
-    private MfuByteBufferFragment toProcessMfuByteBufferFragment = null;
+    private MfuByteBufferFragment currentSample = null;
 
     public MMTDataSource(MMTDataBuffer dataSource) {
         super(/* isNetwork= */ false);
@@ -52,35 +47,7 @@ public class MMTDataSource extends BaseDataSource {
             uri = dataSpec.uri;
             transferInitializing(dataSpec);
 
-            ATSC3PlayerFlags.ATSC3PlayerStartPlayback = true;
-            ATSC3PlayerFlags.ATSC3PlayerStopPlayback = false;
-            ATSC3PlayerFlags.FirstMfuBufferVideoKeyframeSent = false;
-            ATSC3PlayerFlags.FirstMfuBuffer_presentation_time_us_mpu = 0;
-
-            //TODO: remove this...spinlock...
-            while (!ATSC3PlayerFlags.ATSC3PlayerStopPlayback && !inputSource.hasMpuMetadata()) {
-                Log.d("createMfuOuterMediaCodec", "waiting for initMpuMetadata_HEVC_NAL_Payload != null");
-                try {
-                    Thread.sleep(100);
-                } catch (Exception ex) {
-                    //
-                }
-            }
-
-            //spin for at least one video and one audio frame
-            while (!ATSC3PlayerFlags.ATSC3PlayerStopPlayback && (inputSource.mfuBufferQueueVideo.peek() == null || inputSource.mfuBufferQueueAudio.peek() == null)) {
-                //Log.d("createMfuOuterMediaCodec", String.format("waiting for mfuBufferQueueVideo, size: %d, mfuBufferQueueAudio, size: %d", source.mfuBufferQueueVideo.size, dataSource.mfuBufferQueueAudio.size))
-                try {
-                    Thread.sleep(100);
-                } catch (Exception ex) {
-                    //
-                }
-            }
-
-            //bail early
-            if (ATSC3PlayerFlags.ATSC3PlayerStopPlayback) {
-                throw new EOFException();
-            }
+            inputSource.await();
 
             if (dataSpec.length != C.LENGTH_UNSET) {
                 bytesRemaining = dataSpec.length;
@@ -117,14 +84,18 @@ public class MMTDataSource extends BaseDataSource {
 
             if (offset == 0 && readLength == MMTDef.SIZE_HEADER) {
                 initBuffer.rewind();
-                int size = initBuffer.remaining();
-
-                int videoWidth = MmtPacketIdContext.video_packet_statistics.width > 0 ? MmtPacketIdContext.video_packet_statistics.width : MmtPacketIdContext.MmtMfuStatistics.FALLBACK_WIDTH;
-                int videoHeight = MmtPacketIdContext.video_packet_statistics.height > 0 ? MmtPacketIdContext.video_packet_statistics.height : MmtPacketIdContext.MmtMfuStatistics.FALLBACK_HEIGHT;
-                float frameRate = (float) 1000000.0 / MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us;
+                int initDataSize = initBuffer.remaining();
 
                 ByteBuffer bb = ByteBuffer.allocate(MMTDef.SIZE_HEADER);
-                bb.putInt(videoWidth).putInt(videoHeight).putFloat(frameRate).putInt(size);
+                bb.put(MMTDef.TRACK_VIDEO_HEVC)
+                        .put(MMTDef.TRACK_AUDIO_AC4)
+                        .put(MMTDef.TRACK_TEXT_SS)
+                        .putInt(inputSource.getVideoWidth())
+                        .putInt(inputSource.getVideoHeight())
+                        .putFloat(inputSource.getVideoFrameRate())
+                        .putInt(initDataSize)
+                        .putInt(inputSource.getAudioChannelCount())
+                        .putInt(inputSource.getAudioSampleRate());
                 bb.rewind();
                 bb.get(buffer, 0, MMTDef.SIZE_HEADER);
 
@@ -144,33 +115,40 @@ public class MMTDataSource extends BaseDataSource {
             return C.RESULT_END_OF_INPUT;
         }
 
-        int bytesRead;
-
-        inputSource.mfuBufferQueueAudio.clear();
-        inputSource.mfuBufferQueueStpp.clear();
-
-        if (toProcessMfuByteBufferFragment == null || toProcessMfuByteBufferFragment.myByteBuffer.remaining() == 0) {
-            if (toProcessMfuByteBufferFragment != null) {
-                toProcessMfuByteBufferFragment.unreferenceByteBuffer();
+        if (currentSample == null || currentSample.myByteBuffer.remaining() == 0) {
+            if (currentSample != null) {
+                currentSample.unreferenceByteBuffer();
             }
 
             try {
-                if ((toProcessMfuByteBufferFragment = inputSource.mfuBufferQueueVideo.poll(10, TimeUnit.MILLISECONDS)) == null) {
+                if ((currentSample = inputSource.poll(10)) == null) {
                     return 0;
                 }
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
 
-            if (toProcessMfuByteBufferFragment != null) {
-                long computedPresentationTimestampUs = inputSource.getPresentationTimestampUs(toProcessMfuByteBufferFragment);
+            if (currentSample != null) {
+                byte sampleType = C.TRACK_TYPE_UNKNOWN;
+                if (inputSource.isVideoSample(currentSample)) {
+                    sampleType = C.TRACK_TYPE_VIDEO;
+                } else if (inputSource.isAudioSample(currentSample)) {
+                    sampleType = C.TRACK_TYPE_AUDIO;
+                } else if (inputSource.isTextSample(currentSample)) {
+                    sampleType = C.TRACK_TYPE_TEXT;
+                }
+
+                long computedPresentationTimestampUs = inputSource.getPresentationTimestampUs(currentSample);
 
 //                Log.d("!!!", ">>> sample TimeUs: " + computedPresentationTimestampUs
 //                        + ",  sample size: " + toProcessMfuByteBufferFragment.bytebuffer_length
-//                        + ",  sample remaining: " + toProcessMfuByteBufferFragment.myByteBuffer.remaining()
+//                        + ",  sample type: " + sampleType
 //                        + ", sequence number: " + toProcessMfuByteBufferFragment.mpu_sequence_number);
                 sampleHeaderBuffer.clear();
-                sampleHeaderBuffer.putInt(toProcessMfuByteBufferFragment.bytebuffer_length).putLong(computedPresentationTimestampUs);
+                sampleHeaderBuffer
+                        .put(sampleType)
+                        .putInt(currentSample.bytebuffer_length)
+                        .putLong(computedPresentationTimestampUs);
                 sampleHeaderBuffer.rewind();
 
                 readSampleHeader = true;
@@ -186,18 +164,17 @@ public class MMTDataSource extends BaseDataSource {
             return bytesToRead;
         }
 
-        int bytesToRead = (int) Math.min(toProcessMfuByteBufferFragment.myByteBuffer.remaining(), readLength);
+        int bytesToRead = (int) Math.min(currentSample.myByteBuffer.remaining(), readLength);
         if (bytesToRead == 0) {
-            toProcessMfuByteBufferFragment = null;
+            currentSample = null;
             return C.RESULT_END_OF_INPUT;
         }
 
-        toProcessMfuByteBufferFragment.myByteBuffer.get(buffer, offset, bytesToRead);
-        bytesRead = bytesToRead;
+        currentSample.myByteBuffer.get(buffer, offset, bytesToRead);
 
-        bytesTransferred(bytesRead);
+        bytesTransferred(bytesToRead);
 
-        return bytesRead;
+        return bytesToRead;
     }
 
     @Nullable
@@ -211,14 +188,16 @@ public class MMTDataSource extends BaseDataSource {
     public void close() {
         uri = null;
 
-        ATSC3PlayerFlags.ATSC3PlayerStartPlayback = false;
-        ATSC3PlayerFlags.ATSC3PlayerStopPlayback = true;
         inputSource.release();
 
-        if (toProcessMfuByteBufferFragment != null) {
-            toProcessMfuByteBufferFragment.unreferenceByteBuffer();
-            toProcessMfuByteBufferFragment = null;
+        if (currentSample != null) {
+            currentSample.unreferenceByteBuffer();
+            currentSample = null;
         }
+
+        readSignature = true;
+        readHeader = true;
+        readSampleHeader = false;
 
         if (opened) {
             opened = false;

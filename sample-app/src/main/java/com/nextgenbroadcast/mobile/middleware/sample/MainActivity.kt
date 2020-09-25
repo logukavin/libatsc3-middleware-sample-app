@@ -428,39 +428,17 @@ class MainActivity : BaseActivity() {
 
     private fun startPlayback(mpdPath: String) {
         if (mpdPath == "mmt") {
-            val source = receiverPresenter?.createMMTSource()/*?.let { source ->
-                mmt_player_view.start(source)
-            }*/ ?: return
-
-            val mediaSource = ProgressiveMediaSource.Factory({
-                MMTDataSource(source)
-            }, {
-                arrayOf(MMTExtractor())
-            }).createMediaSource("mmt".toUri())
-
-            with(receiver_media_player) {
-                player = simpleExoPlayer
-                // seek to set startPositionUs and add 2 sec for buffering
-                //simpleExoPlayer.seekTo(System.currentTimeMillis() + 2_000)
-                //simpleExoPlayer.prepare(mediaSource, false, true)
-                simpleExoPlayer.prepare(mediaSource)
-                simpleExoPlayer.playWhenReady = true
-            }
-
-            receiver_media_player.visibility = View.VISIBLE
-            progress_bar.visibility = View.GONE
+            val source = receiverPresenter?.createMMTSource() ?: return
+            receiver_media_player.play(source)
         } else {
-            receiver_media_player.visibility = View.VISIBLE
             receiver_media_player.play(Uri.parse(mpdPath))
-            progress_bar.visibility = View.GONE
         }
+        progress_bar.visibility = View.GONE
     }
 
     private fun stopPlayback() {
         receiver_media_player.stop()
         progress_bar.visibility = View.VISIBLE
-
-        //mmt_player_view.stop()
     }
 
     private fun buildShortcuts(sources: List<String>) {

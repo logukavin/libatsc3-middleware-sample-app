@@ -12,13 +12,12 @@ import org.ngbp.libatsc3.middleware.android.application.sync.mmt.MfuByteBufferFr
 import org.ngbp.libatsc3.middleware.android.application.sync.mmt.MmtPacketIdContext;
 import org.ngbp.libatsc3.middleware.android.application.sync.mmt.MpuMetadata_HEVC_NAL_Payload;
 
-import java.io.EOFException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.LinkedBlockingDeque;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
-public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payload, MfuByteBufferFragment> {
+public class MMTDataBuffer_Old implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payload, MfuByteBufferFragment> {
     private final IMMTDataProducer<MpuMetadata_HEVC_NAL_Payload, MfuByteBufferFragment> sourceConsumer;
 
     private final LinkedHashMap<Long, Long> MapVideoMfuPresentationTimestampUsAnchorSystemTimeUs = new LinkedHashMap<>();
@@ -26,93 +25,28 @@ public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payl
 
     public MpuMetadata_HEVC_NAL_Payload InitMpuMetadata_HEVC_NAL_Payload = null;
 
-    private final LinkedBlockingDeque<MfuByteBufferFragment> mfuBufferQueue = new LinkedBlockingDeque<>();
+    final LinkedBlockingDeque<MfuByteBufferFragment> mfuBufferQueueVideo = new LinkedBlockingDeque<>(); //Collections.synchronizedList(new ArrayList<MfuByteBufferFragment>());
+    final LinkedBlockingDeque<MfuByteBufferFragment> mfuBufferQueueAudio = new LinkedBlockingDeque<>(); //Collections.synchronizedList(new ArrayList<MfuByteBufferFragment>());
+    final LinkedBlockingDeque<MfuByteBufferFragment> mfuBufferQueueStpp = new LinkedBlockingDeque<>(); //Collections.synchronizedList(new ArrayList<MfuByteBufferFragment>());
 
-    public MMTDataBuffer(IMMTDataProducer<MpuMetadata_HEVC_NAL_Payload, MfuByteBufferFragment> consumer) {
+    final AtomicBoolean IsSoftFlushingFromAVPtsDiscontinuity = new AtomicBoolean(false);    //only discard the next few inputBuffer and reset our anchors
+
+    public MMTDataBuffer_Old(IMMTDataProducer<MpuMetadata_HEVC_NAL_Payload, MfuByteBufferFragment> consumer) {
         sourceConsumer = consumer;
 
         consumer.setMMTSource(this);
     }
 
     public void release() {
-        ATSC3PlayerFlags.ATSC3PlayerStartPlayback = false;
-        ATSC3PlayerFlags.ATSC3PlayerStopPlayback = true;
-
         sourceConsumer.resetMMTSource(this);
-        mfuBufferQueue.clear();
+        clearQueues();
         clearTimeCache();
     }
 
-    public MfuByteBufferFragment peek() {
-        return mfuBufferQueue.peek();
-    }
-
-    public MfuByteBufferFragment poll(long timeoutMs) throws InterruptedException {
-        return mfuBufferQueue.poll(timeoutMs, TimeUnit.MILLISECONDS);
-    }
-
-    public int getVideoWidth() {
-        return MmtPacketIdContext.video_packet_statistics.width > 0 ? MmtPacketIdContext.video_packet_statistics.width : MmtPacketIdContext.MmtMfuStatistics.FALLBACK_WIDTH;
-    }
-
-    public int getVideoHeight() {
-        return MmtPacketIdContext.video_packet_statistics.height > 0 ? MmtPacketIdContext.video_packet_statistics.height : MmtPacketIdContext.MmtMfuStatistics.FALLBACK_HEIGHT;
-    }
-
-    public float getVideoFrameRate() {
-        return (float) 1000000.0 / MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us;
-    }
-
-    public boolean isVideoSample(MfuByteBufferFragment sample) {
-        return MmtPacketIdContext.video_packet_id == sample.packet_id;
-    }
-
-    public int getAudioChannelCount() {
-        return 2;
-    }
-
-    public int getAudioSampleRate() {
-        return 48000;
-    }
-
-    public boolean isAudioSample(MfuByteBufferFragment sample) {
-        return MmtPacketIdContext.audio_packet_id == sample.packet_id;
-    }
-
-    public boolean isTextSample(MfuByteBufferFragment sample) {
-        return MmtPacketIdContext.stpp_packet_id == sample.packet_id;
-    }
-
-    public void await() throws EOFException {
-        ATSC3PlayerFlags.ATSC3PlayerStartPlayback = true;
-        ATSC3PlayerFlags.ATSC3PlayerStopPlayback = false;
-        ATSC3PlayerFlags.FirstMfuBufferVideoKeyframeSent = false;
-        ATSC3PlayerFlags.FirstMfuBuffer_presentation_time_us_mpu = 0;
-
-        //TODO: remove this...spinlock...
-        while (!ATSC3PlayerFlags.ATSC3PlayerStopPlayback && !hasMpuMetadata()) {
-            com.google.android.exoplayer2.util.Log.d("createMfuOuterMediaCodec", "waiting for initMpuMetadata_HEVC_NAL_Payload != null");
-            try {
-                Thread.sleep(100);
-            } catch (Exception ex) {
-                //
-            }
-        }
-
-        //spin for at least one video and one audio frame
-        while (!ATSC3PlayerFlags.ATSC3PlayerStopPlayback && (peek() == null)) {
-            //Log.d("createMfuOuterMediaCodec", String.format("waiting for mfuBufferQueueVideo, size: %d, mfuBufferQueueAudio, size: %d", source.mfuBufferQueueVideo.size, dataSource.mfuBufferQueueAudio.size))
-            try {
-                Thread.sleep(100);
-            } catch (Exception ex) {
-                //
-            }
-        }
-
-        //bail early
-        if (ATSC3PlayerFlags.ATSC3PlayerStopPlayback) {
-            throw new EOFException();
-        }
+    void clearQueues() {
+        mfuBufferQueueVideo.clear();
+        mfuBufferQueueAudio.clear();
+        mfuBufferQueueStpp.clear();
     }
 
     void clearTimeCache() {
@@ -169,12 +103,12 @@ public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payl
     private void addVideoFragment(MfuByteBufferFragment mfuByteBufferFragment) {
         // if(mfuByteBufferFragment.sample_number == 1 || firstMfuBufferVideoKeyframeSent) {
         //normal flow...
-        mfuBufferQueue.add(mfuByteBufferFragment);
+        mfuBufferQueueVideo.add(mfuByteBufferFragment);
 
         if (mfuByteBufferFragment.sample_number == 1) {
             if (!ATSC3PlayerFlags.FirstMfuBufferVideoKeyframeSent) {
                 Log.d("pushMfuByteBufferFragment", String.format("V: pushing FIRST: queueSize: %d, sampleNumber: %d, size: %d, mpuPresentationTimeUs: %d",
-                        mfuBufferQueue.size(),
+                        mfuBufferQueueVideo.size(),
                         mfuByteBufferFragment.sample_number,
                         mfuByteBufferFragment.bytebuffer_length,
                         mfuByteBufferFragment.mpu_presentation_time_uS_from_SI));
@@ -219,7 +153,7 @@ public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payl
                             mfuByteBufferFragment.sample_number,
                             mfuByteBufferFragment.bytebuffer_length,
                             mfuByteBufferFragment.get_safe_mfu_presentation_time_uS_computed(),
-                            mfuBufferQueue.size()));
+                            mfuBufferQueueVideo.size()));
         }
 //            } else {
 //                //discard
@@ -237,7 +171,7 @@ public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payl
 //                return;
 //            }
 
-        mfuBufferQueue.add(mfuByteBufferFragment);
+        mfuBufferQueueAudio.add(mfuByteBufferFragment);
 
         if (mfuByteBufferFragment.mfu_fragment_count_expected == mfuByteBufferFragment.mfu_fragment_count_rebuilt) {
             MmtPacketIdContext.audio_packet_statistics.complete_mfu_samples_count++;
@@ -272,7 +206,7 @@ public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payl
                     mfuByteBufferFragment.sample_number,
                     mfuByteBufferFragment.bytebuffer_length,
                     mfuByteBufferFragment.get_safe_mfu_presentation_time_uS_computed(),
-                    mfuBufferQueue.size()));
+                    mfuBufferQueueVideo.size()));
         }
     }
 
@@ -281,7 +215,7 @@ public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payl
             return;
         }
 
-        mfuBufferQueue.add(mfuByteBufferFragment);
+        mfuBufferQueueStpp.add(mfuByteBufferFragment);
         MmtPacketIdContext.stpp_packet_statistics.total_mfu_samples_count++;
     }
 
@@ -297,11 +231,11 @@ public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payl
         mediaFormat.setByteBuffer("csd-0", InitMpuMetadata_HEVC_NAL_Payload.myByteBuffer);
     }
 
-    private boolean hasMpuMetadata() {
+    boolean hasMpuMetadata() {
         return InitMpuMetadata_HEVC_NAL_Payload != null;
     }
 
-    public long getPresentationTimestampUs(MfuByteBufferFragment toProcessMfuByteBufferFragment) {
+    long getPresentationTimestampUs(MfuByteBufferFragment toProcessMfuByteBufferFragment) {
         long ptsOffsetUs = 66000L;
 
         //by default for any missing MMT SI emissions or flash-cut into MMT flow emission, use now_Us + 66000uS for our presentationTimestampUs

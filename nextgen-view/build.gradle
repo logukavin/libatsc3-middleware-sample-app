@@ -37,6 +37,7 @@ dependencies {
     implementation fileTree(dir: "libs", include: ["*.jar"])
 
     implementation project(':nextgen-core')
+    compileOnly project(":nextgen-mmt")
 
     api project(':exoplayer-library-core')
     api project(':exoplayer-library-dash')

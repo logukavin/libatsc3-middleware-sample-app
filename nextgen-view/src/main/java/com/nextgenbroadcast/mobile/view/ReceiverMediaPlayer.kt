@@ -4,7 +4,9 @@ import android.content.Context
 import android.net.Uri
 import android.util.AttributeSet
 import android.util.Log
+import androidx.core.net.toUri
 import com.google.android.exoplayer2.*
+import com.google.android.exoplayer2.source.ProgressiveMediaSource
 import com.google.android.exoplayer2.source.dash.DashMediaSource
 import com.google.android.exoplayer2.source.dash.DefaultDashChunkSource
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
@@ -15,6 +17,9 @@ import com.nextgenbroadcast.mobile.core.AppUtils
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.permission.AlterDataSourceFactory
 import com.nextgenbroadcast.mobile.permission.UriPermissionProvider
+import com.nextgenbroadcast.mobile.mmt.atsc3.media.MMTDataBuffer
+import com.nextgenbroadcast.mobile.mmt.exoplayer2.MMTDataSource
+import com.nextgenbroadcast.mobile.mmt.exoplayer2.MMTExtractor
 import java.io.IOException
 
 class ReceiverMediaPlayer @JvmOverloads constructor(
@@ -68,6 +73,18 @@ class ReceiverMediaPlayer @JvmOverloads constructor(
         simpleExoPlayer.playWhenReady = true
     }
 
+    fun play(mmtBuffer: MMTDataBuffer) {
+        val mediaSource = ProgressiveMediaSource.Factory({
+            MMTDataSource(mmtBuffer)
+        }, {
+            arrayOf(MMTExtractor())
+        }).createMediaSource("mmt".toUri())
+
+        player = simpleExoPlayer
+        simpleExoPlayer.prepare(mediaSource)
+        simpleExoPlayer.playWhenReady = true
+    }
+
     fun stop() {
         simpleExoPlayer.stop()
         player = null
@@ -81,21 +98,13 @@ class ReceiverMediaPlayer @JvmOverloads constructor(
     }
 
     private fun createExoPlayer(): SimpleExoPlayer {
-        val testRenderFactory = /*object :*/ DefaultRenderersFactory(context)/* {
-            override fun buildVideoRenderers(context: Context?, extensionRendererMode: Int, mediaCodecSelector: MediaCodecSelector?, drmSessionManager: DrmSessionManager<FrameworkMediaCrypto>?, playClearSamplesWithoutKeys: Boolean, enableDecoderFallback: Boolean, eventHandler: Handler?, eventListener: VideoRendererEventListener?, allowedVideoJoiningTimeMs: Long, out: ArrayList<Renderer>?) {
-                //  EXTENSION_RENDERER_MODE_OFF - to use only MediaCodecVideoRenderer
-                super.buildVideoRenderers(context, EXTENSION_RENDERER_MODE_OFF, mediaCodecSelector, drmSessionManager, playClearSamplesWithoutKeys, enableDecoderFallback, eventHandler, eventListener, allowedVideoJoiningTimeMs, out)
-            }
-        }*/
-
-        val testSelector = DefaultTrackSelector()
-
+        val renderFactory = DefaultRenderersFactory(context)
+        val selector = DefaultTrackSelector()
         val loadingControl = DefaultLoadControl.Builder()
                 .setBufferDurationsMs(15000, 50000, 2500, 5000)
                 .createDefaultLoadControl()
-//        val loadingControl = DefaultLoadControl()
 
-        return ExoPlayerFactory.newSimpleInstance(context, testRenderFactory, testSelector, loadingControl).apply {
+        return ExoPlayerFactory.newSimpleInstance(context, renderFactory, selector, loadingControl).apply {
             addListener(object : Player.EventListener {
                 override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
                     val state = when (playbackState) {
