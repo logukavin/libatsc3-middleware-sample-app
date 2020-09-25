@@ -43,7 +43,7 @@ public class DecoderHandlerThread {
     private final Handler decoderHandler;
     private final Handler serviceHandler;
 
-    private MMTDataBuffer dataSource;
+    private MMTDataBuffer_Old dataSource;
     private Surface myDecoderSurface;
 
     private MediaSync sync;
@@ -84,11 +84,11 @@ public class DecoderHandlerThread {
         serviceHandler = new ServiceHandler(Looper.getMainLooper(), listener);
     }
 
-    public void setMediaSource(MMTDataBuffer source) {
+    public void setMediaSource(MMTDataBuffer_Old source) {
         dataSource = source;
     }
 
-    MMTDataBuffer getMediaSource() {
+    MMTDataBuffer_Old getMediaSource() {
         return dataSource;
     }
 
