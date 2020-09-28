@@ -7,13 +7,17 @@ import android.content.ServiceConnection
 import android.os.IBinder
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import com.nextgenbroadcast.mobile.permission.UriPermissionProvider
 import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
+import com.nextgenbroadcast.mobile.middleware.sample.view.ReceiverPlayerView
 import com.nextgenbroadcast.mobile.service.binder.InterprocessServiceBinder
 
 abstract class BaseActivity : AppCompatActivity() {
 
     var isBound: Boolean = false
         private set
+
+    private val uriPermissionProvider = UriPermissionProvider(BuildConfig.APPLICATION_ID)
 
     override fun onStart() {
         super.onStart()
@@ -41,6 +45,10 @@ abstract class BaseActivity : AppCompatActivity() {
         }
     }
 
+    fun preparePlayerView(playerView: ReceiverPlayerView) {
+        playerView.setUriPermissionProvider(uriPermissionProvider)
+    }
+
     abstract fun onBind(binder: IServiceBinder)
     abstract fun onUnbind()
 
@@ -48,8 +56,9 @@ abstract class BaseActivity : AppCompatActivity() {
         private var binder: InterprocessServiceBinder? = null
 
         override fun onServiceConnected(className: ComponentName, service: IBinder) {
-            binder = InterprocessServiceBinder(service).also {
+            binder = InterprocessServiceBinder(service, BuildConfig.APPLICATION_ID, uriPermissionProvider).also {
                 onBind(it)
+                uriPermissionProvider.setPermissionRequester(it)
             }
             isBound = true
         }
@@ -61,6 +70,9 @@ abstract class BaseActivity : AppCompatActivity() {
 
                 onUnbind()
             }
+
+            uriPermissionProvider.setPermissionRequester(null)
+
             isBound = false
         }
     }

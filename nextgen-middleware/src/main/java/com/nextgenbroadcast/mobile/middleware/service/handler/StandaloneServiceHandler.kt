@@ -1,5 +1,8 @@
 package com.nextgenbroadcast.mobile.middleware.service.handler
 
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.os.*
 import androidx.core.os.bundleOf
 import androidx.lifecycle.LifecycleOwner
@@ -11,8 +14,10 @@ import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
 import com.nextgenbroadcast.mobile.core.presentation.IMediaPlayerPresenter
 import com.nextgenbroadcast.mobile.core.presentation.IReceiverPresenter
 import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
+import com.nextgenbroadcast.mobile.middleware.IMediaFileProvider
 
 internal class StandaloneServiceHandler(
+        private val fileProvider: IMediaFileProvider,
         private val lifecycleOwner: LifecycleOwner,
         private val receiverPresenter: IReceiverPresenter,
         private val serviceController: IServiceController,
@@ -32,7 +37,9 @@ internal class StandaloneServiceHandler(
                 observeSelectedService(msg.replyTo)
                 observeAppData(msg.replyTo)
                 observeRPMLayoutParams(msg.replyTo)
-                observeRPMMediaUrl(msg.replyTo)
+                msg.data.getString(IServiceBinder.PARAM_PERMISSION_PACKAGE)?.let { clientPackage ->
+                    observeRPMMediaUrl(msg.replyTo, clientPackage)
+                }
             }
 
             IServiceBinder.ACTION_OPEN_ROUTE -> {
@@ -73,6 +80,17 @@ internal class StandaloneServiceHandler(
 
             IServiceBinder.CALLBACK_REMOVE_PLAYER_STATE_CHANGE -> {
                 viewController.addOnPlayerSateChangedCallback(playerStateListener)
+            }
+
+            IServiceBinder.ACTION_NEED_URI_PERMISSION -> {
+                msg.data.getParcelable(Uri::class.java, IServiceBinder.PARAM_URI_NEED_PERMISSION)?.let { uri ->
+                    msg.data.getString(IServiceBinder.PARAM_PERMISSION_PACKAGE)?.let { clientPackage ->
+                        fileProvider.grantUriPermission(clientPackage, uri)
+                        uri.path?.let { uriPath ->
+                            sendHavePermissions(msg.replyTo, uriPath)
+                        }
+                    }
+                }
             }
 
             else -> super.handleMessage(msg)
@@ -152,15 +170,24 @@ internal class StandaloneServiceHandler(
         })
     }
 
-    private fun observeRPMMediaUrl(sendToMessenger: Messenger) {
-        viewController.rmpMediaUrl.observe(lifecycleOwner, { rmpMediaUrl ->
-            sendToMessenger.send(buildMessage(
-                    IServiceBinder.LIVEDATA_RMP_MEDIA_URL,
-                    bundleOf(
-                            IServiceBinder.PARAM_RMP_MEDIA_URL to rmpMediaUrl
-                    )
-            ))
+    private fun observeRPMMediaUrl(sendToMessenger: Messenger, clientPackage: String) {
+        viewController.rmpMediaUri.observe(lifecycleOwner, { rmpMediaUri ->
+            rmpMediaUri?.let { uri ->
+                fileProvider.grantUriPermission(clientPackage, uri)
+                sendToMessenger.send(buildMessage(
+                        IServiceBinder.LIVEDATA_RMP_MEDIA_URI,
+                        bundleOf(
+                                IServiceBinder.PARAM_RMP_MEDIA_URI to uri
+                        )
+                ))
+            }
         })
+    }
+
+    private fun sendHavePermissions(sendToMessenger: Messenger, uriPath: String) {
+        sendToMessenger.send(buildMessage(IServiceBinder.ACTION_NEED_URI_PERMISSION,bundleOf(
+                IServiceBinder.PARAM_URI_NEED_PERMISSION to uriPath
+        )))
     }
 
     private fun buildMessage(dataType: Int, args: Bundle? = null, classLoader: ClassLoader? = null): Message = Message.obtain(null, dataType).apply {

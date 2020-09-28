@@ -1,19 +1,22 @@
 package com.nextgenbroadcast.mobile.middleware.controller.view
 
+import androidx.core.net.toUri
 import androidx.lifecycle.*
 import com.nextgenbroadcast.mobile.core.mapWith
 import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.RPMParams
-import com.nextgenbroadcast.mobile.middleware.server.ServerUtils
 import com.nextgenbroadcast.mobile.core.presentation.media.IObservablePlayer
 import com.nextgenbroadcast.mobile.core.presentation.media.PlayerStateRegistry
+import com.nextgenbroadcast.mobile.middleware.IMediaFileProvider
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
+import com.nextgenbroadcast.mobile.middleware.server.ServerUtils
 import com.nextgenbroadcast.mobile.middleware.settings.IClientSettings
 
 internal class ViewControllerImpl(
         private val repository: IRepository,
-        private val settings: IClientSettings
+        private val settings: IClientSettings,
+        private val fileProvider: IMediaFileProvider
 ) : IViewController {
 
     private enum class PlaybackSource {
@@ -21,7 +24,7 @@ internal class ViewControllerImpl(
     }
 
     private val playbackSource = MutableLiveData<PlaybackSource>(PlaybackSource.BROADCAST)
-    private val externalMediaUrl = MutableLiveData<String>()
+    private val externalMediaUrl = MutableLiveData<String?>()
     private val rmpListeners = PlayerStateRegistry()
 
     override val appData: LiveData<AppData?> = repository.heldPackage.mapWith(repository.applications) { (held, applications) ->
@@ -45,11 +48,15 @@ internal class ViewControllerImpl(
     }
 
     override val rmpLayoutParams = MutableLiveData<RPMParams>(RPMParams())
-    override val rmpMediaUrl = Transformations.switchMap(playbackSource) { source ->
+    override val rmpMediaUri = Transformations.switchMap(playbackSource) { source ->
         if (source == PlaybackSource.BROADCAST) {
-            repository.routeMediaUrl
+            repository.routeMediaUrl.map { input ->
+                input?.let {
+                    fileProvider.getFileProviderUri(input)
+                }
+            }
         } else {
-            externalMediaUrl
+            externalMediaUrl.map { input -> input?.toUri() }
         }
     }
 

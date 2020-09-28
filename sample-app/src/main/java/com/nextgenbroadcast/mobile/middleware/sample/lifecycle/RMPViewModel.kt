@@ -14,7 +14,7 @@ class RMPViewModel(
     private val _playWhenReady = MutableLiveData<Boolean>(true)
 
     val layoutParams = Transformations.distinctUntilChanged(presenter.rmpLayoutParams)
-    val mediaUri = Transformations.distinctUntilChanged(presenter.rmpMediaUrl)
+    val mediaUri = Transformations.distinctUntilChanged(presenter.rmpMediaUri)
 
     val playWhenReady: LiveData<Boolean> = _playWhenReady
 

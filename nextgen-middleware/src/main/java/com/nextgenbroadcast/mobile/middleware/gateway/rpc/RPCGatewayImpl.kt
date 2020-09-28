@@ -34,7 +34,7 @@ internal class RPCGatewayImpl(
     override val queryServiceId: String?
         get() = serviceController.selectedService.value?.globalId
     override val mediaUrl: String?
-        get() = viewController.rmpMediaUrl.value
+        get() = viewController.rmpMediaUri.value.toString()
     override val playbackState: PlaybackState
         get() = viewController.rmpState.value ?: PlaybackState.IDLE
     override val serviceGuideUrls: List<Urls>
@@ -55,7 +55,7 @@ internal class RPCGatewayImpl(
             onServiceGuidUrls(urls)
         }
 
-        viewController.rmpMediaUrl.distinctUntilChanged().observeForever {
+        viewController.rmpMediaUri.distinctUntilChanged().observeForever {
             onMediaUrlUpdated()
         }
 

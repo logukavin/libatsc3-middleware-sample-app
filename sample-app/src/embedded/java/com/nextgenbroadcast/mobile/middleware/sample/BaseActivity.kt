@@ -9,6 +9,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
 import com.nextgenbroadcast.mobile.middleware.R
+import com.nextgenbroadcast.mobile.middleware.sample.view.ReceiverPlayerView
 import com.nextgenbroadcast.mobile.middleware.service.Atsc3ForegroundService
 import com.nextgenbroadcast.mobile.middleware.service.EmbeddedAtsc3Service
 
@@ -35,6 +36,8 @@ abstract class BaseActivity : AppCompatActivity() {
     fun openRoute(path: String) {
         Atsc3ForegroundService.openRoute(this, path)
     }
+
+    fun preparePlayerView(playerView: ReceiverPlayerView) {}
 
     abstract fun onBind(binder: IServiceBinder)
     abstract fun onUnbind()
