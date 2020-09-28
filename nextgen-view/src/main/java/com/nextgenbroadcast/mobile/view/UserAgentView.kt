@@ -2,6 +2,7 @@ package com.nextgenbroadcast.mobile.view
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.pm.ApplicationInfo
 import android.graphics.Color
 import android.net.Uri
 import android.net.http.SslError
@@ -47,7 +48,9 @@ class UserAgentView @JvmOverloads constructor(
             javaScriptEnabled = true
             domStorageEnabled = true
         }
-
+        if (BuildConfig.DEBUG) {
+            setWebContentsDebuggingEnabled(true)
+        }
         clearSslPreferences()
         webViewClient = createWebViewClient()
     }
