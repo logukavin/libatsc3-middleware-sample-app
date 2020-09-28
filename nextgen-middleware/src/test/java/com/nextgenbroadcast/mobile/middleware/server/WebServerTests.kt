@@ -5,7 +5,6 @@ import com.nextgenbroadcast.mobile.middleware.server.web.MiddlewareWebServer
 import com.nextgenbroadcast.mobile.middleware.server.web.MiddlewareWebServerError
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestCoroutineDispatcher
 import kotlinx.coroutines.test.runBlockingTest
 import okhttp3.ConnectionSpec
@@ -80,11 +79,9 @@ class WebServerTests : ServerTest() {
         Assert.assertEquals(true, response.isSuccessful)
     }
 
-    @ExperimentalCoroutinesApi
     @Test
-    fun makeHttpErrorCall() = testDispatcher.runBlockingTest {
-        val client = OkHttpClient.Builder().connectionSpecs(listOf(ConnectionSpec.CLEARTEXT)).build()
-        launch { delay(500) }
+    fun makeHttpErrorCall() {
+        val client = OkHttpClient().newBuilder().build()
         val request: Request = Request.Builder().url("http://localhost:8080/index1.html").build()
         val response = client.newCall(request).execute()
         val serverMessage = response.body()?.string()

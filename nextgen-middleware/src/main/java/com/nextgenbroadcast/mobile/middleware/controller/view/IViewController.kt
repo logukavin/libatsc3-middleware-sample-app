@@ -2,8 +2,8 @@ package com.nextgenbroadcast.mobile.middleware.controller.view
 
 import androidx.lifecycle.LiveData
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
-import com.nextgenbroadcast.mobile.middleware.presentation.IMediaPlayerPresenter
-import com.nextgenbroadcast.mobile.middleware.presentation.IUserAgentPresenter
+import com.nextgenbroadcast.mobile.core.presentation.IMediaPlayerPresenter
+import com.nextgenbroadcast.mobile.core.presentation.IUserAgentPresenter
 
 interface IViewController : IUserAgentPresenter, IMediaPlayerPresenter {
     val rmpState: LiveData<PlaybackState>
