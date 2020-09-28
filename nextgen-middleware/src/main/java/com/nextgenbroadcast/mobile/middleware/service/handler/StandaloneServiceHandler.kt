@@ -11,9 +11,9 @@ import com.nextgenbroadcast.mobile.core.presentation.media.IObservablePlayer
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
 import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
 import com.nextgenbroadcast.mobile.core.presentation.IMediaPlayerPresenter
-import com.nextgenbroadcast.mobile.core.presentation.IReceiverPresenter
 import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
 import com.nextgenbroadcast.mobile.middleware.IMediaFileProvider
+import com.nextgenbroadcast.mobile.middleware.presentation.IReceiverPresenter
 
 internal class StandaloneServiceHandler(
         private val fileProvider: IMediaFileProvider,
@@ -193,7 +193,7 @@ internal class StandaloneServiceHandler(
     }
 
     private fun sendHavePermissions(sendToMessenger: Messenger, uriPath: String) {
-        sendToMessenger.send(buildMessage(IServiceBinder.ACTION_NEED_URI_PERMISSION,bundleOf(
+        sendToMessenger.send(buildMessage(IServiceBinder.ACTION_NEED_URI_PERMISSION, bundleOf(
                 IServiceBinder.PARAM_URI_NEED_PERMISSION to uriPath
         )))
     }

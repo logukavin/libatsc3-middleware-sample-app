@@ -12,30 +12,25 @@ import android.content.res.Configuration
 import android.graphics.drawable.Icon
 import android.net.Uri
 import android.os.Bundle
-import android.util.Log
 import android.view.GestureDetector
 import android.view.View
-import android.view.WindowManager
 import android.widget.ArrayAdapter
 import android.widget.ListAdapter
 import android.widget.Toast
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.core.net.toUri
 import androidx.core.os.bundleOf
 import androidx.databinding.DataBindingUtil
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
-import com.google.android.exoplayer2.source.ProgressiveMediaSource
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.nextgenbroadcast.mobile.core.FileUtils
 import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.model.SLSService
 import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
-import com.nextgenbroadcast.mobile.core.presentation.IReceiverPresenter
-import com.nextgenbroadcast.mobile.middleware.core.FileUtils
+import com.nextgenbroadcast.mobile.middleware.presentation.IReceiverPresenter
 import com.nextgenbroadcast.mobile.middleware.sample.core.SwipeGestureDetector
 import com.nextgenbroadcast.mobile.middleware.sample.databinding.ActivityMainBinding
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.RMPViewModel
@@ -44,11 +39,6 @@ import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.SelectorViewModel
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.UserAgentViewModel
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.factory.UserAgentViewModelFactory
 import com.nextgenbroadcast.mobile.middleware.sample.useragent.ServiceAdapter
-import com.nextgenbroadcast.mobile.middleware.service.Atsc3ForegroundService
-import com.nextgenbroadcast.mobile.middleware.service.binder.IServiceBinder
-import com.nextgenbroadcast.mobile.mmt.exoplayer2.MMTDataSource
-import com.nextgenbroadcast.mobile.mmt.exoplayer2.MMTExtractor
-import com.nextgenbroadcast.mobile.view.ReceiverMediaPlayer
 import com.nextgenbroadcast.mobile.view.UserAgentView
 import dagger.android.AndroidInjection
 import kotlinx.android.synthetic.main.activity_main.*
@@ -306,7 +296,7 @@ class MainActivity : BaseActivity() {
     }
 
     private fun startPlayback(mediaUri: Uri) {
-        if (mediaUri.scheme == "mmt") {
+        if (mediaUri.path == "mmt") {
             receiverPresenter?.createMMTSource()?.let { source ->
                 receiver_player.startPlayback(source)
             }
@@ -424,21 +414,6 @@ class MainActivity : BaseActivity() {
             constrainPercentHeight(R.id.receiver_player, scale)
             constrainPercentWidth(R.id.receiver_player, scale)
         }.applyTo(user_agent_root)
-    }
-
-    private fun startPlayback(mpdPath: String) {
-        if (mpdPath == "mmt") {
-            val source = receiverPresenter?.createMMTSource() ?: return
-            receiver_media_player.play(source)
-        } else {
-            receiver_media_player.play(Uri.parse(mpdPath))
-        }
-        progress_bar.visibility = View.GONE
-    }
-
-    private fun stopPlayback() {
-        receiver_media_player.stop()
-        progress_bar.visibility = View.VISIBLE
     }
 
     private fun buildShortcuts(sources: List<String>) {
