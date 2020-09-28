@@ -33,7 +33,7 @@
 
         <provider
             android:name="androidx.core.content.FileProvider"
-            android:authorities="@string/fileProvider"
+            android:authorities="@string/nextgenMediaFileProvider"
             android:exported="false"
             android:grantUriPermissions="true">
             <meta-data

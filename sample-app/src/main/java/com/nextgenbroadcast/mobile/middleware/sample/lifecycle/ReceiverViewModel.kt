@@ -18,10 +18,10 @@ class ReceiverViewModel(
 
     init {
         _appDataLog.addSource(agentPresenter.appData) { data ->
-            _appDataLog.value = formatLog(data, playerPresenter.rmpMediaUri.value.toString())
+            _appDataLog.value = formatLog(data, playerPresenter.rmpMediaUri.value?.toString())
         }
         _appDataLog.addSource(playerPresenter.rmpMediaUri) { uri ->
-            _appDataLog.value = formatLog(agentPresenter.appData.value, uri.toString())
+            _appDataLog.value = formatLog(agentPresenter.appData.value, uri?.toString())
         }
     }
 

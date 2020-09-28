@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
+import android.net.Uri
 import android.os.IBinder
 import android.os.PowerManager
 import android.os.PowerManager.WakeLock
@@ -46,6 +47,8 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     private lateinit var serviceController: IServiceController
     private lateinit var state: MediatorLiveData<Triple<ReceiverState?, SLSService?, PlaybackState?>>
 
+    protected lateinit var mediaFileProvider: IMediaFileProvider
+
     private var viewController: IViewController? = null
     private var webGateway: IWebGateway? = null
     private var rpcGateway: IRPCGateway? = null
@@ -84,6 +87,8 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
                 }
             })
         }
+
+        mediaFileProvider = MediaFileProvider(applicationContext)
     }
 
     override fun onBind(intent: Intent): IBinder? {
@@ -227,13 +232,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         // we release it only when destroy presentation layer
         if (wakeLock.isHeld) return
 
-        val view = ViewControllerImpl(repository, settings, object : IMediaFileProvider {
-            override fun getFileProviderUri(path: String) = FileProvider.getUriForFile(
-                        applicationContext,
-                        getString(R.string.fileProvider),
-                        File(path))
-
-        }).also {
+        val view = ViewControllerImpl(repository, settings, mediaFileProvider).also {
             viewController = it
         }
         val web = WebGatewayImpl(serviceController, repository, settings).also {
@@ -283,6 +282,22 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     )
 
     class InitializationException : RuntimeException()
+
+    private class MediaFileProvider(
+            private val context: Context
+    ) : IMediaFileProvider {
+        private val authority = context.getString(R.string.nextgenMediaFileProvider)
+
+        override fun getFileProviderUri(path: String): Uri = FileProvider.getUriForFile(
+                context,
+                authority,
+                File(path)
+        )
+
+        override fun grantUriPermission(toPackage: String, uri: Uri) {
+            context.grantUriPermission(toPackage, uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+    }
 
     companion object {
         private const val SERVICE_ACTION = "${BuildConfig.LIBRARY_PACKAGE_NAME}.intent.action"

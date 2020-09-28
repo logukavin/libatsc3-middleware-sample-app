@@ -8,5 +8,4 @@
     <string name="service_action_select_pcap">Select pcap file…</string>
     <string name="service_action_disconnect">Disconnect</string>
     <string name="watch_tv">Watch TV</string>
-    <string name="fileProvider">fileProvider</string>
 </resources>

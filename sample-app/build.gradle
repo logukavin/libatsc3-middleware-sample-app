@@ -37,20 +37,18 @@ android {
     productFlavors {
         embedded {
             dimension "service_type"
-            resValue "string", "fileProvider", "com.nextgenbroadcast.mobile.middleware.provider"
             resValue "string", "app_name", "Atsc3 Sample App"
         }
 
         standalone {
             dimension "service_type"
-            resValue "string", "fileProvider", "com.nextgenbroadcast.mobile.middleware.standalone.provider"
             applicationIdSuffix ".standalone"
             resValue "string", "app_name", "Atsc3 Standalone Sample App"
+            resValue "string", "nextgenMediaFileProvider", "com.nextgenbroadcast.mobile.middleware.standalone.provider"
         }
 
         light {
             dimension "service_type"
-            resValue "string", "fileProvider", "com.nextgenbroadcast.mobile.middleware.light.provider"
             applicationIdSuffix ".light"
             resValue "string", "app_name", "Atsc3 Light Sample App"
         }

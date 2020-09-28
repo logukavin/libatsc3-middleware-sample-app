@@ -56,7 +56,7 @@ internal class ViewControllerImpl(
                 }
             }
         } else {
-            Transformations.map(externalMediaUrl) { input -> input?.toUri() }
+            externalMediaUrl.map { input -> input?.toUri() }
         }
     }
 
