@@ -37,8 +37,8 @@ android {
 dependencies {
     implementation fileTree(dir: "libs", include: ["*.jar"])
 
-    implementation project(":atsc3_core")
-    implementation project(":atsc3_bridge")
+    implementation 'org.ngbp.libatsc3:atsc3_core:1.0.0.1'
+    implementation 'org.ngbp.libatsc3:atsc3_bridge:1.0.0.1'
 
     implementation project(":nextgen-core")
 
@@ -48,3 +48,5 @@ dependencies {
 
     implementation "androidx.startup:startup-runtime:1.0.0-alpha03"
 }
+
+apply from: '../publish.gradle'

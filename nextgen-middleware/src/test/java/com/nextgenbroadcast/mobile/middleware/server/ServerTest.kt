@@ -5,6 +5,7 @@ import android.content.res.Resources
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import com.nextgenbroadcast.mobile.core.cert.CertificateUtils
 import com.nextgenbroadcast.mobile.core.cert.UserAgentSSLContext
+import com.nextgenbroadcast.mobile.middleware.gateway.web.ConnectionType
 import com.nextgenbroadcast.mobile.middleware.server.web.configureSSLFactory
 import com.nextgenbroadcast.mobile.middleware.server.web.getSecureServerConnector
 import com.nextgenbroadcast.mobile.middleware.server.web.getServerConnector
@@ -53,10 +54,10 @@ open class ServerTest {
         val sslContextFactory = configureSSLFactory(UserAgentSSLContext(mockApplicationContext))
         with(server) {
             connectors = arrayListOf(
-                    getServerConnector(this, HOST_NAME, HTTP_PORT),
-                    getServerConnector(this, HOST_NAME, WS_PORT),
-                    getSecureServerConnector(this, HOST_NAME, HTTPS_PORT, sslContextFactory),
-                    getSecureServerConnector(this, HOST_NAME, WSS_PORT, sslContextFactory)
+                    getServerConnector(ConnectionType.HTTP, this, HOST_NAME, HTTP_PORT),
+                    getServerConnector(ConnectionType.WS, this, HOST_NAME, WS_PORT),
+                    getSecureServerConnector(ConnectionType.HTTPS, this, HOST_NAME, HTTPS_PORT, sslContextFactory),
+                    getSecureServerConnector(ConnectionType.WSS, this, HOST_NAME, WSS_PORT, sslContextFactory)
             ).toTypedArray()
         }
     }
