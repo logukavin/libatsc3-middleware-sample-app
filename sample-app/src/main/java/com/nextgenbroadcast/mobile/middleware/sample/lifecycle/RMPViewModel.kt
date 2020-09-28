@@ -4,9 +4,9 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Transformations
 import androidx.lifecycle.ViewModel
-import com.nextgenbroadcast.mobile.middleware.controller.media.IObservablePlayer
+import com.nextgenbroadcast.mobile.core.presentation.media.IObservablePlayer
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
-import com.nextgenbroadcast.mobile.middleware.presentation.IMediaPlayerPresenter
+import com.nextgenbroadcast.mobile.core.presentation.IMediaPlayerPresenter
 
 class RMPViewModel(
         private val presenter: IMediaPlayerPresenter
