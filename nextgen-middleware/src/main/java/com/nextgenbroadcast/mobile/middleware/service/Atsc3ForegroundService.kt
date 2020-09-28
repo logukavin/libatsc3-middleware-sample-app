@@ -32,7 +32,6 @@ import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
 import com.nextgenbroadcast.mobile.middleware.settings.MiddlewareSettingsImpl
 import com.nextgenbroadcast.mobile.middleware.repository.RepositoryImpl
 import com.nextgenbroadcast.mobile.middleware.server.web.MiddlewareWebServer
-import com.nextgenbroadcast.mobile.mmt.atsc3.media.MMTDataSource
 import kotlinx.coroutines.Dispatchers
 
 abstract class Atsc3ForegroundService : BindableForegroundService() {
@@ -287,13 +286,13 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         const val ACTION_USB_PERMISSION = "$SERVICE_ACTION.USB_PERMISSION"
         const val ACTION_RMP_PLAY = "$SERVICE_ACTION.RMP_PLAY"
         const val ACTION_RMP_PAUSE = "$SERVICE_ACTION.RMP_PAUSE"
-        const val ACTION_OPEN_ROUTE = "$SERVICE_ACTION.OPEN_FILE"
+        const val ACTION_OPEN_ROUTE = "$SERVICE_ACTION.OPEN_ROUTE"
         const val ACTION_CLOSE_ROUTE = "$SERVICE_ACTION.CLOSE_ROUTE"
 
         const val EXTRA_DEVICE = "device"
-        const val EXTRA_ROUTE_PATH = "file_path"
+        const val EXTRA_ROUTE_PATH = "route_path"
 
-        internal lateinit var clazz: Class<*>
+        internal lateinit var clazz: Class<out Atsc3ForegroundService>
 
         @Deprecated("old implementation")
         fun startService(context: Context) {

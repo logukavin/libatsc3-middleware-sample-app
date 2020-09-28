@@ -57,11 +57,6 @@ android {
         unitTests.includeAndroidResources = true
         unitTests.returnDefaultValues = true
     }
-
-    //TODO: refactore to remove
-    buildFeatures {
-        dataBinding = true
-    }
 }
 
 def lifecycleVersion = rootProject.ext.lifecycleVersion

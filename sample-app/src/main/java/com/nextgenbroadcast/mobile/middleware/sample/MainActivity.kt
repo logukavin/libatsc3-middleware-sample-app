@@ -10,11 +10,7 @@ import android.content.pm.ShortcutInfo
 import android.content.pm.ShortcutManager
 import android.content.res.Configuration
 import android.graphics.drawable.Icon
-import android.net.Uri
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
-import android.util.Log
 import android.view.*
 import android.widget.ArrayAdapter
 import android.widget.ListAdapter
@@ -27,15 +23,12 @@ import androidx.databinding.DataBindingUtil
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.nextgenbroadcast.mobile.core.FileUtils
 import com.nextgenbroadcast.mobile.core.model.AppData
-import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.model.SLSService
-import com.nextgenbroadcast.mobile.middleware.Atsc3Activity
-import com.nextgenbroadcast.mobile.middleware.service.Atsc3ForegroundService
-import com.nextgenbroadcast.mobile.middleware.service.binder.IServiceBinder
-import com.nextgenbroadcast.mobile.middleware.core.FileUtils
-import com.nextgenbroadcast.mobile.middleware.presentation.IReceiverPresenter
+import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
+import com.nextgenbroadcast.mobile.core.presentation.IReceiverPresenter
 import com.nextgenbroadcast.mobile.middleware.sample.core.SwipeGestureDetector
 import com.nextgenbroadcast.mobile.middleware.sample.databinding.ActivityMainBinding
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.RMPViewModel
@@ -44,13 +37,12 @@ import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.SelectorViewModel
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.UserAgentViewModel
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.factory.UserAgentViewModelFactory
 import com.nextgenbroadcast.mobile.middleware.sample.useragent.ServiceAdapter
-import com.nextgenbroadcast.mobile.view.ReceiverMediaPlayer
 import com.nextgenbroadcast.mobile.view.UserAgentView
 import dagger.android.AndroidInjection
 import kotlinx.android.synthetic.main.activity_main.*
 import java.util.*
 
-class MainActivity : Atsc3Activity() {
+class MainActivity : BaseActivity() {
 
     private lateinit var binding: ActivityMainBinding
 
@@ -65,8 +57,6 @@ class MainActivity : Atsc3Activity() {
     private var currentAppData: AppData? = null
     private var previewMode = false
     private var previewName: String? = null
-
-    private val updateMediaTimeHandler = Handler(Looper.getMainLooper())
 
     private lateinit var serviceAdapter: ServiceAdapter
     private lateinit var sourceAdapter: ListAdapter
@@ -100,7 +90,7 @@ class MainActivity : Atsc3Activity() {
                 if (state == null || state == ReceiverState.IDLE) {
                     previewName?.let { source ->
                         sourceMap.find { (name, _, _) -> name == source }?.let { (_, path, _) ->
-                            Atsc3ForegroundService.openRoute(this, path)
+                            openRoute(path)
                         }
                     }
                 }
@@ -129,6 +119,8 @@ class MainActivity : Atsc3Activity() {
     }
 
     override fun onUnbind() {
+        receiver_player.unbind()
+
         rmpViewModel = null
         userAgentViewModel = null
         selectorViewModel = null
@@ -192,32 +184,10 @@ class MainActivity : Atsc3Activity() {
                 showFileChooser()
             } else {
                 sourceMap.getOrNull(position)?.let { (_, path) ->
-                    Atsc3ForegroundService.openRoute(this, path)
+                    openRoute(path)
                 }
             }
         }
-
-        receiver_media_player.setListener(object : ReceiverMediaPlayer.EventListener {
-            override fun onPlayerStateChanged(state: PlaybackState) {
-                rmpViewModel?.setCurrentPlayerState(state)
-
-                if (state == PlaybackState.PLAYING) {
-                    window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-                    startMediaTimeUpdate()
-                } else {
-                    window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-                    cancelMediaTimeUpdate()
-                }
-            }
-
-            override fun onPlayerError(error: Exception) {
-                Log.d(TAG, error.message ?: "")
-            }
-
-            override fun onPlaybackSpeedChanged(speed: Float) {
-                rmpViewModel?.setCurrentPlaybackRate(speed)
-            }
-        })
 
         bottom_sheet_title.setOnClickListener {
             when (bottomSheetBehavior.state) {
@@ -258,13 +228,9 @@ class MainActivity : Atsc3Activity() {
     }
 
     override fun onUserLeaveHint() {
-        if (hasFeaturePIP && isPlaying()) {
+        if (hasFeaturePIP && receiver_player.isPlaying()) {
             enterPictureInPictureMode(PictureInPictureParams.Builder().build())
         }
-    }
-
-    private fun isPlaying(): Boolean {
-        return receiver_media_player.isPlaying || mmt_player_view.isPlaying
     }
 
     override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: Configuration) {
@@ -308,24 +274,36 @@ class MainActivity : Atsc3Activity() {
     private fun bindMediaPlayer(rmpViewModel: RMPViewModel) {
         with(rmpViewModel) {
             reset()
-            layoutParams.observe(this@MainActivity, Observer { params ->
+            layoutParams.observe(this@MainActivity, { params ->
                 updateRMPLayout(
                         params.x.toFloat() / 100,
                         params.y.toFloat() / 100,
                         params.scale.toFloat() / 100
                 )
             })
-            mediaUri.observe(this@MainActivity, Observer { mediaUri ->
-                mediaUri?.let { startPlayback(mediaUri) } ?: stopPlayback()
+            mediaUri.observe(this@MainActivity, { mediaUri ->
+                mediaUri?.let { startPlayback(mediaUri) } ?: receiver_player.stopPlayback()
             })
-            playWhenReady.observe(this@MainActivity, Observer { playWhenReady ->
-                receiver_media_player.playWhenReady = playWhenReady
+            playWhenReady.observe(this@MainActivity, { playWhenReady ->
+                receiver_player.setPlayWhenReady(playWhenReady)
             })
+        }
+
+        receiver_player.bind(rmpViewModel)
+    }
+
+    private fun startPlayback(mediaUri: String) {
+        if (mediaUri == "mmt") {
+            receiverPresenter?.createMMTSource()?.let { source ->
+                receiver_player.startPlayback(source)
+            }
+        } else {
+            receiver_player.startPlayback(mediaUri)
         }
     }
 
     private fun bindSelector(selectorViewModel: SelectorViewModel) {
-        selectorViewModel.services.observe(this, Observer { services ->
+        selectorViewModel.services.observe(this, { services ->
             servicesList = services
 
             if (services.isNotEmpty()) {
@@ -358,7 +336,7 @@ class MainActivity : Atsc3Activity() {
         super.onStop()
 
         //receiver_media_player.reset()
-        receiver_media_player.stop()
+        receiver_player.stopPlayback()
     }
 
     override fun onBackPressed() {
@@ -372,7 +350,7 @@ class MainActivity : Atsc3Activity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         if (requestCode == FILE_REQUEST_CODE && data != null) {
             val path = data.getStringExtra("FILE") ?: data.data?.let { FileUtils.getPath(applicationContext, it) }
-            path?.let { Atsc3ForegroundService.openRoute(this, it) }
+            path?.let { openRoute(it) }
 
             return
         }
@@ -405,7 +383,7 @@ class MainActivity : Atsc3Activity() {
     private fun changeService(serviceId: Int) {
         if (selectorViewModel?.selectService(serviceId) != true) return
 
-        stopPlayback()
+        receiver_player.stopPlayback()
         setBAAvailability(false)
     }
 
@@ -428,50 +406,11 @@ class MainActivity : Atsc3Activity() {
     private fun updateRMPLayout(x: Float, y: Float, scale: Float) {
         ConstraintSet().apply {
             clone(user_agent_root)
-            setHorizontalBias(R.id.receiver_media_player, if (scale == 1f) 0f else x / (1f - scale))
-            setVerticalBias(R.id.receiver_media_player, if (scale == 1f) 0f else y / (1f - scale))
-            constrainPercentHeight(R.id.receiver_media_player, scale)
-            constrainPercentWidth(R.id.receiver_media_player, scale)
+            setHorizontalBias(R.id.receiver_player, if (scale == 1f) 0f else x / (1f - scale))
+            setVerticalBias(R.id.receiver_player, if (scale == 1f) 0f else y / (1f - scale))
+            constrainPercentHeight(R.id.receiver_player, scale)
+            constrainPercentWidth(R.id.receiver_player, scale)
         }.applyTo(user_agent_root)
-    }
-
-    private fun startPlayback(mpdPath: String) {
-        if (mpdPath == "mmt") {
-            receiverPresenter?.createMMTSource()?.let { source ->
-                mmt_player_view.start(source)
-            }
-
-            receiver_media_player.visibility = View.INVISIBLE
-            progress_bar.visibility = View.GONE
-        } else {
-            receiver_media_player.visibility = View.VISIBLE
-            receiver_media_player.play(Uri.parse(mpdPath))
-            progress_bar.visibility = View.GONE
-        }
-    }
-
-    private fun stopPlayback() {
-        receiver_media_player.stop()
-        progress_bar.visibility = View.VISIBLE
-
-        mmt_player_view.stop()
-    }
-
-    private val updateMediaTimeRunnable = object : Runnable {
-        override fun run() {
-            rmpViewModel?.setCurrentMediaTime(receiver_media_player.playbackPosition)
-
-            updateMediaTimeHandler.postDelayed(this, MEDIA_TIME_UPDATE_DELAY)
-        }
-    }
-
-    private fun startMediaTimeUpdate() {
-        updateMediaTimeHandler.removeCallbacks(updateMediaTimeRunnable)
-        updateMediaTimeHandler.postDelayed(updateMediaTimeRunnable, MEDIA_TIME_UPDATE_DELAY)
-    }
-
-    private fun cancelMediaTimeUpdate() {
-        updateMediaTimeHandler.removeCallbacks(updateMediaTimeRunnable)
     }
 
     private fun buildShortcuts(sources: List<String>) {
@@ -496,7 +435,6 @@ class MainActivity : Atsc3Activity() {
         const val PARAM_MODE_PREVIEW = "PARAM_MODE_PREVIEW"
 
         private const val FILE_REQUEST_CODE = 133
-        private const val MEDIA_TIME_UPDATE_DELAY = 500L
 
         private const val PERMISSION_REQUEST = 1000
 
