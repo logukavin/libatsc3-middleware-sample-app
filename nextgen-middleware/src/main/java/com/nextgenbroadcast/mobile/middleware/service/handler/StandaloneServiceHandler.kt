@@ -14,9 +14,10 @@ import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
 import com.nextgenbroadcast.mobile.core.presentation.IMediaPlayerPresenter
 import com.nextgenbroadcast.mobile.core.presentation.IReceiverPresenter
 import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
+import com.nextgenbroadcast.mobile.middleware.IMediaFileProvider
 
 internal class StandaloneServiceHandler(
-        private val context: Context,
+        private val fileProvider: IMediaFileProvider,
         private val lifecycleOwner: LifecycleOwner,
         private val receiverPresenter: IReceiverPresenter,
         private val serviceController: IServiceController,
@@ -84,7 +85,7 @@ internal class StandaloneServiceHandler(
             IServiceBinder.ACTION_NEED_URI_PERMISSION -> {
                 msg.data.getParcelable(Uri::class.java, IServiceBinder.PARAM_URI_NEED_PERMISSION)?.let { uri ->
                     msg.data.getString(IServiceBinder.PARAM_PERMISSION_PACKAGE)?.let { clientPackage ->
-                        context.grantUriPermission(clientPackage, uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        fileProvider.grantUriPermission(clientPackage, uri)
                         uri.path?.let { uriPath ->
                             sendHavePermissions(msg.replyTo, uriPath)
                         }
@@ -172,7 +173,7 @@ internal class StandaloneServiceHandler(
     private fun observeRPMMediaUrl(sendToMessenger: Messenger, clientPackage: String) {
         viewController.rmpMediaUri.observe(lifecycleOwner, { rmpMediaUri ->
             rmpMediaUri?.let { uri ->
-                context.grantUriPermission(clientPackage, uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                fileProvider.grantUriPermission(clientPackage, uri)
                 sendToMessenger.send(buildMessage(
                         IServiceBinder.LIVEDATA_RMP_MEDIA_URI,
                         bundleOf(
