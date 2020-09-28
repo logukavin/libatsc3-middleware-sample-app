@@ -27,8 +27,8 @@ allprojects {
         google()
         jcenter()
         maven {
-            url 'https://pkgs.dev.azure.com/NGWP/Middleware/_packaging/jsonrpc2/maven/v1'
-            name 'jsonrpc2'
+            url 'https://pkgs.dev.azure.com/NGWP/Middleware/_packaging/middleware/maven/v1'
+            name 'middleware'
             authentication {
                 basic(BasicAuthentication)
             }
