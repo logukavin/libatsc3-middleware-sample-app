@@ -1,22 +1,24 @@
 package com.nextgenbroadcast.mobile.service.binder
 
+import android.net.Uri
 import android.os.*
 import androidx.core.os.bundleOf
 import androidx.lifecycle.MutableLiveData
+import com.nextgenbroadcast.mobile.permission.UriPermissionProvider
 import com.nextgenbroadcast.mobile.core.model.*
+import com.nextgenbroadcast.mobile.core.presentation.*
 import com.nextgenbroadcast.mobile.core.presentation.media.IObservablePlayer
-import com.nextgenbroadcast.mobile.core.presentation.IMediaPlayerPresenter
-import com.nextgenbroadcast.mobile.core.presentation.IReceiverPresenter
-import com.nextgenbroadcast.mobile.core.presentation.ISelectorPresenter
-import com.nextgenbroadcast.mobile.core.presentation.IUserAgentPresenter
 import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
 import com.nextgenbroadcast.mobile.service.handler.StandaloneClientHandler
 import com.nextgenbroadcast.mobile.service.handler.OnIncomingPlayerStateListener
+import com.nextgenbroadcast.mobile.permission.IUriPermissionRequester
 import java.lang.UnsupportedOperationException
 
 class InterprocessServiceBinder(
-        service: IBinder
-) : IServiceBinder {
+        service: IBinder,
+        private val clientPackage: String,
+        uriPermissionProvider: UriPermissionProvider? = null
+) : IServiceBinder, IUriPermissionRequester {
 
     private var playerStateListener: IObservablePlayer.IPlayerStateListener? = null
 
@@ -56,7 +58,7 @@ class InterprocessServiceBinder(
 
     inner class MediaPlayerPresenter : IMediaPlayerPresenter {
         override val rmpLayoutParams = MutableLiveData<RPMParams>()
-        override val rmpMediaUrl = MutableLiveData<String?>()
+        override val rmpMediaUri = MutableLiveData<Uri?>()
 
         override fun rmpLayoutReset() {
             sendAction(IServiceBinder.ACTION_RMP_LAYOUT_RESET)
@@ -102,6 +104,7 @@ class InterprocessServiceBinder(
     private var sendingMessenger: Messenger? = Messenger(service)
 
     private val incomingMessenger = Messenger(StandaloneClientHandler(
+            uriPermissionProvider,
             selectorPresenter,
             receiverPresenter,
             userAgentPresenter,
@@ -122,11 +125,12 @@ class InterprocessServiceBinder(
     }
 
     fun close() {
-        sendingMessenger = null;
+        sendingMessenger = null
     }
 
     private fun subscribe(dataType: Int) {
         sendingMessenger?.send(Message.obtain(null, dataType).apply {
+            data = bundleOf(IServiceBinder.PARAM_PERMISSION_PACKAGE to clientPackage)
             replyTo = incomingMessenger
         })
     }
@@ -138,4 +142,10 @@ class InterprocessServiceBinder(
         })
     }
 
+    override fun requestUriPermission(uri: Uri, clientPackage: String) {
+        sendAction(IServiceBinder.ACTION_NEED_URI_PERMISSION, bundleOf(
+                IServiceBinder.PARAM_URI_NEED_PERMISSION to uri,
+                IServiceBinder.PARAM_PERMISSION_PACKAGE to clientPackage
+        ))
+    }
 }

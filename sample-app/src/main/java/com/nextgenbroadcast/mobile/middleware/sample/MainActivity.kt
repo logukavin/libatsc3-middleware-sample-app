@@ -10,7 +10,9 @@ import android.content.pm.ShortcutInfo
 import android.content.pm.ShortcutManager
 import android.content.res.Configuration
 import android.graphics.drawable.Icon
+import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import android.view.*
 import android.widget.ArrayAdapter
 import android.widget.ListAdapter
@@ -281,6 +283,7 @@ class MainActivity : BaseActivity() {
                         params.scale.toFloat() / 100
                 )
             })
+            preparePlayerView(receiver_player)
             mediaUri.observe(this@MainActivity, { mediaUri ->
                 mediaUri?.let { startPlayback(mediaUri) } ?: receiver_player.stopPlayback()
             })
@@ -292,8 +295,8 @@ class MainActivity : BaseActivity() {
         receiver_player.bind(rmpViewModel)
     }
 
-    private fun startPlayback(mediaUri: String) {
-        if (mediaUri == "mmt") {
+    private fun startPlayback(mediaUri: Uri) {
+        if (mediaUri.scheme == "mmt") {
             receiverPresenter?.createMMTSource()?.let { source ->
                 receiver_player.startPlayback(source)
             }

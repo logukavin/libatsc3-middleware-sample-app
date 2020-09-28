@@ -16,8 +16,8 @@ class EmbeddedAtsc3Service : Atsc3ForegroundService() {
             ServiceBinder(serviceController, viewController)
 
     inner class ServiceBinder(
-            private val serviceController: IServiceController,
-            private val viewController: IViewController
+            serviceController: IServiceController,
+            viewController: IViewController
     ) : Binder(), IServiceBinder {
         override val receiverPresenter: IReceiverPresenter = object : IReceiverPresenter {
             override val receiverState = serviceController.receiverState

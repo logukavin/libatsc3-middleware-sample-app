@@ -20,7 +20,7 @@ import kotlinx.android.synthetic.main.receiver_player_layout.view.receiver_media
 open class BaseReceiverPlayerView : FrameLayout {
     private val updateMediaTimeHandler = Handler(Looper.getMainLooper())
 
-    private var rmpViewModel: RMPViewModel? = null;
+    private var rmpViewModel: RMPViewModel? = null
 
     constructor(context: Context) : this(context, null)
     constructor(context: Context, attrs: AttributeSet?) : this(context, attrs, 0)
@@ -73,6 +73,12 @@ open class BaseReceiverPlayerView : FrameLayout {
 
     fun setPlayWhenReady(playWhenReady: Boolean) {
         receiver_media_player?.playWhenReady = playWhenReady
+    }
+
+    fun startPlayback(mpdUri: Uri) {
+        receiver_media_player.visibility = View.VISIBLE
+        receiver_media_player.play(mpdUri)
+        progress_bar.visibility = View.GONE
     }
 
     fun startPlayback(mpdPath: String) {

@@ -7,6 +7,7 @@ import android.content.ServiceConnection
 import android.os.IBinder
 import androidx.appcompat.app.AppCompatActivity
 import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
+import com.nextgenbroadcast.mobile.middleware.sample.view.ReceiverPlayerView
 import com.nextgenbroadcast.mobile.middleware.service.Atsc3ForegroundService
 import com.nextgenbroadcast.mobile.middleware.service.StandaloneAtsc3Service
 import com.nextgenbroadcast.mobile.service.binder.InterprocessServiceBinder
@@ -35,12 +36,14 @@ abstract class BaseActivity : AppCompatActivity() {
         Atsc3ForegroundService.openRoute(this, path)
     }
 
+    fun preparePlayerView(playerView: ReceiverPlayerView) {}
+
     abstract fun onBind(binder: IServiceBinder)
     abstract fun onUnbind()
 
     private val connection = object : ServiceConnection {
         override fun onServiceConnected(className: ComponentName, service: IBinder) {
-            onBind(InterprocessServiceBinder(service))
+            onBind(InterprocessServiceBinder(service, BuildConfig.APPLICATION_ID))
             isBound = true
         }
 
