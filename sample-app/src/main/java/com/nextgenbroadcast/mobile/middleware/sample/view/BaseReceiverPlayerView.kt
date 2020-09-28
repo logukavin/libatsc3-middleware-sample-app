@@ -76,19 +76,11 @@ open class BaseReceiverPlayerView : FrameLayout {
     }
 
     fun startPlayback(mpdUri: Uri) {
-        receiver_media_player.visibility = View.VISIBLE
         receiver_media_player.play(mpdUri)
         progress_bar.visibility = View.GONE
     }
 
-    fun startPlayback(mpdPath: String) {
-        receiver_media_player.visibility = View.VISIBLE
-        receiver_media_player.play(Uri.parse(mpdPath))
-        progress_bar.visibility = View.GONE
-    }
-
     open fun startPlayback(mmtSource: Any) {
-        receiver_media_player.visibility = View.INVISIBLE
         progress_bar.visibility = View.GONE
     }
 
