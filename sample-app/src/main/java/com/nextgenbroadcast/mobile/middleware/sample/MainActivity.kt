@@ -12,7 +12,6 @@ import android.content.res.Configuration
 import android.graphics.drawable.Icon
 import android.net.Uri
 import android.os.Bundle
-import android.util.Log
 import android.view.*
 import android.widget.ArrayAdapter
 import android.widget.ListAdapter
@@ -121,6 +120,7 @@ class MainActivity : BaseActivity() {
     }
 
     override fun onUnbind() {
+        super.onUnbind()
         receiver_player.unbind()
 
         rmpViewModel = null
