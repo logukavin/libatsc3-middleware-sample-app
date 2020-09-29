@@ -120,7 +120,6 @@ class MainActivity : BaseActivity() {
     }
 
     override fun onUnbind() {
-        super.onUnbind()
         receiver_player.unbind()
 
         rmpViewModel = null
