@@ -5,7 +5,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.os.IBinder
-import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import com.nextgenbroadcast.mobile.permission.UriPermissionProvider
@@ -20,8 +19,6 @@ abstract class BaseActivity : AppCompatActivity() {
 
     private val uriPermissionProvider = UriPermissionProvider(BuildConfig.APPLICATION_ID)
 
-    private var binder: InterprocessServiceBinder? = null
-
     override fun onStart() {
         super.onStart()
 
@@ -34,6 +31,7 @@ abstract class BaseActivity : AppCompatActivity() {
         super.onStop()
 
         unbindService(connection)
+        isBound = false
         onUnbind()
     }
 
@@ -52,17 +50,10 @@ abstract class BaseActivity : AppCompatActivity() {
     }
 
     abstract fun onBind(binder: IServiceBinder)
-
-    protected open fun onUnbind() {
-        if (isBound) {
-            binder?.close()
-            binder = null
-            isBound = false
-        }
-        uriPermissionProvider.setPermissionRequester(null)
-    }
+    abstract fun onUnbind()
 
     private val connection = object : ServiceConnection {
+        private var binder: InterprocessServiceBinder? = null
 
         override fun onServiceConnected(className: ComponentName, service: IBinder) {
             binder = InterprocessServiceBinder(service, BuildConfig.APPLICATION_ID, uriPermissionProvider).also {
@@ -73,7 +64,16 @@ abstract class BaseActivity : AppCompatActivity() {
         }
 
         override fun onServiceDisconnected(arg0: ComponentName) {
-            onUnbind()
+            if (isBound) {
+                binder?.close()
+                binder = null
+
+                onUnbind()
+            }
+
+            uriPermissionProvider.setPermissionRequester(null)
+
+            isBound = false
         }
     }
 
