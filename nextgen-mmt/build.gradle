@@ -34,17 +34,17 @@ android {
     }
 }
 
+def libatsc3Version = rootProject.ext.libatsc3Version
+
 dependencies {
     implementation fileTree(dir: "libs", include: ["*.jar"])
 
-    implementation project(":atsc3_core")
-    implementation project(":atsc3_bridge")
-//    implementation 'org.ngbp.libatsc3:atsc3_core:1.0.0.1'
-//    implementation 'org.ngbp.libatsc3:atsc3_bridge:1.0.0.1'
+    implementation "org.ngbp.libatsc3:atsc3_core:$libatsc3Version"
+    implementation "org.ngbp.libatsc3:atsc3_bridge:$libatsc3Version"
 
     implementation project(":nextgen-core")
 
-    compileOnly project(':exoplayer-library-core')
+    compileOnly 'com.google.android.exoplayer:exoplayer-core:2.10.7.1'
 
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
     implementation 'androidx.core:core-ktx:1.3.1'

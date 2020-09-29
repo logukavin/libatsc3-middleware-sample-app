@@ -72,10 +72,7 @@ public class MMTExtractor implements Extractor {
 
     private boolean readMMTHeader(ExtractorInput input) throws IOException, InterruptedException {
         ByteBuffer buffer = ByteBuffer.allocate(MMTDef.mmtSignature.length);
-
-        input.resetPeekPosition();
-        input.peekFully(buffer.array(), /* offset= */ 0, /* length= */ MMTDef.mmtSignature.length);
-        input.skipFully(MMTDef.SIZE_HEADER);
+        input.readFully(buffer.array(), /* offset= */ 0, /* length= */ MMTDef.mmtSignature.length);
         buffer.rewind();
 
         return Arrays.equals(buffer.array(), MMTDef.mmtSignature);
@@ -132,16 +129,13 @@ public class MMTExtractor implements Extractor {
     private void peekNextSampleHeader(ExtractorInput extractorInput) throws IOException, InterruptedException {
         sampleHeaderBuffer.clear();
 
-        extractorInput.resetPeekPosition();
-        extractorInput.peekFully(sampleHeaderBuffer.array(), /* offset= */ 0, /* length= */ MMTDef.SIZE_SAMPLE_HEADER);
+        extractorInput.readFully(sampleHeaderBuffer.array(), /* offset= */ 0, /* length= */ MMTDef.SIZE_SAMPLE_HEADER);
 
         sampleHeaderBuffer.rewind();
 
         currentSampleType = sampleHeaderBuffer.get();
         currentSampleSize = sampleHeaderBuffer.getInt();
         currentSampleTimeUs = sampleHeaderBuffer.getLong();
-
-        extractorInput.skipFully(MMTDef.SIZE_SAMPLE_HEADER);
     }
 
     private void maybeOutputFormat(ExtractorInput input) throws IOException, InterruptedException {
@@ -150,9 +144,7 @@ public class MMTExtractor implements Extractor {
 
             ByteBuffer buffer = ByteBuffer.allocate(MMTDef.SIZE_HEADER);
 
-            input.resetPeekPosition();
-            input.peekFully(buffer.array(), /* offset= */ 0, /* length= */ MMTDef.SIZE_HEADER);
-            input.skipFully(MMTDef.SIZE_HEADER);
+            input.readFully(buffer.array(), /* offset= */ 0, /* length= */ MMTDef.SIZE_HEADER);
 
             buffer.rewind();
 
@@ -169,9 +161,7 @@ public class MMTExtractor implements Extractor {
             int audioSampleRate = buffer.getInt();
 
             byte[] data = new byte[initialDataSize];
-            input.resetPeekPosition();
-            input.peekFully(data, /* offset= */ 0, /* length= */ initialDataSize);
-            input.skipFully(initialDataSize);
+            input.readFully(data, /* offset= */ 0, /* length= */ initialDataSize);
 
             if (videoType == MMTDef.TRACK_VIDEO_HEVC) {
                 TrackOutput trackOutput = extractorOutput.track(/* id= */ 1, C.TRACK_TYPE_VIDEO);
@@ -212,17 +202,12 @@ public class MMTExtractor implements Extractor {
                 );
             }
 
-            if (textType == MMTDef.TRACK_TEXT_SS) {
+            if (textType == MMTDef.TRACK_TEXT_TTML) {
                 //TODO:
             }
 
             extractorOutput.endTracks();
         }
-    }
-
-    private void createTrack(ExtractorOutput output, int type) {
-        TrackOutput trackOutput = output.track(/* id= */ type, type);
-        tracks.put(type, new MmtTrack(trackOutput));
     }
 
     private void maybeOutputSeekMap() {

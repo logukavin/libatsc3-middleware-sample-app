@@ -89,7 +89,7 @@ public class MMTDataSource extends BaseDataSource {
                 ByteBuffer bb = ByteBuffer.allocate(MMTDef.SIZE_HEADER);
                 bb.put(MMTDef.TRACK_VIDEO_HEVC)
                         .put(MMTDef.TRACK_AUDIO_AC4)
-                        .put(MMTDef.TRACK_TEXT_SS)
+                        .put(MMTDef.TRACK_TEXT_TTML)
                         .putInt(inputSource.getVideoWidth())
                         .putInt(inputSource.getVideoHeight())
                         .putFloat(inputSource.getVideoFrameRate())
