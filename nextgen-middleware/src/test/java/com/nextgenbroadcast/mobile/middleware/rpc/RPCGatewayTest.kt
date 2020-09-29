@@ -1,5 +1,6 @@
 package com.nextgenbroadcast.mobile.middleware.rpc
 
+import android.net.Uri
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -84,7 +85,7 @@ class RPCGatewayTest {
     private val serviceGuidUrls: MutableLiveData<List<Urls>?> = MutableLiveData()
     private var selectedService: MutableLiveData<SLSService?> = MutableLiveData()
     private val rmpState: LiveData<PlaybackState> = MutableLiveData()
-    private val rmpMediaUrl: LiveData<String?> = MutableLiveData()
+    private val rmpMediaUrl: LiveData<Uri?> = MutableLiveData()
 
     @ExperimentalCoroutinesApi
     private val testDispatcher = TestCoroutineDispatcher()
@@ -107,7 +108,7 @@ class RPCGatewayTest {
         `when`(serviceController.serviceGuidUrls).thenReturn(serviceGuidUrls)
         `when`(repository.selectedService).thenReturn(selectedService)
         `when`(repository.selectedService).thenReturn(selectedService)
-        `when`(viewController.rmpMediaUrl).thenReturn(rmpMediaUrl)
+        `when`(viewController.rmpMediaUri).thenReturn(rmpMediaUrl)
         `when`(viewController.rmpState).thenReturn(rmpState)
         `when`(viewController.appData).thenReturn(appDataViewController)
         `when`(viewController.rmpPlaybackRate).thenReturn(rmpPlaybackRate)
