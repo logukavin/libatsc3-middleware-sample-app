@@ -23,19 +23,13 @@ internal class StandaloneServiceHandler(
         private val viewController: IViewController
 ) : Handler() {
 
-    private var observables = mutableMapOf<Int, Observer<Any?>>()
-
-    open fun unSubscribeAll() {
-        observables.forEach { (type, observer) ->
-            when(type) {
-                IServiceBinder.LIVEDATA_RECEIVER_STATE -> serviceController.receiverState.removeObserver(observer)
-                IServiceBinder.LIVEDATA_SERVICE_LIST -> serviceController.sltServices.removeObserver(observer)
-                IServiceBinder.LIVEDATA_SERVICE_SELECTED -> serviceController.selectedService.removeObserver(observer)
-                IServiceBinder.LIVEDATA_APPDATA -> viewController.appData.removeObserver(observer)
-                IServiceBinder.LIVEDATA_RMP_LAYOUT_PARAMS -> viewController.rmpLayoutParams.removeObserver(observer)
-                IServiceBinder.LIVEDATA_RMP_MEDIA_URI -> viewController.rmpMediaUri.removeObserver(observer)
-            }
-        }
+    fun unSubscribeAll() {
+        serviceController.receiverState.removeObservers(lifecycleOwner)
+        serviceController.sltServices.removeObservers(lifecycleOwner)
+        serviceController.selectedService.removeObservers(lifecycleOwner)
+        viewController.appData.removeObservers(lifecycleOwner)
+        viewController.rmpLayoutParams.removeObservers(lifecycleOwner)
+        viewController.rmpMediaUri.removeObservers(lifecycleOwner)
     }
 
     override fun handleMessage(msg: Message) {
@@ -46,13 +40,13 @@ internal class StandaloneServiceHandler(
         when (msg.what) {
 
             IServiceBinder.LIVEDATA_ALL -> {
-                observables[IServiceBinder.LIVEDATA_RECEIVER_STATE] = observeReceiverState(msg.replyTo)
-                observables[IServiceBinder.LIVEDATA_SERVICE_LIST] = observeServiceState(msg.replyTo)
-                observables[IServiceBinder.LIVEDATA_SERVICE_SELECTED] = observeSelectedService(msg.replyTo)
-                observables[IServiceBinder.LIVEDATA_APPDATA] = observeAppData(msg.replyTo)
-                observables[IServiceBinder.LIVEDATA_RMP_LAYOUT_PARAMS] = observeRPMLayoutParams(msg.replyTo)
+                observeReceiverState(msg.replyTo)
+                observeServiceState(msg.replyTo)
+                observeSelectedService(msg.replyTo)
+                observeAppData(msg.replyTo)
+                observeRPMLayoutParams(msg.replyTo)
                 msg.data.getString(IServiceBinder.PARAM_PERMISSION_PACKAGE)?.let { clientPackage ->
-                    observables[IServiceBinder.LIVEDATA_RMP_MEDIA_URI] = observeRPMMediaUrl(msg.replyTo, clientPackage)
+                    observeRPMMediaUrl(msg.replyTo, clientPackage)
                 }
             }
 
@@ -124,8 +118,8 @@ internal class StandaloneServiceHandler(
         }
     }
 
-    private fun observeReceiverState(sendToMessenger: Messenger): Observer<Any?> {
-        return Observer<Any?> { state ->
+    private fun observeReceiverState(sendToMessenger: Messenger) {
+        serviceController.receiverState.observe(lifecycleOwner, { state ->
             sendToMessenger.send(buildMessage(
                     IServiceBinder.LIVEDATA_RECEIVER_STATE,
                     bundleOf(
@@ -133,27 +127,23 @@ internal class StandaloneServiceHandler(
                     ),
                     ReceiverState::class.java.classLoader
             ))
-        }.also {
-            serviceController.receiverState.observe(lifecycleOwner, it)
-        }
+        })
     }
 
-    private fun observeServiceState(sendToMessenger: Messenger): Observer<Any?> {
-        return Observer<Any?> { services ->
+    private fun observeServiceState(sendToMessenger: Messenger) {
+        serviceController.sltServices.observe(lifecycleOwner, { services ->
             sendToMessenger.send(buildMessage(
                     IServiceBinder.LIVEDATA_SERVICE_LIST,
                     bundleOf(
-                            IServiceBinder.PARAM_SERVICE_LIST to services
+                            IServiceBinder.PARAM_SERVICE_LIST to ArrayList<SLSService>(services)
                     ),
                     SLSService::class.java.classLoader
             ))
-        }.also {
-            serviceController.sltServices.observe(lifecycleOwner, it)
-        }
+        })
     }
 
-    private fun observeSelectedService(sendToMessenger: Messenger): Observer<Any?> {
-        return Observer<Any?> { selectedService ->
+    private fun observeSelectedService(sendToMessenger: Messenger) {
+        serviceController.selectedService.observe(lifecycleOwner, { selectedService ->
             sendToMessenger.send(buildMessage(
                     IServiceBinder.LIVEDATA_SERVICE_SELECTED,
                     bundleOf(
@@ -161,13 +151,11 @@ internal class StandaloneServiceHandler(
                     ),
                     SLSService::class.java.classLoader
             ))
-        }.also {
-            serviceController.selectedService.observe(lifecycleOwner, it)
-        }
+        })
     }
 
-    private fun observeAppData(sendToMessenger: Messenger): Observer<Any?> {
-        return Observer<Any?> { appData ->
+    private fun observeAppData(sendToMessenger: Messenger) {
+        viewController.appData.observe(lifecycleOwner, { appData ->
             sendToMessenger.send(buildMessage(
                     IServiceBinder.LIVEDATA_APPDATA,
                     bundleOf(
@@ -175,13 +163,11 @@ internal class StandaloneServiceHandler(
                     ),
                     AppData::class.java.classLoader
             ))
-        }.also {
-            viewController.appData.observe(lifecycleOwner, it)
-        }
+        })
     }
 
-    private fun observeRPMLayoutParams(sendToMessenger: Messenger): Observer<Any?> {
-        return Observer<Any?> { rpmLayoutParams ->
+    private fun observeRPMLayoutParams(sendToMessenger: Messenger) {
+        viewController.rmpLayoutParams.observe(lifecycleOwner, { rpmLayoutParams ->
             sendToMessenger.send(buildMessage(
                     IServiceBinder.LIVEDATA_RMP_LAYOUT_PARAMS,
                     bundleOf(
@@ -189,15 +175,13 @@ internal class StandaloneServiceHandler(
                     ),
                     RPMParams::class.java.classLoader
             ))
-        }.also {
-            viewController.rmpLayoutParams.observe(lifecycleOwner, it)
-        }
+        })
     }
 
-    private fun observeRPMMediaUrl(sendToMessenger: Messenger, clientPackage: String): Observer<Any?> {
-        return Observer<Any?> { rmpMediaUri ->
+    private fun observeRPMMediaUrl(sendToMessenger: Messenger, clientPackage: String) {
+        viewController.rmpMediaUri.observe(lifecycleOwner, { rmpMediaUri ->
             rmpMediaUri?.let { uri ->
-                fileProvider.grantUriPermission(clientPackage, uri as Uri)
+                fileProvider.grantUriPermission(clientPackage, uri)
                 sendToMessenger.send(buildMessage(
                         IServiceBinder.LIVEDATA_RMP_MEDIA_URI,
                         bundleOf(
@@ -205,9 +189,7 @@ internal class StandaloneServiceHandler(
                         )
                 ))
             }
-        }.also {
-            viewController.rmpMediaUri.observe(lifecycleOwner, it)
-        }
+        })
     }
 
     private fun sendHavePermissions(sendToMessenger: Messenger, uriPath: String) {

@@ -10,7 +10,6 @@ import android.net.Uri
 import android.os.IBinder
 import android.os.PowerManager
 import android.os.PowerManager.WakeLock
-import android.util.Log
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.lifecycle.MediatorLiveData
@@ -94,6 +93,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
     override fun onBind(intent: Intent): IBinder? {
         super.onBind(intent)
+
         return createServiceBinder(serviceController, requireViewController())
     }
 
