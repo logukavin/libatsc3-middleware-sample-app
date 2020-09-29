@@ -20,7 +20,7 @@ public final class MMTDef {
     static final byte TRACK_UNDEFINED = 0;
     static final byte TRACK_VIDEO_HEVC = 1;
     static final byte TRACK_AUDIO_AC4 = 1;
-    static final byte TRACK_TEXT_SS = 1;
+    static final byte TRACK_TEXT_TTML = 1;
 
     static final byte[] mmtSignature = Util.getUtf8Bytes("#!MMT\n");
 }

@@ -11,6 +11,7 @@ import androidx.core.view.postDelayed
 import com.nextgenbroadcast.mobile.mmt.atsc3.media.DecoderHandlerThread
 import com.nextgenbroadcast.mobile.mmt.atsc3.media.MMTDataBuffer_Old
 
+@Deprecated("Use MMTDataSource and MMTExtractor instead")
 class MMTPlayerView @JvmOverloads constructor(
         context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
 ) : SurfaceView(context, attrs, defStyleAttr), DecoderHandlerThread.Listener {
