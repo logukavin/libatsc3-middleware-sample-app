@@ -28,7 +28,6 @@ abstract class BaseActivity : AppCompatActivity() {
         super.onStop()
 
         unbindService(connection)
-        isBound = false
         onUnbind()
     }
 
@@ -39,7 +38,10 @@ abstract class BaseActivity : AppCompatActivity() {
     fun preparePlayerView(playerView: ReceiverPlayerView) {}
 
     abstract fun onBind(binder: IServiceBinder)
-    abstract fun onUnbind()
+
+    protected open fun onUnbind() {
+        isBound = true
+    }
 
     private val connection = object : ServiceConnection {
         override fun onServiceConnected(className: ComponentName, service: IBinder) {
@@ -48,7 +50,7 @@ abstract class BaseActivity : AppCompatActivity() {
         }
 
         override fun onServiceDisconnected(arg0: ComponentName) {
-            isBound = false
+            onUnbind()
         }
     }
 }
