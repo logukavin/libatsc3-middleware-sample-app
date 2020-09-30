@@ -121,18 +121,13 @@ class InterprocessServiceBinder(
     ))
 
     init {
-        subscribe(IServiceBinder.LIVEDATA_ALL)
+        sendAction(IServiceBinder.LIVEDATA_ALL, bundleOf(
+                IServiceBinder.PARAM_PERMISSION_PACKAGE to clientPackage
+        ))
     }
 
     fun close() {
         sendingMessenger = null
-    }
-
-    private fun subscribe(dataType: Int) {
-        sendingMessenger?.send(Message.obtain(null, dataType).apply {
-            data = bundleOf(IServiceBinder.PARAM_PERMISSION_PACKAGE to clientPackage)
-            replyTo = incomingMessenger
-        })
     }
 
     private fun sendAction(actionType: Int, args: Bundle? = null) {

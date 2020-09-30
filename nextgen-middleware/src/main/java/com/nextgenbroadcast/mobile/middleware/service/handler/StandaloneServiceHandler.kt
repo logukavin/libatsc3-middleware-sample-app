@@ -1,11 +1,10 @@
 package com.nextgenbroadcast.mobile.middleware.service.handler
 
-import android.content.Context
-import android.content.Intent
 import android.net.Uri
 import android.os.*
 import androidx.core.os.bundleOf
 import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.Observer
 import com.nextgenbroadcast.mobile.core.getParcelable
 import com.nextgenbroadcast.mobile.core.model.*
 import com.nextgenbroadcast.mobile.core.presentation.media.IObservablePlayer
@@ -23,6 +22,15 @@ internal class StandaloneServiceHandler(
         private val serviceController: IServiceController,
         private val viewController: IViewController
 ) : Handler() {
+
+    fun unSubscribeAll() {
+        serviceController.receiverState.removeObservers(lifecycleOwner)
+        serviceController.sltServices.removeObservers(lifecycleOwner)
+        serviceController.selectedService.removeObservers(lifecycleOwner)
+        viewController.appData.removeObservers(lifecycleOwner)
+        viewController.rmpLayoutParams.removeObservers(lifecycleOwner)
+        viewController.rmpMediaUri.removeObservers(lifecycleOwner)
+    }
 
     override fun handleMessage(msg: Message) {
         super.handleMessage(msg)
