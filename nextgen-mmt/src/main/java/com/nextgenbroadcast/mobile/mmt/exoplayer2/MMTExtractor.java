@@ -203,7 +203,16 @@ public class MMTExtractor implements Extractor {
             }
 
             if (textType == MMTDef.TRACK_TEXT_TTML) {
-                //TODO:
+                TrackOutput trackOutput = extractorOutput.track(/* id= */ 3, C.TRACK_TYPE_TEXT);
+                tracks.put(C.TRACK_TYPE_TEXT, new MmtTrack(trackOutput));
+
+                trackOutput.format(
+                        Format.createTextSampleFormat(
+                                null,
+                                MimeTypes.APPLICATION_TTML,
+                                0,
+                                null)
+                );
             }
 
             extractorOutput.endTracks();
