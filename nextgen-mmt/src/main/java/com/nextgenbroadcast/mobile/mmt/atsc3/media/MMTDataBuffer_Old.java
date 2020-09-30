@@ -23,7 +23,7 @@ public class MMTDataBuffer_Old implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_
     private final LinkedHashMap<Long, Long> MapVideoMfuPresentationTimestampUsAnchorSystemTimeUs = new LinkedHashMap<>();
     private final LinkedHashMap<Long, Long> MapAudioMfuPresentationTimestampUsAnchorSystemTimeUs = new LinkedHashMap<>();
 
-    public MpuMetadata_HEVC_NAL_Payload InitMpuMetadata_HEVC_NAL_Payload = null;
+    private MpuMetadata_HEVC_NAL_Payload InitMpuMetadata_HEVC_NAL_Payload = null;
 
     final LinkedBlockingDeque<MfuByteBufferFragment> mfuBufferQueueVideo = new LinkedBlockingDeque<>(); //Collections.synchronizedList(new ArrayList<MfuByteBufferFragment>());
     final LinkedBlockingDeque<MfuByteBufferFragment> mfuBufferQueueAudio = new LinkedBlockingDeque<>(); //Collections.synchronizedList(new ArrayList<MfuByteBufferFragment>());
@@ -37,7 +37,7 @@ public class MMTDataBuffer_Old implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_
         consumer.setMMTSource(this);
     }
 
-    public void release() {
+    void release() {
         sourceConsumer.resetMMTSource(this);
         clearQueues();
         clearTimeCache();
@@ -84,12 +84,12 @@ public class MMTDataBuffer_Old implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_
                     MmtPacketIdContext.audio_packet_statistics.extracted_sample_duration_us));
         }
 
-//        if (IsSoftFlushingFromAVPtsDiscontinuity.get()
-//                || MediaCodecInputBufferMfuByteBufferFragmentWorker.IsHardCodecFlushingFromAVPtsDiscontinuity
-//                || MediaCodecInputBufferMfuByteBufferFragmentWorker.IsResettingCodecFromDiscontinuity) {
-//            mfuByteBufferFragment.unreferenceByteBuffer();
-//            return;
-//        }
+        if (IsSoftFlushingFromAVPtsDiscontinuity.get()
+                || MediaCodecInputBufferMfuByteBufferFragmentWorker.IsHardCodecFlushingFromAVPtsDiscontinuity
+                || MediaCodecInputBufferMfuByteBufferFragmentWorker.IsResettingCodecFromDiscontinuity) {
+            mfuByteBufferFragment.unreferenceByteBuffer();
+            return;
+        }
 
         if (MmtPacketIdContext.video_packet_id == mfuByteBufferFragment.packet_id) {
             addVideoFragment(mfuByteBufferFragment);
