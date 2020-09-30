@@ -67,6 +67,9 @@ class IRPCControllerTest {
     @Mock
     private lateinit var mediaFileProvider: IMediaFileProvider
 
+    @Mock
+    private lateinit var mockedMediaUri: Uri
+
     private lateinit var coordinator: RPCGatewayImpl
     private lateinit var mediaPlayerController: ViewControllerImpl
     private var scaleFactor: Double = 1.0
@@ -98,6 +101,8 @@ class IRPCControllerTest {
         Mockito.`when`(prefs.hostName).thenReturn("localhost")
         Mockito.`when`(prefs.httpsPort).thenReturn(8443)
         Mockito.`when`(prefs.wssPort).thenReturn(9999)
+        Mockito.`when`(mediaFileProvider.getFileProviderUri(mockedMediaUrl)).thenReturn(mockedMediaUri)
+        Mockito.`when`(mockedMediaUri.toString()).thenReturn(mockedMediaUrl)
         Mockito.`when`(repository.heldPackage).thenReturn(appData)
         Mockito.`when`(repository.applications).thenReturn(applications)
         Mockito.`when`(serviceController.serviceGuidUrls).thenReturn(serviceGuidUrls)
@@ -143,10 +148,10 @@ class IRPCControllerTest {
     }
 
     //TODO: Uri.parse always return null https://adrianhall.github.io/android/2019/12/24/unit-testing-android-libraries/
-//    @Test
-//    fun testMediaUrl() {
-//        assertEquals(mockedMediaUrl, iRPCGateway.mediaUrl)
-//    }
+    @Test
+    fun testMediaUrl() {
+        assertEquals(mockedMediaUrl, iRPCGateway.mediaUrl)
+    }
 
     @Test
     fun testPlaybackState() {
