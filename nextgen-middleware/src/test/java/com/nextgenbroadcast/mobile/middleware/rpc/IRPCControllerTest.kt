@@ -53,9 +53,6 @@ class IRPCControllerTest {
     private lateinit var serviceController: IServiceController
 
     @Mock
-    private lateinit var viewController: IViewController
-
-    @Mock
     private lateinit var prefs: IMiddlewareSettings
 
     @Mock
@@ -110,9 +107,6 @@ class IRPCControllerTest {
         Mockito.`when`(serviceController.serviceGuidUrls).thenReturn(serviceGuidUrls)
         Mockito.`when`(repository.selectedService).thenReturn(selectedService)
         Mockito.`when`(repository.routeMediaUrl).thenReturn(routeMediaUrl)
-        Mockito.`when`(viewController.rmpMediaUri).thenReturn(rmpMediaUri)
-        Mockito.`when`(viewController.rmpState).thenReturn(rmpState)
-        Mockito.`when`(viewController.appData).thenReturn(appDataViewController)
 
         mediaPlayerController = ViewControllerImpl(repository, prefs, mediaFileProvider)
         coordinator = RPCGatewayImpl(serviceController, mediaPlayerController, prefs, testDispatcher, testDispatcher)
