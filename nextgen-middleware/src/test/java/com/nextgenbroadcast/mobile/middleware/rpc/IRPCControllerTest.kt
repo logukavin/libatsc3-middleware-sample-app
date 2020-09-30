@@ -53,9 +53,6 @@ class IRPCControllerTest {
     private lateinit var serviceController: IServiceController
 
     @Mock
-    private lateinit var viewController: IViewController
-
-    @Mock
     private lateinit var prefs: IMiddlewareSettings
 
     @Mock
@@ -66,6 +63,9 @@ class IRPCControllerTest {
 
     @Mock
     private lateinit var mediaFileProvider: IMediaFileProvider
+
+    @Mock
+    private lateinit var mockedMediaUri: Uri
 
     private lateinit var coordinator: RPCGatewayImpl
     private lateinit var mediaPlayerController: ViewControllerImpl
@@ -81,9 +81,6 @@ class IRPCControllerTest {
     val applications = MutableLiveData<List<Atsc3Application>>()
     val serviceGuidUrls: LiveData<List<Urls>?> = MutableLiveData()
     var selectedService: MutableLiveData<SLSService?> = MutableLiveData()
-    val rmpState: LiveData<PlaybackState> = MutableLiveData()
-    val rmpMediaUri: LiveData<Uri?> = MutableLiveData()
-    val appDataViewController: LiveData<AppData?> = MutableLiveData()
     val routeMediaUrl: LiveData<String?> = MutableLiveData(mockedMediaUrl)
 
     @ExperimentalCoroutinesApi
@@ -98,6 +95,8 @@ class IRPCControllerTest {
         Mockito.`when`(prefs.hostName).thenReturn("localhost")
         Mockito.`when`(prefs.httpsPort).thenReturn(8443)
         Mockito.`when`(prefs.wssPort).thenReturn(9999)
+        Mockito.`when`(mediaFileProvider.getFileProviderUri(mockedMediaUrl)).thenReturn(mockedMediaUri)
+        Mockito.`when`(mockedMediaUri.toString()).thenReturn(mockedMediaUrl)
         Mockito.`when`(repository.heldPackage).thenReturn(appData)
         Mockito.`when`(repository.applications).thenReturn(applications)
         Mockito.`when`(serviceController.serviceGuidUrls).thenReturn(serviceGuidUrls)
@@ -105,9 +104,6 @@ class IRPCControllerTest {
         Mockito.`when`(serviceController.serviceGuidUrls).thenReturn(serviceGuidUrls)
         Mockito.`when`(repository.selectedService).thenReturn(selectedService)
         Mockito.`when`(repository.routeMediaUrl).thenReturn(routeMediaUrl)
-        Mockito.`when`(viewController.rmpMediaUri).thenReturn(rmpMediaUri)
-        Mockito.`when`(viewController.rmpState).thenReturn(rmpState)
-        Mockito.`when`(viewController.appData).thenReturn(appDataViewController)
 
         mediaPlayerController = ViewControllerImpl(repository, prefs, mediaFileProvider)
         coordinator = RPCGatewayImpl(serviceController, mediaPlayerController, prefs, testDispatcher, testDispatcher)
@@ -142,11 +138,10 @@ class IRPCControllerTest {
         assertEquals(mockedSLSService.globalId, iRPCGateway.queryServiceId)
     }
 
-    //TODO: Uri.parse always return null https://adrianhall.github.io/android/2019/12/24/unit-testing-android-libraries/
-//    @Test
-//    fun testMediaUrl() {
-//        assertEquals(mockedMediaUrl, iRPCGateway.mediaUrl)
-//    }
+    @Test
+    fun testMediaUrl() {
+        assertEquals(mockedMediaUrl, iRPCGateway.mediaUrl)
+    }
 
     @Test
     fun testPlaybackState() {
