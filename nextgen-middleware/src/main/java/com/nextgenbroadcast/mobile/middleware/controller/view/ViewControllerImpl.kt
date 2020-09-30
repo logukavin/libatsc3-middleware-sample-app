@@ -47,12 +47,14 @@ internal class ViewControllerImpl(
         }
     }
 
-    override val rmpLayoutParams = MutableLiveData<RPMParams>(RPMParams())
+    override val rmpLayoutParams = MutableLiveData(RPMParams())
     override val rmpMediaUri = Transformations.switchMap(playbackSource) { source ->
         if (source == PlaybackSource.BROADCAST) {
             repository.routeMediaUrl.map { input ->
-                input?.let {
+                if (input != null && input.startsWith("content")) {
                     fileProvider.getFileProviderUri(input)
+                } else {
+                    input?.toUri()
                 }
             }
         } else {
@@ -60,7 +62,7 @@ internal class ViewControllerImpl(
         }
     }
 
-    override val rmpState = MutableLiveData<PlaybackState>(PlaybackState.IDLE)
+    override val rmpState = MutableLiveData(PlaybackState.IDLE)
     override val rmpMediaTime = MutableLiveData<Long>()
     override val rmpPlaybackRate = MutableLiveData<Float>()
 
