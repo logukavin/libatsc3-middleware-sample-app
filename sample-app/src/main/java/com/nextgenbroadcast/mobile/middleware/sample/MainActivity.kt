@@ -64,6 +64,8 @@ class MainActivity : BaseActivity() {
     private lateinit var sourceAdapter: ListAdapter
     private lateinit var bottomSheetBehavior: BottomSheetBehavior<View>
 
+    private var initPlayer = false
+
     private val hasFeaturePIP: Boolean by lazy {
         packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)
     }
@@ -97,6 +99,13 @@ class MainActivity : BaseActivity() {
                     }
                 }
             })
+        }
+
+        if (initPlayer) {
+            initPlayer = false
+            rmpViewModel?.mediaUri?.value?.let { uri ->
+                startPlayback(uri)
+            }
         }
     }
 
@@ -299,6 +308,8 @@ class MainActivity : BaseActivity() {
         if (mediaUri.path == "mmt") {
             receiverPresenter?.createMMTSource()?.let { source ->
                 receiver_player.startPlayback(source)
+            } ?: let {
+                initPlayer = true
             }
         } else {
             receiver_player.startPlayback(mediaUri)

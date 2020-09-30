@@ -27,8 +27,6 @@ class ReceiverMediaPlayer @JvmOverloads constructor(
         context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
 ) : PlayerView(context, attrs, defStyleAttr) {
 
-    /*private*/ lateinit var simpleExoPlayer: SimpleExoPlayer
-
     private val dashMediaSourceFactory: DashMediaSource.Factory by lazy {
         createMediaSourceFactory()
     }
@@ -41,23 +39,13 @@ class ReceiverMediaPlayer @JvmOverloads constructor(
         get() = rmpState == PlaybackState.PLAYING
 
     val playbackPosition
-        get() = simpleExoPlayer.currentPosition
+        get() = player?.currentPosition ?: 0
 
     var playWhenReady
-        get() = simpleExoPlayer.playWhenReady
+        get() = player?.playWhenReady ?: false
         set(value) {
-            simpleExoPlayer.playWhenReady = value
+            player?.playWhenReady = value
         }
-
-    override fun onFinishInflate() {
-        super.onFinishInflate()
-
-        if (isInEditMode) return
-
-        simpleExoPlayer = createExoPlayer().also {
-            player = it
-        }
-    }
 
     fun setListener(listener: EventListener) {
         this.listener = listener
@@ -69,9 +57,10 @@ class ReceiverMediaPlayer @JvmOverloads constructor(
 
     fun play(mediaUri: Uri) {
         val dashMediaSource = dashMediaSourceFactory.createMediaSource(mediaUri)
-        player = simpleExoPlayer
-        simpleExoPlayer.prepare(dashMediaSource)
-        simpleExoPlayer.playWhenReady = true
+        player = createDefaultExoPlayer().apply {
+            prepare(dashMediaSource)
+            playWhenReady = true
+        }
     }
 
     fun play(mmtBuffer: MMTDataBuffer) {
@@ -81,31 +70,37 @@ class ReceiverMediaPlayer @JvmOverloads constructor(
             arrayOf(MMTExtractor())
         }).createMediaSource("mmt".toUri())
 
-        player = simpleExoPlayer
-        simpleExoPlayer.prepare(mediaSource)
-        simpleExoPlayer.playWhenReady = true
+        player = createMMTExoPlayer().apply {
+            prepare(mediaSource)
+            playWhenReady = true
+        }
     }
 
     fun stop() {
-        simpleExoPlayer.stop()
+        player?.stop()
         player = null
     }
 
     fun reset() {
-        with(simpleExoPlayer) {
-            stop()
-            release()
+        player?.let {
+            it.stop()
+            it.release()
         }
     }
 
-    private fun createExoPlayer(): SimpleExoPlayer {
-        val renderFactory = DefaultRenderersFactory(context)
-        val selector = DefaultTrackSelector()
+    private fun createDefaultExoPlayer(): SimpleExoPlayer {
+        return createExoPlayer(DefaultLoadControl())
+    }
+
+    private fun createMMTExoPlayer(): SimpleExoPlayer {
         val loadingControl = DefaultLoadControl.Builder()
                 .setBufferDurationsMs(15000, 50000, 2500, 5000)
                 .createDefaultLoadControl()
+        return createExoPlayer(loadingControl)
+    }
 
-        return ExoPlayerFactory.newSimpleInstance(context, renderFactory, selector, loadingControl).apply {
+    private fun createExoPlayer(loadControl: LoadControl): SimpleExoPlayer {
+        return ExoPlayerFactory.newSimpleInstance(context, DefaultRenderersFactory(context), DefaultTrackSelector(), loadControl).apply {
             addListener(object : Player.EventListener {
                 override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
                     val state = when (playbackState) {
