@@ -51,10 +51,12 @@ internal class ViewControllerImpl(
     override val rmpMediaUri = Transformations.switchMap(playbackSource) { source ->
         if (source == PlaybackSource.BROADCAST) {
             repository.routeMediaUrl.map { input ->
-                if (input != null && input.startsWith("content")) {
-                    fileProvider.getFileProviderUri(input)
-                } else {
-                    input?.toUri()
+                input?.let {
+                    if (input.startsWith("mmt")) {
+                        input.toUri()
+                    } else {
+                        fileProvider.getFileProviderUri(input)
+                    }
                 }
             }
         } else {
