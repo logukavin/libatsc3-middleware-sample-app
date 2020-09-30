@@ -81,9 +81,6 @@ class IRPCControllerTest {
     val applications = MutableLiveData<List<Atsc3Application>>()
     val serviceGuidUrls: LiveData<List<Urls>?> = MutableLiveData()
     var selectedService: MutableLiveData<SLSService?> = MutableLiveData()
-    val rmpState: LiveData<PlaybackState> = MutableLiveData()
-    val rmpMediaUri: LiveData<Uri?> = MutableLiveData()
-    val appDataViewController: LiveData<AppData?> = MutableLiveData()
     val routeMediaUrl: LiveData<String?> = MutableLiveData(mockedMediaUrl)
 
     @ExperimentalCoroutinesApi
@@ -141,7 +138,6 @@ class IRPCControllerTest {
         assertEquals(mockedSLSService.globalId, iRPCGateway.queryServiceId)
     }
 
-    //TODO: Uri.parse always return null https://adrianhall.github.io/android/2019/12/24/unit-testing-android-libraries/
     @Test
     fun testMediaUrl() {
         assertEquals(mockedMediaUrl, iRPCGateway.mediaUrl)
