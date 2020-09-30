@@ -58,7 +58,7 @@ class NotificationHelper(
     }
 
     private fun createPendingIntent(context: Context, intentAction: String? = null): PendingIntent {
-        val intent = Intent(context, Atsc3ForegroundService::class.java).apply {
+        val intent = Intent(context, Atsc3ForegroundService.clazz).apply {
             action = intentAction
         }
         return PendingIntent.getService(context, 0, intent, 0)
