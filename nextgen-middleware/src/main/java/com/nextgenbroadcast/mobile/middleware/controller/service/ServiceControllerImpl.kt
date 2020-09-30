@@ -10,7 +10,7 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Applicatio
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPackage
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.service.Atsc3Service
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
-import com.nextgenbroadcast.mobile.mmt.atsc3.media.MMTDataSource
+import com.nextgenbroadcast.mobile.mmt.atsc3.media.MMTDataBuffer
 import kotlinx.coroutines.*
 
 
@@ -121,8 +121,8 @@ internal class ServiceControllerImpl (
         }
     }
 
-    override fun createMMTSource(): MMTDataSource {
-        return MMTDataSource(atsc3Module)
+    override fun createMMTSource(): MMTDataBuffer {
+        return MMTDataBuffer(atsc3Module)
     }
 
     private fun resetHeldWithDelay() {

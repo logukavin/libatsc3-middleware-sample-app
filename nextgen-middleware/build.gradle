@@ -62,16 +62,17 @@ android {
 }
 
 def lifecycleVersion = rootProject.ext.lifecycleVersion
+def libatsc3Version = rootProject.ext.libatsc3Version
 def jettyVersion = '9.4.30.v20200611'
 def powermock_version = "2.0.7"
 
 dependencies {
     implementation fileTree(dir: "libs", include: ["*.jar"])
 
-    implementation 'org.ngbp.libatsc3:atsc3_core:1.0.0.1'
-    implementation 'org.ngbp.libatsc3:atsc3_bridge:1.0.0.1'
-    implementation 'org.ngbp.libatsc3:atsc3_phy_virtual:1.0.0.1'
-    implementation 'org.ngbp.libatsc3:atsc3_phy_lowasis:1.0.0.1'
+    implementation "org.ngbp.libatsc3:atsc3_core:$libatsc3Version"
+    implementation "org.ngbp.libatsc3:atsc3_bridge:$libatsc3Version"
+    implementation "org.ngbp.libatsc3:atsc3_phy_virtual:$libatsc3Version"
+    implementation "org.ngbp.libatsc3:atsc3_phy_lowasis:$libatsc3Version"
 
     implementation project(":nextgen-core")
     compileOnly project(":nextgen-mmt")

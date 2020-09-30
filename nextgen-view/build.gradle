@@ -37,6 +37,7 @@ dependencies {
     implementation fileTree(dir: "libs", include: ["*.jar"])
 
     implementation project(':nextgen-core')
+    compileOnly project(":nextgen-mmt")
 
     api 'com.google.android.exoplayer:exoplayer-daa:2.10.7.1'
     api 'com.google.android.exoplayer:exoplayer-dash:2.10.7.1'

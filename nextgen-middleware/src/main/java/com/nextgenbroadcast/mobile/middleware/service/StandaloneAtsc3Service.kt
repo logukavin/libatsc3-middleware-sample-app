@@ -5,8 +5,8 @@ import android.os.*
 import com.nextgenbroadcast.mobile.middleware.service.handler.StandaloneServiceHandler
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
 import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
-import com.nextgenbroadcast.mobile.core.presentation.IReceiverPresenter
-import com.nextgenbroadcast.mobile.mmt.atsc3.media.MMTDataSource
+import com.nextgenbroadcast.mobile.middleware.presentation.IReceiverPresenter
+import com.nextgenbroadcast.mobile.mmt.atsc3.media.MMTDataBuffer
 import java.lang.UnsupportedOperationException
 
 class StandaloneAtsc3Service : Atsc3ForegroundService() {
@@ -29,7 +29,7 @@ class StandaloneAtsc3Service : Atsc3ForegroundService() {
                         closeRoute(this@StandaloneAtsc3Service)
                     }
 
-                    override fun createMMTSource(): MMTDataSource {
+                    override fun createMMTSource(): MMTDataBuffer {
                         throw UnsupportedOperationException("MMT playback is not supported with standalone service")
                     }
                 },

@@ -12,8 +12,8 @@ import android.content.res.Configuration
 import android.graphics.drawable.Icon
 import android.net.Uri
 import android.os.Bundle
-import android.util.Log
-import android.view.*
+import android.view.GestureDetector
+import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.ListAdapter
 import android.widget.Toast
@@ -30,7 +30,7 @@ import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.model.SLSService
 import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
-import com.nextgenbroadcast.mobile.core.presentation.IReceiverPresenter
+import com.nextgenbroadcast.mobile.middleware.presentation.IReceiverPresenter
 import com.nextgenbroadcast.mobile.middleware.sample.core.SwipeGestureDetector
 import com.nextgenbroadcast.mobile.middleware.sample.databinding.ActivityMainBinding
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.RMPViewModel
@@ -63,6 +63,8 @@ class MainActivity : BaseActivity() {
     private lateinit var serviceAdapter: ServiceAdapter
     private lateinit var sourceAdapter: ListAdapter
     private lateinit var bottomSheetBehavior: BottomSheetBehavior<View>
+
+    private var initPlayer = false
 
     private val hasFeaturePIP: Boolean by lazy {
         packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)
@@ -97,6 +99,13 @@ class MainActivity : BaseActivity() {
                     }
                 }
             })
+        }
+
+        if (initPlayer) {
+            initPlayer = false
+            rmpViewModel?.mediaUri?.value?.let { uri ->
+                startPlayback(uri)
+            }
         }
     }
 
@@ -296,9 +305,11 @@ class MainActivity : BaseActivity() {
     }
 
     private fun startPlayback(mediaUri: Uri) {
-        if (mediaUri.scheme == "mmt") {
+        if (mediaUri.path == "mmt") {
             receiverPresenter?.createMMTSource()?.let { source ->
                 receiver_player.startPlayback(source)
+            } ?: let {
+                initPlayer = true
             }
         } else {
             receiver_player.startPlayback(mediaUri)

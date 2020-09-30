@@ -1,4 +1,4 @@
-package com.nextgenbroadcast.mobile.core.presentation
+package com.nextgenbroadcast.mobile.middleware.presentation
 
 import androidx.lifecycle.LiveData
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
