@@ -148,7 +148,8 @@ public class MMTDataSource extends BaseDataSource {
                 sampleHeaderBuffer
                         .put(sampleType)
                         .putInt(currentSample.bytebuffer_length)
-                        .putLong(computedPresentationTimestampUs);
+                        .putLong(computedPresentationTimestampUs)
+                        .put(currentSample.sample_number == 1 ? (byte) 1 : (byte) 0);
                 sampleHeaderBuffer.rewind();
 
                 readSampleHeader = true;
