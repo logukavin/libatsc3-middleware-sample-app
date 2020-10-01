@@ -11,18 +11,9 @@ import com.nextgenbroadcast.mobile.mmt.atsc3.media.MMTDataBuffer;
 
 import org.ngbp.libatsc3.middleware.android.application.sync.mmt.MfuByteBufferFragment;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 
 public class MMTDataSource extends BaseDataSource {
-
-    public static class TestExtractedMMTDataSourceException extends IOException {
-
-        public TestExtractedMMTDataSourceException(IOException cause) {
-            super(cause);
-        }
-
-    }
 
     private final MMTDataBuffer inputSource;
 
@@ -42,21 +33,16 @@ public class MMTDataSource extends BaseDataSource {
     }
 
     @Override
-    public long open(DataSpec dataSpec) throws MMTDataSource.TestExtractedMMTDataSourceException {
-        try {
-            uri = dataSpec.uri;
-            transferInitializing(dataSpec);
+    public long open(DataSpec dataSpec) {
+        uri = dataSpec.uri;
+        transferInitializing(dataSpec);
 
-            inputSource.await();
+        inputSource.open();
 
-            if (dataSpec.length != C.LENGTH_UNSET) {
-                bytesRemaining = dataSpec.length;
-            } else {
-                bytesRemaining = C.LENGTH_UNSET;
-            }
-
-        } catch (IOException e) {
-            throw new MMTDataSource.TestExtractedMMTDataSourceException(e);
+        if (dataSpec.length != C.LENGTH_UNSET) {
+            bytesRemaining = dataSpec.length;
+        } else {
+            bytesRemaining = C.LENGTH_UNSET;
         }
 
         opened = true;
@@ -80,6 +66,18 @@ public class MMTDataSource extends BaseDataSource {
         }
 
         if (readHeader) {
+            if (!inputSource.hasMpuMetadata()) {
+                try {
+                    Thread.sleep(100);
+                } catch (Exception ex) {
+                    //
+                }
+
+                if (!inputSource.hasMpuMetadata()) {
+                    return 0;
+                }
+            }
+
             ByteBuffer initBuffer = inputSource.InitMpuMetadata_HEVC_NAL_Payload.myByteBuffer;
 
             if (offset == 0 && readLength == MMTDef.SIZE_HEADER) {
@@ -115,11 +113,7 @@ public class MMTDataSource extends BaseDataSource {
             return C.RESULT_END_OF_INPUT;
         }
 
-        if (currentSample == null || currentSample.myByteBuffer.remaining() == 0) {
-            if (currentSample != null) {
-                currentSample.unreferenceByteBuffer();
-            }
-
+        if (currentSample == null) {
             try {
                 if ((currentSample = inputSource.poll(10)) == null) {
                     return 0;
@@ -172,6 +166,11 @@ public class MMTDataSource extends BaseDataSource {
         }
 
         currentSample.myByteBuffer.get(buffer, offset, bytesToRead);
+
+        if (currentSample.myByteBuffer.remaining() == 0) {
+            currentSample.unreferenceByteBuffer();
+            currentSample = null;
+        }
 
         bytesTransferred(bytesToRead);
 

@@ -43,10 +43,6 @@ public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payl
         clearTimeCache();
     }
 
-    public MfuByteBufferFragment peek() {
-        return mfuBufferQueue.peek();
-    }
-
     public MfuByteBufferFragment poll(long timeoutMs) throws InterruptedException {
         return mfuBufferQueue.poll(timeoutMs, TimeUnit.MILLISECONDS);
     }
@@ -83,36 +79,11 @@ public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payl
         return MmtPacketIdContext.stpp_packet_id == sample.packet_id;
     }
 
-    public void await() throws EOFException {
+    public void open() {
         ATSC3PlayerFlags.ATSC3PlayerStartPlayback = true;
         ATSC3PlayerFlags.ATSC3PlayerStopPlayback = false;
         ATSC3PlayerFlags.FirstMfuBufferVideoKeyframeSent = false;
         ATSC3PlayerFlags.FirstMfuBuffer_presentation_time_us_mpu = 0;
-
-        //TODO: remove this...spinlock...
-        while (!ATSC3PlayerFlags.ATSC3PlayerStopPlayback && !hasMpuMetadata()) {
-            com.google.android.exoplayer2.util.Log.d("createMfuOuterMediaCodec", "waiting for initMpuMetadata_HEVC_NAL_Payload != null");
-            try {
-                Thread.sleep(100);
-            } catch (Exception ex) {
-                //
-            }
-        }
-
-        //spin for at least one video and one audio frame
-        while (!ATSC3PlayerFlags.ATSC3PlayerStopPlayback && (peek() == null)) {
-            //Log.d("createMfuOuterMediaCodec", String.format("waiting for mfuBufferQueueVideo, size: %d, mfuBufferQueueAudio, size: %d", source.mfuBufferQueueVideo.size, dataSource.mfuBufferQueueAudio.size))
-            try {
-                Thread.sleep(100);
-            } catch (Exception ex) {
-                //
-            }
-        }
-
-        //bail early
-        if (ATSC3PlayerFlags.ATSC3PlayerStopPlayback) {
-            throw new EOFException();
-        }
     }
 
     void clearTimeCache() {
@@ -297,7 +268,7 @@ public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payl
         mediaFormat.setByteBuffer("csd-0", InitMpuMetadata_HEVC_NAL_Payload.myByteBuffer);
     }
 
-    private boolean hasMpuMetadata() {
+    public boolean hasMpuMetadata() {
         return InitMpuMetadata_HEVC_NAL_Payload != null;
     }
 
