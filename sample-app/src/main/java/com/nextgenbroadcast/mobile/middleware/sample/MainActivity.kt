@@ -272,7 +272,8 @@ class MainActivity : BaseActivity() {
 
     private fun setSelectedService(serviceId: Int, serviceName: String?) {
         bottom_sheet_title.text = serviceName
-        changeService(serviceId)
+        if(serviceId > 0)
+            changeService(serviceId)
     }
 
     private fun onBALoadingError() {
@@ -323,11 +324,15 @@ class MainActivity : BaseActivity() {
             if (services.isNotEmpty()) {
                 serviceList.adapter = serviceAdapter
                 serviceAdapter.setServices(services)
-
-                val selectedServiceId = selectorViewModel.getSelectedServiceId()
-                val service = services.firstOrNull { it.id == selectedServiceId }
-                        ?: services.first()
-                setSelectedService(service.id, service.shortName)
+                selectorViewModel.getSelectedService().observe(this, { service ->
+                    service?.let {
+                        bottom_sheet_title.text = it.shortName
+                    } ?: run {
+                        servicesList?.first()?.let {
+                            setSelectedService(it.id, it.shortName)
+                        }
+                    }
+                })
             } else {
                 if (previewMode) {
                     serviceList.adapter = null
