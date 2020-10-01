@@ -68,12 +68,24 @@ public class MMTDataSource extends BaseDataSource {
         if (readHeader) {
             if (!inputSource.hasMpuMetadata()) {
                 try {
-                    Thread.sleep(100);
+                    Thread.sleep(10);
                 } catch (Exception ex) {
                     //
                 }
 
                 if (!inputSource.hasMpuMetadata()) {
+                    return 0;
+                }
+            }
+
+            if (!inputSource.skipUntilKeyFrame()) {
+                try {
+                    Thread.sleep(10);
+                } catch (Exception ex) {
+                    //
+                }
+
+                if (!inputSource.skipUntilKeyFrame()) {
                     return 0;
                 }
             }
