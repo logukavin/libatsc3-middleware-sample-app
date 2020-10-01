@@ -109,7 +109,7 @@ public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payl
 
         //jjustman-2020-08-19 - hack-ish workaround for ac-4 and mmt_atsc3_message signalling information w/ sample duration (or avoiding parsing the trun box)
         if (MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us != 0 || MmtPacketIdContext.audio_packet_statistics.extracted_sample_duration_us == 0) {
-            if(MmtPacketIdContext.audio_packet_id == mfuByteBufferFragment.packet_id && mfuByteBufferFragment.sample_number==1) {
+            if (MmtPacketIdContext.audio_packet_id == mfuByteBufferFragment.packet_id && mfuByteBufferFragment.sample_number == 1) {
                 Log.d("PushMfuByteBufferFragment:INFO", String.format(" packet_id: %d, mpu_sequence_number: %d, setting audio_packet_statistics.extracted_sample_duration_us to follow video: %d * 2",
                         mfuByteBufferFragment.packet_id, mfuByteBufferFragment.mpu_sequence_number, MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us));
             }
@@ -272,6 +272,20 @@ public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payl
         return InitMpuMetadata_HEVC_NAL_Payload != null;
     }
 
+    public boolean skipUntilKeyFrame() {
+        MfuByteBufferFragment fragment;
+        while ((fragment = mfuBufferQueue.peek()) != null) {
+            if (fragment.sample_number == 1) {
+                return true;
+            } else {
+                fragment.unreferenceByteBuffer();
+                mfuBufferQueue.remove();
+            }
+        }
+
+        return false;
+    }
+
     public long getPresentationTimestampUs(MfuByteBufferFragment toProcessMfuByteBufferFragment) {
         long ptsOffsetUs = 66000L;
 
@@ -293,7 +307,7 @@ public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payl
                     anchorMfuPresentationTimestampUs = anchor.getKey();
                     anchorSystemTimeUs = anchor.getValue();
                 }
-            } else  if (toProcessMfuByteBufferFragment.packet_id == MmtPacketIdContext.audio_packet_id) {
+            } else if (toProcessMfuByteBufferFragment.packet_id == MmtPacketIdContext.audio_packet_id) {
                 if (MapAudioMfuPresentationTimestampUsAnchorSystemTimeUs.size() == 0) {
                     MapAudioMfuPresentationTimestampUsAnchorSystemTimeUs.put(toProcessMfuByteBufferFragment.mfu_presentation_time_uS_computed, System.currentTimeMillis() * 1000);
                 }
