@@ -53,6 +53,15 @@ public class MMTDataSource extends BaseDataSource {
 
     @Override
     public int read(byte[] buffer, int offset, int readLength) {
+        /*
+         * Before reading of sample data next steps MUST be performed
+         * 1. once read and check source the signature
+         * 2. once read format initialization data
+         * 3. read sample header before every sample
+         */
+
+
+        // Read identification header
         if (readSignature) {
             ByteBuffer bb = ByteBuffer.allocate(MMTDef.mmtSignature.length);
             bb.put(MMTDef.mmtSignature);
@@ -65,6 +74,7 @@ public class MMTDataSource extends BaseDataSource {
             return bytesToRead;
         }
 
+        // read initialization header
         if (readHeader) {
             if (!inputSource.hasMpuMetadata()) {
                 try {
@@ -125,6 +135,7 @@ public class MMTDataSource extends BaseDataSource {
             return C.RESULT_END_OF_INPUT;
         }
 
+        // get next sample and fill it's header
         if (currentSample == null) {
             try {
                 if ((currentSample = inputSource.poll(10)) == null) {
@@ -164,6 +175,7 @@ public class MMTDataSource extends BaseDataSource {
 
         if (!opened) return C.LENGTH_UNSET;
 
+        // read the sample header
         if (readSampleHeader) {
             int bytesToRead = (int) Math.min(sampleHeaderBuffer.remaining(), readLength);
             sampleHeaderBuffer.get(buffer, offset, bytesToRead);
@@ -171,6 +183,7 @@ public class MMTDataSource extends BaseDataSource {
             return bytesToRead;
         }
 
+        // read the sample buffer
         int bytesToRead = (int) Math.min(currentSample.myByteBuffer.remaining(), readLength);
         if (bytesToRead == 0) {
             currentSample = null;
