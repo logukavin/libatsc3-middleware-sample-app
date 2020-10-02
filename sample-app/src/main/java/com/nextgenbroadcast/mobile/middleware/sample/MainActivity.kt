@@ -247,8 +247,12 @@ class MainActivity : BaseActivity() {
     override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: Configuration) {
         val visibility = if (isInPictureInPictureMode) {
             user_agent_web_view.closeMenu()
+            setBAAvailability(false)
             View.INVISIBLE
         } else {
+            if (isBAvailable()) {
+                setBAAvailability(true)
+            }
             View.VISIBLE
         }
         atsc3_data_log.visibility = visibility
@@ -276,6 +280,7 @@ class MainActivity : BaseActivity() {
     }
 
     private fun onBALoadingError() {
+        currentAppData = null
         setBAAvailability(false)
         user_agent_web_view.unloadBAContent()
 
@@ -402,13 +407,14 @@ class MainActivity : BaseActivity() {
     }
 
     private fun setBAAvailability(available: Boolean) {
-        if (isInPictureInPictureMode) return
         user_agent_web_view.visibility = if (available) View.VISIBLE else View.INVISIBLE
     }
 
     private fun switchApplication(appData: AppData?) {
         if (appData != null && appData.isAvailable()) {
-            setBAAvailability(true)
+            if (!isInPictureInPictureMode) {
+                setBAAvailability(true)
+            }
             if (!appData.isAppEquals(currentAppData) || appData.isAvailable() != currentAppData?.isAvailable()) {
                 user_agent_web_view.loadBAContent(appData.appEntryPage)
             }
@@ -417,6 +423,8 @@ class MainActivity : BaseActivity() {
         }
         currentAppData = appData
     }
+
+    private fun isBAvailable() = currentAppData?.isAvailable() ?: false
 
     private fun updateRMPLayout(x: Float, y: Float, scale: Float) {
         ConstraintSet().apply {
