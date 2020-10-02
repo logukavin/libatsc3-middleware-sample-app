@@ -4,7 +4,6 @@ import android.net.Uri
 import android.os.*
 import androidx.core.os.bundleOf
 import androidx.lifecycle.LifecycleOwner
-import androidx.lifecycle.Observer
 import com.nextgenbroadcast.mobile.core.getParcelable
 import com.nextgenbroadcast.mobile.core.model.*
 import com.nextgenbroadcast.mobile.core.presentation.media.IObservablePlayer
@@ -41,8 +40,8 @@ internal class StandaloneServiceHandler(
 
             IServiceBinder.LIVEDATA_ALL -> {
                 observeReceiverState(msg.replyTo)
-                observeServiceState(msg.replyTo)
                 observeSelectedService(msg.replyTo)
+                observeServiceList(msg.replyTo)
                 observeAppData(msg.replyTo)
                 observeRPMLayoutParams(msg.replyTo)
                 msg.data.getString(IServiceBinder.PARAM_PERMISSION_PACKAGE)?.let { clientPackage ->
@@ -130,7 +129,7 @@ internal class StandaloneServiceHandler(
         })
     }
 
-    private fun observeServiceState(sendToMessenger: Messenger) {
+    private fun observeServiceList(sendToMessenger: Messenger) {
         serviceController.sltServices.observe(lifecycleOwner, { services ->
             sendToMessenger.send(buildMessage(
                     IServiceBinder.LIVEDATA_SERVICE_LIST,
