@@ -33,7 +33,7 @@ steps:
       publishJUnitResults: true
       testResultsFiles: '**/TEST-*.xml'
       tasks: 'clean build'
-    displayName: gradlew build, test and publish
+    displayName: gradlew build
 
   - task: CopyFiles@2
     displayName: 'Copy .aar files to artifact staging directory'
