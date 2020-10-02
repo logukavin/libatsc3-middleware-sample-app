@@ -27,6 +27,7 @@ public class MMTExtractor implements Extractor {
     private int currentSampleSize;
     private long currentSampleTimeUs;
     private byte currentSampleType;
+    private boolean currentSampleIsKey;
     private boolean hasOutputFormat;
     private boolean hasOutputSeekMap;
 
@@ -108,12 +109,12 @@ public class MMTExtractor implements Extractor {
         }
 
         @C.BufferFlags int sampleFlags = 0;
-        if (track.isKeyFrame) {
-            track.isKeyFrame = false;
+        if (currentSampleIsKey) {
             sampleFlags = C.BUFFER_FLAG_KEY_FRAME;
-            if (timeOffsetUs == 0) {
-                timeOffsetUs = currentSampleTimeUs;
-            }
+        }
+
+        if (timeOffsetUs == 0) {
+            timeOffsetUs = currentSampleTimeUs;
         }
 
         trackOutput.sampleMetadata(
@@ -136,6 +137,7 @@ public class MMTExtractor implements Extractor {
         currentSampleType = sampleHeaderBuffer.get();
         currentSampleSize = sampleHeaderBuffer.getInt();
         currentSampleTimeUs = sampleHeaderBuffer.getLong();
+        currentSampleIsKey = sampleHeaderBuffer.get() == 1;
     }
 
     private void maybeOutputFormat(ExtractorInput input) throws IOException, InterruptedException {
@@ -231,8 +233,6 @@ public class MMTExtractor implements Extractor {
     private static final class MmtTrack {
 
         public final TrackOutput trackOutput;
-
-        public boolean isKeyFrame = true;
 
         public MmtTrack(TrackOutput trackOutput) {
             this.trackOutput = trackOutput;

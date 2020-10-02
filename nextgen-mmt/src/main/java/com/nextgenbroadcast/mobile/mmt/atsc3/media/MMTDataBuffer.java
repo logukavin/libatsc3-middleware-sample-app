@@ -43,10 +43,6 @@ public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payl
         clearTimeCache();
     }
 
-    public MfuByteBufferFragment peek() {
-        return mfuBufferQueue.peek();
-    }
-
     public MfuByteBufferFragment poll(long timeoutMs) throws InterruptedException {
         return mfuBufferQueue.poll(timeoutMs, TimeUnit.MILLISECONDS);
     }
@@ -83,36 +79,11 @@ public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payl
         return MmtPacketIdContext.stpp_packet_id == sample.packet_id;
     }
 
-    public void await() throws EOFException {
+    public void open() {
         ATSC3PlayerFlags.ATSC3PlayerStartPlayback = true;
         ATSC3PlayerFlags.ATSC3PlayerStopPlayback = false;
         ATSC3PlayerFlags.FirstMfuBufferVideoKeyframeSent = false;
         ATSC3PlayerFlags.FirstMfuBuffer_presentation_time_us_mpu = 0;
-
-        //TODO: remove this...spinlock...
-        while (!ATSC3PlayerFlags.ATSC3PlayerStopPlayback && !hasMpuMetadata()) {
-            com.google.android.exoplayer2.util.Log.d("createMfuOuterMediaCodec", "waiting for initMpuMetadata_HEVC_NAL_Payload != null");
-            try {
-                Thread.sleep(100);
-            } catch (Exception ex) {
-                //
-            }
-        }
-
-        //spin for at least one video and one audio frame
-        while (!ATSC3PlayerFlags.ATSC3PlayerStopPlayback && (peek() == null)) {
-            //Log.d("createMfuOuterMediaCodec", String.format("waiting for mfuBufferQueueVideo, size: %d, mfuBufferQueueAudio, size: %d", source.mfuBufferQueueVideo.size, dataSource.mfuBufferQueueAudio.size))
-            try {
-                Thread.sleep(100);
-            } catch (Exception ex) {
-                //
-            }
-        }
-
-        //bail early
-        if (ATSC3PlayerFlags.ATSC3PlayerStopPlayback) {
-            throw new EOFException();
-        }
     }
 
     void clearTimeCache() {
@@ -138,7 +109,7 @@ public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payl
 
         //jjustman-2020-08-19 - hack-ish workaround for ac-4 and mmt_atsc3_message signalling information w/ sample duration (or avoiding parsing the trun box)
         if (MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us != 0 || MmtPacketIdContext.audio_packet_statistics.extracted_sample_duration_us == 0) {
-            if(MmtPacketIdContext.audio_packet_id == mfuByteBufferFragment.packet_id && mfuByteBufferFragment.sample_number==1) {
+            if (MmtPacketIdContext.audio_packet_id == mfuByteBufferFragment.packet_id && mfuByteBufferFragment.sample_number == 1) {
                 Log.d("PushMfuByteBufferFragment:INFO", String.format(" packet_id: %d, mpu_sequence_number: %d, setting audio_packet_statistics.extracted_sample_duration_us to follow video: %d * 2",
                         mfuByteBufferFragment.packet_id, mfuByteBufferFragment.mpu_sequence_number, MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us));
             }
@@ -297,8 +268,22 @@ public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payl
         mediaFormat.setByteBuffer("csd-0", InitMpuMetadata_HEVC_NAL_Payload.myByteBuffer);
     }
 
-    private boolean hasMpuMetadata() {
+    public boolean hasMpuMetadata() {
         return InitMpuMetadata_HEVC_NAL_Payload != null;
+    }
+
+    public boolean skipUntilKeyFrame() {
+        MfuByteBufferFragment fragment;
+        while ((fragment = mfuBufferQueue.peek()) != null) {
+            if (fragment.sample_number == 1) {
+                return true;
+            } else {
+                fragment.unreferenceByteBuffer();
+                mfuBufferQueue.remove();
+            }
+        }
+
+        return false;
     }
 
     public long getPresentationTimestampUs(MfuByteBufferFragment toProcessMfuByteBufferFragment) {
@@ -322,7 +307,7 @@ public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payl
                     anchorMfuPresentationTimestampUs = anchor.getKey();
                     anchorSystemTimeUs = anchor.getValue();
                 }
-            } else  if (toProcessMfuByteBufferFragment.packet_id == MmtPacketIdContext.audio_packet_id) {
+            } else if (toProcessMfuByteBufferFragment.packet_id == MmtPacketIdContext.audio_packet_id) {
                 if (MapAudioMfuPresentationTimestampUsAnchorSystemTimeUs.size() == 0) {
                     MapAudioMfuPresentationTimestampUsAnchorSystemTimeUs.put(toProcessMfuByteBufferFragment.mfu_presentation_time_uS_computed, System.currentTimeMillis() * 1000);
                 }
