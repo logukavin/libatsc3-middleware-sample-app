@@ -25,11 +25,12 @@ steps:
     inputs:
       workingDirectory: ''
       gradleWrapperFile: 'gradlew'
+      javaHomeOption: 'JDKVersion'
       gradleOptions: '-Xmx3072m'
       publishJUnitResults: true
       testResultsFiles: '**/TEST-*.xml'
-      tasks: 'clean build'
-    displayName: gradlew build, test and publish
+      tasks: 'clean build, :sample-app:assembleStandaloneDebug'
+    displayName: gradlew build
 
   - task: CopyFiles@2
     displayName: 'Copy .apk files to artifact staging directory'
