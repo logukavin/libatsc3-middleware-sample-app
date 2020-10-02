@@ -56,6 +56,8 @@ class ReceiverMediaPlayer @JvmOverloads constructor(
     }
 
     fun play(mediaUri: Uri) {
+        reset()
+
         val dashMediaSource = dashMediaSourceFactory.createMediaSource(mediaUri)
         player = createDefaultExoPlayer().apply {
             prepare(dashMediaSource)
@@ -64,6 +66,8 @@ class ReceiverMediaPlayer @JvmOverloads constructor(
     }
 
     fun play(mmtBuffer: MMTDataBuffer) {
+        reset()
+
         val mediaSource = ProgressiveMediaSource.Factory({
             MMTDataSource(mmtBuffer)
         }, {
@@ -77,14 +81,14 @@ class ReceiverMediaPlayer @JvmOverloads constructor(
     }
 
     fun stop() {
-        player?.stop()
-        player = null
+        reset()
     }
 
-    fun reset() {
+    private fun reset() {
         player?.let {
             it.stop()
             it.release()
+            player = null
         }
     }
 

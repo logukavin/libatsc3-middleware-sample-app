@@ -3,9 +3,10 @@ package com.nextgenbroadcast.mobile.mmt.exoplayer2;
 import com.google.android.exoplayer2.util.Util;
 
 public final class MMTDef {
-    static final int SIZE_SAMPLE_HEADER = Byte.BYTES /*sampleType*/
-            + Integer.BYTES /*sampleSize*/
-            + Long.BYTES /*sampleTime*/;
+    static final int SIZE_SAMPLE_HEADER = Byte.BYTES /*sample type*/
+            + Integer.BYTES /*sample size*/
+            + Long.BYTES /*sample presentation time*/
+            + Byte.BYTES /*is key frame*/;
 
     static final int SIZE_HEADER = Byte.BYTES /*video type*/
             + Byte.BYTES /*audio type*/
