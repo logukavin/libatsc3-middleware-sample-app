@@ -32,8 +32,8 @@ steps:
       gradleOptions: '-Xmx3072m'
       publishJUnitResults: true
       testResultsFiles: '**/TEST-*.xml'
-      tasks: 'clean build'
-    displayName: gradlew build
+      tasks: 'clean :nextgen-middleware:testReleaseUnitTest'
+    displayName: gradlew build, test and publish
 
   - task: CopyFiles@2
     displayName: 'Copy .aar files to artifact staging directory'
