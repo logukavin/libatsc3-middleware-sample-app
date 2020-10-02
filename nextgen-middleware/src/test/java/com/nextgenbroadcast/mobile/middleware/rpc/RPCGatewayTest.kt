@@ -72,11 +72,14 @@ class RPCGatewayTest {
     @Mock
     private lateinit var prefs: IMiddlewareSettings
 
+    @Mock
+    private lateinit var mockedMediaUri: Uri
+
     private var scaleFactor: Double = 1.0
     private var xPos: Double = 11.0
     private var yPos: Double = 22.0
     private val mockedSLSService: SLSService = SLSService(5003, "WZTV", "tag:sinclairplatform.com,2020:WZTV:2727")
-    private val mockedMediaUrl: String? = null
+    private val mockedMediaUrl: String = "htttp://mockedurl.com"
     private val deviceId = UUID.randomUUID().toString()
     private val advertisingId = UUID.randomUUID().toString()
 
@@ -85,7 +88,6 @@ class RPCGatewayTest {
     private val serviceGuidUrls: MutableLiveData<List<Urls>?> = MutableLiveData()
     private var selectedService: MutableLiveData<SLSService?> = MutableLiveData()
     private val rmpState: LiveData<PlaybackState> = MutableLiveData()
-    private val rmpMediaUrl: LiveData<Uri?> = MutableLiveData()
 
     @ExperimentalCoroutinesApi
     private val testDispatcher = TestCoroutineDispatcher()
@@ -108,13 +110,17 @@ class RPCGatewayTest {
         `when`(serviceController.serviceGuidUrls).thenReturn(serviceGuidUrls)
         `when`(repository.selectedService).thenReturn(selectedService)
         `when`(repository.selectedService).thenReturn(selectedService)
-        `when`(viewController.rmpMediaUri).thenReturn(rmpMediaUrl)
+        `when`(viewController.rmpMediaUri).thenReturn(MutableLiveData(mockedMediaUri))
         `when`(viewController.rmpState).thenReturn(rmpState)
         `when`(viewController.appData).thenReturn(appDataViewController)
         `when`(viewController.rmpPlaybackRate).thenReturn(rmpPlaybackRate)
+
+        `when`(mockedMediaUri.toString()).thenReturn(mockedMediaUrl)
+
         iRPCGateway = RPCGatewayImpl(serviceController, viewController, prefs, testDispatcher, testDispatcher)
         middlewareWebSocket = PowerMockito.spy(MiddlewareWebSocket(iRPCGateway))
         iRPCGateway.onSocketOpened(middlewareWebSocket)
+
         Dispatchers.setMain(testDispatcher)
     }
 
