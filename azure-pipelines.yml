@@ -29,7 +29,7 @@ steps:
       gradleOptions: '-Xmx3072m'
       publishJUnitResults: true
       testResultsFiles: '**/TEST-*.xml'
-      tasks: 'clean build, :sample-app:assembleStandaloneDebug'
+      tasks: 'clean build'
     displayName: gradlew build
 
   - task: CopyFiles@2
