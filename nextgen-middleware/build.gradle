@@ -1,0 +1,117 @@
+apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
+apply plugin: 'kotlin-android-extensions'
+apply plugin: 'kotlin-kapt'
+
+android {
+    compileSdkVersion rootProject.compileSdkVersion
+    buildToolsVersion rootProject.buildToolsVersion
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    kotlinOptions {
+        jvmTarget = "1.8"
+    }
+
+    defaultConfig {
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode 1
+        versionName "1.0"
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        consumerProguardFiles "consumer-rules.pro"
+
+        ndk {
+            abiFilters 'arm64-v8a', 'x86', 'x86_64'
+        }
+
+        resValue "string", "nextgenMediaFileProvider", "com.nextgenbroadcast.mobile.middleware.provider"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+
+        debug {
+            jniDebuggable = true
+            debuggable true
+        }
+    }
+
+    externalNativeBuild {
+        ndkBuild {
+            path 'Android.mk'
+        }
+    }
+
+    packagingOptions {
+        // specify the path to your object binaries, or generally:
+        doNotStrip '**.so'
+    }
+
+    testOptions {
+        unitTests.includeAndroidResources = true
+        unitTests.returnDefaultValues = true
+    }
+}
+
+def lifecycleVersion = rootProject.ext.lifecycleVersion
+def libatsc3Version = rootProject.ext.libatsc3Version
+def jettyVersion = '9.4.30.v20200611'
+def powermock_version = "2.0.7"
+
+dependencies {
+    implementation fileTree(dir: "libs", include: ["*.jar"])
+
+    implementation "org.ngbp.libatsc3:atsc3_core:$libatsc3Version"
+    implementation "org.ngbp.libatsc3:atsc3_bridge:$libatsc3Version"
+    implementation "org.ngbp.libatsc3:atsc3_phy_virtual:$libatsc3Version"
+    implementation "org.ngbp.libatsc3:atsc3_phy_lowasis:$libatsc3Version"
+
+    implementation project(":nextgen-core")
+    compileOnly project(":nextgen-mmt")
+
+    implementation 'com.github.nmuzhichin:jsonrpc-core:1.0.4.3'
+    implementation 'com.github.nmuzhichin:jsonrpc-jackson-extension:1.0.4.3'
+
+    implementation 'org.apache.commons:commons-lang3:3.9'
+
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    implementation 'androidx.core:core-ktx:1.3.1'
+    implementation 'androidx.appcompat:appcompat:1.2.0'
+
+    implementation group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.11.0'
+    implementation 'com.google.code.gson:gson:2.8.6'
+
+    implementation "org.eclipse.jetty:jetty-server:$jettyVersion"
+    implementation "org.eclipse.jetty:jetty-servlet:$jettyVersion"
+    implementation group: 'org.eclipse.jetty.websocket', name: 'websocket-server', version: "$jettyVersion"
+
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.3.7'
+
+    implementation "androidx.lifecycle:lifecycle-livedata-ktx:$lifecycleVersion"
+    implementation "androidx.lifecycle:lifecycle-service:$lifecycleVersion"
+
+    implementation("androidx.startup:startup-runtime:1.0.0-alpha03") {
+        transitive = true
+    }
+
+    testImplementation project(":nextgen-mmt")
+    testImplementation 'junit:junit:4.12'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.2'
+    testImplementation 'androidx.test:core:1.3.0'
+    testImplementation "android.arch.core:core-testing:1.1.1"
+    testImplementation "org.powermock:powermock-module-junit4:$powermock_version"
+    testImplementation "org.powermock:powermock-api-mockito2:$powermock_version"
+    testImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.3.8'
+    testImplementation 'com.squareup.okhttp3:okhttp:3.12.5'
+    testImplementation "android.arch.core:core-testing:1.1.1"
+}
+
+apply from: '../publish.gradle'
