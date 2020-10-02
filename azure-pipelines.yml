@@ -11,10 +11,6 @@ trigger:
 pool:
   vmImage: 'ubuntu-latest'
 
-variables:
-  - name: ARTIFACT_VERSION
-    value: 0.0.0
-
 steps:
   - bash:
        echo "y" | sudo $(ANDROID_SDK_ROOT)/tools/bin/sdkmanager --install "ndk;21.0.6113669" --sdk_root=${ANDROID_SDK_ROOT}
@@ -32,14 +28,14 @@ steps:
       gradleOptions: '-Xmx3072m'
       publishJUnitResults: true
       testResultsFiles: '**/TEST-*.xml'
-      tasks: 'clean :nextgen-middleware:testReleaseUnitTest'
+      tasks: 'clean build'
     displayName: gradlew build, test and publish
 
   - task: CopyFiles@2
-    displayName: 'Copy .aar files to artifact staging directory'
+    displayName: 'Copy .apk files to artifact staging directory'
     inputs:
         SourceFolder: '$(system.defaultworkingdirectory)'
-        Contents: '**/*.aar'
+        Contents: '**/*.apk'
         TargetFolder: '$(build.artifactstagingdirectory)'
     condition: succeededOrFailed()
 
