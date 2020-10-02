@@ -402,6 +402,7 @@ class MainActivity : BaseActivity() {
     }
 
     private fun setBAAvailability(available: Boolean) {
+        if (isInPictureInPictureMode) return
         user_agent_web_view.visibility = if (available) View.VISIBLE else View.INVISIBLE
     }
 
