@@ -27,6 +27,11 @@ class ReceiverMediaPlayer @JvmOverloads constructor(
         context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
 ) : PlayerView(context, attrs, defStyleAttr) {
 
+    private var buffering = false
+    private val enableBufferingProgress = Runnable {
+        setShowBuffering(SHOW_BUFFERING_ALWAYS)
+    }
+
     private val dashMediaSourceFactory: DashMediaSource.Factory by lazy {
         createMediaSourceFactory()
     }
@@ -109,6 +114,7 @@ class ReceiverMediaPlayer @JvmOverloads constructor(
                 override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
                     val state = when (playbackState) {
                         Player.STATE_BUFFERING, Player.STATE_READY -> {
+                            updateBufferingState(playbackState == Player.STATE_BUFFERING)
                             if (playWhenReady) PlaybackState.PLAYING else PlaybackState.PAUSED
                         }
                         Player.STATE_IDLE, Player.STATE_ENDED -> {
@@ -134,6 +140,19 @@ class ReceiverMediaPlayer @JvmOverloads constructor(
         }
     }
 
+    private fun updateBufferingState(isBuffering: Boolean) {
+        if (isBuffering) {
+            if (!buffering) {
+                buffering = true
+                postDelayed(enableBufferingProgress, 500)
+            }
+        } else {
+            buffering = false
+            removeCallbacks(enableBufferingProgress)
+            setShowBuffering(SHOW_BUFFERING_NEVER)
+        }
+    }
+
     private fun createMediaSourceFactory(): DashMediaSource.Factory {
         val userAgent = AppUtils.getUserAgent(context)
         val manifestDataSourceFactory = DefaultDataSourceFactory(context, userAgent)
@@ -156,6 +175,12 @@ class ReceiverMediaPlayer @JvmOverloads constructor(
                 }
             })
         }
+    }
+
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+
+        removeCallbacks(enableBufferingProgress)
     }
 
     interface EventListener {
