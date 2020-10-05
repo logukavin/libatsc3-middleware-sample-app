@@ -52,7 +52,7 @@ internal class ViewControllerImpl(
         if (source == PlaybackSource.BROADCAST) {
             repository.routeMediaUrl.map { input ->
                 input?.let {
-                    if (input.startsWith("mmt")) {
+                    if (input.startsWith("mmt://")) {
                         input.toUri()
                     } else {
                         fileProvider.getFileProviderUri(input)
