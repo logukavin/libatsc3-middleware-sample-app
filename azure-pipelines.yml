@@ -34,7 +34,7 @@ steps:
       publishJUnitResults: true
       testResultsFiles: '**/TEST-*.xml'
       tasks: 'clean build'
-    displayName: gradlew build
+    displayName: gradlew build, test and publish
 
   - task: CopyFiles@2
     displayName: 'Copy .apk files to artifact staging directory'
