@@ -112,7 +112,7 @@ internal class ServiceControllerImpl (
             }
 
             if (atsc3Module.slsProtocol == Atsc3Module.SLS_PROTOCOL_MMT) {
-                repository.setMediaUrl("mmt")
+                repository.setMediaUrl("mmt://${service.shortName}")
             }
         } else {
             // Reset HELD and service if service can't be selected

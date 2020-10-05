@@ -310,7 +310,7 @@ class MainActivity : BaseActivity() {
     }
 
     private fun startPlayback(mediaUri: Uri) {
-        if (mediaUri.path == "mmt") {
+        if (mediaUri.toString().startsWith("mmt://")) {
             receiverPresenter?.createMMTSource()?.let { source ->
                 receiver_player.startPlayback(source)
             } ?: let {
