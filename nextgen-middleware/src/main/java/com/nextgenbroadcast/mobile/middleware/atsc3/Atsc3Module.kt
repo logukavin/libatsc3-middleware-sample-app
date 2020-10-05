@@ -122,19 +122,12 @@ internal class Atsc3Module(
     fun openUsbDevice(device: UsbDevice): Boolean {
         log("Opening USB device: ${device.deviceName}")
 
-        Atsc3UsbDevice.DumpAllAtsc3UsbDevices()
-
-        Atsc3UsbDevice.FindFromUsbDevice(device)?.let {
-            log("usbPHYLayerDeviceTryToInstantiateFromRegisteredPHYNDKs: Atsc3UsbDevice already instantiated: $device, instance: $it")
-            return false
-        } ?: log("usbPHYLayerDeviceTryToInstantiateFromRegisteredPHYNDKs: Atsc3UsbDevice map returned : $device, but null instance?")
-
-        close()
-
-        val candidatePHYList = Atsc3NdkPHYClientBase.GetCandidatePHYImplementations(device)
-                ?: return false
+        val candidatePHYList = getPHYImplementations(device)
+        if (candidatePHYList.isEmpty()) return false
 
         val conn = usbManager.openDevice(device) ?: return false
+
+        close()
 
         val atsc3UsbDevice = Atsc3UsbDevice(device, conn)
 
@@ -172,6 +165,17 @@ internal class Atsc3Module(
         atsc3UsbDevice.destroy()
 
         return false
+    }
+
+    fun isDeviceCompatible(device: UsbDevice) = getPHYImplementations(device).isNotEmpty()
+
+    private fun getPHYImplementations(device: UsbDevice): List<Atsc3NdkPHYClientBase.USBVendorIDProductIDSupportedPHY> {
+        Atsc3UsbDevice.FindFromUsbDevice(device)?.let {
+            log("usbPHYLayerDeviceTryToInstantiateFromRegisteredPHYNDKs: Atsc3UsbDevice already instantiated: $device, instance: $it")
+            return emptyList()
+        } ?: log("usbPHYLayerDeviceTryToInstantiateFromRegisteredPHYNDKs: Atsc3UsbDevice map returned : $device, but null instance?")
+
+        return Atsc3NdkPHYClientBase.GetCandidatePHYImplementations(device) ?: emptyList()
     }
 
     fun selectService(serviceId: Int): Boolean {
