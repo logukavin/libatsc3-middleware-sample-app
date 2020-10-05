@@ -1,6 +1,7 @@
 package com.nextgenbroadcast.mobile.middleware.atsc3.entities.app
 
 data class Atsc3Application(
+        val packageName: String,
         val appContextIdList: List<String>,
         val cachePath: String,
         val files: Map<String, Atsc3ApplicationFile>
@@ -10,6 +11,6 @@ data class Atsc3Application(
         list.forEach { file ->
             newFiles[file.contentLocation] = file
         }
-        return Atsc3Application(this.appContextIdList, this.cachePath, newFiles)
+        return Atsc3Application(this.packageName, this.appContextIdList, this.cachePath, newFiles)
     }
 }
