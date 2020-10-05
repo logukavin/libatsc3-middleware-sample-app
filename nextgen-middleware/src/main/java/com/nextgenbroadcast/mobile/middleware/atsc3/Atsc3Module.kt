@@ -359,6 +359,7 @@ internal class Atsc3Module(
         }?.toMap() ?: emptyMap<String, Atsc3ApplicationFile>()
 
         return Atsc3Application(
+                packageMetadata.packageName,
                 packageMetadata.appContextIdList.split(" "),
                 String.format("%s/%s", jni_getCacheDir(), packageMetadata.packageExtractPath),
                 files
