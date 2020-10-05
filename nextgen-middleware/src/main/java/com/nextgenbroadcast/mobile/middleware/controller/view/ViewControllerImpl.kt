@@ -35,7 +35,7 @@ internal class ViewControllerImpl(
             } ?: held.bbandEntryPageUrl ?: return@let null
             val compatibleServiceIds = held.coupledServices ?: emptyList()
             val application = applications?.firstOrNull { app ->
-                app.appContextIdList.contains(appContextId)
+                app.appContextIdList.contains(appContextId) && app.packageName == held.bcastEntryPackageUrl
             }
 
             AppData(
