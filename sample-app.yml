@@ -33,8 +33,8 @@ steps:
       gradleOptions: '-Xmx3072m'
       publishJUnitResults: true
       testResultsFiles: '**/TEST-*.xml'
-      tasks: 'clean test assembleDebug'
-    displayName: gradlew build, test and publish
+      tasks: 'clean assembleDebug'
+    displayName: gradlew build
 
   - task: CopyFiles@2
     displayName: 'Copy .apk files to artifact staging directory'
