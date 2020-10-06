@@ -153,7 +153,8 @@ internal class Atsc3Module(
                     atsc3NdkPHYClientBaseCandidate.setAtsc3UsbDevice(atsc3UsbDevice)
                     atsc3UsbDevice.setAtsc3NdkPHYClientBase(atsc3NdkPHYClientBaseCandidate)
                     //jjustman-2020-08-31 - hack for LowaSIS - tune to 593000 - CH34
-                    atsc3NdkPHYClientBaseCandidate.tune(593000, 0)
+                    //jjustman-2020-10-06 - chage for jj's lab to 659
+                    atsc3NdkPHYClientBaseCandidate.tune(659000, 0)
 
                     atsc3NdkPHYClientInstance = atsc3NdkPHYClientBaseCandidate
                     setState(State.OPENED)

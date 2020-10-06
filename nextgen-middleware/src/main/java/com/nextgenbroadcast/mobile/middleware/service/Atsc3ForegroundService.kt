@@ -233,7 +233,10 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     }
 
     private fun requestDevicePermission(device: UsbDevice) {
-        usbManager.requestPermission(device, PendingIntent.getService(this, 0, Intent(ACTION_USB_PERMISSION), 0))
+        val intent = Intent(this, clazz).apply {
+            action = ACTION_USB_PERMISSION
+        }
+        usbManager.requestPermission(device, PendingIntent.getService(this, 0, intent, 0))
     }
 
     private fun startWebServer(rpc: IRPCGateway, web: IWebGateway) {
