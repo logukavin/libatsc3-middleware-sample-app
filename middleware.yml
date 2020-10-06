@@ -28,7 +28,6 @@ steps:
     displayName: 'Maven Authenticate'
     inputs:
       artifactsFeeds: 'middleware, nextgen'
- 
 
   - task: Gradle@2
     inputs:
@@ -37,8 +36,18 @@ steps:
       javaHomeOption: 'JDKVersion'
       publishJUnitResults: true
       testResultsFiles: '**/TEST-*.xml'
-      tasks: 'clean :nextgen-core:assembleRelease :nextgen-middleware:assembleRelease :nextgen-mmt:assembleRelease :nextgen-view:assembleRelease :nextgen-middleware:testReleaseUnitTest :nextgen-core:publish :nextgen-middleware:publish :nextgen-mmt:publish :nextgen-view:publish -PartifactVersion=$(ARTIFACT_VERSION)'
-    displayName: gradlew build, test and publish
+      tasks: 'clean :nextgen-core:assembleRelease :nextgen-middleware:assembleRelease :nextgen-mmt:assembleRelease :nextgen-view:assembleRelease'
+    displayName: gradlew clean and build
+
+  - task: Gradle@2
+    inputs:
+      workingDirectory: ''
+      gradleWrapperFile: 'gradlew'
+      javaHomeOption: 'JDKVersion'
+      publishJUnitResults: true
+      testResultsFiles: '**/TEST-*.xml'
+      tasks: ':nextgen-core:publish :nextgen-middleware:publish :nextgen-mmt:publish :nextgen-view:publish -PartifactVersion=$(ARTIFACT_VERSION)'
+    displayName: gradlew publish
 
   - task: CopyFiles@2
     displayName: 'Copy .aar files to artifact staging directory'
@@ -46,10 +55,8 @@ steps:
         SourceFolder: '$(system.defaultworkingdirectory)'
         Contents: '**/*.aar'
         TargetFolder: '$(build.artifactstagingdirectory)'
-    condition: succeededOrFailed()
 
   - task: PublishBuildArtifacts@1
     displayName: 'Publish Artifact: drop'
     inputs:
         PathtoPublish: '$(build.artifactstagingdirectory)'
-    condition: succeededOrFailed()
