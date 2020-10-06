@@ -29,6 +29,7 @@ internal class StandaloneServiceHandler(
         viewController.appData.removeObservers(lifecycleOwner)
         viewController.rmpLayoutParams.removeObservers(lifecycleOwner)
         viewController.rmpMediaUri.removeObservers(lifecycleOwner)
+        fileProvider.revokeAllUriPermissions()
     }
 
     override fun handleMessage(msg: Message) {
