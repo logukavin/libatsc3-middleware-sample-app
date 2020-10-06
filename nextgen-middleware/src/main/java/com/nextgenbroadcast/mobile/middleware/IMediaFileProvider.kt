@@ -5,4 +5,5 @@ import android.net.Uri
 interface IMediaFileProvider {
     fun getFileProviderUri(path: String): Uri
     fun grantUriPermission(toPackage: String, uri: Uri)
+    fun revokeAllUriPermissions()
 }

@@ -32,12 +32,13 @@ import com.nextgenbroadcast.mobile.middleware.gateway.web.IWebGateway
 import com.nextgenbroadcast.mobile.middleware.gateway.web.WebGatewayImpl
 import com.nextgenbroadcast.mobile.middleware.phy.Atsc3DeviceReceiver
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
-import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
-import com.nextgenbroadcast.mobile.middleware.settings.MiddlewareSettingsImpl
 import com.nextgenbroadcast.mobile.middleware.repository.RepositoryImpl
 import com.nextgenbroadcast.mobile.middleware.server.web.MiddlewareWebServer
-import kotlinx.coroutines.Dispatchers
+import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
+import com.nextgenbroadcast.mobile.middleware.settings.MiddlewareSettingsImpl
+import kotlinx.coroutines.*
 import java.io.File
+import java.util.*
 
 abstract class Atsc3ForegroundService : BindableForegroundService() {
     private lateinit var wakeLock: WakeLock
@@ -287,6 +288,9 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
             private val context: Context
     ) : IMediaFileProvider {
         private val authority = context.getString(R.string.nextgenMediaFileProvider)
+        private val providedFiles: Queue<ReadableFile> = LinkedList()
+
+        data class ReadableFile(val pg: String, val uri: Uri, val startTime: Long)
 
         override fun getFileProviderUri(path: String): Uri = FileProvider.getUriForFile(
                 context,
@@ -296,6 +300,46 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
         override fun grantUriPermission(toPackage: String, uri: Uri) {
             context.grantUriPermission(toPackage, uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            if(uri.lastPathSegment != "mpd.mpd") {
+                revokeUriPermissionWithDelay(ReadableFile(toPackage, uri, System.currentTimeMillis()))
+            }
+        }
+
+        private val ioScope = CoroutineScope(Dispatchers.IO)
+        private var revokePermissionJob: Job? = null
+
+        private fun revokeUriPermissionWithDelay(readableFile: ReadableFile) {
+            providedFiles.add(readableFile)
+            if(null == revokePermissionJob) {
+                revokePermissionJob = ioScope.launch {
+                    delay(DELAY_TIME)
+                    withContext(Dispatchers.Main) {
+                        val time = System.currentTimeMillis()
+                        providedFiles.filter { time - it.startTime >= DELAY_TIME }.forEach { readableFile ->
+                            context.revokeUriPermission(readableFile.pg, readableFile.uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            providedFiles.remove(readableFile)
+                        }
+                        revokePermissionJob = null
+                    }
+                }
+            }
+        }
+
+        override fun revokeAllUriPermissions() {
+            revokePermissionJob?.let {
+                it.cancel()
+                revokePermissionJob = null
+            }
+            if(providedFiles.isNotEmpty()) {
+                providedFiles.forEach { readableFile ->
+                    context.revokeUriPermission(readableFile.pg, readableFile.uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                providedFiles.clear()
+            }
+        }
+
+        companion object {
+            const val DELAY_TIME: Long = 60 * 1000
         }
     }
 
