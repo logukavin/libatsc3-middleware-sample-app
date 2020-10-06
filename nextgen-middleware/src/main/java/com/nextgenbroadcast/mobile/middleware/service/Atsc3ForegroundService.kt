@@ -97,6 +97,12 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         scanUSBDevices()
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+
+        atsc3Module.close()
+    }
+
     override fun onBind(intent: Intent): IBinder? {
         super.onBind(intent)
 
