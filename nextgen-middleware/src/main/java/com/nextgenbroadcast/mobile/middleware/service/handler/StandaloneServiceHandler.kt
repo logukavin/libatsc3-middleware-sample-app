@@ -181,7 +181,7 @@ internal class StandaloneServiceHandler(
     private fun observeRPMMediaUrl(sendToMessenger: Messenger, clientPackage: String) {
         viewController.rmpMediaUri.observe(lifecycleOwner, { rmpMediaUri ->
             rmpMediaUri?.let { uri ->
-                fileProvider.grantUriPermission(clientPackage, uri)
+                fileProvider.grantUriPermission(clientPackage, uri, false)
                 sendToMessenger.send(buildMessage(
                         IServiceBinder.LIVEDATA_RMP_MEDIA_URI,
                         bundleOf(
