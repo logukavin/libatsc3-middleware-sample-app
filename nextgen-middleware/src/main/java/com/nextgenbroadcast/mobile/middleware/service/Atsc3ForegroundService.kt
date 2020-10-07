@@ -55,6 +55,8 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     private var webServer: MiddlewareWebServer? = null
     private var deviceReceiver: Atsc3DeviceReceiver? = null
 
+    private var isInitialized = false
+
     private val usbManager: UsbManager by lazy {
         getSystemService(Context.USB_SERVICE) as UsbManager
     }
@@ -93,8 +95,6 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         }
 
         mediaFileProvider = MediaFileProvider(applicationContext)
-
-        scanUSBDevices()
     }
 
     override fun onDestroy() {
@@ -105,6 +105,8 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
     override fun onBind(intent: Intent): IBinder? {
         super.onBind(intent)
+
+        maybeInitialize()
 
         return createServiceBinder(serviceController, requireViewController())
     }
@@ -142,6 +144,16 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         }
 
         return START_NOT_STICKY
+    }
+
+    private fun maybeInitialize() {
+        if (isInitialized) return
+
+        isInitialized = true;
+
+        if (!atsc3Module.scanForEmbeddedDevices()) {
+            scanForCompatableUSBDevices()
+        }
     }
 
     private fun openRoute(filePath: String?) {
@@ -213,7 +225,8 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
     private fun onDevicePermissionGranted(device: UsbDevice?) {
         device?.let {
-            openRoute(device)
+            // open device using a new Intent to start Service as foreground
+            startForDevice(this, device)
         }
     }
 
@@ -224,14 +237,15 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         }
     }
 
-    private fun scanUSBDevices() {
+    private fun scanForCompatableUSBDevices() {
         usbManager.deviceList.map { (_, device) ->
             device
         }.firstOrNull { device ->
             atsc3Module.isDeviceCompatible(device)
         }?.let { device ->
             if (usbManager.hasPermission(device)) {
-                openRoute(device)
+                // open device using a new Intent to start Service as foreground
+                startForDevice(this, device)
             } else {
                 requestDevicePermission(device)
             }
