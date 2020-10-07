@@ -23,15 +23,5 @@ steps:
       javaHomeOption: 'JDKVersion'
       publishJUnitResults: true
       testResultsFiles: '**/TEST-*.xml'
-      tasks: 'clean :nextgen-core:assembleDebug :nextgen-middleware:assembleDebug :nextgen-mmt:assembleDebug :nextgen-view:assembleDebug'
-    displayName: gradlew clean and build
-
-  - task: Gradle@2
-    inputs:
-      workingDirectory: ''
-      gradleWrapperFile: 'gradlew'
-      javaHomeOption: 'JDKVersion'
-      publishJUnitResults: true
-      testResultsFiles: '**/TEST-*.xml'
-      tasks: ':nextgen-middleware:testDebugUnitTest'
-    displayName: gradlew test
+      tasks: 'clean :nextgen-middleware:testDebugUnitTest'
+    displayName: gradlew clean and test
