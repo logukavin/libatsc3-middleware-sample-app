@@ -6,21 +6,17 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
-import android.net.Uri
 import android.os.IBinder
 import android.os.PowerManager
 import android.os.PowerManager.WakeLock
 import androidx.core.content.ContextCompat
-import androidx.core.content.FileProvider
 import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.Observer
 import com.nextgenbroadcast.mobile.core.cert.UserAgentSSLContext
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.model.SLSService
-import com.nextgenbroadcast.mobile.middleware.BuildConfig
-import com.nextgenbroadcast.mobile.middleware.IMediaFileProvider
-import com.nextgenbroadcast.mobile.middleware.R
+import com.nextgenbroadcast.mobile.middleware.*
 import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3Module
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
 import com.nextgenbroadcast.mobile.middleware.controller.service.ServiceControllerImpl
@@ -37,8 +33,6 @@ import com.nextgenbroadcast.mobile.middleware.server.web.MiddlewareWebServer
 import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
 import com.nextgenbroadcast.mobile.middleware.settings.MiddlewareSettingsImpl
 import kotlinx.coroutines.*
-import java.io.File
-import java.util.*
 
 abstract class Atsc3ForegroundService : BindableForegroundService() {
     private lateinit var wakeLock: WakeLock
@@ -89,7 +83,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
             })
         }
 
-        mediaFileProvider = MediaFileProvider(applicationContext)
+        mediaFileProvider = MediaFileProvider(applicationContext, MediaFileSweeper(applicationContext))
     }
 
     override fun onBind(intent: Intent): IBinder? {
@@ -283,65 +277,6 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     )
 
     class InitializationException : RuntimeException()
-
-    private class MediaFileProvider(
-            private val context: Context
-    ) : IMediaFileProvider {
-        private val authority = context.getString(R.string.nextgenMediaFileProvider)
-        private val providedFiles: Queue<ReadableFile> = LinkedList()
-
-        data class ReadableFile(val pg: String, val uri: Uri, val startTime: Long)
-
-        override fun getFileProviderUri(path: String): Uri = FileProvider.getUriForFile(
-                context,
-                authority,
-                File(path)
-        )
-
-        override fun grantUriPermission(toPackage: String, uri: Uri) {
-            context.grantUriPermission(toPackage, uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            if(uri.lastPathSegment != "mpd.mpd") {
-                revokeUriPermissionWithDelay(ReadableFile(toPackage, uri, System.currentTimeMillis()))
-            }
-        }
-
-        private val ioScope = CoroutineScope(Dispatchers.IO)
-        private var revokePermissionJob: Job? = null
-
-        private fun revokeUriPermissionWithDelay(readableFile: ReadableFile) {
-            providedFiles.add(readableFile)
-            if(null == revokePermissionJob) {
-                revokePermissionJob = ioScope.launch {
-                    delay(DELAY_TIME)
-                    withContext(Dispatchers.Main) {
-                        val time = System.currentTimeMillis()
-                        providedFiles.filter { time - it.startTime >= DELAY_TIME }.forEach { readableFile ->
-                            context.revokeUriPermission(readableFile.pg, readableFile.uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                            providedFiles.remove(readableFile)
-                        }
-                        revokePermissionJob = null
-                    }
-                }
-            }
-        }
-
-        override fun revokeAllUriPermissions() {
-            revokePermissionJob?.let {
-                it.cancel()
-                revokePermissionJob = null
-            }
-            if(providedFiles.isNotEmpty()) {
-                providedFiles.forEach { readableFile ->
-                    context.revokeUriPermission(readableFile.pg, readableFile.uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                }
-                providedFiles.clear()
-            }
-        }
-
-        companion object {
-            const val DELAY_TIME: Long = 60 * 1000
-        }
-    }
 
     companion object {
         private const val SERVICE_ACTION = "${BuildConfig.LIBRARY_PACKAGE_NAME}.intent.action"
