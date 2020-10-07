@@ -95,6 +95,7 @@ internal class Atsc3Module(
                 phy.tune(659000, 0)
                 return@let phy
             } else {
+                phy.deinit()
                 return@let null
             }
         } ?: return false
