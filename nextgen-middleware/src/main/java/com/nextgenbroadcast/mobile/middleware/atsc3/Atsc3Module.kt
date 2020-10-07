@@ -220,6 +220,10 @@ internal class Atsc3Module(
 
     fun close() {
         atsc3NdkPHYClientInstance?.let { client ->
+            log("closeUsbDevice -- calling client.deinit")
+
+            client.deinit()
+
             client.atsc3UsbDevice?.let { device ->
                 log("closeUsbDevice -- before FindFromUsbDevice")
                 Atsc3UsbDevice.DumpAllAtsc3UsbDevices();
@@ -228,13 +232,6 @@ internal class Atsc3Module(
 
                 Atsc3UsbDevice.DumpAllAtsc3UsbDevices();
             }
-            client.stop()
-            client.deinit()
-//            try {
-//                Thread.sleep(1000)
-//            } catch (e: InterruptedException) {
-//                e.printStackTrace()
-//            }
             atsc3NdkPHYClientInstance = null
         }
 
