@@ -20,6 +20,7 @@ import org.ngbp.libatsc3.middleware.android.application.sync.mmt.MfuByteBufferFr
 import org.ngbp.libatsc3.middleware.android.application.sync.mmt.MpuMetadata_HEVC_NAL_Payload
 import org.ngbp.libatsc3.middleware.android.phy.Atsc3NdkPHYClientBase
 import org.ngbp.libatsc3.middleware.android.phy.Atsc3UsbDevice
+import org.ngbp.libatsc3.middleware.android.phy.SaankhyaPHYAndroid
 import org.ngbp.libatsc3.middleware.android.phy.virtual.PcapDemuxedVirtualPHYAndroid
 import org.ngbp.libatsc3.middleware.android.phy.virtual.PcapSTLTPVirtualPHYAndroid
 import org.ngbp.libatsc3.middleware.android.phy.virtual.srt.SRTRxSTLTPVirtualPHYAndroid
@@ -77,6 +78,28 @@ internal class Atsc3Module(
     fun setListener(listener: Listener?) {
         if (this.listener != null) throw IllegalStateException("Atsc3Module listener already initialized")
         this.listener = listener
+    }
+
+    fun scanForEmbeddedDevices(): Boolean {
+        atsc3NdkPHYClientInstance = SaankhyaPHYAndroid().let { phy ->
+            //jjustman-2020-08-31 - force loading of SaankhyaPHYAndroid with SDIO configuration
+            log("SaankhyaPHYAndroid: calling atsc3NdkPHYClientInstance.init()")
+            var sl_res = phy.init()
+            log(String.format("SaankhyaPHYAndroid: return from atsc3NdkPHYClientInstance.init(): %d", sl_res))
+
+            log(String.format("SaankhyaPHYAndroid: calling atsc3NdkPHYClientInstance.open(-1, SDIO)"))
+            sl_res = phy.open(-1, "SDIO")
+            log(String.format("SaankhyaPHYAndroid: return from atsc3NdkPHYClientInstance.open(-1, SDIO): %d", sl_res))
+
+            if(sl_res == 0) {
+                phy.tune(659000, 0)
+                return@let phy
+            } else {
+                return@let null
+            }
+        } ?: return false
+
+        return true
     }
 
     fun openPcapFile(filename: String, type: PcapType): Boolean {
