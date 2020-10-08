@@ -6,23 +6,22 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.DialogFragment
 import kotlinx.android.synthetic.main.dialog_settings.*
-import java.lang.Exception
 
-class SettingsDialog(
-        private val listener: OnSettingsDialogListener
-): DialogFragment() {
+class SettingsDialog: DialogFragment() {
 
     interface OnSettingsDialogListener {
         fun onSetFrequency(frequency: Int)
     }
 
+    var listener: OnSettingsDialogListener? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setStyle(STYLE_NORMAL, android.R.style.Theme_Material_Light_Dialog)
+        setStyle(STYLE_NORMAL, R.style.Dialog)
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        dialog?.setTitle("Settings")
+        dialog?.setTitle(R.string.settings)
         return inflater.inflate(R.layout.dialog_settings, null)
     }
 
@@ -30,13 +29,9 @@ class SettingsDialog(
         super.onViewCreated(view, savedInstanceState)
         applyButton.setOnClickListener {
             dismiss()
-            listener.onSetFrequency(
-                    try {
-                        Integer.parseInt(frequencyEditText.text.toString())
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                        0
-                    })
+            frequencyEditText.text.toString().toIntOrNull()?.let {
+                listener?.onSetFrequency(it)
+            }
         }
     }
 }

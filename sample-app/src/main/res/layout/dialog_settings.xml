@@ -10,7 +10,7 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:inputType="number"
-        android:hint="Enter frequency"
+        android:hint="@string/enter_frequency"
         android:focusedByDefault="true"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintLeft_toLeftOf="parent"
@@ -18,7 +18,7 @@
 
     <Button
         android:id="@+id/applyButton"
-        android:text="Apply"
+        android:text="@string/apply"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         app:layout_constraintTop_toBottomOf="@+id/frequencyEditText"
