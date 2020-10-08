@@ -77,7 +77,9 @@ class ReceiverMediaPlayer @JvmOverloads constructor(
             MMTDataSource(mmtBuffer)
         }, {
             arrayOf(MMTExtractor())
-        }).createMediaSource("mmt".toUri())
+        }).apply {
+            setLoadErrorHandlingPolicy(createDefaultLoadErrorHandlingPolicy())
+        }.createMediaSource("mmt".toUri())
 
         player = createMMTExoPlayer().apply {
             prepare(mediaSource)
@@ -162,18 +164,7 @@ class ReceiverMediaPlayer @JvmOverloads constructor(
                 DefaultDashChunkSource.Factory(mediaDataSourceFactory),
                 manifestDataSourceFactory
         ).apply {
-            setLoadErrorHandlingPolicy(object : DefaultLoadErrorHandlingPolicy() {
-                override fun getRetryDelayMsFor(dataType: Int, loadDurationMs: Long, exception: IOException?, errorCount: Int): Long {
-                    Log.w("ExoPlayerCustomLoadErrorHandlingPolicy", "dataType: $dataType, loadDurationMs: $loadDurationMs, exception ex: $exception, errorCount: $errorCount")
-
-                    //jjustman-2019-11-07 - retry every 1s for exoplayer errors from ROUTE/DASH
-                    return 1000
-                }
-
-                override fun getMinimumLoadableRetryCount(dataType: Int): Int {
-                    return 1
-                }
-            })
+            setLoadErrorHandlingPolicy(createDefaultLoadErrorHandlingPolicy())
         }
     }
 
@@ -181,6 +172,21 @@ class ReceiverMediaPlayer @JvmOverloads constructor(
         super.onDetachedFromWindow()
 
         removeCallbacks(enableBufferingProgress)
+    }
+
+    private fun createDefaultLoadErrorHandlingPolicy(): DefaultLoadErrorHandlingPolicy {
+        return object : DefaultLoadErrorHandlingPolicy() {
+            override fun getRetryDelayMsFor(dataType: Int, loadDurationMs: Long, exception: IOException?, errorCount: Int): Long {
+                Log.w("ExoPlayerCustomLoadErrorHandlingPolicy", "dataType: $dataType, loadDurationMs: $loadDurationMs, exception ex: $exception, errorCount: $errorCount")
+
+                //jjustman-2019-11-07 - retry every 1s for exoplayer errors from ROUTE/DASH
+                return 1000
+            }
+
+            override fun getMinimumLoadableRetryCount(dataType: Int): Int {
+                return 1
+            }
+        }
     }
 
     interface EventListener {
