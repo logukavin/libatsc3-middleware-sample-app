@@ -55,6 +55,12 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     private var webServer: MiddlewareWebServer? = null
     private var deviceReceiver: Atsc3DeviceReceiver? = null
 
+    private var isInitialized = false
+
+    private val usbManager: UsbManager by lazy {
+        getSystemService(Context.USB_SERVICE) as UsbManager
+    }
+
     abstract fun createServiceBinder(serviceController: IServiceController, viewController: IViewController) : IBinder
 
     override fun onCreate() {
@@ -91,8 +97,16 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         mediaFileProvider = MediaFileProvider(applicationContext)
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+
+        atsc3Module.close()
+    }
+
     override fun onBind(intent: Intent): IBinder? {
         super.onBind(intent)
+
+        maybeInitialize()
 
         return createServiceBinder(serviceController, requireViewController())
     }
@@ -106,9 +120,15 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
                 ACTION_STOP -> killService()
 
-                ACTION_DEVICE_ATTACHED -> onDeviceAttached(intent.getParcelableExtra<UsbDevice?>(UsbManager.EXTRA_DEVICE))
+                ACTION_DEVICE_ATTACHED -> onDeviceAttached(intent.getParcelableExtra(UsbManager.EXTRA_DEVICE))
 
-                ACTION_DEVICE_DETACHED -> onDeviceDetached(intent.getParcelableExtra<UsbDevice?>(UsbManager.EXTRA_DEVICE))
+                ACTION_DEVICE_DETACHED -> onDeviceDetached(intent.getParcelableExtra(UsbManager.EXTRA_DEVICE))
+
+                ACTION_USB_PERMISSION -> intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false).let { granted ->
+                    if (granted) {
+                        onDevicePermissionGranted(intent.getParcelableExtra(UsbManager.EXTRA_DEVICE))
+                    }
+                }
 
                 ACTION_RMP_PLAY -> viewController?.rmpResume()
 
@@ -126,12 +146,36 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         return START_NOT_STICKY
     }
 
+    private fun maybeInitialize() {
+        if (isInitialized) return
+
+        isInitialized = true;
+
+        if (!atsc3Module.scanForEmbeddedDevices()) {
+            scanForCompatableUSBDevices()
+        }
+    }
+
     private fun openRoute(filePath: String?) {
         // change source to file. So, let's unregister device receiver
         unregisterDeviceReceiver()
 
         filePath?.let {
             serviceController.openRoute(filePath)
+        }
+    }
+
+    private fun openRoute(device: UsbDevice) {
+        startForeground()
+        unregisterDeviceReceiver()
+
+        serviceController.openRoute(device)
+
+        // Register BroadcastReceiver to detect when device is disconnected
+        deviceReceiver = Atsc3DeviceReceiver(device.deviceName).also { receiver ->
+            registerReceiver(receiver, IntentFilter().apply {
+                addAction(UsbManager.ACTION_USB_DEVICE_DETACHED)
+            })
         }
     }
 
@@ -168,23 +212,10 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         }
 
         //TODO: process case with second connected device
-
-        val usbManager = getSystemService(Context.USB_SERVICE) as UsbManager
         if (usbManager.hasPermission(device)) {
-            startForeground()
-            unregisterDeviceReceiver()
-
-            serviceController.openRoute(device)
-
-            // Register BroadcastReceiver to detect when device is disconnected
-            deviceReceiver = Atsc3DeviceReceiver(device.deviceName).also { receiver ->
-                registerReceiver(receiver, IntentFilter().apply {
-                    addAction(UsbManager.ACTION_USB_DEVICE_DETACHED)
-                })
-            }
+            openRoute(device)
         } else {
-            //TODO: If we need this request then add ACTION_USB_PERMISSION action processing
-            usbManager.requestPermission(device, PendingIntent.getService(this, 0, Intent(ACTION_USB_PERMISSION), 0))
+            requestDevicePermission(device)
         }
     }
 
@@ -192,11 +223,40 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         closeRoute()
     }
 
+    private fun onDevicePermissionGranted(device: UsbDevice?) {
+        device?.let {
+            // open device using a new Intent to start Service as foreground
+            startForDevice(this, device)
+        }
+    }
+
     private fun unregisterDeviceReceiver() {
         deviceReceiver?.let { receiver ->
             unregisterReceiver(receiver)
             deviceReceiver = null
         }
+    }
+
+    private fun scanForCompatableUSBDevices() {
+        usbManager.deviceList.map { (_, device) ->
+            device
+        }.firstOrNull { device ->
+            atsc3Module.isDeviceCompatible(device)
+        }?.let { device ->
+            if (usbManager.hasPermission(device)) {
+                // open device using a new Intent to start Service as foreground
+                startForDevice(this, device)
+            } else {
+                requestDevicePermission(device)
+            }
+        }
+    }
+
+    private fun requestDevicePermission(device: UsbDevice) {
+        val intent = Intent(this, clazz).apply {
+            action = ACTION_USB_PERMISSION
+        }
+        usbManager.requestPermission(device, PendingIntent.getService(this, 0, intent, 0))
     }
 
     private fun startWebServer(rpc: IRPCGateway, web: IWebGateway) {
@@ -314,7 +374,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         const val ACTION_OPEN_ROUTE = "$SERVICE_ACTION.OPEN_ROUTE"
         const val ACTION_CLOSE_ROUTE = "$SERVICE_ACTION.CLOSE_ROUTE"
 
-        const val EXTRA_DEVICE = "device"
+        const val EXTRA_DEVICE = UsbManager.EXTRA_DEVICE
         const val EXTRA_ROUTE_PATH = "route_path"
 
         internal lateinit var clazz: Class<out Atsc3ForegroundService>

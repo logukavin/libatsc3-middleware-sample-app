@@ -3,7 +3,7 @@ package com.nextgenbroadcast.mobile.middleware.controller.service
 import android.hardware.usb.UsbDevice
 import androidx.lifecycle.LiveData
 import com.nextgenbroadcast.mobile.core.presentation.ISelectorPresenter
-import com.nextgenbroadcast.mobile.middleware.presentation.IReceiverPresenter
+import com.nextgenbroadcast.mobile.core.presentation.IReceiverPresenter
 import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.Urls
 
 interface IServiceController : IReceiverPresenter, ISelectorPresenter {
