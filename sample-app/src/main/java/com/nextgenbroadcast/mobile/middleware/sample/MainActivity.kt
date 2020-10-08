@@ -207,9 +207,10 @@ class MainActivity : BaseActivity() {
             }
         }
 
-        //make sure we can read from device pcap files
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE), PERMISSION_REQUEST)
+        //make sure we can read from device pcap files and get location
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED ||
+                ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.ACCESS_COARSE_LOCATION), PERMISSIONS_REQUEST)
         }
     }
 
@@ -228,12 +229,19 @@ class MainActivity : BaseActivity() {
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
 
-        if (requestCode == PERMISSION_REQUEST) {
-            val index = permissions.indexOf(Manifest.permission.WRITE_EXTERNAL_STORAGE)
-            val granted = (index >= 0) && grantResults[index] == PackageManager.PERMISSION_GRANTED
+        if (requestCode == PERMISSIONS_REQUEST) {
+            val indexWriteExternalStorage = permissions.indexOf(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+            val grantedWriteExternalStorage = (indexWriteExternalStorage >= 0) && grantResults[indexWriteExternalStorage] == PackageManager.PERMISSION_GRANTED
 
-            if (!granted) {
+            if (!grantedWriteExternalStorage) {
                 Toast.makeText(this, getText(R.string.warning_external_stortage_permission), Toast.LENGTH_SHORT).show()
+            }
+
+            val indexAccessLocation = permissions.indexOf(Manifest.permission.ACCESS_COARSE_LOCATION)
+            val grantedAccessLocation = (indexAccessLocation >= 0) && grantResults[indexAccessLocation] == PackageManager.PERMISSION_GRANTED
+
+            if (!grantedAccessLocation) {
+                Toast.makeText(this, getText(R.string.warning_access_background_location_permission), Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -459,7 +467,7 @@ class MainActivity : BaseActivity() {
 
         private const val FILE_REQUEST_CODE = 133
 
-        private const val PERMISSION_REQUEST = 1000
+        private const val PERMISSIONS_REQUEST = 1000
 
         private val sourceMap = listOf(
                 Triple("Select pcap file...", "", false),
