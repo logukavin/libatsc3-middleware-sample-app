@@ -19,7 +19,7 @@ class MediaFileSweeper(
 
     fun sweepLater(toPackage: String, uri: Uri) {
         var queue = queueMap[toPackage]
-        if(null == queue) {
+        if(queue == null) {
             queue = LinkedBlockingQueue<PermissionContainer>()
             queueMap[toPackage] = queue
         }
@@ -28,12 +28,12 @@ class MediaFileSweeper(
             runSweeper(toPackage)
     }
 
-    private fun isSweeperWorking(toPackage: String): Boolean = null != revokePermissionJobMap[toPackage]
+    private fun isSweeperWorking(toPackage: String): Boolean = revokePermissionJobMap[toPackage] != null
 
     private fun runSweeper(toPackage: String) {
         queueMap[toPackage]?.let { queue ->
             revokePermissionJobMap[toPackage] = ioScope.launch {
-                while (null != queue.peek() && queue.peek().time < System.currentTimeMillis()) {
+                while (queue.peek() != null && queue.peek().time < System.currentTimeMillis()) {
                     val pc = queue.poll()
                     withContext(Dispatchers.Main) {
                         context.revokeUriPermission(toPackage, pc.uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
