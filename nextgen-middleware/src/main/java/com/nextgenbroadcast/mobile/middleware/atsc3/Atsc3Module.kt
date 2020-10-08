@@ -20,6 +20,7 @@ import org.ngbp.libatsc3.middleware.android.application.sync.mmt.MfuByteBufferFr
 import org.ngbp.libatsc3.middleware.android.application.sync.mmt.MpuMetadata_HEVC_NAL_Payload
 import org.ngbp.libatsc3.middleware.android.phy.Atsc3NdkPHYClientBase
 import org.ngbp.libatsc3.middleware.android.phy.Atsc3UsbDevice
+import org.ngbp.libatsc3.middleware.android.phy.SaankhyaPHYAndroid
 import org.ngbp.libatsc3.middleware.android.phy.virtual.PcapDemuxedVirtualPHYAndroid
 import org.ngbp.libatsc3.middleware.android.phy.virtual.PcapSTLTPVirtualPHYAndroid
 import org.ngbp.libatsc3.middleware.android.phy.virtual.srt.SRTRxSTLTPVirtualPHYAndroid
@@ -79,6 +80,29 @@ internal class Atsc3Module(
         this.listener = listener
     }
 
+    fun scanForEmbeddedDevices(): Boolean {
+        atsc3NdkPHYClientInstance = SaankhyaPHYAndroid().let { phy ->
+            //jjustman-2020-08-31 - force loading of SaankhyaPHYAndroid with SDIO configuration
+            log("SaankhyaPHYAndroid: calling atsc3NdkPHYClientInstance.init()")
+            var sl_res = phy.init()
+            log(String.format("SaankhyaPHYAndroid: return from atsc3NdkPHYClientInstance.init(): %d", sl_res))
+
+            log(String.format("SaankhyaPHYAndroid: calling atsc3NdkPHYClientInstance.open(-1, SDIO)"))
+            sl_res = phy.open(-1, "SDIO")
+            log(String.format("SaankhyaPHYAndroid: return from atsc3NdkPHYClientInstance.open(-1, SDIO): %d", sl_res))
+
+            if(sl_res == 0) {
+                phy.tune(659000, 0)
+                return@let phy
+            } else {
+                phy.deinit()
+                return@let null
+            }
+        } ?: return false
+
+        return true
+    }
+
     fun openPcapFile(filename: String, type: PcapType): Boolean {
         log("Opening PCAP file: $filename")
 
@@ -122,19 +146,12 @@ internal class Atsc3Module(
     fun openUsbDevice(device: UsbDevice): Boolean {
         log("Opening USB device: ${device.deviceName}")
 
-        Atsc3UsbDevice.DumpAllAtsc3UsbDevices()
-
-        Atsc3UsbDevice.FindFromUsbDevice(device)?.let {
-            log("usbPHYLayerDeviceTryToInstantiateFromRegisteredPHYNDKs: Atsc3UsbDevice already instantiated: $device, instance: $it")
-            return false
-        } ?: log("usbPHYLayerDeviceTryToInstantiateFromRegisteredPHYNDKs: Atsc3UsbDevice map returned : $device, but null instance?")
-
-        close()
-
-        val candidatePHYList = Atsc3NdkPHYClientBase.GetCandidatePHYImplementations(device)
-                ?: return false
+        val candidatePHYList = getPHYImplementations(device)
+        if (candidatePHYList.isEmpty()) return false
 
         val conn = usbManager.openDevice(device) ?: return false
+
+        close()
 
         val atsc3UsbDevice = Atsc3UsbDevice(device, conn)
 
@@ -160,7 +177,8 @@ internal class Atsc3Module(
                     atsc3NdkPHYClientBaseCandidate.setAtsc3UsbDevice(atsc3UsbDevice)
                     atsc3UsbDevice.setAtsc3NdkPHYClientBase(atsc3NdkPHYClientBaseCandidate)
                     //jjustman-2020-08-31 - hack for LowaSIS - tune to 593000 - CH34
-                    atsc3NdkPHYClientBaseCandidate.tune(593000, 0)
+                    //jjustman-2020-10-06 - chage for jj's lab to 659
+                    atsc3NdkPHYClientBaseCandidate.tune(659000, 0)
 
                     atsc3NdkPHYClientInstance = atsc3NdkPHYClientBaseCandidate
                     setState(State.OPENED)
@@ -172,6 +190,17 @@ internal class Atsc3Module(
         atsc3UsbDevice.destroy()
 
         return false
+    }
+
+    fun isDeviceCompatible(device: UsbDevice) = getPHYImplementations(device).isNotEmpty()
+
+    private fun getPHYImplementations(device: UsbDevice): List<Atsc3NdkPHYClientBase.USBVendorIDProductIDSupportedPHY> {
+        Atsc3UsbDevice.FindFromUsbDevice(device)?.let {
+            log("usbPHYLayerDeviceTryToInstantiateFromRegisteredPHYNDKs: Atsc3UsbDevice already instantiated: $device, instance: $it")
+            return emptyList()
+        } ?: log("usbPHYLayerDeviceTryToInstantiateFromRegisteredPHYNDKs: Atsc3UsbDevice map returned : $device, but null instance?")
+
+        return Atsc3NdkPHYClientBase.GetCandidatePHYImplementations(device) ?: emptyList()
     }
 
     fun selectService(serviceId: Int): Boolean {
@@ -191,6 +220,10 @@ internal class Atsc3Module(
 
     fun close() {
         atsc3NdkPHYClientInstance?.let { client ->
+            log("closeUsbDevice -- calling client.deinit")
+
+            client.deinit()
+
             client.atsc3UsbDevice?.let { device ->
                 log("closeUsbDevice -- before FindFromUsbDevice")
                 Atsc3UsbDevice.DumpAllAtsc3UsbDevices();
@@ -199,13 +232,6 @@ internal class Atsc3Module(
 
                 Atsc3UsbDevice.DumpAllAtsc3UsbDevices();
             }
-            client.stop()
-            client.deinit()
-//            try {
-//                Thread.sleep(1000)
-//            } catch (e: InterruptedException) {
-//                e.printStackTrace()
-//            }
             atsc3NdkPHYClientInstance = null
         }
 
