@@ -192,8 +192,6 @@ class MainActivity : BaseActivity() {
             servicesList?.getOrNull(position)?.let { item ->
                 setSelectedService(item.id, item.shortName)
             } ?: if (position == 0) {
-                openSettings()
-            } else if (position == 1) {
                 showFileChooser()
             } else {
                 sourceMap.getOrNull(position)?.let { (_, path) ->
@@ -207,6 +205,10 @@ class MainActivity : BaseActivity() {
                 BottomSheetBehavior.STATE_COLLAPSED -> bottomSheetBehavior.state = BottomSheetBehavior.STATE_EXPANDED
                 BottomSheetBehavior.STATE_EXPANDED -> bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
             }
+        }
+
+        settings_button.setOnClickListener {
+            openSettings()
         }
 
         //make sure we can read from device pcap files
@@ -473,7 +475,6 @@ class MainActivity : BaseActivity() {
         private const val PERMISSION_REQUEST = 1000
 
         private val sourceMap = listOf(
-                Triple("Settings", "", false),
                 Triple("Select pcap file...", "", false),
                 Triple("las", "srt://las.srt.atsc3.com:31350?passphrase=A166AC45-DB7C-4B68-B957-09B8452C76A4", true),
                 Triple("bna", "srt://bna.srt.atsc3.com:31347?passphrase=88731837-0EB5-4951-83AA-F515B3BEBC20", true),
