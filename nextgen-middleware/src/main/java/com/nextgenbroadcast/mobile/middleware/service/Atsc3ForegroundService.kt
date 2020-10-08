@@ -30,8 +30,7 @@ import com.nextgenbroadcast.mobile.middleware.gateway.rpc.IRPCGateway
 import com.nextgenbroadcast.mobile.middleware.gateway.rpc.RPCGatewayImpl
 import com.nextgenbroadcast.mobile.middleware.gateway.web.IWebGateway
 import com.nextgenbroadcast.mobile.middleware.gateway.web.WebGatewayImpl
-import com.nextgenbroadcast.mobile.middleware.location.ImaginaryApi
-import com.nextgenbroadcast.mobile.middleware.location.LocationService
+import com.nextgenbroadcast.mobile.middleware.location.FindFrequencyService
 import com.nextgenbroadcast.mobile.middleware.phy.Atsc3DeviceReceiver
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
 import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
@@ -153,8 +152,8 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
         isInitialized = true;
 
-        LocationService(this).getLocation { location ->
-            ImaginaryApi().getFrequencyList(location.longitude, location.latitude)
+        FindFrequencyService(this).getFrequencyList {
+            settings.frequencyList = it
         }
 
         if (!atsc3Module.scanForEmbeddedDevices()) {
