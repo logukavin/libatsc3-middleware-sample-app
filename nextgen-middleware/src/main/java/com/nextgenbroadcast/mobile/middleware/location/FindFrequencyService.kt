@@ -7,14 +7,14 @@ import android.location.Location
 import androidx.core.content.ContextCompat
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
+import kotlinx.coroutines.*
 
-class LocationService(
+class FindFrequencyService(
         val context: Context
 ) {
-
     private lateinit var fusedLocationClient: FusedLocationProviderClient
 
-    fun getLocation(callback: (location: Location) -> Unit) {
+    private fun getLocation(callback: (location: Location) -> Unit) {
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) return
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
         fusedLocationClient.lastLocation.addOnSuccessListener { location : Location? ->
@@ -22,5 +22,20 @@ class LocationService(
                 callback.invoke(it)
             }
         }
+    }
+
+    fun getFrequencyList(callback: (frequencyList: List<Int>) -> Unit) {
+        getLocation { location ->
+            CoroutineScope(Dispatchers.IO).launch {
+                val frequencyList = getFrequencyByLocation(location.longitude, location.latitude)
+                withContext(Dispatchers.Main) {
+                    callback.invoke(frequencyList)
+                }
+            }
+        }
+    }
+
+    private suspend fun getFrequencyByLocation(long: Double, alt: Double): List<Int> {
+        return listOf()
     }
 }

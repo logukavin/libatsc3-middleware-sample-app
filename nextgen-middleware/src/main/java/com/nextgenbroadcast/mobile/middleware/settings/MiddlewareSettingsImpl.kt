@@ -18,6 +18,7 @@ internal class MiddlewareSettingsImpl(context: Context) : IMiddlewareSettings {
         get() = requireString(ADVERTISING_ID) {
             UUID.randomUUID().toString()
         }
+    override var frequencyList: List<Int>? = null
 
     override val hostName = ServerConstants.HOST_NAME
     override var httpPort = ServerConstants.PORT_AUTOFIT
