@@ -142,7 +142,6 @@ public class MMTDataSource extends BaseDataSource {
                     return 0;
                 }
             } catch (InterruptedException e) {
-                e.printStackTrace();
                 return 0;
             }
 
