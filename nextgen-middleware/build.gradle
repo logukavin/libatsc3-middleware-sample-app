@@ -73,6 +73,7 @@ dependencies {
     implementation "org.ngbp.libatsc3:atsc3_bridge:$libatsc3Version"
     implementation "org.ngbp.libatsc3:atsc3_phy_virtual:$libatsc3Version"
     implementation "org.ngbp.libatsc3:atsc3_phy_lowasis:$libatsc3Version"
+    implementation "org.ngbp.libatsc3:atsc3_phy_saankhya:$libatsc3Version"
 
     implementation project(":nextgen-core")
     compileOnly project(":nextgen-mmt")
