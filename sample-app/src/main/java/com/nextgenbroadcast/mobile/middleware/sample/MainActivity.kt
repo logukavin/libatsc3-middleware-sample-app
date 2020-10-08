@@ -404,12 +404,13 @@ class MainActivity : BaseActivity() {
     }
 
     private fun openSettings() {
-        SettingsDialog(object : SettingsDialog.OnSettingsDialogListener {
-            override fun onSetFrequency(frequency: Int) {
-                // TODO("Apply value")
+        SettingsDialog().apply {
+            listener = object : SettingsDialog.OnSettingsDialogListener {
+                override fun onSetFrequency(frequency: Int) {
+                    // TODO("Apply value")
+                }
             }
-
-        }).show(supportFragmentManager, SettingsDialog::class.java.simpleName)
+        }.show(supportFragmentManager, SettingsDialog::class.java.simpleName)
     }
 
     private fun changeService(serviceId: Int) {
