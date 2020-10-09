@@ -21,6 +21,8 @@ class EmbeddedAtsc3Service : Atsc3ForegroundService() {
     ) : Binder(), IServiceBinder {
         override val receiverPresenter: IReceiverPresenter = object : IReceiverPresenter {
             override val receiverState = serviceController.receiverState
+            override val freqKhz: Int
+                get() = TODO("Not yet implemented")
 
             override fun openRoute(path: String): Boolean {
                 openRoute(this@EmbeddedAtsc3Service, path)
@@ -32,6 +34,9 @@ class EmbeddedAtsc3Service : Atsc3ForegroundService() {
             }
 
             override fun createMMTSource() = serviceController.createMMTSource()
+            override fun tune(freqKhz: Int) {
+                TODO("Not yet implemented")
+            }
         }
         override val selectorPresenter: ISelectorPresenter = serviceController
         override val userAgentPresenter: IUserAgentPresenter = viewController

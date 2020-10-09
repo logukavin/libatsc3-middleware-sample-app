@@ -23,7 +23,7 @@ class FrequencyLocator(
             if(location != null) {
                 if(settings.frequencyLocation != null) {
                     val distance = location.distanceTo(settings.frequencyLocation?.location).toInt()
-                    if(distance > RECEPTION_RADUIS) {
+                    if(distance > RECEPTION_RADIUS) {
                         updateFrequenciesByLocation(location, callback)
                     } else settings.frequencyLocation?.frequencyList?.let { it ->
                         callback.invoke(it)
@@ -52,6 +52,6 @@ class FrequencyLocator(
     }
 
     companion object {
-        const val RECEPTION_RADUIS = 50 // in kilometres
+        const val RECEPTION_RADIUS = 50 // in kilometres
     }
 }
