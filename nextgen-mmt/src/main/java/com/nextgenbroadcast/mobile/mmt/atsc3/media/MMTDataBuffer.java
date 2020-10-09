@@ -10,6 +10,7 @@ import org.ngbp.libatsc3.middleware.android.application.sync.mmt.MmtPacketIdCont
 import org.ngbp.libatsc3.middleware.android.application.sync.mmt.MpuMetadata_HEVC_NAL_Payload;
 
 import java.nio.ByteBuffer;
+import java.util.ConcurrentModificationException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.LinkedBlockingDeque;
@@ -23,7 +24,7 @@ public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payl
     private MpuMetadata_HEVC_NAL_Payload InitMpuMetadata_HEVC_NAL_Payload = null;
 
     private boolean FirstMfuBufferVideoKeyframeSent = false;
-    private boolean isActive = false;
+    private volatile boolean isActive = false;
 
     public MMTDataBuffer() {
     }
@@ -86,9 +87,16 @@ public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payl
     }
 
     @Override
-    public synchronized void open() {
-        isActive = true;
+    public synchronized void open() throws ConcurrentModificationException {
+        if (isActive) {
+            try {
+                wait(1000);
+            } catch (InterruptedException e) {
+                throw new ConcurrentModificationException("Buffer is occupied by another object");
+            }
+        }
 
+        isActive = true;
         FirstMfuBufferVideoKeyframeSent = false;
     }
 
@@ -99,6 +107,8 @@ public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payl
         mfuBufferQueue.clear();
         MapAudioMfuPresentationTimestampUsAnchorSystemTimeUs.clear();
         MapVideoMfuPresentationTimestampUsAnchorSystemTimeUs.clear();
+
+        notify();
     }
 
     @Override

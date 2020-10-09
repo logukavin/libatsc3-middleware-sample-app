@@ -11,9 +11,19 @@ import com.nextgenbroadcast.mobile.mmt.atsc3.media.MMTDataBuffer;
 
 import org.ngbp.libatsc3.middleware.android.application.sync.mmt.MfuByteBufferFragment;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ConcurrentModificationException;
 
 public class MMTDataSource extends BaseDataSource {
+
+    public static class MMTDataSourceException extends IOException {
+
+        public MMTDataSourceException(Exception cause) {
+            super(cause);
+        }
+
+    }
 
     private final MMTDataBuffer inputSource;
 
@@ -33,11 +43,15 @@ public class MMTDataSource extends BaseDataSource {
     }
 
     @Override
-    public long open(DataSpec dataSpec) {
+    public long open(DataSpec dataSpec) throws MMTDataSourceException {
         uri = dataSpec.uri;
         transferInitializing(dataSpec);
 
-        inputSource.open();
+        try {
+            inputSource.open();
+        } catch (ConcurrentModificationException e) {
+            throw new MMTDataSourceException(e);
+        }
 
         if (dataSpec.length != C.LENGTH_UNSET) {
             bytesRemaining = dataSpec.length;
