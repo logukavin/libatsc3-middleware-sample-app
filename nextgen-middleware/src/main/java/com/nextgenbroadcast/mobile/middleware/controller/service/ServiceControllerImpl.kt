@@ -127,6 +127,10 @@ internal class ServiceControllerImpl (
         }
     }
 
+    override fun tune(freqKhz: Int) {
+        atsc3Module.tune(freqKhz)
+    }
+
     private fun resetHeldWithDelay() {
         cancelHeldReset()
         heldResetJob = ioScope.launch {
