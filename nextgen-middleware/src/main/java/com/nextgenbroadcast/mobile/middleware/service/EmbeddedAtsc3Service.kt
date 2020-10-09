@@ -2,13 +2,13 @@ package com.nextgenbroadcast.mobile.middleware.service
 
 import android.os.Binder
 import android.os.IBinder
+import com.nextgenbroadcast.mobile.core.presentation.IMediaPlayerPresenter
+import com.nextgenbroadcast.mobile.core.presentation.IReceiverPresenter
+import com.nextgenbroadcast.mobile.core.presentation.ISelectorPresenter
+import com.nextgenbroadcast.mobile.core.presentation.IUserAgentPresenter
 import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
 import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
-import com.nextgenbroadcast.mobile.core.presentation.IMediaPlayerPresenter
-import com.nextgenbroadcast.mobile.core.presentation.ISelectorPresenter
-import com.nextgenbroadcast.mobile.core.presentation.IUserAgentPresenter
-import com.nextgenbroadcast.mobile.core.presentation.IReceiverPresenter
 
 class EmbeddedAtsc3Service : Atsc3ForegroundService() {
 
@@ -20,6 +20,13 @@ class EmbeddedAtsc3Service : Atsc3ForegroundService() {
             viewController: IViewController
     ) : Binder(), IServiceBinder {
         override val receiverPresenter: IReceiverPresenter = object : IReceiverPresenter {
+            override val freqKhz: Int
+                get() = TODO("Not yet implemented")
+
+            override fun tune(freqKhz: Int) {
+                TODO("Not yet implemented")
+            }
+
             override val receiverState = serviceController.receiverState
 
             override fun openRoute(path: String): Boolean {

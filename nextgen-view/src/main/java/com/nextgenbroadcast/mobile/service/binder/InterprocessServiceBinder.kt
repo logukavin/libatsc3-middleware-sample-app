@@ -1,19 +1,23 @@
 package com.nextgenbroadcast.mobile.service.binder
 
 import android.net.Uri
-import android.os.*
+import android.os.Bundle
+import android.os.IBinder
+import android.os.Message
+import android.os.Messenger
 import androidx.core.os.bundleOf
 import androidx.lifecycle.MutableLiveData
-import com.nextgenbroadcast.mobile.permission.UriPermissionProvider
 import com.nextgenbroadcast.mobile.core.model.*
-import com.nextgenbroadcast.mobile.core.presentation.*
+import com.nextgenbroadcast.mobile.core.presentation.IMediaPlayerPresenter
+import com.nextgenbroadcast.mobile.core.presentation.IReceiverPresenter
+import com.nextgenbroadcast.mobile.core.presentation.ISelectorPresenter
+import com.nextgenbroadcast.mobile.core.presentation.IUserAgentPresenter
 import com.nextgenbroadcast.mobile.core.presentation.media.IObservablePlayer
 import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
-import com.nextgenbroadcast.mobile.core.presentation.IReceiverPresenter
-import com.nextgenbroadcast.mobile.service.handler.StandaloneClientHandler
-import com.nextgenbroadcast.mobile.service.handler.OnIncomingPlayerStateListener
 import com.nextgenbroadcast.mobile.permission.IUriPermissionRequester
-import java.lang.UnsupportedOperationException
+import com.nextgenbroadcast.mobile.permission.UriPermissionProvider
+import com.nextgenbroadcast.mobile.service.handler.OnIncomingPlayerStateListener
+import com.nextgenbroadcast.mobile.service.handler.StandaloneClientHandler
 
 class InterprocessServiceBinder(
         service: IBinder,
@@ -36,6 +40,13 @@ class InterprocessServiceBinder(
 
     inner class ReceiverPresenter : IReceiverPresenter {
         override val receiverState = MutableLiveData<ReceiverState>()
+
+        override val freqKhz: Int
+            get() = TODO("Not yet implemented")
+
+        override fun tune(freqKhz: Int) {
+            TODO("Not yet implemented")
+        }
 
         override fun openRoute(path: String): Boolean {
             sendAction(IServiceBinder.ACTION_OPEN_ROUTE, bundleOf(
