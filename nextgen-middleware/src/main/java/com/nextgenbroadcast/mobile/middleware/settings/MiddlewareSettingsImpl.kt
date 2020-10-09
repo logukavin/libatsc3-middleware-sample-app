@@ -39,6 +39,15 @@ internal class MiddlewareSettingsImpl(context: Context) : IMiddlewareSettings {
     override var wsPort = ServerConstants.PORT_AUTOFIT
     override var wssPort = ServerConstants.PORT_AUTOFIT
 
+    override var freqKhz: Int
+        get() {
+            //TODO: init from shared prefs
+            return 0
+        }
+        set(value) {
+            //TODO: implement. Do not save to shared prefs
+        }
+
     private fun saveString(key: String, value: String): String {
         preferences.edit { putString(key, value) }
         return value
