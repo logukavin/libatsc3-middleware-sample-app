@@ -44,7 +44,7 @@ import dagger.android.AndroidInjection
 import kotlinx.android.synthetic.main.activity_main.*
 import java.util.*
 
-class MainActivity : BaseActivity() {
+class MainActivity : BaseActivity(), SettingsDialog.OnSettingsDialogListener {
 
     private lateinit var binding: ActivityMainBinding
 
@@ -404,13 +404,11 @@ class MainActivity : BaseActivity() {
     }
 
     private fun openSettings() {
-        SettingsDialog().apply {
-            listener = object : SettingsDialog.OnSettingsDialogListener {
-                override fun onSetFrequency(frequency: Int) {
-                    // TODO("Apply value")
-                }
-            }
-        }.show(supportFragmentManager, SettingsDialog::class.java.simpleName)
+        SettingsDialog().show(supportFragmentManager, SettingsDialog::class.java.simpleName)
+    }
+
+    override fun onSetFrequency(frequency: Int) {
+        // TODO("Apply value")
     }
 
     private fun changeService(serviceId: Int) {
