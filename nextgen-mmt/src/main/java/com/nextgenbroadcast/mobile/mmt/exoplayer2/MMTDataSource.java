@@ -56,7 +56,7 @@ public class MMTDataSource extends BaseDataSource {
         /*
          * Before reading of sample data next steps MUST be performed
          * 1. once read and check source the signature
-         * 2. once read format initialization data
+         * 2. once read the stream format initialization data
          * 3. read sample header before every sample
          */
 
@@ -74,8 +74,9 @@ public class MMTDataSource extends BaseDataSource {
             return bytesToRead;
         }
 
-        // read initialization header
+        // read stream initialization header
         if (readHeader) {
+            // wait for initial MFU Metadata
             if (!inputSource.hasMpuMetadata()) {
                 try {
                     Thread.sleep(10);
@@ -88,6 +89,7 @@ public class MMTDataSource extends BaseDataSource {
                 }
             }
 
+            // wait for video or audio key frame
             if (!inputSource.skipUntilKeyFrame()) {
                 try {
                     Thread.sleep(10);
@@ -100,12 +102,8 @@ public class MMTDataSource extends BaseDataSource {
                 }
             }
 
-            ByteBuffer initBuffer = inputSource.InitMpuMetadata_HEVC_NAL_Payload.myByteBuffer;
-
             if (offset == 0 && readLength == MMTDef.SIZE_HEADER) {
-                initBuffer.rewind();
-                int initDataSize = initBuffer.remaining();
-
+                // write stream Header data
                 ByteBuffer bb = ByteBuffer.allocate(MMTDef.SIZE_HEADER);
                 bb.put(MMTDef.TRACK_VIDEO_HEVC)
                         .put(MMTDef.TRACK_AUDIO_AC4)
@@ -113,7 +111,7 @@ public class MMTDataSource extends BaseDataSource {
                         .putInt(inputSource.getVideoWidth())
                         .putInt(inputSource.getVideoHeight())
                         .putFloat(inputSource.getVideoFrameRate())
-                        .putInt(initDataSize)
+                        .putInt(inputSource.getMpuMetadataSize())
                         .putInt(inputSource.getAudioChannelCount())
                         .putInt(inputSource.getAudioSampleRate());
                 bb.rewind();
@@ -121,9 +119,9 @@ public class MMTDataSource extends BaseDataSource {
 
                 return MMTDef.SIZE_HEADER;
             } else {
-                int bytesToRead = Math.min(initBuffer.remaining(), readLength);
-                initBuffer.get(buffer, offset, bytesToRead);
-                readHeader = initBuffer.remaining() != 0;
+                // write initial MFU Metadata
+                int bytesToRead = inputSource.readMpuMetadata(buffer, offset, readLength);
+                readHeader = bytesToRead != readLength;
 
                 return bytesToRead;
             }
