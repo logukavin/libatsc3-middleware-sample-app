@@ -78,7 +78,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
             atsc3Module = it
         }
 
-        serviceController = ServiceControllerImpl(repo, atsc3)
+        serviceController = ServiceControllerImpl(repo, settings, atsc3)
 
         state = MediatorLiveData<Triple<ReceiverState?, SLSService?, PlaybackState?>>().apply {
             addSource(serviceController.receiverState) { receiverState ->
