@@ -6,21 +6,17 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
-import android.net.Uri
 import android.os.IBinder
 import android.os.PowerManager
 import android.os.PowerManager.WakeLock
 import androidx.core.content.ContextCompat
-import androidx.core.content.FileProvider
 import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.Observer
 import com.nextgenbroadcast.mobile.core.cert.UserAgentSSLContext
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.model.SLSService
-import com.nextgenbroadcast.mobile.middleware.BuildConfig
-import com.nextgenbroadcast.mobile.middleware.IMediaFileProvider
-import com.nextgenbroadcast.mobile.middleware.R
+import com.nextgenbroadcast.mobile.middleware.*
 import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3Module
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
 import com.nextgenbroadcast.mobile.middleware.controller.service.ServiceControllerImpl
@@ -30,14 +26,15 @@ import com.nextgenbroadcast.mobile.middleware.gateway.rpc.IRPCGateway
 import com.nextgenbroadcast.mobile.middleware.gateway.rpc.RPCGatewayImpl
 import com.nextgenbroadcast.mobile.middleware.gateway.web.IWebGateway
 import com.nextgenbroadcast.mobile.middleware.gateway.web.WebGatewayImpl
+import com.nextgenbroadcast.mobile.middleware.location.FrequencyLocator
 import com.nextgenbroadcast.mobile.middleware.phy.Atsc3DeviceReceiver
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
-import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
-import com.nextgenbroadcast.mobile.middleware.settings.MiddlewareSettingsImpl
 import com.nextgenbroadcast.mobile.middleware.repository.RepositoryImpl
 import com.nextgenbroadcast.mobile.middleware.server.web.MiddlewareWebServer
-import kotlinx.coroutines.Dispatchers
-import java.io.File
+import com.nextgenbroadcast.mobile.middleware.service.provider.IMediaFileProvider
+import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
+import com.nextgenbroadcast.mobile.middleware.settings.MiddlewareSettingsImpl
+import kotlinx.coroutines.*
 
 abstract class Atsc3ForegroundService : BindableForegroundService() {
     private lateinit var wakeLock: WakeLock
@@ -47,13 +44,15 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     private lateinit var serviceController: IServiceController
     private lateinit var state: MediatorLiveData<Triple<ReceiverState?, SLSService?, PlaybackState?>>
 
-    protected lateinit var mediaFileProvider: IMediaFileProvider
-
     private var viewController: IViewController? = null
     private var webGateway: IWebGateway? = null
     private var rpcGateway: IRPCGateway? = null
     private var webServer: MiddlewareWebServer? = null
     private var deviceReceiver: Atsc3DeviceReceiver? = null
+
+    protected open val mediaFileProvider: IMediaFileProvider by lazy {
+        com.nextgenbroadcast.mobile.middleware.service.provider.MediaFileProvider(applicationContext)
+    }
 
     private var isInitialized = false
 
@@ -77,7 +76,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
             atsc3Module = it
         }
 
-        serviceController = ServiceControllerImpl(repo, atsc3)
+        serviceController = ServiceControllerImpl(repo, settings, atsc3)
 
         state = MediatorLiveData<Triple<ReceiverState?, SLSService?, PlaybackState?>>().apply {
             addSource(serviceController.receiverState) { receiverState ->
@@ -93,8 +92,6 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
                 }
             })
         }
-
-        mediaFileProvider = MediaFileProvider(applicationContext)
     }
 
     override fun onDestroy() {
@@ -150,6 +147,11 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         if (isInitialized) return
 
         isInitialized = true;
+
+        FrequencyLocator(this, settings).requestFrequencies {
+            // TODO can set frequency to Atsc3Module from settings
+        }
+
 
         if (!atsc3Module.scanForEmbeddedDevices()) {
             scanForCompatableUSBDevices()
@@ -342,22 +344,6 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     )
 
     class InitializationException : RuntimeException()
-
-    private class MediaFileProvider(
-            private val context: Context
-    ) : IMediaFileProvider {
-        private val authority = context.getString(R.string.nextgenMediaFileProvider)
-
-        override fun getFileProviderUri(path: String): Uri = FileProvider.getUriForFile(
-                context,
-                authority,
-                File(path)
-        )
-
-        override fun grantUriPermission(toPackage: String, uri: Uri) {
-            context.grantUriPermission(toPackage, uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        }
-    }
 
     companion object {
         private const val SERVICE_ACTION = "${BuildConfig.LIBRARY_PACKAGE_NAME}.intent.action"
