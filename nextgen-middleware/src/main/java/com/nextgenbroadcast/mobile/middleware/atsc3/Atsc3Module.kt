@@ -105,6 +105,10 @@ internal class Atsc3Module(
         return true
     }
 
+    fun tune(freqKhz: Int) {
+        atsc3NdkPHYClientInstance?.tune(freqKhz, 0)
+    }
+
     fun openPcapFile(filename: String, type: PcapType): Boolean {
         log("Opening PCAP file: $filename")
 
