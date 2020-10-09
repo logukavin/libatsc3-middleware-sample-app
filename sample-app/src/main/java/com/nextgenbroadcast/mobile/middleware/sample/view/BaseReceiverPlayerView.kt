@@ -10,7 +10,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.widget.FrameLayout
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
-import com.nextgenbroadcast.mobile.middleware.sample.MainActivity
 import com.nextgenbroadcast.mobile.middleware.sample.R
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.RMPViewModel
 import com.nextgenbroadcast.mobile.view.ReceiverMediaPlayer
@@ -50,7 +49,7 @@ open class BaseReceiverPlayerView : FrameLayout {
             }
 
             override fun onPlayerError(error: Exception) {
-                Log.d(MainActivity.TAG, error.message ?: "")
+                Log.d(TAG, error.message ?: "")
             }
 
             override fun onPlaybackSpeedChanged(speed: Float) {
@@ -107,6 +106,8 @@ open class BaseReceiverPlayerView : FrameLayout {
     }
 
     companion object {
+        val TAG: String = BaseReceiverPlayerView::class.java.simpleName
+
         private const val MEDIA_TIME_UPDATE_DELAY = 500L
     }
 }

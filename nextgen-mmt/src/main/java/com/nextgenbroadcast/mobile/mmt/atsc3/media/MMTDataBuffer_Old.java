@@ -3,9 +3,6 @@ package com.nextgenbroadcast.mobile.mmt.atsc3.media;
 import android.media.MediaFormat;
 import android.util.Log;
 
-import com.nextgenbroadcast.mobile.core.media.IMMTDataConsumer;
-import com.nextgenbroadcast.mobile.core.media.IMMTDataProducer;
-
 import org.ngbp.libatsc3.middleware.android.ATSC3PlayerFlags;
 import org.ngbp.libatsc3.middleware.android.DebuggingFlags;
 import org.ngbp.libatsc3.middleware.android.application.sync.mmt.MfuByteBufferFragment;
@@ -17,9 +14,7 @@ import java.util.Map;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public class MMTDataBuffer_Old implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payload, MfuByteBufferFragment> {
-    private final IMMTDataProducer<MpuMetadata_HEVC_NAL_Payload, MfuByteBufferFragment> sourceConsumer;
-
+public class MMTDataBuffer_Old {
     private final LinkedHashMap<Long, Long> MapVideoMfuPresentationTimestampUsAnchorSystemTimeUs = new LinkedHashMap<>();
     private final LinkedHashMap<Long, Long> MapAudioMfuPresentationTimestampUsAnchorSystemTimeUs = new LinkedHashMap<>();
 
@@ -31,14 +26,10 @@ public class MMTDataBuffer_Old implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_
 
     final AtomicBoolean IsSoftFlushingFromAVPtsDiscontinuity = new AtomicBoolean(false);    //only discard the next few inputBuffer and reset our anchors
 
-    public MMTDataBuffer_Old(IMMTDataProducer<MpuMetadata_HEVC_NAL_Payload, MfuByteBufferFragment> consumer) {
-        sourceConsumer = consumer;
-
-        consumer.setMMTSource(this);
+    public MMTDataBuffer_Old() {
     }
 
     void release() {
-        sourceConsumer.resetMMTSource(this);
         clearQueues();
         clearTimeCache();
     }
@@ -54,7 +45,6 @@ public class MMTDataBuffer_Old implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_
         MapVideoMfuPresentationTimestampUsAnchorSystemTimeUs.clear();
     }
 
-    @Override
     public void InitMpuMetadata_HEVC_NAL_Payload(MpuMetadata_HEVC_NAL_Payload payload) {
         if (ATSC3PlayerFlags.ATSC3PlayerStartPlayback && InitMpuMetadata_HEVC_NAL_Payload == null) {
             InitMpuMetadata_HEVC_NAL_Payload = payload;
@@ -63,7 +53,6 @@ public class MMTDataBuffer_Old implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_
         }
     }
 
-    @Override
     public void PushMfuByteBufferFragment(MfuByteBufferFragment mfuByteBufferFragment) {
         if (!ATSC3PlayerFlags.ATSC3PlayerStartPlayback) {
             mfuByteBufferFragment.myByteBuffer = null;
