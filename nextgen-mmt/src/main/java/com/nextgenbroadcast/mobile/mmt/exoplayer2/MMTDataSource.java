@@ -67,7 +67,7 @@ public class MMTDataSource extends BaseDataSource {
             bb.put(MMTDef.mmtSignature);
             bb.rewind();
 
-            int bytesToRead = (int) Math.min(bb.remaining() - offset, readLength);
+            int bytesToRead = Math.min(bb.remaining() - offset, readLength);
             bb.get(buffer, offset, bytesToRead);
             readSignature = bb.remaining() != 0;
 
@@ -79,8 +79,8 @@ public class MMTDataSource extends BaseDataSource {
             if (!inputSource.hasMpuMetadata()) {
                 try {
                     Thread.sleep(10);
-                } catch (Exception ex) {
-                    //
+                } catch (InterruptedException ex) {
+                    return 0;
                 }
 
                 if (!inputSource.hasMpuMetadata()) {
@@ -91,8 +91,8 @@ public class MMTDataSource extends BaseDataSource {
             if (!inputSource.skipUntilKeyFrame()) {
                 try {
                     Thread.sleep(10);
-                } catch (Exception ex) {
-                    //
+                } catch (InterruptedException ex) {
+                    return 0;
                 }
 
                 if (!inputSource.skipUntilKeyFrame()) {
@@ -121,7 +121,7 @@ public class MMTDataSource extends BaseDataSource {
 
                 return MMTDef.SIZE_HEADER;
             } else {
-                int bytesToRead = (int) Math.min(initBuffer.remaining(), readLength);
+                int bytesToRead = Math.min(initBuffer.remaining(), readLength);
                 initBuffer.get(buffer, offset, bytesToRead);
                 readHeader = initBuffer.remaining() != 0;
 
@@ -142,49 +142,47 @@ public class MMTDataSource extends BaseDataSource {
                     return 0;
                 }
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                return 0;
             }
 
-            if (currentSample != null) {
-                byte sampleType = C.TRACK_TYPE_UNKNOWN;
-                if (inputSource.isVideoSample(currentSample)) {
-                    sampleType = C.TRACK_TYPE_VIDEO;
-                } else if (inputSource.isAudioSample(currentSample)) {
-                    sampleType = C.TRACK_TYPE_AUDIO;
-                } else if (inputSource.isTextSample(currentSample)) {
-                    sampleType = C.TRACK_TYPE_TEXT;
-                }
-
-                long computedPresentationTimestampUs = inputSource.getPresentationTimestampUs(currentSample);
-
-//                Log.d("!!!", ">>> sample TimeUs: " + computedPresentationTimestampUs
-//                        + ",  sample size: " + toProcessMfuByteBufferFragment.bytebuffer_length
-//                        + ",  sample type: " + sampleType
-//                        + ", sequence number: " + toProcessMfuByteBufferFragment.mpu_sequence_number);
-                sampleHeaderBuffer.clear();
-                sampleHeaderBuffer
-                        .put(sampleType)
-                        .putInt(currentSample.bytebuffer_length)
-                        .putLong(computedPresentationTimestampUs)
-                        .put(currentSample.sample_number == 1 ? (byte) 1 : (byte) 0);
-                sampleHeaderBuffer.rewind();
-
-                readSampleHeader = true;
+            byte sampleType = C.TRACK_TYPE_UNKNOWN;
+            if (inputSource.isVideoSample(currentSample)) {
+                sampleType = C.TRACK_TYPE_VIDEO;
+            } else if (inputSource.isAudioSample(currentSample)) {
+                sampleType = C.TRACK_TYPE_AUDIO;
+            } else if (inputSource.isTextSample(currentSample)) {
+                sampleType = C.TRACK_TYPE_TEXT;
             }
+
+            long computedPresentationTimestampUs = inputSource.getPresentationTimestampUs(currentSample);
+
+//            Log.d("!!!", ">>> sample TimeUs: " + computedPresentationTimestampUs
+//                    + ",  sample size: " + toProcessMfuByteBufferFragment.bytebuffer_length
+//                    + ",  sample type: " + sampleType
+//                    + ", sequence number: " + toProcessMfuByteBufferFragment.mpu_sequence_number);
+            sampleHeaderBuffer.clear();
+            sampleHeaderBuffer
+                    .put(sampleType)
+                    .putInt(currentSample.bytebuffer_length)
+                    .putLong(computedPresentationTimestampUs)
+                    .put(currentSample.sample_number == 1 ? (byte) 1 : (byte) 0);
+            sampleHeaderBuffer.rewind();
+
+            readSampleHeader = true;
         }
 
         if (!opened) return C.LENGTH_UNSET;
 
         // read the sample header
         if (readSampleHeader) {
-            int bytesToRead = (int) Math.min(sampleHeaderBuffer.remaining(), readLength);
+            int bytesToRead = Math.min(sampleHeaderBuffer.remaining(), readLength);
             sampleHeaderBuffer.get(buffer, offset, bytesToRead);
             readSampleHeader = sampleHeaderBuffer.remaining() != 0;
             return bytesToRead;
         }
 
         // read the sample buffer
-        int bytesToRead = (int) Math.min(currentSample.myByteBuffer.remaining(), readLength);
+        int bytesToRead = Math.min(currentSample.myByteBuffer.remaining(), readLength);
         if (bytesToRead == 0) {
             currentSample = null;
             return C.RESULT_END_OF_INPUT;
