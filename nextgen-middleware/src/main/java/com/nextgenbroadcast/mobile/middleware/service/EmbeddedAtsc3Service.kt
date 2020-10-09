@@ -8,7 +8,7 @@ import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
 import com.nextgenbroadcast.mobile.core.presentation.IMediaPlayerPresenter
 import com.nextgenbroadcast.mobile.core.presentation.ISelectorPresenter
 import com.nextgenbroadcast.mobile.core.presentation.IUserAgentPresenter
-import com.nextgenbroadcast.mobile.middleware.presentation.IReceiverPresenter
+import com.nextgenbroadcast.mobile.core.presentation.IReceiverPresenter
 
 class EmbeddedAtsc3Service : Atsc3ForegroundService() {
 

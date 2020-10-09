@@ -1,9 +1,13 @@
 package com.nextgenbroadcast.mobile.middleware.settings
 
 import android.content.Context
+import android.location.Location
 import androidx.core.content.edit
 import com.nextgenbroadcast.mobile.middleware.BuildConfig
+import com.nextgenbroadcast.mobile.middleware.location.FrequencyLocation
 import com.nextgenbroadcast.mobile.middleware.server.ServerConstants
+import org.json.JSONArray
+import org.json.JSONObject
 import java.util.*
 
 internal class MiddlewareSettingsImpl(context: Context) : IMiddlewareSettings {
@@ -19,24 +23,78 @@ internal class MiddlewareSettingsImpl(context: Context) : IMiddlewareSettings {
             UUID.randomUUID().toString()
         }
 
+    override var frequencyLocation: FrequencyLocation?
+        get() = loadString(FREQUENCY_LOCATION)?.let {
+            stringToFrequencyLocation(it)
+        }
+        set(value) {
+            frequencyLocationToString(value)?.let {
+                saveString(FREQUENCY_LOCATION, it)
+            }
+        }
+
     override val hostName = ServerConstants.HOST_NAME
     override var httpPort = ServerConstants.PORT_AUTOFIT
     override var httpsPort = ServerConstants.PORT_AUTOFIT
     override var wsPort = ServerConstants.PORT_AUTOFIT
     override var wssPort = ServerConstants.PORT_AUTOFIT
 
+    override var freqKhz: Int
+        get() {
+            //TODO: init from shared prefs
+            return 0
+        }
+        set(value) {
+            //TODO: implement. Do not save to shared prefs
+        }
+
     private fun saveString(key: String, value: String): String {
         preferences.edit { putString(key, value) }
         return value
     }
 
+    private fun loadString(key: String): String? {
+        return preferences.getString(key, null)
+    }
+
     private fun requireString(key: String, action: () -> String): String {
-        return preferences.getString(key, null) ?: saveString(key, action.invoke())
+        return loadString(key) ?: saveString(key, action.invoke())
+    }
+
+    private fun stringToFrequencyLocation(flJsonStr: String): FrequencyLocation {
+        val frequencyLocationJson = JSONObject(flJsonStr)
+        val frequencyJSONArray = frequencyLocationJson.getJSONArray(FREQUENCY_LIST)
+        val frequencyList = mutableListOf<Int>().apply {
+            for(index in 0 until frequencyJSONArray.length()) {
+                add(index, frequencyJSONArray.get(index) as Int)
+            }
+        }
+        return FrequencyLocation(
+                Location(frequencyLocationJson.getString(LOCATION_PROVIDER)).apply {
+                    latitude = frequencyLocationJson.getDouble(LOCATION_LATITUDE)
+                    longitude = frequencyLocationJson.getDouble(LOCATION_LONGITUDE)
+                }, frequencyList)
+    }
+
+    private fun frequencyLocationToString(frequencyLocation: FrequencyLocation?): String? {
+        return frequencyLocation?.let {
+            JSONObject().apply {
+                put(LOCATION_PROVIDER, frequencyLocation.location.provider)
+                put(LOCATION_LATITUDE, frequencyLocation.location.latitude)
+                put(LOCATION_LONGITUDE, frequencyLocation.location.longitude)
+                put(FREQUENCY_LIST, JSONArray(frequencyLocation.frequencyList))
+            }.toString()
+        }
     }
 
     companion object {
-        const val REPOSITORY_PREFERENCE = "${BuildConfig.LIBRARY_PACKAGE_NAME}.preference"
-        const val DEVICE_ID = "device_id"
-        const val ADVERTISING_ID = "advertising_id"
+        private const val REPOSITORY_PREFERENCE = "${BuildConfig.LIBRARY_PACKAGE_NAME}.preference"
+        private const val DEVICE_ID = "device_id"
+        private const val ADVERTISING_ID = "advertising_id"
+        private const val FREQUENCY_LOCATION = "frequency_location"
+        private const val LOCATION_PROVIDER = "location_provider"
+        private const val LOCATION_LATITUDE = "location_latitude"
+        private const val LOCATION_LONGITUDE = "location_longitude"
+        private const val FREQUENCY_LIST = "frequency_list"
     }
 }
