@@ -56,8 +56,9 @@ internal class MiddlewareSettingsImpl(context: Context) : IMiddlewareSettings {
         val frequencyLocationJson = JSONObject(flJsonStr)
         val frequencyJSONArray = frequencyLocationJson.getJSONArray(FREQUENCY_LIST)
         val frequencyList = mutableListOf<Int>().apply {
-            for(index in 0 until frequencyJSONArray.length())
+            for(index in 0 until frequencyJSONArray.length()) {
                 add(index, frequencyJSONArray.get(index) as Int)
+            }
         }
         return FrequencyLocation(
                 Location(frequencyLocationJson.getString(LOCATION_PROVIDER)).apply {
