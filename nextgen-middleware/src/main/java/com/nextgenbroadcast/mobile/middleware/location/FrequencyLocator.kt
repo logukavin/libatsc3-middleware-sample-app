@@ -5,7 +5,6 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.location.Location
 import androidx.core.content.ContextCompat
-import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
 import kotlinx.coroutines.CoroutineScope
@@ -17,43 +16,42 @@ class FrequencyLocator(
         val context: Context,
         val settings: IMiddlewareSettings
 ) {
-    private lateinit var fusedLocationClient: FusedLocationProviderClient
 
     fun requestFrequencies(callback: (frequencyList: List<Int>) -> Unit) {
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) return
-        fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
-        fusedLocationClient.lastLocation.addOnSuccessListener { location: Location? ->
-            location?.let {
-                if(settings.location != null) {
-                    val distance = location.distanceTo(settings.location).toInt()
+        LocationServices.getFusedLocationProviderClient(context).lastLocation.addOnSuccessListener { location: Location? ->
+            if(location != null) {
+                if(settings.frequencyLocation != null) {
+                    val distance = location.distanceTo(settings.frequencyLocation?.location).toInt()
                     if(distance > RECEPTION_RADUIS) {
                         updateFrequenciesByLocation(location, callback)
-                    } else settings.frequencyList?.let { it ->
+                    } else settings.frequencyLocation?.frequencyList?.let { it ->
                         callback.invoke(it)
                     }
                 } else {
                     updateFrequenciesByLocation(location, callback)
                 }
+            } else {
+                callback.invoke(listOf())
             }
         }
     }
 
     private fun updateFrequenciesByLocation(location: Location, callback: (frequencyList: List<Int>) -> Unit) {
-        settings.location = location
         CoroutineScope(Dispatchers.IO).launch {
             val frequencyList = getFrequencyByLocation(location.longitude, location.latitude)
             withContext(Dispatchers.Main) {
-                settings.frequencyList = frequencyList
+                settings.frequencyLocation = FrequencyLocation(location, frequencyList)
                 callback.invoke(frequencyList)
             }
         }
     }
 
     private suspend fun getFrequencyByLocation(long: Double, alt: Double): List<Int> {
-        return listOf(1)
+        return listOf(659000)
     }
 
     companion object {
-        const val RECEPTION_RADUIS = 50
+        const val RECEPTION_RADUIS = 50 // in kilometres
     }
 }
