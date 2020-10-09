@@ -122,7 +122,9 @@ internal class ServiceControllerImpl (
     }
 
     override fun createMMTSource(): MMTDataBuffer {
-        return MMTDataBuffer(atsc3Module)
+        return MMTDataBuffer().also { mmtDataBuffer ->
+            atsc3Module.setMMTSource(mmtDataBuffer)
+        }
     }
 
     private fun resetHeldWithDelay() {
