@@ -9,7 +9,7 @@ import com.nextgenbroadcast.mobile.core.model.*
 import com.nextgenbroadcast.mobile.core.presentation.*
 import com.nextgenbroadcast.mobile.core.presentation.media.IObservablePlayer
 import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
-import com.nextgenbroadcast.mobile.middleware.presentation.IReceiverPresenter
+import com.nextgenbroadcast.mobile.core.presentation.IReceiverPresenter
 import com.nextgenbroadcast.mobile.service.handler.StandaloneClientHandler
 import com.nextgenbroadcast.mobile.service.handler.OnIncomingPlayerStateListener
 import com.nextgenbroadcast.mobile.permission.IUriPermissionRequester
