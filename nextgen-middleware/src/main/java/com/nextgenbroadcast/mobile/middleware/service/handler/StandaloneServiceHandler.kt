@@ -11,11 +11,11 @@ import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceControl
 import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
 import com.nextgenbroadcast.mobile.core.presentation.IMediaPlayerPresenter
 import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
-import com.nextgenbroadcast.mobile.middleware.IMediaFileProvider
+import com.nextgenbroadcast.mobile.middleware.service.provider.IStandaloneMediaFileProvider
 import com.nextgenbroadcast.mobile.middleware.presentation.IReceiverPresenter
 
 internal class StandaloneServiceHandler(
-        private val fileProvider: IMediaFileProvider,
+        private val fileProvider: IStandaloneMediaFileProvider,
         private val lifecycleOwner: LifecycleOwner,
         private val receiverPresenter: IReceiverPresenter,
         private val serviceController: IServiceController,
