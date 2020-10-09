@@ -8,7 +8,6 @@ import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.Urls
 import com.nextgenbroadcast.mobile.middleware.server.web.MiddlewareWebServer
 import com.nextgenbroadcast.mobile.middleware.server.web.configureSSLFactory
 import com.nextgenbroadcast.mobile.middleware.server.ws.MiddlewareWebSocket
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.eclipse.jetty.client.HttpClient
 import org.eclipse.jetty.websocket.api.WebSocketAdapter
 import org.eclipse.jetty.websocket.client.WebSocketClient
@@ -29,7 +28,6 @@ class SocketServerTest : ServerTest() {
     private lateinit var webServer: MiddlewareWebServer
     private lateinit var webSocketClient: WebSocketClient
 
-    @ExperimentalCoroutinesApi
     @Before
     fun setup() {
         rpcGateway = object : RPCGatewayAdapter() {
@@ -56,7 +54,7 @@ class SocketServerTest : ServerTest() {
         }
 
         webServer = MiddlewareWebServer(server, webGateway = null).also {
-            it.start()
+            server.start()
         }
         webSocketClient = WebSocketClient(HttpClient(configureSSLFactory(UserAgentSSLContext(mockApplicationContext))))
     }
