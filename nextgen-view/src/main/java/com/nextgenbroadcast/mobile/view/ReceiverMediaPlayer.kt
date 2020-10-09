@@ -11,7 +11,6 @@ import com.google.android.exoplayer2.source.dash.DashMediaSource
 import com.google.android.exoplayer2.source.dash.DefaultDashChunkSource
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
 import com.google.android.exoplayer2.ui.PlayerView
-import com.google.android.exoplayer2.upstream.DataSource
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
 import com.google.android.exoplayer2.upstream.DefaultLoadErrorHandlingPolicy
 import com.nextgenbroadcast.mobile.core.AppUtils
@@ -39,6 +38,7 @@ class ReceiverMediaPlayer @JvmOverloads constructor(
     private var rmpState: PlaybackState? = null
     private var listener: EventListener? = null
     private var uriPermissionProvider: UriPermissionProvider? = null
+    private var isMMTPlayback = false
 
     val isPlaying: Boolean
         get() = rmpState == PlaybackState.PLAYING
@@ -73,11 +73,15 @@ class ReceiverMediaPlayer @JvmOverloads constructor(
     fun play(mmtBuffer: MMTDataBuffer) {
         reset()
 
+        isMMTPlayback = true
+
         val mediaSource = ProgressiveMediaSource.Factory({
             MMTDataSource(mmtBuffer)
         }, {
             arrayOf(MMTExtractor())
-        }).createMediaSource("mmt".toUri())
+        }).apply {
+            setLoadErrorHandlingPolicy(createDefaultLoadErrorHandlingPolicy())
+        }.createMediaSource("mmt".toUri())
 
         player = createMMTExoPlayer().apply {
             prepare(mediaSource)
@@ -95,6 +99,7 @@ class ReceiverMediaPlayer @JvmOverloads constructor(
             it.release()
             player = null
         }
+        isMMTPlayback = false
     }
 
     private fun createDefaultExoPlayer(): SimpleExoPlayer {
@@ -131,6 +136,12 @@ class ReceiverMediaPlayer @JvmOverloads constructor(
 
                 override fun onPlayerError(error: ExoPlaybackException) {
                     listener?.onPlayerError(error)
+
+                    if (isMMTPlayback) {
+                        seekToDefaultPosition()
+                    }
+
+                    retry()
                 }
 
                 override fun onPlaybackParametersChanged(playbackParameters: PlaybackParameters) {
@@ -162,18 +173,7 @@ class ReceiverMediaPlayer @JvmOverloads constructor(
                 DefaultDashChunkSource.Factory(mediaDataSourceFactory),
                 manifestDataSourceFactory
         ).apply {
-            setLoadErrorHandlingPolicy(object : DefaultLoadErrorHandlingPolicy() {
-                override fun getRetryDelayMsFor(dataType: Int, loadDurationMs: Long, exception: IOException?, errorCount: Int): Long {
-                    Log.w("ExoPlayerCustomLoadErrorHandlingPolicy", "dataType: $dataType, loadDurationMs: $loadDurationMs, exception ex: $exception, errorCount: $errorCount")
-
-                    //jjustman-2019-11-07 - retry every 1s for exoplayer errors from ROUTE/DASH
-                    return 1000
-                }
-
-                override fun getMinimumLoadableRetryCount(dataType: Int): Int {
-                    return 1
-                }
-            })
+            setLoadErrorHandlingPolicy(createDefaultLoadErrorHandlingPolicy())
         }
     }
 
@@ -181,6 +181,21 @@ class ReceiverMediaPlayer @JvmOverloads constructor(
         super.onDetachedFromWindow()
 
         removeCallbacks(enableBufferingProgress)
+    }
+
+    private fun createDefaultLoadErrorHandlingPolicy(): DefaultLoadErrorHandlingPolicy {
+        return object : DefaultLoadErrorHandlingPolicy() {
+            override fun getRetryDelayMsFor(dataType: Int, loadDurationMs: Long, exception: IOException?, errorCount: Int): Long {
+                Log.w("ExoPlayerCustomLoadErrorHandlingPolicy", "dataType: $dataType, loadDurationMs: $loadDurationMs, exception ex: $exception, errorCount: $errorCount")
+
+                //jjustman-2019-11-07 - retry every 1s for exoplayer errors from ROUTE/DASH
+                return 1000
+            }
+
+            override fun getMinimumLoadableRetryCount(dataType: Int): Int {
+                return 1
+            }
+        }
     }
 
     interface EventListener {

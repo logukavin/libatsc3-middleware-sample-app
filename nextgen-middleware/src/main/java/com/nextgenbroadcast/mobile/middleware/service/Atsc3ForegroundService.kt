@@ -30,6 +30,7 @@ import com.nextgenbroadcast.mobile.middleware.gateway.rpc.IRPCGateway
 import com.nextgenbroadcast.mobile.middleware.gateway.rpc.RPCGatewayImpl
 import com.nextgenbroadcast.mobile.middleware.gateway.web.IWebGateway
 import com.nextgenbroadcast.mobile.middleware.gateway.web.WebGatewayImpl
+import com.nextgenbroadcast.mobile.middleware.location.FrequencyLocator
 import com.nextgenbroadcast.mobile.middleware.phy.Atsc3DeviceReceiver
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
 import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
@@ -77,7 +78,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
             atsc3Module = it
         }
 
-        serviceController = ServiceControllerImpl(repo, atsc3)
+        serviceController = ServiceControllerImpl(repo, settings, atsc3)
 
         state = MediatorLiveData<Triple<ReceiverState?, SLSService?, PlaybackState?>>().apply {
             addSource(serviceController.receiverState) { receiverState ->
@@ -150,6 +151,11 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         if (isInitialized) return
 
         isInitialized = true;
+
+        FrequencyLocator(this, settings).requestFrequencies {
+            // TODO can set frequency to Atsc3Module from settings
+        }
+
 
         if (!atsc3Module.scanForEmbeddedDevices()) {
             scanForCompatableUSBDevices()
