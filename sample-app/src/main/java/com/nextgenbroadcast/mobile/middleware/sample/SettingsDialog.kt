@@ -1,5 +1,6 @@
 package com.nextgenbroadcast.mobile.middleware.sample
 
+import android.content.Context
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -13,7 +14,12 @@ class SettingsDialog: DialogFragment() {
         fun onSetFrequency(frequency: Int)
     }
 
-    var listener: OnSettingsDialogListener? = null
+    private var listener: OnSettingsDialogListener? = null
+
+    override fun onAttach(context: Context) {
+        super.onAttach(context)
+        listener = context as? OnSettingsDialogListener
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
