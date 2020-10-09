@@ -10,4 +10,6 @@ interface IReceiverPresenter {
     fun closeRoute()
 
     fun createMMTSource(): Any
+
+    fun tune(freqKhz: Int)
 }
