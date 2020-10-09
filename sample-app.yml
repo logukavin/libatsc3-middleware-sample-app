@@ -3,19 +3,10 @@
 # Add steps that test, sign, and distribute the APK, save build artifacts, and more:
 # https://docs.microsoft.com/azure/devops/pipelines/languages/android
 
-trigger:
-  tags:
-    include:
-      - 1.*
-
 pool:
   vmImage: 'ubuntu-latest'
 
 steps:
-  - powershell: |
-      Write-Host "##vso[task.setvariable variable=ARTIFACT_VERSION]$(git describe --tags)"
-    displayName: 'Setup ARTIFACT_VERSION from tag'
-
   - bash:
        echo "y" | sudo $(ANDROID_SDK_ROOT)/tools/bin/sdkmanager --install "ndk;21.0.6113669" --sdk_root=${ANDROID_SDK_ROOT}
     displayName: 'Setup NDK 21.0.6113669'
@@ -42,10 +33,8 @@ steps:
         SourceFolder: '$(system.defaultworkingdirectory)'
         Contents: '**/*.apk'
         TargetFolder: '$(build.artifactstagingdirectory)'
-    condition: succeededOrFailed()
 
   - task: PublishBuildArtifacts@1
     displayName: 'Publish Artifact: drop'
     inputs:
         PathtoPublish: '$(build.artifactstagingdirectory)'
-    condition: succeededOrFailed()

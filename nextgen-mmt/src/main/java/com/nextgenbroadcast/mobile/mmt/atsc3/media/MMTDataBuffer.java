@@ -1,46 +1,32 @@
 package com.nextgenbroadcast.mobile.mmt.atsc3.media;
 
-import android.media.MediaFormat;
 import android.util.Log;
 
 import com.nextgenbroadcast.mobile.core.media.IMMTDataConsumer;
-import com.nextgenbroadcast.mobile.core.media.IMMTDataProducer;
 
-import org.ngbp.libatsc3.middleware.android.ATSC3PlayerFlags;
 import org.ngbp.libatsc3.middleware.android.DebuggingFlags;
 import org.ngbp.libatsc3.middleware.android.application.sync.mmt.MfuByteBufferFragment;
 import org.ngbp.libatsc3.middleware.android.application.sync.mmt.MmtPacketIdContext;
 import org.ngbp.libatsc3.middleware.android.application.sync.mmt.MpuMetadata_HEVC_NAL_Payload;
 
-import java.io.EOFException;
+import java.nio.ByteBuffer;
+import java.util.ConcurrentModificationException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 
 public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payload, MfuByteBufferFragment> {
-    private final IMMTDataProducer<MpuMetadata_HEVC_NAL_Payload, MfuByteBufferFragment> sourceConsumer;
-
+    private final LinkedBlockingDeque<MfuByteBufferFragment> mfuBufferQueue = new LinkedBlockingDeque<>();
     private final LinkedHashMap<Long, Long> MapVideoMfuPresentationTimestampUsAnchorSystemTimeUs = new LinkedHashMap<>();
     private final LinkedHashMap<Long, Long> MapAudioMfuPresentationTimestampUsAnchorSystemTimeUs = new LinkedHashMap<>();
 
-    public MpuMetadata_HEVC_NAL_Payload InitMpuMetadata_HEVC_NAL_Payload = null;
+    private MpuMetadata_HEVC_NAL_Payload InitMpuMetadata_HEVC_NAL_Payload = null;
 
-    private final LinkedBlockingDeque<MfuByteBufferFragment> mfuBufferQueue = new LinkedBlockingDeque<>();
+    private boolean FirstMfuBufferVideoKeyframeSent = false;
+    private volatile boolean isActive = false;
 
-    public MMTDataBuffer(IMMTDataProducer<MpuMetadata_HEVC_NAL_Payload, MfuByteBufferFragment> consumer) {
-        sourceConsumer = consumer;
-
-        consumer.setMMTSource(this);
-    }
-
-    public void release() {
-        ATSC3PlayerFlags.ATSC3PlayerStartPlayback = false;
-        ATSC3PlayerFlags.ATSC3PlayerStopPlayback = true;
-
-        sourceConsumer.resetMMTSource(this);
-        mfuBufferQueue.clear();
-        clearTimeCache();
+    public MMTDataBuffer() {
     }
 
     public MfuByteBufferFragment poll(long timeoutMs) throws InterruptedException {
@@ -79,21 +65,60 @@ public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payl
         return MmtPacketIdContext.stpp_packet_id == sample.packet_id;
     }
 
-    public void open() {
-        ATSC3PlayerFlags.ATSC3PlayerStartPlayback = true;
-        ATSC3PlayerFlags.ATSC3PlayerStopPlayback = false;
-        ATSC3PlayerFlags.FirstMfuBufferVideoKeyframeSent = false;
-        ATSC3PlayerFlags.FirstMfuBuffer_presentation_time_us_mpu = 0;
+    public boolean isKeySample(MfuByteBufferFragment fragment) {
+        return fragment.sample_number == 1;
     }
 
-    void clearTimeCache() {
+    public int getMpuMetadataSize() {
+        if (InitMpuMetadata_HEVC_NAL_Payload == null) return 0;
+
+        ByteBuffer initBuffer = InitMpuMetadata_HEVC_NAL_Payload.myByteBuffer;
+        initBuffer.rewind();
+        return initBuffer.remaining();
+    }
+
+    public int readMpuMetadata(byte[] buffer, int offset, int length) {
+        if (InitMpuMetadata_HEVC_NAL_Payload == null) return 0;
+
+        ByteBuffer initBuffer = InitMpuMetadata_HEVC_NAL_Payload.myByteBuffer;
+        int bytesToRead = Math.min(initBuffer.remaining(), length);
+        initBuffer.get(buffer, offset, bytesToRead);
+        return bytesToRead;
+    }
+
+    @Override
+    public synchronized void open() throws ConcurrentModificationException {
+        if (isActive) {
+            try {
+                wait(1000);
+            } catch (InterruptedException e) {
+                throw new ConcurrentModificationException("Buffer is occupied by another object");
+            }
+        }
+
+        isActive = true;
+        FirstMfuBufferVideoKeyframeSent = false;
+    }
+
+    @Override
+    public synchronized void release() {
+        isActive = false;
+
+        mfuBufferQueue.clear();
         MapAudioMfuPresentationTimestampUsAnchorSystemTimeUs.clear();
         MapVideoMfuPresentationTimestampUsAnchorSystemTimeUs.clear();
+
+        notify();
+    }
+
+    @Override
+    public boolean isActive() {
+        return isActive;
     }
 
     @Override
     public void InitMpuMetadata_HEVC_NAL_Payload(MpuMetadata_HEVC_NAL_Payload payload) {
-        if (ATSC3PlayerFlags.ATSC3PlayerStartPlayback && InitMpuMetadata_HEVC_NAL_Payload == null) {
+        if (isActive && InitMpuMetadata_HEVC_NAL_Payload == null) {
             InitMpuMetadata_HEVC_NAL_Payload = payload;
         } else {
             payload.releaseByteBuffer();
@@ -102,14 +127,14 @@ public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payl
 
     @Override
     public void PushMfuByteBufferFragment(MfuByteBufferFragment mfuByteBufferFragment) {
-        if (!ATSC3PlayerFlags.ATSC3PlayerStartPlayback) {
-            mfuByteBufferFragment.myByteBuffer = null;
+        if (!isActive) {
+            mfuByteBufferFragment.unreferenceByteBuffer();
             return;
         }
 
         //jjustman-2020-08-19 - hack-ish workaround for ac-4 and mmt_atsc3_message signalling information w/ sample duration (or avoiding parsing the trun box)
         if (MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us != 0 || MmtPacketIdContext.audio_packet_statistics.extracted_sample_duration_us == 0) {
-            if (MmtPacketIdContext.audio_packet_id == mfuByteBufferFragment.packet_id && mfuByteBufferFragment.sample_number == 1) {
+            if (MmtPacketIdContext.audio_packet_id == mfuByteBufferFragment.packet_id && isKeySample(mfuByteBufferFragment)) {
                 Log.d("PushMfuByteBufferFragment:INFO", String.format(" packet_id: %d, mpu_sequence_number: %d, setting audio_packet_statistics.extracted_sample_duration_us to follow video: %d * 2",
                         mfuByteBufferFragment.packet_id, mfuByteBufferFragment.mpu_sequence_number, MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us));
             }
@@ -142,15 +167,15 @@ public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payl
         //normal flow...
         mfuBufferQueue.add(mfuByteBufferFragment);
 
-        if (mfuByteBufferFragment.sample_number == 1) {
-            if (!ATSC3PlayerFlags.FirstMfuBufferVideoKeyframeSent) {
+        if (isKeySample(mfuByteBufferFragment)) {
+            if (!FirstMfuBufferVideoKeyframeSent) {
                 Log.d("pushMfuByteBufferFragment", String.format("V: pushing FIRST: queueSize: %d, sampleNumber: %d, size: %d, mpuPresentationTimeUs: %d",
                         mfuBufferQueue.size(),
                         mfuByteBufferFragment.sample_number,
                         mfuByteBufferFragment.bytebuffer_length,
                         mfuByteBufferFragment.mpu_presentation_time_uS_from_SI));
             }
-            ATSC3PlayerFlags.FirstMfuBufferVideoKeyframeSent = true;
+            FirstMfuBufferVideoKeyframeSent = true;
 
             MmtPacketIdContext.video_packet_statistics.video_mfu_i_frame_count++;
         } else {
@@ -248,24 +273,12 @@ public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payl
     }
 
     private void addSubtitleFragment(MfuByteBufferFragment mfuByteBufferFragment) {
-        if (!ATSC3PlayerFlags.FirstMfuBufferVideoKeyframeSent) {
+        if (!FirstMfuBufferVideoKeyframeSent) {
             return;
         }
 
         mfuBufferQueue.add(mfuByteBufferFragment);
         MmtPacketIdContext.stpp_packet_statistics.total_mfu_samples_count++;
-    }
-
-    void getMediaFormat(MediaFormat mediaFormat) {
-        byte[] nal_check = new byte[8];
-        InitMpuMetadata_HEVC_NAL_Payload.myByteBuffer.get(nal_check, 0, 8);
-        Log.d("createMfuOuterMediaCodec", String.format("HEVC NAL is: 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x, len: %d",
-                nal_check[0], nal_check[1], nal_check[2], nal_check[3],
-                nal_check[4], nal_check[5], nal_check[6], nal_check[7], InitMpuMetadata_HEVC_NAL_Payload.myByteBuffer.capacity()));
-
-        InitMpuMetadata_HEVC_NAL_Payload.myByteBuffer.rewind();
-
-        mediaFormat.setByteBuffer("csd-0", InitMpuMetadata_HEVC_NAL_Payload.myByteBuffer);
     }
 
     public boolean hasMpuMetadata() {
@@ -275,7 +288,7 @@ public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payl
     public boolean skipUntilKeyFrame() {
         MfuByteBufferFragment fragment;
         while ((fragment = mfuBufferQueue.peek()) != null) {
-            if (fragment.sample_number == 1) {
+            if (isKeySample(fragment) && !isTextSample(fragment)) {
                 return true;
             } else {
                 fragment.unreferenceByteBuffer();

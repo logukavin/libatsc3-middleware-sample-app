@@ -3,7 +3,7 @@ package com.nextgenbroadcast.mobile.core.service.binder
 import com.nextgenbroadcast.mobile.core.presentation.IMediaPlayerPresenter
 import com.nextgenbroadcast.mobile.core.presentation.ISelectorPresenter
 import com.nextgenbroadcast.mobile.core.presentation.IUserAgentPresenter
-import com.nextgenbroadcast.mobile.middleware.presentation.IReceiverPresenter
+import com.nextgenbroadcast.mobile.core.presentation.IReceiverPresenter
 
 interface IServiceBinder {
     val receiverPresenter: IReceiverPresenter

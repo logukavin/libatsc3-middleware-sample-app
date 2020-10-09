@@ -10,13 +10,15 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Applicatio
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPackage
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.service.Atsc3Service
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
+import com.nextgenbroadcast.mobile.middleware.settings.IReceiverSettings
 import com.nextgenbroadcast.mobile.mmt.atsc3.media.MMTDataBuffer
 import kotlinx.coroutines.*
 
 
 internal class ServiceControllerImpl (
         private val repository: IRepository,
-        private val atsc3Module: Atsc3Module
+        private val settings: IReceiverSettings,
+        private val atsc3Module: Atsc3Module,
 ) : IServiceController, Atsc3Module.Listener {
 
     private val ioScope = CoroutineScope(Dispatchers.IO)
@@ -30,6 +32,9 @@ internal class ServiceControllerImpl (
     override val serviceGuidUrls = repository.serviceGuideUrls
 
     override val sltServices = repository.services
+
+    override val freqKhz: Int
+        get() = settings.freqKhz
 
     init {
         atsc3Module.setListener(this)
@@ -122,7 +127,14 @@ internal class ServiceControllerImpl (
     }
 
     override fun createMMTSource(): MMTDataBuffer {
-        return MMTDataBuffer(atsc3Module)
+        return MMTDataBuffer().also { mmtDataBuffer ->
+            atsc3Module.setMMTSource(mmtDataBuffer)
+        }
+    }
+
+    override fun tune(freqKhz: Int) {
+        settings.freqKhz = freqKhz
+        atsc3Module.tune(freqKhz)
     }
 
     private fun resetHeldWithDelay() {

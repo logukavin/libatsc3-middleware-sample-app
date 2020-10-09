@@ -7,6 +7,7 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <!--    To make service endless-->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
     <application>
 
@@ -25,6 +26,7 @@
             android:name=".ServiceDialogActivity"
             android:excludeFromRecents="true"
             android:exported="false"
+            android:taskAffinity=".ServiceActivity"
             android:theme="@style/Theme.AppCompat.Light.Dialog" />
 
         <uses-library

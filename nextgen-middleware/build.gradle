@@ -73,6 +73,7 @@ dependencies {
     implementation "org.ngbp.libatsc3:atsc3_bridge:$libatsc3Version"
     implementation "org.ngbp.libatsc3:atsc3_phy_virtual:$libatsc3Version"
     implementation "org.ngbp.libatsc3:atsc3_phy_lowasis:$libatsc3Version"
+    implementation "org.ngbp.libatsc3:atsc3_phy_saankhya:$libatsc3Version"
 
     implementation project(":nextgen-core")
     compileOnly project(":nextgen-mmt")
@@ -101,6 +102,8 @@ dependencies {
     implementation("androidx.startup:startup-runtime:1.0.0-alpha03") {
         transitive = true
     }
+
+    implementation 'com.google.android.gms:play-services-location:17.1.0'
 
     testImplementation project(":nextgen-mmt")
     testImplementation 'junit:junit:4.12'
