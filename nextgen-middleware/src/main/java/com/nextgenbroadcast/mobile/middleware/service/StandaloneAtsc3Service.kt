@@ -24,6 +24,8 @@ class StandaloneAtsc3Service : Atsc3ForegroundService() {
                 lifecycleOwner = this@StandaloneAtsc3Service,
                 receiverPresenter = object : IReceiverPresenter {
                     override val receiverState = serviceController.receiverState
+                    override val freqKhz: Int
+                        get() = TODO("Not yet implemented")
 
                     override fun openRoute(path: String): Boolean {
                         openRoute(this@StandaloneAtsc3Service, path)
@@ -36,6 +38,10 @@ class StandaloneAtsc3Service : Atsc3ForegroundService() {
 
                     override fun createMMTSource(): MMTDataBuffer {
                         throw UnsupportedOperationException("MMT playback is not supported with standalone service")
+                    }
+
+                    override fun tune(freqKhz: Int) {
+                        TODO("Not yet implemented")
                     }
                 },
                 serviceController = serviceController,
