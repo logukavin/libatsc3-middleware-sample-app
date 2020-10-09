@@ -2,6 +2,7 @@ package com.nextgenbroadcast.mobile.middleware.service
 
 import android.content.Intent
 import android.os.*
+import com.nextgenbroadcast.mobile.middleware.service.provider.StandaloneMediaFileProvider
 import com.nextgenbroadcast.mobile.middleware.service.handler.StandaloneServiceHandler
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
 import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
@@ -10,6 +11,10 @@ import com.nextgenbroadcast.mobile.mmt.atsc3.media.MMTDataBuffer
 import java.lang.UnsupportedOperationException
 
 class StandaloneAtsc3Service : Atsc3ForegroundService() {
+
+    override val mediaFileProvider by lazy {
+        StandaloneMediaFileProvider(applicationContext)
+    }
 
     private var serviceHandler: StandaloneServiceHandler? = null
 

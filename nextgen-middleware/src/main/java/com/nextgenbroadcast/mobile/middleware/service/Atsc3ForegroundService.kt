@@ -30,6 +30,8 @@ import com.nextgenbroadcast.mobile.middleware.phy.Atsc3DeviceReceiver
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
 import com.nextgenbroadcast.mobile.middleware.repository.RepositoryImpl
 import com.nextgenbroadcast.mobile.middleware.server.web.MiddlewareWebServer
+import com.nextgenbroadcast.mobile.middleware.service.provider.IMediaFileProvider
+import com.nextgenbroadcast.mobile.middleware.service.provider.MediaFileProvider
 import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
 import com.nextgenbroadcast.mobile.middleware.settings.MiddlewareSettingsImpl
 import kotlinx.coroutines.*
@@ -42,13 +44,15 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     private lateinit var serviceController: IServiceController
     private lateinit var state: MediatorLiveData<Triple<ReceiverState?, SLSService?, PlaybackState?>>
 
-    protected lateinit var mediaFileProvider: IMediaFileProvider
-
     private var viewController: IViewController? = null
     private var webGateway: IWebGateway? = null
     private var rpcGateway: IRPCGateway? = null
     private var webServer: MiddlewareWebServer? = null
     private var deviceReceiver: Atsc3DeviceReceiver? = null
+
+    protected open val mediaFileProvider: IMediaFileProvider by lazy {
+        MediaFileProvider(applicationContext)
+    }
 
     abstract fun createServiceBinder(serviceController: IServiceController, viewController: IViewController) : IBinder
 
@@ -82,8 +86,6 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
                 }
             })
         }
-
-        mediaFileProvider = MediaFileProvider(applicationContext, MediaFileSweeper(applicationContext))
     }
 
     override fun onBind(intent: Intent): IBinder? {
