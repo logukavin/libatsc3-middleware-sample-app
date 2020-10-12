@@ -32,6 +32,7 @@ import com.nextgenbroadcast.mobile.middleware.repository.IRepository
 import com.nextgenbroadcast.mobile.middleware.repository.RepositoryImpl
 import com.nextgenbroadcast.mobile.middleware.server.web.MiddlewareWebServer
 import com.nextgenbroadcast.mobile.middleware.service.provider.IMediaFileProvider
+import com.nextgenbroadcast.mobile.middleware.service.provider.MediaFileProvider
 import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
 import com.nextgenbroadcast.mobile.middleware.settings.MiddlewareSettingsImpl
 import kotlinx.coroutines.*
@@ -50,14 +51,14 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     private var webServer: MiddlewareWebServer? = null
     private var deviceReceiver: Atsc3DeviceReceiver? = null
 
-    protected open val mediaFileProvider: IMediaFileProvider by lazy {
-        com.nextgenbroadcast.mobile.middleware.service.provider.MediaFileProvider(applicationContext)
-    }
-
     private var isInitialized = false
 
     private val usbManager: UsbManager by lazy {
         getSystemService(Context.USB_SERVICE) as UsbManager
+    }
+
+    protected open val mediaFileProvider: IMediaFileProvider by lazy {
+        MediaFileProvider(applicationContext)
     }
 
     abstract fun createServiceBinder(serviceController: IServiceController, viewController: IViewController) : IBinder
