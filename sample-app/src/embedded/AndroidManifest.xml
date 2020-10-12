@@ -6,7 +6,17 @@
 
         <service
             android:name="com.nextgenbroadcast.mobile.middleware.service.EmbeddedAtsc3Service"
-            android:exported="false" />
+            android:exported="false">
+
+            <meta-data
+                android:name="com.nextgenbroadcast.mobile.middleware.location.FrequencyLocator"
+                android:value="nextgenbroadcast.locator" />
+
+            <meta-data
+                android:name="org.ngbp.libatsc3.middleware.android.phy.SaankhyaPHYAndroid"
+                android:resource="@xml/saankhya_phy" />
+
+        </service>
 
     </application>
 

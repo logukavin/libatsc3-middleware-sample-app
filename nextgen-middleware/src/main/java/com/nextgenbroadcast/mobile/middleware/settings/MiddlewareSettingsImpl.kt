@@ -94,9 +94,11 @@ internal class MiddlewareSettingsImpl(context: Context) : IMiddlewareSettings {
     private fun frequencyLocationToString(frequencyLocation: FrequencyLocation?): String? {
         return frequencyLocation?.let {
             JSONObject().apply {
-                put(LOCATION_PROVIDER, frequencyLocation.location.provider)
-                put(LOCATION_LATITUDE, frequencyLocation.location.latitude)
-                put(LOCATION_LONGITUDE, frequencyLocation.location.longitude)
+                frequencyLocation.location?.let { location ->
+                    put(LOCATION_PROVIDER, location.provider)
+                    put(LOCATION_LATITUDE, location.latitude)
+                    put(LOCATION_LONGITUDE, location.longitude)
+                }
                 put(FREQUENCY_LIST, JSONArray(frequencyLocation.frequencyList))
             }.toString()
         }
