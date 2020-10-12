@@ -12,10 +12,7 @@ import com.nextgenbroadcast.mobile.middleware.gateway.web.ConnectionType
 import com.nextgenbroadcast.mobile.middleware.gateway.web.IWebGateway
 import com.nextgenbroadcast.mobile.middleware.server.ServerConstants.ATSC_CMD_PATH
 import com.nextgenbroadcast.mobile.middleware.server.ws.MiddlewareWebSocket
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
 import org.eclipse.jetty.http.HttpVersion
 import org.eclipse.jetty.server.*
 import org.eclipse.jetty.server.handler.HandlerCollection
@@ -37,11 +34,13 @@ import java.util.*
 
 class MiddlewareWebServer constructor(
         private val server: Server,
-        private val webGateway: IWebGateway?
+        private val webGateway: IWebGateway?,
+        unconfinedDispatcher: CoroutineDispatcher
 ) : AutoCloseable, LifecycleOwner {
 
     private val lifecycleRegistry = LifecycleRegistry(this)
     private val availResources = arrayListOf<AppResource>()
+    private val globalScope = CoroutineScope(unconfinedDispatcher)
 
     init {
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
@@ -196,7 +195,7 @@ class MiddlewareWebServer constructor(
                 }
             }
 
-            return MiddlewareWebServer(server, webGateway)
+            return MiddlewareWebServer(server, webGateway, Dispatchers.Unconfined)
         }
     }
 

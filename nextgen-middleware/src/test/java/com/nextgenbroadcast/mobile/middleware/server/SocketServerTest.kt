@@ -8,6 +8,8 @@ import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.Urls
 import com.nextgenbroadcast.mobile.middleware.server.web.MiddlewareWebServer
 import com.nextgenbroadcast.mobile.middleware.server.web.configureSSLFactory
 import com.nextgenbroadcast.mobile.middleware.server.ws.MiddlewareWebSocket
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.TestCoroutineDispatcher
 import org.eclipse.jetty.client.HttpClient
 import org.eclipse.jetty.websocket.api.WebSocketAdapter
 import org.eclipse.jetty.websocket.client.WebSocketClient
@@ -28,6 +30,10 @@ class SocketServerTest : ServerTest() {
     private lateinit var webServer: MiddlewareWebServer
     private lateinit var webSocketClient: WebSocketClient
 
+    @ExperimentalCoroutinesApi
+    private val testDispatcher = TestCoroutineDispatcher()
+
+    @ExperimentalCoroutinesApi
     @Before
     fun setup() {
         rpcGateway = object : RPCGatewayAdapter() {
@@ -53,7 +59,7 @@ class SocketServerTest : ServerTest() {
             }
         }
 
-        webServer = MiddlewareWebServer(server, webGateway = null).also {
+        webServer = MiddlewareWebServer(server, webGateway = null, unconfinedDispatcher = testDispatcher).also {
             server.start()
         }
         webSocketClient = WebSocketClient(HttpClient(configureSSLFactory(UserAgentSSLContext(mockApplicationContext))))
@@ -85,6 +91,13 @@ class SocketServerTest : ServerTest() {
         val session = webSocketClient.connect(WebSocketAdapter(), URI("wss://localhost:$WSS_PORT/")).get()
 
         Assert.assertTrue(session.isOpen)
+    }
+
+    @ExperimentalCoroutinesApi
+    @After
+    fun cleanUp() {
+//        Dispatchers.resetMain()
+        testDispatcher.cleanupTestCoroutines()
     }
 }
 
