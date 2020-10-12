@@ -39,13 +39,10 @@ internal class MiddlewareSettingsImpl(context: Context) : IMiddlewareSettings {
     override var wsPort = ServerConstants.PORT_AUTOFIT
     override var wssPort = ServerConstants.PORT_AUTOFIT
 
-    override var freqKhz: Int
-        get() {
-            //TODO: init from shared prefs
-            return 0
-        }
+    override var freqKhz: Int?
+        get() = loadInt(FREQUENCY_CUSTOM) ?: frequencyLocation?.frequencyList?.first()
         set(value) {
-            //TODO: implement. Do not save to shared prefs
+            saveInt(FREQUENCY_CUSTOM, value)
         }
 
     private fun saveString(key: String, value: String): String {
@@ -55,6 +52,14 @@ internal class MiddlewareSettingsImpl(context: Context) : IMiddlewareSettings {
 
     private fun loadString(key: String): String? {
         return preferences.getString(key, null)
+    }
+
+    private fun loadInt(key: String): Int? {
+        return if(preferences.contains(key)) preferences.getInt(key, 0) else null
+    }
+
+    private fun saveInt(key: String, value: Int?) {
+        preferences.edit { if(value != null) putInt(key, value) else remove(key) }
     }
 
     private fun requireString(key: String, action: () -> String): String {
@@ -96,5 +101,6 @@ internal class MiddlewareSettingsImpl(context: Context) : IMiddlewareSettings {
         private const val LOCATION_LATITUDE = "location_latitude"
         private const val LOCATION_LONGITUDE = "location_longitude"
         private const val FREQUENCY_LIST = "frequency_list"
+        private const val FREQUENCY_CUSTOM = "frequency_custom"
     }
 }

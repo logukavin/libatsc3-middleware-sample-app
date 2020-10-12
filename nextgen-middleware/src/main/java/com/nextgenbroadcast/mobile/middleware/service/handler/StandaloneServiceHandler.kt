@@ -48,6 +48,7 @@ internal class StandaloneServiceHandler(
                 msg.data.getString(IServiceBinder.PARAM_PERMISSION_PACKAGE)?.let { clientPackage ->
                     observeRPMMediaUrl(msg.replyTo, clientPackage)
                 }
+                observeFrequency(msg.replyTo)
             }
 
             IServiceBinder.ACTION_OPEN_ROUTE -> {
@@ -99,6 +100,10 @@ internal class StandaloneServiceHandler(
                         }
                     }
                 }
+            }
+
+            IServiceBinder.ACTION_TYNE_FREQUENCY -> {
+                receiverPresenter.tune(msg.data.getInt(IServiceBinder.PARAM_FREQUENCY_KHZ))
             }
 
             else -> super.handleMessage(msg)
@@ -189,6 +194,18 @@ internal class StandaloneServiceHandler(
                         )
                 ))
             }
+        })
+    }
+
+    private fun observeFrequency(sendToMessenger: Messenger) {
+        serviceController.freqKhz.observe(lifecycleOwner, { freqKhz ->
+            sendToMessenger.send(buildMessage(
+                    IServiceBinder.ACTION_TYNE_FREQUENCY,
+                    bundleOf(
+                            IServiceBinder.PARAM_FREQUENCY_KHZ to freqKhz
+                    ),
+                    SLSService::class.java.classLoader
+            ))
         })
     }
 
