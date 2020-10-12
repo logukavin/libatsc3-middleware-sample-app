@@ -33,8 +33,11 @@ internal class ServiceControllerImpl (
 
     override val sltServices = repository.services
 
-    override val freqKhz: Int
-        get() = settings.freqKhz
+    override val freqKhz = MutableLiveData<Int>().apply {
+        settings.freqKhz?.let {
+            postValue(settings.freqKhz)
+        }
+    }
 
     init {
         atsc3Module.setListener(this)
@@ -134,6 +137,7 @@ internal class ServiceControllerImpl (
 
     override fun tune(freqKhz: Int) {
         settings.freqKhz = freqKhz
+        this@ServiceControllerImpl.freqKhz.postValue(freqKhz)
         atsc3Module.tune(freqKhz)
     }
 

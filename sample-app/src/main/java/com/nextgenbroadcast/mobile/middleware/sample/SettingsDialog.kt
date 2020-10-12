@@ -1,25 +1,16 @@
 package com.nextgenbroadcast.mobile.middleware.sample
 
-import android.content.Context
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.DialogFragment
+import com.nextgenbroadcast.mobile.core.presentation.IReceiverPresenter
 import kotlinx.android.synthetic.main.dialog_settings.*
 
-class SettingsDialog: DialogFragment() {
-
-    interface OnSettingsDialogListener {
-        fun onSetFrequency(frequency: Int)
-    }
-
-    private var listener: OnSettingsDialogListener? = null
-
-    override fun onAttach(context: Context) {
-        super.onAttach(context)
-        listener = context as? OnSettingsDialogListener
-    }
+class SettingsDialog(
+        private val receiverPresenter: IReceiverPresenter
+): DialogFragment() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -33,11 +24,14 @@ class SettingsDialog: DialogFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        receiverPresenter.freqKhz.observe(this, { freqKhz ->
+            frequencyEditText.setText(freqKhz.toString())
+        })
         applyButton.setOnClickListener {
-            dismiss()
             frequencyEditText.text.toString().toIntOrNull()?.let {
-                listener?.onSetFrequency(it)
+                receiverPresenter.tune(it)
             }
+            dismiss()
         }
     }
 }

@@ -107,6 +107,10 @@ class MainActivity : BaseActivity() {
                 startPlayback(uri)
             }
         }
+        settings_button.visibility = View.VISIBLE
+        settings_button.setOnClickListener {
+            openSettings(receiver)
+        }
     }
 
     private fun bindViewModels(provider: ViewModelProvider): Triple<RMPViewModel, UserAgentViewModel, SelectorViewModel> {
@@ -407,8 +411,8 @@ class MainActivity : BaseActivity() {
         }
     }
 
-    private fun openSettings() {
-        SettingsDialog().show(supportFragmentManager, SettingsDialog::class.java.simpleName)
+    private fun openSettings(receiverPresenter: IReceiverPresenter) {
+        SettingsDialog(receiverPresenter).show(supportFragmentManager, SettingsDialog::class.java.simpleName)
     }
 
     private fun changeService(serviceId: Int) {
