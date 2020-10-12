@@ -210,7 +210,10 @@ internal class Atsc3Module(
     }
 
     fun selectService(serviceId: Int): Boolean {
+        if (selectedServiceId == serviceId) return false
+
         clearHeld()
+        setMMTSource(null)
 
         selectedServiceId = serviceId
         selectedServiceSLSProtocol = atsc3NdkApplicationBridge.atsc3_slt_selectService(serviceId)
@@ -247,6 +250,8 @@ internal class Atsc3Module(
     }
 
     override fun setMMTSource(source: MMTDataConsumerType?) {
+        ATSC3PlayerFlags.ATSC3PlayerStartPlayback = false
+
         mmtSource?.let { oldSource ->
             oldSource.release()
             mmtSource = null
