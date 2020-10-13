@@ -6,7 +6,7 @@
     <string name="warning_external_stortage_permission">External storage permission is required to open *.pcap files </string>
     <string name="warning_access_background_location_permission">Location permission is necessary yo tune the receiver </string>
     <string name="source_loading">Loading %s…</string>
-    <string name="settings">Settings</string>
-    <string name="enter_frequency">Enter frequency</string>
-    <string name="apply">Apply</string>
+    <string name="settings_title">Settings</string>
+    <string name="settings_frequency_hint">Receiver frequency</string>
+    <string name="settings_apply_btn">Tune</string>
 </resources>

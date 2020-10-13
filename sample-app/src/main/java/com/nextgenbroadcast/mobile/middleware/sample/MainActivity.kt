@@ -108,7 +108,6 @@ class MainActivity : BaseActivity() {
             }
         }
 
-        settings_button.visibility = View.VISIBLE
         settings_button.setOnClickListener {
             openSettings(receiver)
         }

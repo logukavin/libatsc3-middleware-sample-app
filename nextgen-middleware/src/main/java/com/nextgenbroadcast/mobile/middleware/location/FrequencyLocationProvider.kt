@@ -13,8 +13,8 @@ import com.google.android.gms.location.LocationServices
 
 class FrequencyLocationProvider(
         private val context: Context,
-        private val callback: (location: Location) -> Unit
-): LocationListener {
+        private val callback: (location: Location?) -> Unit
+) : LocationListener {
 
     private val locationManager = (context.getSystemService(Context.LOCATION_SERVICE) as LocationManager)
 
@@ -24,11 +24,9 @@ class FrequencyLocationProvider(
             if (location != null) {
                 callback.invoke(location)
             } else {
-                locationManager.requestLocationUpdates(
-                        locationManager.getBestProvider(Criteria(), false),
-                        0,
-                        0f,
-                        this@FrequencyLocationProvider)
+                locationManager.getBestProvider(Criteria(), false)?.let { provider ->
+                    locationManager.requestLocationUpdates(provider, 0, 0f, this@FrequencyLocationProvider)
+                } ?: callback.invoke(null)
             }
         }
     }

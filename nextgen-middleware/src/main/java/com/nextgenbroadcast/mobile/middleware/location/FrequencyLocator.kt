@@ -15,16 +15,18 @@ class FrequencyLocator(
 
     fun requestFrequencies(callback: (frequencyList: List<Int>) -> Unit) {
         FrequencyLocationProvider(context) { location ->
-            if (settings.frequencyLocation != null) {
-                val distance = location.distanceTo(settings.frequencyLocation?.location).toInt()
-                if (distance > RECEPTION_RADIUS) {
+            location?.let {
+                if (settings.frequencyLocation != null) {
+                    val distance = location.distanceTo(settings.frequencyLocation?.location).toInt()
+                    if (distance > RECEPTION_RADIUS) {
+                        updateFrequenciesByLocation(location, callback)
+                    } else settings.frequencyLocation?.frequencyList?.let { list ->
+                        callback.invoke(list)
+                    }
+                } else {
                     updateFrequenciesByLocation(location, callback)
-                } else settings.frequencyLocation?.frequencyList?.let { it ->
-                    callback.invoke(it)
                 }
-            } else {
-                updateFrequenciesByLocation(location, callback)
-            }
+            } ?: callback.invoke(emptyList())
         }.requestLocation()
     }
 
