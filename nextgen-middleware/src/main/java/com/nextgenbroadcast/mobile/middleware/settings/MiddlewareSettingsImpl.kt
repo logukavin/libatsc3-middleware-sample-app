@@ -3,6 +3,7 @@ package com.nextgenbroadcast.mobile.middleware.settings
 import android.content.Context
 import android.location.Location
 import androidx.core.content.edit
+import androidx.lifecycle.MutableLiveData
 import com.nextgenbroadcast.mobile.middleware.BuildConfig
 import com.nextgenbroadcast.mobile.middleware.location.FrequencyLocation
 import com.nextgenbroadcast.mobile.middleware.server.ServerConstants
@@ -30,6 +31,8 @@ internal class MiddlewareSettingsImpl(context: Context) : IMiddlewareSettings {
         set(value) {
             frequencyLocationToString(value)?.let {
                 saveString(FREQUENCY_LOCATION, it)
+                if (freqKhz == 0)
+                    freqKhz = value?.frequencyList?.firstOrNull() ?: 0
             }
         }
 
@@ -40,12 +43,11 @@ internal class MiddlewareSettingsImpl(context: Context) : IMiddlewareSettings {
     override var wssPort = ServerConstants.PORT_AUTOFIT
 
     override var freqKhz: Int
-        get() {
-            //TODO: init from shared prefs
-            return 0
+        get() = requireInt(FREQUENCY_CUSTOM) {
+            frequencyLocation?.frequencyList?.firstOrNull() ?: 0
         }
         set(value) {
-            //TODO: implement. Do not save to shared prefs
+            saveInt(FREQUENCY_CUSTOM, value)
         }
 
     private fun saveString(key: String, value: String): String {
@@ -57,15 +59,28 @@ internal class MiddlewareSettingsImpl(context: Context) : IMiddlewareSettings {
         return preferences.getString(key, null)
     }
 
+    private fun loadInt(key: String): Int? {
+        return if (preferences.contains(key)) preferences.getInt(key, 0) else null
+    }
+
+    private fun saveInt(key: String, value: Int): Int {
+        preferences.edit { putInt(key, value) }
+        return value
+    }
+
     private fun requireString(key: String, action: () -> String): String {
         return loadString(key) ?: saveString(key, action.invoke())
+    }
+
+    private fun requireInt(key: String, action: () -> Int): Int {
+        return loadInt(key) ?: saveInt(key, action.invoke())
     }
 
     private fun stringToFrequencyLocation(flJsonStr: String): FrequencyLocation {
         val frequencyLocationJson = JSONObject(flJsonStr)
         val frequencyJSONArray = frequencyLocationJson.getJSONArray(FREQUENCY_LIST)
         val frequencyList = mutableListOf<Int>().apply {
-            for(index in 0 until frequencyJSONArray.length()) {
+            for (index in 0 until frequencyJSONArray.length()) {
                 add(index, frequencyJSONArray.get(index) as Int)
             }
         }
@@ -96,5 +111,6 @@ internal class MiddlewareSettingsImpl(context: Context) : IMiddlewareSettings {
         private const val LOCATION_LATITUDE = "location_latitude"
         private const val LOCATION_LONGITUDE = "location_longitude"
         private const val FREQUENCY_LIST = "frequency_list"
+        private const val FREQUENCY_CUSTOM = "frequency_custom"
     }
 }
