@@ -4,26 +4,33 @@ import android.content.Context
 import android.content.res.Resources
 import android.content.res.XmlResourceParser
 import com.nextgenbroadcast.mobile.middleware.atsc3.utils.XmlUtils
+import com.nextgenbroadcast.mobile.middleware.phy.Atsc3OnboardPhyConnector
 import org.ngbp.libatsc3.middleware.android.phy.Atsc3NdkPHYClientBase
 import org.xmlpull.v1.XmlPullParser
 
-internal class PhyInitializer : IServiceInitializer {
+internal class OnboardPhyInitializer : IServiceInitializer {
 
     private var isActive = true
 
     override fun initialize(context: Context, components: HashMap<Class<*>, Pair<Int, String>>): Boolean {
+        val connector = Atsc3OnboardPhyConnector()
+
         components.filter { (clazz, _) ->
             Atsc3NdkPHYClientBase::class.java.isAssignableFrom(clazz)
         }.map { (clazz, data) ->
             val (resource) = data
-            Pair(clazz as Class<out Atsc3NdkPHYClientBase>, resource)
+            @Suppress("UNCHECKED_CAST")
+            Pair(clazz as Class<Atsc3NdkPHYClientBase>, resource)
         }.forEach { (component, resource) ->
             try {
                 val parser = context.resources.getXml(resource)
-                readPhyAttributes(parser).forEach { (fd, devicePath, freqKhz) ->
-                    if (initializePHY(component, fd, devicePath, freqKhz)) {
-                        return true
-                    }
+                val params = readPhyAttributes(parser)
+
+                val instance: Any = component.getDeclaredConstructor().newInstance()
+                val phy = instance as Atsc3NdkPHYClientBase
+
+                if (connector.connect(phy, params)) {
+                    return true
                 }
             } catch (e: Resources.NotFoundException) {
                 e.printStackTrace()
@@ -80,27 +87,5 @@ internal class PhyInitializer : IServiceInitializer {
             parser.close()
             return result
         }
-    }
-
-    private fun initializePHY(component: Class<out Atsc3NdkPHYClientBase>, fd: Int, devicePath: String?, freqKhz: Int): Boolean {
-        try {
-            val instance: Any = component.getDeclaredConstructor().newInstance()
-            val initializer = instance as Atsc3NdkPHYClientBase
-
-            if (initializer.init() == 0) {
-                if (initializer.open(fd, devicePath) == 0) {
-                    if (freqKhz > 0) {
-                        initializer.tune(freqKhz, 0)
-                    }
-
-                    return true
-                }
-            }
-        } catch (t: Throwable) {
-            //throw StartupException(throwable)
-            t.printStackTrace()
-        }
-
-        return false
     }
 }

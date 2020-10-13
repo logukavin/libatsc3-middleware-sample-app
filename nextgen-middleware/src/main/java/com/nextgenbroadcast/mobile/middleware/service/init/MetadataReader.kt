@@ -6,7 +6,8 @@ import android.content.pm.PackageManager
 import com.nextgenbroadcast.mobile.middleware.service.Atsc3ForegroundService
 
 internal object MetadataReader {
-    internal fun discoverMetadata(context: Context): HashMap<Class<*>, Pair<Int, String>> {
+
+    fun discoverMetadata(context: Context): HashMap<Class<*>, Pair<Int, String>> {
         val discovered = HashMap<Class<*>, Pair<Int, String>>()
 
         try {
@@ -23,10 +24,8 @@ internal object MetadataReader {
                 }
             }
         } catch (e: PackageManager.NameNotFoundException) {
-            //throw StartupException(exception)
             e.printStackTrace()
         } catch (e: ClassNotFoundException) {
-            //throw StartupException(exception)
             e.printStackTrace()
         }
 

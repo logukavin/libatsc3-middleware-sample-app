@@ -19,7 +19,8 @@ internal class LocatorInitializer(
             val (_, value) = data
             value == LOCATOR_STR
         }.map {(clazz, _) ->
-            clazz as Class<out IFrequencyLocator>
+            @Suppress("UNCHECKED_CAST")
+            clazz as Class<IFrequencyLocator>
         }
 
         locationJob = CoroutineScope(Dispatchers.IO).launch {
@@ -29,7 +30,7 @@ internal class LocatorInitializer(
 
                 try {
                     val prevLocation = settings.frequencyLocation?.location
-                    withTimeout(LOCATION_DELAY) {
+                    withTimeout(LOCATION_REQUEST_DELAY) {
                         initializer.locateFrequency(context){ location ->
                             prevLocation == null || location.distanceTo(prevLocation) > IFrequencyLocator.RECEPTION_RADIUS
                         }?.let {
@@ -38,6 +39,7 @@ internal class LocatorInitializer(
                     }
                 } catch (e: TimeoutCancellationException) {
                     e.printStackTrace()
+                    initializer.cancel()
                 }
 
                 if (!isActive) return@forEach
@@ -55,7 +57,7 @@ internal class LocatorInitializer(
     }
 
     companion object {
-        private val LOCATION_DELAY = TimeUnit.SECONDS.toMillis(1)
+        private val LOCATION_REQUEST_DELAY = TimeUnit.MINUTES.toMillis(1)
 
         private const val LOCATOR_STR = "nextgenbroadcast.locator"
     }
