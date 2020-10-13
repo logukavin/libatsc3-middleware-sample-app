@@ -216,6 +216,8 @@ class MainActivity : BaseActivity() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED ||
                 ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.ACCESS_COARSE_LOCATION), PERMISSION_REQUEST)
+        } else {
+            bindToService()
         }
     }
 
@@ -247,6 +249,8 @@ class MainActivity : BaseActivity() {
 
             if (!grantedAccessLocation) {
                 Toast.makeText(this, getText(R.string.warning_access_background_location_permission), Toast.LENGTH_SHORT).show()
+            } else {
+                bindToService()
             }
         }
     }

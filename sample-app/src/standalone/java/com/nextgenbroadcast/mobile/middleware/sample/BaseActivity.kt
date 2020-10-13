@@ -16,9 +16,7 @@ abstract class BaseActivity : AppCompatActivity() {
     var isBound: Boolean = false
         private set
 
-    override fun onStart() {
-        super.onStart()
-
+    fun bindToService() {
         Intent(this, StandaloneAtsc3Service::class.java).also { intent ->
             bindService(intent, connection, Context.BIND_AUTO_CREATE)
         }
@@ -27,7 +25,8 @@ abstract class BaseActivity : AppCompatActivity() {
     override fun onStop() {
         super.onStop()
 
-        unbindService(connection)
+        if(isBound)
+            unbindService(connection)
         isBound = false
         onUnbind()
     }
