@@ -26,19 +26,23 @@ import com.nextgenbroadcast.mobile.middleware.gateway.rpc.IRPCGateway
 import com.nextgenbroadcast.mobile.middleware.gateway.rpc.RPCGatewayImpl
 import com.nextgenbroadcast.mobile.middleware.gateway.web.IWebGateway
 import com.nextgenbroadcast.mobile.middleware.gateway.web.WebGatewayImpl
+import com.nextgenbroadcast.mobile.middleware.location.IFrequencyLocator
 import com.nextgenbroadcast.mobile.middleware.phy.Atsc3DeviceReceiver
+import com.nextgenbroadcast.mobile.middleware.phy.Atsc3UsbPhyConnector
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
 import com.nextgenbroadcast.mobile.middleware.repository.RepositoryImpl
 import com.nextgenbroadcast.mobile.middleware.server.web.MiddlewareWebServer
+import com.nextgenbroadcast.mobile.middleware.service.init.UsbPhyInitializer
+import com.nextgenbroadcast.mobile.middleware.service.init.OnboardPhyInitializer
 import com.nextgenbroadcast.mobile.middleware.service.init.IServiceInitializer
 import com.nextgenbroadcast.mobile.middleware.service.init.LocatorInitializer
 import com.nextgenbroadcast.mobile.middleware.service.init.MetadataReader
-import com.nextgenbroadcast.mobile.middleware.service.init.PhyInitializer
 import com.nextgenbroadcast.mobile.middleware.service.provider.IMediaFileProvider
 import com.nextgenbroadcast.mobile.middleware.service.provider.MediaFileProvider
 import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
 import com.nextgenbroadcast.mobile.middleware.settings.MiddlewareSettingsImpl
 import kotlinx.coroutines.*
+import org.ngbp.libatsc3.middleware.android.phy.Atsc3NdkPHYClientBase
 import java.lang.ref.WeakReference
 
 abstract class Atsc3ForegroundService : BindableForegroundService() {
@@ -153,6 +157,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         return START_NOT_STICKY
     }
 
+    @Suppress("UNCHECKED_CAST")
     private fun maybeInitialize() {
         if (isInitialized) return
 
@@ -164,12 +169,14 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
             initializer.add(WeakReference(it))
         }.initialize(applicationContext, components)
 
-        val phyInitializer = PhyInitializer().also {
+        val phyInitializer = OnboardPhyInitializer().also {
             initializer.add(WeakReference(it))
         }
 
         if (!phyInitializer.initialize(applicationContext, components)) {
-            scanForCompatibleUSBDevices()
+            UsbPhyInitializer().also {
+                initializer.add(WeakReference(it))
+            }.initialize(applicationContext, components)
         }
     }
 
@@ -251,21 +258,6 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         deviceReceiver?.let { receiver ->
             unregisterReceiver(receiver)
             deviceReceiver = null
-        }
-    }
-
-    private fun scanForCompatibleUSBDevices() {
-        usbManager.deviceList.map { (_, device) ->
-            device
-        }.firstOrNull { device ->
-            atsc3Module.isDeviceCompatible(device)
-        }?.let { device ->
-            if (usbManager.hasPermission(device)) {
-                // open device using a new Intent to start Service as foreground
-                startForDevice(this, device)
-            } else {
-                requestDevicePermission(device)
-            }
         }
     }
 
