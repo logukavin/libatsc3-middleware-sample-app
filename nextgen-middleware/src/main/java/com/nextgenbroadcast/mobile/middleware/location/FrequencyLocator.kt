@@ -1,11 +1,7 @@
 package com.nextgenbroadcast.mobile.middleware.location
 
-import android.Manifest
 import android.content.Context
-import android.content.pm.PackageManager
 import android.location.Location
-import androidx.core.content.ContextCompat
-import com.google.android.gms.location.LocationServices
 import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -18,23 +14,20 @@ class FrequencyLocator(
 ) {
 
     fun requestFrequencies(callback: (frequencyList: List<Int>) -> Unit) {
-        if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) return
-        LocationServices.getFusedLocationProviderClient(context).lastLocation.addOnSuccessListener { location: Location? ->
-            if(location != null) {
-                if(settings.frequencyLocation != null) {
+        FrequencyLocationProvider(context) { location ->
+            location?.let {
+                if (settings.frequencyLocation != null) {
                     val distance = location.distanceTo(settings.frequencyLocation?.location).toInt()
-                    if(distance > RECEPTION_RADIUS) {
+                    if (distance > RECEPTION_RADIUS) {
                         updateFrequenciesByLocation(location, callback)
-                    } else settings.frequencyLocation?.frequencyList?.let { it ->
-                        callback.invoke(it)
+                    } else settings.frequencyLocation?.frequencyList?.let { list ->
+                        callback.invoke(list)
                     }
                 } else {
                     updateFrequenciesByLocation(location, callback)
                 }
-            } else {
-                callback.invoke(listOf())
-            }
-        }
+            } ?: callback.invoke(emptyList())
+        }.requestLocation()
     }
 
     private fun updateFrequenciesByLocation(location: Location, callback: (frequencyList: List<Int>) -> Unit) {
@@ -52,6 +45,6 @@ class FrequencyLocator(
     }
 
     companion object {
-        const val RECEPTION_RADIUS = 50 // in kilometres
+        const val RECEPTION_RADIUS = 50000 // in metres
     }
 }

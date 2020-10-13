@@ -70,6 +70,9 @@ internal class StandaloneClientHandler(
                 }
             }
 
+            IServiceBinder.ACTION_TYNE_FREQUENCY -> {
+                receiverPresenter.freqKhz.postValue(msg.data.getInt(IServiceBinder.PARAM_FREQUENCY_KHZ))
+            }
         }
     }
 
