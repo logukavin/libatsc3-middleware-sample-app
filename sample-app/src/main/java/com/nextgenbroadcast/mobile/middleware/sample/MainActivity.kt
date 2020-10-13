@@ -107,6 +107,7 @@ class MainActivity : BaseActivity() {
                 startPlayback(uri)
             }
         }
+
         settings_button.visibility = View.VISIBLE
         settings_button.setOnClickListener {
             openSettings(receiver)
@@ -386,6 +387,10 @@ class MainActivity : BaseActivity() {
             return
         }
 
+        if(requestCode == SETTINGS_REQUEST_CODE && data != null) {
+            receiverPresenter?.tune(data.getIntExtra(SettingsDialog.PARAM_FREQUENCY, 0))
+        }
+
         super.onActivityResult(requestCode, resultCode, data)
     }
 
@@ -412,7 +417,9 @@ class MainActivity : BaseActivity() {
     }
 
     private fun openSettings(receiverPresenter: IReceiverPresenter) {
-        SettingsDialog(receiverPresenter).show(supportFragmentManager, SettingsDialog::class.java.simpleName)
+        startActivityForResult(Intent(this, SettingsDialog::class.java).apply {
+            putExtra(SettingsDialog.PARAM_FREQUENCY, receiverPresenter.freqKhz.value)
+        }, SETTINGS_REQUEST_CODE)
     }
 
     private fun changeService(serviceId: Int) {
@@ -474,6 +481,7 @@ class MainActivity : BaseActivity() {
         const val PARAM_MODE_PREVIEW = "PARAM_MODE_PREVIEW"
 
         private const val FILE_REQUEST_CODE = 133
+        private const val SETTINGS_REQUEST_CODE = 134
 
         private const val PERMISSION_REQUEST = 1000
 

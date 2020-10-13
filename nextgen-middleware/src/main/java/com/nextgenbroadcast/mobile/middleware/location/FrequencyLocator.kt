@@ -14,7 +14,7 @@ class FrequencyLocator(
 ) {
 
     fun requestFrequencies(callback: (frequencyList: List<Int>) -> Unit) {
-        CustomLocationProvider(context) { location ->
+        FrequencyLocationProvider(context) { location ->
             if (settings.frequencyLocation != null) {
                 val distance = location.distanceTo(settings.frequencyLocation?.location).toInt()
                 if (distance > RECEPTION_RADIUS) {

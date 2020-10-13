@@ -3,6 +3,7 @@ package com.nextgenbroadcast.mobile.middleware.location
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import android.location.Criteria
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
@@ -10,7 +11,7 @@ import android.os.Bundle
 import androidx.core.content.ContextCompat
 import com.google.android.gms.location.LocationServices
 
-class CustomLocationProvider(
+class FrequencyLocationProvider(
         private val context: Context,
         private val callback: (location: Location) -> Unit
 ): LocationListener {
@@ -24,17 +25,17 @@ class CustomLocationProvider(
                 callback.invoke(location)
             } else {
                 locationManager.requestLocationUpdates(
-                        LocationManager.NETWORK_PROVIDER,
-                        1,
-                        FrequencyLocator.RECEPTION_RADIUS.toFloat(),
-                        this@CustomLocationProvider)
+                        locationManager.getBestProvider(Criteria(), false),
+                        0,
+                        0f,
+                        this@FrequencyLocationProvider)
             }
         }
     }
 
     override fun onLocationChanged(location: Location) {
         callback.invoke(location)
-        locationManager.removeUpdates(this@CustomLocationProvider)
+        locationManager.removeUpdates(this@FrequencyLocationProvider)
     }
 
     override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {

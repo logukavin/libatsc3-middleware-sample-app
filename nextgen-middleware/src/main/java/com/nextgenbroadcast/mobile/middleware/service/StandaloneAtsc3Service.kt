@@ -24,7 +24,7 @@ class StandaloneAtsc3Service : Atsc3ForegroundService() {
                 lifecycleOwner = this@StandaloneAtsc3Service,
                 receiverPresenter = object : IReceiverPresenter {
                     override val receiverState = serviceController.receiverState
-                    override var freqKhz = serviceController.freqKhz
+                    override val freqKhz = serviceController.freqKhz
 
                     override fun openRoute(path: String): Boolean {
                         openRoute(this@StandaloneAtsc3Service, path)
