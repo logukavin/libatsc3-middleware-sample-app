@@ -31,8 +31,8 @@ internal class MiddlewareSettingsImpl(context: Context) : IMiddlewareSettings {
         set(value) {
             frequencyLocationToString(value)?.let {
                 saveString(FREQUENCY_LOCATION, it)
-                if(freqKhz.value == 0)
-                    freqKhz.postValue(value?.frequencyList?.firstOrNull()?:0)
+                if (freqKhz == 0)
+                    freqKhz = value?.frequencyList?.firstOrNull() ?: 0
             }
         }
 
@@ -42,16 +42,13 @@ internal class MiddlewareSettingsImpl(context: Context) : IMiddlewareSettings {
     override var wsPort = ServerConstants.PORT_AUTOFIT
     override var wssPort = ServerConstants.PORT_AUTOFIT
 
-    override val freqKhz = MutableLiveData<Int>()
-
-    init {
-        freqKhz.postValue(loadInt(FREQUENCY_CUSTOM) ?: frequencyLocation?.frequencyList?.firstOrNull() ?: 0)
-    }
-
-    override fun setFrequency(value: Int) {
-        saveInt(FREQUENCY_CUSTOM, value)
-        freqKhz.postValue(value)
-    }
+    override var freqKhz: Int
+        get() = requireInt(FREQUENCY_CUSTOM) {
+            frequencyLocation?.frequencyList?.firstOrNull() ?: 0
+        }
+        set(value) {
+            saveInt(FREQUENCY_CUSTOM, value)
+        }
 
     private fun saveString(key: String, value: String): String {
         preferences.edit { putString(key, value) }
@@ -63,22 +60,27 @@ internal class MiddlewareSettingsImpl(context: Context) : IMiddlewareSettings {
     }
 
     private fun loadInt(key: String): Int? {
-        return if(preferences.contains(key)) preferences.getInt(key, 0) else null
+        return if (preferences.contains(key)) preferences.getInt(key, 0) else null
     }
 
-    private fun saveInt(key: String, value: Int?) {
-        preferences.edit { if(value != null) putInt(key, value) else remove(key) }
+    private fun saveInt(key: String, value: Int): Int {
+        preferences.edit { putInt(key, value) }
+        return value
     }
 
     private fun requireString(key: String, action: () -> String): String {
         return loadString(key) ?: saveString(key, action.invoke())
     }
 
+    private fun requireInt(key: String, action: () -> Int): Int {
+        return loadInt(key) ?: saveInt(key, action.invoke())
+    }
+
     private fun stringToFrequencyLocation(flJsonStr: String): FrequencyLocation {
         val frequencyLocationJson = JSONObject(flJsonStr)
         val frequencyJSONArray = frequencyLocationJson.getJSONArray(FREQUENCY_LIST)
         val frequencyList = mutableListOf<Int>().apply {
-            for(index in 0 until frequencyJSONArray.length()) {
+            for (index in 0 until frequencyJSONArray.length()) {
                 add(index, frequencyJSONArray.get(index) as Int)
             }
         }
