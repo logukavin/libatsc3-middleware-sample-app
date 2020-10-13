@@ -1,5 +1,8 @@
 package com.nextgenbroadcast.mobile.middleware.settings
 
+import androidx.lifecycle.LiveData
+
 interface IReceiverSettings {
-    var freqKhz: Int?
+    val freqKhz: LiveData<Int>
+    fun setFrequency(freqKhz: Int)
 }

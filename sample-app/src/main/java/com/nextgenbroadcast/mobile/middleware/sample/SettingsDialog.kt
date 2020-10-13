@@ -1,37 +1,28 @@
 package com.nextgenbroadcast.mobile.middleware.sample
 
+import android.app.Activity
+import android.content.Intent
 import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import androidx.fragment.app.DialogFragment
-import com.nextgenbroadcast.mobile.core.presentation.IReceiverPresenter
 import kotlinx.android.synthetic.main.dialog_settings.*
 
-class SettingsDialog(
-        private val receiverPresenter: IReceiverPresenter
-): DialogFragment() {
+class SettingsDialog: Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setStyle(STYLE_NORMAL, R.style.Dialog)
-    }
-
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        dialog?.setTitle(R.string.settings)
-        return inflater.inflate(R.layout.dialog_settings, null)
-    }
-
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-        receiverPresenter.freqKhz.observe(this, { freqKhz ->
+        setContentView(R.layout.dialog_settings)
+        val freqKhz = intent.getIntExtra(PARAM_FREQUENCY, 0)
+        if (freqKhz > 0) {
             frequencyEditText.setText(freqKhz.toString())
-        })
-        applyButton.setOnClickListener {
-            frequencyEditText.text.toString().toIntOrNull()?.let {
-                receiverPresenter.tune(it)
-            }
-            dismiss()
         }
+        applyButton.setOnClickListener {
+            setResult(RESULT_OK, Intent().apply {
+                putExtra(PARAM_FREQUENCY, frequencyEditText.text.toString().toIntOrNull() ?:0)
+            })
+            finish()
+        }
+    }
+
+    companion object {
+        const val PARAM_FREQUENCY = "param_frequency"
     }
 }

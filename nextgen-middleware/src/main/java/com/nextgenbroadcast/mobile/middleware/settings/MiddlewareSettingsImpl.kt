@@ -3,6 +3,7 @@ package com.nextgenbroadcast.mobile.middleware.settings
 import android.content.Context
 import android.location.Location
 import androidx.core.content.edit
+import androidx.lifecycle.MutableLiveData
 import com.nextgenbroadcast.mobile.middleware.BuildConfig
 import com.nextgenbroadcast.mobile.middleware.location.FrequencyLocation
 import com.nextgenbroadcast.mobile.middleware.server.ServerConstants
@@ -30,6 +31,8 @@ internal class MiddlewareSettingsImpl(context: Context) : IMiddlewareSettings {
         set(value) {
             frequencyLocationToString(value)?.let {
                 saveString(FREQUENCY_LOCATION, it)
+                if(freqKhz.value == 0)
+                    freqKhz.postValue(value?.frequencyList?.firstOrNull()?:0)
             }
         }
 
@@ -39,11 +42,16 @@ internal class MiddlewareSettingsImpl(context: Context) : IMiddlewareSettings {
     override var wsPort = ServerConstants.PORT_AUTOFIT
     override var wssPort = ServerConstants.PORT_AUTOFIT
 
-    override var freqKhz: Int?
-        get() = loadInt(FREQUENCY_CUSTOM) ?: frequencyLocation?.frequencyList?.first()
-        set(value) {
-            saveInt(FREQUENCY_CUSTOM, value)
-        }
+    override val freqKhz = MutableLiveData<Int>()
+
+    init {
+        freqKhz.postValue(loadInt(FREQUENCY_CUSTOM) ?: frequencyLocation?.frequencyList?.firstOrNull() ?: 0)
+    }
+
+    override fun setFrequency(value: Int) {
+        saveInt(FREQUENCY_CUSTOM, value)
+        freqKhz.postValue(value)
+    }
 
     private fun saveString(key: String, value: String): String {
         preferences.edit { putString(key, value) }
