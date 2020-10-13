@@ -19,7 +19,9 @@ abstract class BaseActivity : AppCompatActivity() {
 
     private val uriPermissionProvider = UriPermissionProvider(BuildConfig.APPLICATION_ID)
 
-    fun bindToService() {
+    override fun onStart() {
+        super.onStart()
+
         newServiceIntent().also { intent ->
             bindService(intent, connection, Context.BIND_AUTO_CREATE)
         }
@@ -27,8 +29,8 @@ abstract class BaseActivity : AppCompatActivity() {
 
     override fun onStop() {
         super.onStop()
-        if(isBound)
-            unbindService(connection)
+
+        unbindService(connection)
         isBound = false
         onUnbind()
     }
