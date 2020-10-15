@@ -12,11 +12,12 @@ class SettingsDialog: Activity() {
         setContentView(R.layout.dialog_settings)
         val freqKhz = intent.getIntExtra(PARAM_FREQUENCY, 0)
         if (freqKhz > 0) {
-            frequencyEditText.setText(freqKhz.toString())
+            frequencyEditText.setText((freqKhz / 1000).toString())
         }
         applyButton.setOnClickListener {
             setResult(RESULT_OK, Intent().apply {
-                putExtra(PARAM_FREQUENCY, frequencyEditText.text.toString().toIntOrNull() ?:0)
+                val freqKhz = frequencyEditText.text.toString().toIntOrNull()?.let { it * 1000 } ?: 0
+                putExtra(PARAM_FREQUENCY,  freqKhz)
             })
             finish()
         }
