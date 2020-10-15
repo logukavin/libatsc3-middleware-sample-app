@@ -10,14 +10,12 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Applicatio
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPackage
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.service.Atsc3Service
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
-import com.nextgenbroadcast.mobile.middleware.settings.IReceiverSettings
 import com.nextgenbroadcast.mobile.mmt.atsc3.media.MMTDataBuffer
 import kotlinx.coroutines.*
 
 
 internal class ServiceControllerImpl (
         private val repository: IRepository,
-        private val settings: IReceiverSettings,
         private val atsc3Module: Atsc3Module,
 ) : IServiceController, Atsc3Module.Listener {
 
@@ -26,14 +24,14 @@ internal class ServiceControllerImpl (
     private var heldResetJob: Job? = null
     private var mediaUrlAssignmentJob: Job? = null
 
-    override val receiverState = MutableLiveData<ReceiverState>(ReceiverState.IDLE)
+    override val receiverState = MutableLiveData(ReceiverState.IDLE)
 
     override val selectedService = repository.selectedService
     override val serviceGuidUrls = repository.serviceGuideUrls
 
     override val sltServices = repository.services
 
-    override val freqKhz = MutableLiveData(settings.freqKhz)
+    override val freqKhz = MutableLiveData(0)
 
     init {
         atsc3Module.setListener(this)
@@ -132,7 +130,7 @@ internal class ServiceControllerImpl (
     }
 
     override fun tune(freqKhz: Int) {
-        settings.freqKhz = freqKhz
+        this.freqKhz.postValue(freqKhz)
         atsc3Module.tune(freqKhz)
     }
 

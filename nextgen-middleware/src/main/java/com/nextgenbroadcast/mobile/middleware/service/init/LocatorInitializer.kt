@@ -4,12 +4,12 @@ import android.content.Context
 import com.nextgenbroadcast.mobile.core.presentation.IReceiverPresenter
 import com.nextgenbroadcast.mobile.middleware.location.FrequencyLocation
 import com.nextgenbroadcast.mobile.middleware.location.IFrequencyLocator
-import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
+import com.nextgenbroadcast.mobile.middleware.settings.IReceiverSettings
 import kotlinx.coroutines.*
 import java.util.concurrent.TimeUnit
 
 internal class LocatorInitializer(
-        private val settings: IMiddlewareSettings,
+        private val settings: IReceiverSettings,
         private val receiver: IReceiverPresenter
 ) : IServiceInitializer {
 
