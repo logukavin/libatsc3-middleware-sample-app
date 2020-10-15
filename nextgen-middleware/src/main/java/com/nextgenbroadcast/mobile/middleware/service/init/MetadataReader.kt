@@ -3,6 +3,7 @@ package com.nextgenbroadcast.mobile.middleware.service.init
 import android.content.ComponentName
 import android.content.Context
 import android.content.pm.PackageManager
+import android.os.Bundle
 import com.nextgenbroadcast.mobile.middleware.service.Atsc3ForegroundService
 
 internal object MetadataReader {
@@ -16,11 +17,8 @@ internal object MetadataReader {
             providerInfo.metaData?.let { metadata ->
                 val keys = metadata.keySet()
                 for (key in keys) {
-                    val resource = metadata.getInt(key)
-                    val value = metadata.getString(key, null)
                     val clazz = Class.forName(key)
-
-                    discovered[clazz] = Pair(resource, value)
+                    discovered[clazz] = getData(metadata, key)
                 }
             }
         } catch (e: PackageManager.NameNotFoundException) {
@@ -30,6 +28,14 @@ internal object MetadataReader {
         }
 
         return discovered
+    }
+
+    private fun getData(metadata: Bundle, key: String?): Pair<Int, String> {
+        return when (val value = metadata.get(key)) {
+            is Int -> Pair(value, "")
+            is String -> Pair(0, value)
+            else -> Pair(0, "")
+        }
     }
 
 }
