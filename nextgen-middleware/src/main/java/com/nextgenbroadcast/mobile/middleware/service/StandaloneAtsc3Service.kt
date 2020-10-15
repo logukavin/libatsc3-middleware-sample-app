@@ -1,15 +1,20 @@
 package com.nextgenbroadcast.mobile.middleware.service
 
 import android.content.Intent
-import android.os.IBinder
-import android.os.Messenger
-import com.nextgenbroadcast.mobile.core.presentation.IReceiverPresenter
+import android.os.*
+import com.nextgenbroadcast.mobile.middleware.service.provider.StandaloneMediaFileProvider
+import com.nextgenbroadcast.mobile.middleware.service.handler.StandaloneServiceHandler
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
 import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
-import com.nextgenbroadcast.mobile.middleware.service.handler.StandaloneServiceHandler
+import com.nextgenbroadcast.mobile.core.presentation.IReceiverPresenter
 import com.nextgenbroadcast.mobile.mmt.atsc3.media.MMTDataBuffer
+import java.lang.UnsupportedOperationException
 
 class StandaloneAtsc3Service : Atsc3ForegroundService() {
+
+    override val mediaFileProvider by lazy {
+        StandaloneMediaFileProvider(applicationContext)
+    }
 
     private var serviceHandler: StandaloneServiceHandler? = null
 
@@ -18,15 +23,8 @@ class StandaloneAtsc3Service : Atsc3ForegroundService() {
                 mediaFileProvider,
                 lifecycleOwner = this@StandaloneAtsc3Service,
                 receiverPresenter = object : IReceiverPresenter {
-
-                    override val freqKhz: Int
-                        get() = TODO("Not yet implemented")
-
-                    override fun tune(freqKhz: Int) {
-                        TODO("Not yet implemented")
-                    }
-
                     override val receiverState = serviceController.receiverState
+                    override val freqKhz = serviceController.freqKhz
 
                     override fun openRoute(path: String): Boolean {
                         openRoute(this@StandaloneAtsc3Service, path)
@@ -39,6 +37,10 @@ class StandaloneAtsc3Service : Atsc3ForegroundService() {
 
                     override fun createMMTSource(): MMTDataBuffer {
                         throw UnsupportedOperationException("MMT playback is not supported with standalone service")
+                    }
+
+                    override fun tune(freqKhz: Int) {
+                        serviceController.tune(freqKhz)
                     }
                 },
                 serviceController = serviceController,

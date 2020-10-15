@@ -223,7 +223,7 @@ public class MMTDataSource extends BaseDataSource {
     public void close() {
         uri = null;
 
-        inputSource.release();
+        inputSource.close();
 
         if (currentSample != null) {
             currentSample.unreferenceByteBuffer();

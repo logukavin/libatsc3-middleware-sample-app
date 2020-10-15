@@ -40,6 +40,7 @@ class InterprocessServiceBinder(
 
     inner class ReceiverPresenter : IReceiverPresenter {
         override val receiverState = MutableLiveData<ReceiverState>()
+        override val freqKhz = MutableLiveData<Int>()
 
         override val freqKhz: Int
             get() = TODO("Not yet implemented")
@@ -61,6 +62,12 @@ class InterprocessServiceBinder(
 
         override fun createMMTSource(): Any {
             throw UnsupportedOperationException("MMT playback is not supported with standalone service")
+        }
+
+        override fun tune(freqKhz: Int) {
+            sendAction(IServiceBinder.ACTION_TYNE_FREQUENCY, bundleOf(
+                    IServiceBinder.PARAM_FREQUENCY_KHZ to freqKhz
+            ))
         }
     }
 

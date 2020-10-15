@@ -82,29 +82,6 @@ internal class Atsc3Module(
         this.listener = listener
     }
 
-    fun scanForEmbeddedDevices(): Boolean {
-        atsc3NdkPHYClientInstance = SaankhyaPHYAndroid().let { phy ->
-            //jjustman-2020-08-31 - force loading of SaankhyaPHYAndroid with SDIO configuration
-            log("SaankhyaPHYAndroid: calling atsc3NdkPHYClientInstance.init()")
-            var sl_res = phy.init()
-            log(String.format("SaankhyaPHYAndroid: return from atsc3NdkPHYClientInstance.init(): %d", sl_res))
-
-            log(String.format("SaankhyaPHYAndroid: calling atsc3NdkPHYClientInstance.open(-1, SDIO)"))
-            sl_res = phy.open(-1, "SDIO")
-            log(String.format("SaankhyaPHYAndroid: return from atsc3NdkPHYClientInstance.open(-1, SDIO): %d", sl_res))
-
-            if (sl_res == 0) {
-                phy.tune(659000, 0)
-                return@let phy
-            } else {
-                phy.deinit()
-                return@let null
-            }
-        } ?: return false
-
-        return true
-    }
-
     fun tune(freqKhz: Int) {
         atsc3NdkPHYClientInstance?.tune(freqKhz, 0)
     }
@@ -210,7 +187,10 @@ internal class Atsc3Module(
     }
 
     fun selectService(serviceId: Int): Boolean {
+        if (selectedServiceId == serviceId) return false
+
         clearHeld()
+        setMMTSource(null)
 
         selectedServiceId = serviceId
         selectedServiceSLSProtocol = atsc3NdkApplicationBridge.atsc3_slt_selectService(serviceId)
@@ -247,6 +227,8 @@ internal class Atsc3Module(
     }
 
     override fun setMMTSource(source: MMTDataConsumerType?) {
+        ATSC3PlayerFlags.ATSC3PlayerStartPlayback = false
+
         mmtSource?.let { oldSource ->
             oldSource.release()
             mmtSource = null

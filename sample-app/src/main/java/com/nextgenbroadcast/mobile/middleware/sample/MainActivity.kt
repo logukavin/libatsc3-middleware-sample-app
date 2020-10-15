@@ -107,6 +107,10 @@ class MainActivity : BaseActivity() {
                 startPlayback(uri)
             }
         }
+
+        settings_button.setOnClickListener {
+            openSettings(receiver)
+        }
     }
 
     private fun bindViewModels(provider: ViewModelProvider): Triple<RMPViewModel, UserAgentViewModel, SelectorViewModel> {
@@ -382,6 +386,10 @@ class MainActivity : BaseActivity() {
             return
         }
 
+        if(requestCode == SETTINGS_REQUEST_CODE && data != null) {
+            receiverPresenter?.tune(data.getIntExtra(SettingsDialog.PARAM_FREQUENCY, 0))
+        }
+
         super.onActivityResult(requestCode, resultCode, data)
     }
 
@@ -405,6 +413,12 @@ class MainActivity : BaseActivity() {
         } catch (ex: ActivityNotFoundException) {
             Toast.makeText(this, "There is no one File Manager registered in system.", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    private fun openSettings(receiverPresenter: IReceiverPresenter) {
+        startActivityForResult(Intent(this, SettingsDialog::class.java).apply {
+            putExtra(SettingsDialog.PARAM_FREQUENCY, receiverPresenter.freqKhz.value)
+        }, SETTINGS_REQUEST_CODE)
     }
 
     private fun changeService(serviceId: Int) {
@@ -466,6 +480,7 @@ class MainActivity : BaseActivity() {
         const val PARAM_MODE_PREVIEW = "PARAM_MODE_PREVIEW"
 
         private const val FILE_REQUEST_CODE = 133
+        private const val SETTINGS_REQUEST_CODE = 134
 
         private const val PERMISSION_REQUEST = 1000
 

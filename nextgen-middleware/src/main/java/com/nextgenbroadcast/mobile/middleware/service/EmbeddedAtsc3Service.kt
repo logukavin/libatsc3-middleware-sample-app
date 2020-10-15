@@ -28,6 +28,7 @@ class EmbeddedAtsc3Service : Atsc3ForegroundService() {
             }
 
             override val receiverState = serviceController.receiverState
+            override val freqKhz = serviceController.freqKhz
 
             override fun openRoute(path: String): Boolean {
                 openRoute(this@EmbeddedAtsc3Service, path)
@@ -39,6 +40,9 @@ class EmbeddedAtsc3Service : Atsc3ForegroundService() {
             }
 
             override fun createMMTSource() = serviceController.createMMTSource()
+            override fun tune(freqKhz: Int) {
+                serviceController.tune(freqKhz)
+            }
         }
         override val selectorPresenter: ISelectorPresenter = serviceController
         override val userAgentPresenter: IUserAgentPresenter = viewController

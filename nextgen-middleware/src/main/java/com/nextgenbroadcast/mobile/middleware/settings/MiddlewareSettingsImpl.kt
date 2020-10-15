@@ -12,6 +12,7 @@ import java.util.*
 
 internal class MiddlewareSettingsImpl(context: Context) : IMiddlewareSettings {
     private val preferences = context.getSharedPreferences(REPOSITORY_PREFERENCE, Context.MODE_PRIVATE)
+    private var customFreqKhz: Int? = null
 
     override val deviceId: String
         get() = requireString(DEVICE_ID) {
@@ -40,12 +41,11 @@ internal class MiddlewareSettingsImpl(context: Context) : IMiddlewareSettings {
     override var wssPort = ServerConstants.PORT_AUTOFIT
 
     override var freqKhz: Int
-        get() {
-            //TODO: init from shared prefs
-            return 0
+        get() = customFreqKhz ?: run {
+            frequencyLocation?.frequencyList?.firstOrNull() ?: 0
         }
         set(value) {
-            //TODO: implement. Do not save to shared prefs
+            customFreqKhz = value
         }
 
     private fun saveString(key: String, value: String): String {
@@ -65,7 +65,7 @@ internal class MiddlewareSettingsImpl(context: Context) : IMiddlewareSettings {
         val frequencyLocationJson = JSONObject(flJsonStr)
         val frequencyJSONArray = frequencyLocationJson.getJSONArray(FREQUENCY_LIST)
         val frequencyList = mutableListOf<Int>().apply {
-            for(index in 0 until frequencyJSONArray.length()) {
+            for (index in 0 until frequencyJSONArray.length()) {
                 add(index, frequencyJSONArray.get(index) as Int)
             }
         }
