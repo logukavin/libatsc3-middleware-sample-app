@@ -9,7 +9,21 @@
             android:enabled="true"
             android:exported="true"
             android:permission="com.nextgenbroadcast.mobile.middleware.service.ATSC3_SECURITY_SERVICE_PERMISSION"
-            android:process=":atsc3Service" />
+            android:process=":atsc3Service" >
+
+            <meta-data
+                android:name="com.nextgenbroadcast.mobile.middleware.location.FrequencyLocator"
+                android:value="nextgenbroadcast.locator" />
+
+            <meta-data
+                android:name="org.ngbp.libatsc3.middleware.android.phy.SaankhyaPHYAndroid"
+                android:resource="@xml/saankhya_phy" />
+
+            <meta-data
+                android:name="com.nextgenbroadcast.mobile.middleware.phy.Atsc3UsbPhyConnector"
+                android:resource="@xml/device_filter" />
+
+        </service>
 
         <provider
             android:name="androidx.startup.InitializationProvider"

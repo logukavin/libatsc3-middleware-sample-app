@@ -31,8 +31,6 @@ internal class MiddlewareSettingsImpl(context: Context) : IMiddlewareSettings {
         set(value) {
             frequencyLocationToString(value)?.let {
                 saveString(FREQUENCY_LOCATION, it)
-                if (freqKhz == 0)
-                    freqKhz = value?.frequencyList?.firstOrNull() ?: 0
             }
         }
 
