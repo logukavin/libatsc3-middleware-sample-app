@@ -96,7 +96,6 @@ class SocketServerTest : ServerTest() {
     @ExperimentalCoroutinesApi
     @After
     fun cleanUp() {
-//        Dispatchers.resetMain()
         testDispatcher.cleanupTestCoroutines()
     }
 }
