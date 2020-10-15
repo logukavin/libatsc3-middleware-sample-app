@@ -1,13 +1,16 @@
 package com.nextgenbroadcast.mobile.middleware.service.init
 
 import android.content.Context
+import com.nextgenbroadcast.mobile.core.presentation.IReceiverPresenter
+import com.nextgenbroadcast.mobile.middleware.location.FrequencyLocation
 import com.nextgenbroadcast.mobile.middleware.location.IFrequencyLocator
 import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
 import kotlinx.coroutines.*
 import java.util.concurrent.TimeUnit
 
 internal class LocatorInitializer(
-        private val settings: IMiddlewareSettings
+        private val settings: IMiddlewareSettings,
+        private val receiver: IReceiverPresenter
 ) : IServiceInitializer {
 
     private var locationJob: Job? = null
@@ -18,7 +21,7 @@ internal class LocatorInitializer(
         }.filter { (_, data) ->
             val (_, value) = data
             value == LOCATOR_STR
-        }.map {(clazz, _) ->
+        }.map { (clazz, _) ->
             @Suppress("UNCHECKED_CAST")
             clazz as Class<IFrequencyLocator>
         }
@@ -31,10 +34,13 @@ internal class LocatorInitializer(
                 try {
                     val prevLocation = settings.frequencyLocation?.location
                     withTimeout(LOCATION_REQUEST_DELAY) {
-                        initializer.locateFrequency(context){ location ->
+                        initializer.locateFrequency(context) { location ->
                             prevLocation == null || location.distanceTo(prevLocation) > IFrequencyLocator.RECEPTION_RADIUS
-                        }?.let {
-                            settings.frequencyLocation = it
+                        }?.let { frequencyLocation ->
+                            settings.frequencyLocation = frequencyLocation
+                            applyFrequencyLocation(frequencyLocation)
+                        } ?: settings.frequencyLocation?.let { frequencyLocation ->
+                            applyFrequencyLocation(frequencyLocation)
                         }
                     }
                 } catch (e: TimeoutCancellationException) {
@@ -47,6 +53,12 @@ internal class LocatorInitializer(
         }
 
         return true
+    }
+
+    private fun applyFrequencyLocation(frequencyLocation: FrequencyLocation) {
+        frequencyLocation.frequencyList.firstOrNull()?.let { frequency ->
+            receiver.tune(frequency)
+        }
     }
 
     override fun cancel() {

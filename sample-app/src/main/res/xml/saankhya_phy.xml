@@ -2,5 +2,5 @@
 <resources>
     <!--     <phy-device fd="-1" path="SDIO" freqKhz="659000" /> -->
 
-    <phy-device fd="-1" path="SDIO" freqKhz="659000" />
+    <phy-device fd="-1" path="SDIO" />
 </resources>
