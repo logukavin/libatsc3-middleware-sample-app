@@ -6,12 +6,10 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
-import android.net.Uri
 import android.os.IBinder
 import android.os.PowerManager
 import android.os.PowerManager.WakeLock
 import androidx.core.content.ContextCompat
-import androidx.core.content.FileProvider
 import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.Observer
 import com.nextgenbroadcast.mobile.core.cert.UserAgentSSLContext
@@ -19,8 +17,6 @@ import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.model.SLSService
 import com.nextgenbroadcast.mobile.middleware.BuildConfig
-import com.nextgenbroadcast.mobile.middleware.IMediaFileProvider
-import com.nextgenbroadcast.mobile.middleware.R
 import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3Module
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
 import com.nextgenbroadcast.mobile.middleware.controller.service.ServiceControllerImpl
@@ -30,15 +26,24 @@ import com.nextgenbroadcast.mobile.middleware.gateway.rpc.IRPCGateway
 import com.nextgenbroadcast.mobile.middleware.gateway.rpc.RPCGatewayImpl
 import com.nextgenbroadcast.mobile.middleware.gateway.web.IWebGateway
 import com.nextgenbroadcast.mobile.middleware.gateway.web.WebGatewayImpl
-import com.nextgenbroadcast.mobile.middleware.location.FrequencyLocator
+import com.nextgenbroadcast.mobile.middleware.location.IFrequencyLocator
 import com.nextgenbroadcast.mobile.middleware.phy.Atsc3DeviceReceiver
+import com.nextgenbroadcast.mobile.middleware.phy.Atsc3UsbPhyConnector
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
-import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
-import com.nextgenbroadcast.mobile.middleware.settings.MiddlewareSettingsImpl
 import com.nextgenbroadcast.mobile.middleware.repository.RepositoryImpl
 import com.nextgenbroadcast.mobile.middleware.server.web.MiddlewareWebServer
-import kotlinx.coroutines.Dispatchers
-import java.io.File
+import com.nextgenbroadcast.mobile.middleware.service.init.UsbPhyInitializer
+import com.nextgenbroadcast.mobile.middleware.service.init.OnboardPhyInitializer
+import com.nextgenbroadcast.mobile.middleware.service.init.IServiceInitializer
+import com.nextgenbroadcast.mobile.middleware.service.init.LocatorInitializer
+import com.nextgenbroadcast.mobile.middleware.service.init.MetadataReader
+import com.nextgenbroadcast.mobile.middleware.service.provider.IMediaFileProvider
+import com.nextgenbroadcast.mobile.middleware.service.provider.MediaFileProvider
+import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
+import com.nextgenbroadcast.mobile.middleware.settings.MiddlewareSettingsImpl
+import kotlinx.coroutines.*
+import org.ngbp.libatsc3.middleware.android.phy.Atsc3NdkPHYClientBase
+import java.lang.ref.WeakReference
 
 abstract class Atsc3ForegroundService : BindableForegroundService() {
     private lateinit var wakeLock: WakeLock
@@ -48,8 +53,6 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     private lateinit var serviceController: IServiceController
     private lateinit var state: MediatorLiveData<Triple<ReceiverState?, SLSService?, PlaybackState?>>
 
-    protected lateinit var mediaFileProvider: IMediaFileProvider
-
     private var viewController: IViewController? = null
     private var webGateway: IWebGateway? = null
     private var rpcGateway: IRPCGateway? = null
@@ -57,12 +60,17 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     private var deviceReceiver: Atsc3DeviceReceiver? = null
 
     private var isInitialized = false
+    private val initializer = ArrayList<WeakReference<IServiceInitializer>>()
 
     private val usbManager: UsbManager by lazy {
         getSystemService(Context.USB_SERVICE) as UsbManager
     }
 
-    abstract fun createServiceBinder(serviceController: IServiceController, viewController: IViewController) : IBinder
+    protected open val mediaFileProvider: IMediaFileProvider by lazy {
+        MediaFileProvider(applicationContext)
+    }
+
+    abstract fun createServiceBinder(serviceController: IServiceController, viewController: IViewController): IBinder
 
     override fun onCreate() {
         super.onCreate()
@@ -94,12 +102,14 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
                 }
             })
         }
-
-        mediaFileProvider = MediaFileProvider(applicationContext)
     }
 
     override fun onDestroy() {
         super.onDestroy()
+
+        initializer.forEach { ref ->
+            ref.get()?.cancel()
+        }
 
         atsc3Module.close()
     }
@@ -150,15 +160,22 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     private fun maybeInitialize() {
         if (isInitialized) return
 
-        isInitialized = true;
+        isInitialized = true
 
-        FrequencyLocator(this, settings).requestFrequencies {
-            // TODO can set frequency to Atsc3Module from settings
+        val components = MetadataReader.discoverMetadata(this)
+
+        LocatorInitializer(settings, serviceController).also {
+            initializer.add(WeakReference(it))
+        }.initialize(applicationContext, components)
+
+        val phyInitializer = OnboardPhyInitializer().also {
+            initializer.add(WeakReference(it))
         }
 
-
-        if (!atsc3Module.scanForEmbeddedDevices()) {
-            scanForCompatableUSBDevices()
+        if (!phyInitializer.initialize(applicationContext, components)) {
+            UsbPhyInitializer().also {
+                initializer.add(WeakReference(it))
+            }.initialize(applicationContext, components)
         }
     }
 
@@ -240,21 +257,6 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         deviceReceiver?.let { receiver ->
             unregisterReceiver(receiver)
             deviceReceiver = null
-        }
-    }
-
-    private fun scanForCompatableUSBDevices() {
-        usbManager.deviceList.map { (_, device) ->
-            device
-        }.firstOrNull { device ->
-            atsc3Module.isDeviceCompatible(device)
-        }?.let { device ->
-            if (usbManager.hasPermission(device)) {
-                // open device using a new Intent to start Service as foreground
-                startForDevice(this, device)
-            } else {
-                requestDevicePermission(device)
-            }
         }
     }
 
@@ -349,27 +351,12 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
     class InitializationException : RuntimeException()
 
-    private class MediaFileProvider(
-            private val context: Context
-    ) : IMediaFileProvider {
-        private val authority = context.getString(R.string.nextgenMediaFileProvider)
-
-        override fun getFileProviderUri(path: String): Uri = FileProvider.getUriForFile(
-                context,
-                authority,
-                File(path)
-        )
-
-        override fun grantUriPermission(toPackage: String, uri: Uri) {
-            context.grantUriPermission(toPackage, uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        }
-    }
-
     companion object {
         private const val SERVICE_ACTION = "${BuildConfig.LIBRARY_PACKAGE_NAME}.intent.action"
 
         @Deprecated("old implementation")
         const val ACTION_START = "$SERVICE_ACTION.START"
+
         @Deprecated("old implementation")
         const val ACTION_STOP = "$SERVICE_ACTION.STOP"
         const val ACTION_DEVICE_ATTACHED = "$SERVICE_ACTION.USB_ATTACHED"

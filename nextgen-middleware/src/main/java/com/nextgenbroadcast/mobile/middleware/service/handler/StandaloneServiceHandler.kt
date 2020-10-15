@@ -11,11 +11,11 @@ import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceControl
 import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
 import com.nextgenbroadcast.mobile.core.presentation.IMediaPlayerPresenter
 import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
-import com.nextgenbroadcast.mobile.middleware.IMediaFileProvider
+import com.nextgenbroadcast.mobile.middleware.service.provider.IStandaloneMediaFileProvider
 import com.nextgenbroadcast.mobile.core.presentation.IReceiverPresenter
 
 internal class StandaloneServiceHandler(
-        private val fileProvider: IMediaFileProvider,
+        private val fileProvider: IStandaloneMediaFileProvider,
         private val lifecycleOwner: LifecycleOwner,
         private val receiverPresenter: IReceiverPresenter,
         private val serviceController: IServiceController,
@@ -29,6 +29,7 @@ internal class StandaloneServiceHandler(
         viewController.appData.removeObservers(lifecycleOwner)
         viewController.rmpLayoutParams.removeObservers(lifecycleOwner)
         viewController.rmpMediaUri.removeObservers(lifecycleOwner)
+        fileProvider.revokeAllUriPermissions()
     }
 
     override fun handleMessage(msg: Message) {
@@ -47,6 +48,7 @@ internal class StandaloneServiceHandler(
                 msg.data.getString(IServiceBinder.PARAM_PERMISSION_PACKAGE)?.let { clientPackage ->
                     observeRPMMediaUrl(msg.replyTo, clientPackage)
                 }
+                observeFrequency(msg.replyTo)
             }
 
             IServiceBinder.ACTION_OPEN_ROUTE -> {
@@ -98,6 +100,10 @@ internal class StandaloneServiceHandler(
                         }
                     }
                 }
+            }
+
+            IServiceBinder.ACTION_TYNE_FREQUENCY -> {
+                receiverPresenter.tune(msg.data.getInt(IServiceBinder.PARAM_FREQUENCY_KHZ))
             }
 
             else -> super.handleMessage(msg)
@@ -180,7 +186,7 @@ internal class StandaloneServiceHandler(
     private fun observeRPMMediaUrl(sendToMessenger: Messenger, clientPackage: String) {
         viewController.rmpMediaUri.observe(lifecycleOwner, { rmpMediaUri ->
             rmpMediaUri?.let { uri ->
-                fileProvider.grantUriPermission(clientPackage, uri)
+                fileProvider.grantUriPermission(clientPackage, uri, false)
                 sendToMessenger.send(buildMessage(
                         IServiceBinder.LIVEDATA_RMP_MEDIA_URI,
                         bundleOf(
@@ -188,6 +194,18 @@ internal class StandaloneServiceHandler(
                         )
                 ))
             }
+        })
+    }
+
+    private fun observeFrequency(sendToMessenger: Messenger) {
+        serviceController.freqKhz.observe(lifecycleOwner, { freqKhz ->
+            sendToMessenger.send(buildMessage(
+                    IServiceBinder.ACTION_TYNE_FREQUENCY,
+                    bundleOf(
+                            IServiceBinder.PARAM_FREQUENCY_KHZ to freqKhz
+                    ),
+                    SLSService::class.java.classLoader
+            ))
         })
     }
 

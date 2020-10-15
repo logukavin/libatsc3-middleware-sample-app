@@ -3,55 +3,79 @@ package com.nextgenbroadcast.mobile.middleware.location
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import android.location.Criteria
 import android.location.Location
+import android.location.LocationListener
+import android.location.LocationManager
+import android.os.Bundle
 import androidx.core.content.ContextCompat
 import com.google.android.gms.location.LocationServices
-import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resume
 
-class FrequencyLocator(
-        val context: Context,
-        val settings: IMiddlewareSettings
-) {
+class FrequencyLocator : IFrequencyLocator {
 
-    fun requestFrequencies(callback: (frequencyList: List<Int>) -> Unit) {
-        if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) return
-        LocationServices.getFusedLocationProviderClient(context).lastLocation.addOnSuccessListener { location: Location? ->
-            if(location != null) {
-                if(settings.frequencyLocation != null) {
-                    val distance = location.distanceTo(settings.frequencyLocation?.location).toInt()
-                    if(distance > RECEPTION_RADUIS) {
-                        updateFrequenciesByLocation(location, callback)
-                    } else settings.frequencyLocation?.frequencyList?.let { it ->
-                        callback.invoke(it)
-                    }
-                } else {
-                    updateFrequenciesByLocation(location, callback)
+    private var locationRequest: Pair<LocationManager, LocationListener>? = null
+
+    override suspend fun locateFrequency(context: Context, predicate: (Location) -> Boolean): FrequencyLocation? {
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) return null
+
+        val location: Location? = suspendCancellableCoroutine { cont ->
+            LocationServices.getFusedLocationProviderClient(context).lastLocation.addOnSuccessListener { location ->
+                location?.let {
+                    cont.resume(location)
+                } ?: let {
+                    val locationManager = (context.getSystemService(Context.LOCATION_SERVICE) as LocationManager)
+                    locationManager.getBestProvider(Criteria(), true)?.let { provider ->
+                        locationManager.getLastKnownLocation(provider)?.let { location ->
+                            //TODO: check location time
+                            cont.resume(location)
+                            return@addOnSuccessListener
+                        }
+
+                        val locationListener = object : LocationListener {
+                            override fun onLocationChanged(location: Location?) {
+                                locationManager.removeUpdates(this)
+                                cont.resume(location)
+                            }
+
+                            override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {
+                                // do nothing
+                            }
+
+                            override fun onProviderEnabled(provider: String?) {
+                                // do nothing
+                            }
+
+                            override fun onProviderDisabled(provider: String?) {
+                                // do nothing
+                            }
+                        }.also { listener ->
+                            locationManager.requestLocationUpdates(provider, 0, 0f, listener)
+                        }
+
+                        locationRequest = Pair(locationManager, locationListener)
+                    } ?: cont.resume(null)
                 }
-            } else {
-                callback.invoke(listOf())
             }
         }
-    }
 
-    private fun updateFrequenciesByLocation(location: Location, callback: (frequencyList: List<Int>) -> Unit) {
-        CoroutineScope(Dispatchers.IO).launch {
+        if (location != null && predicate.invoke(location)) {
             val frequencyList = getFrequencyByLocation(location.longitude, location.latitude)
-            withContext(Dispatchers.Main) {
-                settings.frequencyLocation = FrequencyLocation(location, frequencyList)
-                callback.invoke(frequencyList)
-            }
+            return FrequencyLocation(location, frequencyList)
+        }
+
+        return null
+    }
+
+    override fun cancel() {
+        locationRequest?.let { (locationManager, locationListener) ->
+            locationManager.removeUpdates(locationListener)
+            locationRequest = null
         }
     }
 
-    private suspend fun getFrequencyByLocation(long: Double, alt: Double): List<Int> {
+    private suspend fun getFrequencyByLocation(longitude: Double, latitude: Double): List<Int> {
         return listOf(659000)
-    }
-
-    companion object {
-        const val RECEPTION_RADUIS = 50 // in kilometres
     }
 }

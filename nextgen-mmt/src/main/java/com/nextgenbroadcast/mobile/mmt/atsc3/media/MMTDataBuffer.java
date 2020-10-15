@@ -25,6 +25,7 @@ public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payl
 
     private boolean FirstMfuBufferVideoKeyframeSent = false;
     private volatile boolean isActive = false;
+    private volatile boolean isReleased = false;
 
     public MMTDataBuffer() {
     }
@@ -96,12 +97,14 @@ public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payl
             }
         }
 
+        if (isReleased) throw new IllegalStateException("Buffer was released");
+
         isActive = true;
         FirstMfuBufferVideoKeyframeSent = false;
     }
 
     @Override
-    public synchronized void release() {
+    public synchronized void close() {
         isActive = false;
 
         mfuBufferQueue.clear();
@@ -109,6 +112,13 @@ public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payl
         MapVideoMfuPresentationTimestampUsAnchorSystemTimeUs.clear();
 
         notify();
+    }
+
+    @Override
+    public void release() {
+        isReleased = true;
+
+        close();
     }
 
     @Override
