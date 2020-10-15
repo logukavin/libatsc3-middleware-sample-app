@@ -157,7 +157,6 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         return START_NOT_STICKY
     }
 
-    @Suppress("UNCHECKED_CAST")
     private fun maybeInitialize() {
         if (isInitialized) return
 
@@ -165,7 +164,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
         val components = MetadataReader.discoverMetadata(this)
 
-        LocatorInitializer(settings).also {
+        LocatorInitializer(settings, serviceController).also {
             initializer.add(WeakReference(it))
         }.initialize(applicationContext, components)
 
