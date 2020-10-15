@@ -42,13 +42,6 @@ class InterprocessServiceBinder(
         override val receiverState = MutableLiveData<ReceiverState>()
         override val freqKhz = MutableLiveData<Int>()
 
-        override val freqKhz: Int
-            get() = TODO("Not yet implemented")
-
-        override fun tune(freqKhz: Int) {
-            TODO("Not yet implemented")
-        }
-
         override fun openRoute(path: String): Boolean {
             sendAction(IServiceBinder.ACTION_OPEN_ROUTE, bundleOf(
                     IServiceBinder.PARAM_OPEN_ROUTE_PATH to path
