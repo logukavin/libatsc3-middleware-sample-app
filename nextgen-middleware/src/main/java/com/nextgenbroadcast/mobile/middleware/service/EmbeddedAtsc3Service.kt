@@ -20,13 +20,6 @@ class EmbeddedAtsc3Service : Atsc3ForegroundService() {
             viewController: IViewController
     ) : Binder(), IServiceBinder {
         override val receiverPresenter: IReceiverPresenter = object : IReceiverPresenter {
-            override val freqKhz: Int
-                get() = TODO("Not yet implemented")
-
-            override fun tune(freqKhz: Int) {
-                TODO("Not yet implemented")
-            }
-
             override val receiverState = serviceController.receiverState
             override val freqKhz = serviceController.freqKhz
 
