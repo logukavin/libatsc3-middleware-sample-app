@@ -12,6 +12,7 @@ import java.util.*
 
 internal class MiddlewareSettingsImpl(context: Context) : IMiddlewareSettings {
     private val preferences = context.getSharedPreferences(REPOSITORY_PREFERENCE, Context.MODE_PRIVATE)
+    private var customFreqKhz: Int? = null
 
     override val deviceId: String
         get() = requireString(DEVICE_ID) {
@@ -39,7 +40,13 @@ internal class MiddlewareSettingsImpl(context: Context) : IMiddlewareSettings {
     override var wsPort = ServerConstants.PORT_AUTOFIT
     override var wssPort = ServerConstants.PORT_AUTOFIT
 
-    override var freqKhz: Int = frequencyLocation?.frequencyList?.firstOrNull() ?: 0
+    override var freqKhz: Int
+        get() = customFreqKhz ?: run {
+            frequencyLocation?.frequencyList?.firstOrNull() ?: 0
+        }
+        set(value) {
+            customFreqKhz = value
+        }
 
     private fun saveString(key: String, value: String): String {
         preferences.edit { putString(key, value) }
