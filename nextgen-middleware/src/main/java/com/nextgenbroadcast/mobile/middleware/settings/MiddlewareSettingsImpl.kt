@@ -12,7 +12,6 @@ import java.util.*
 
 internal class MiddlewareSettingsImpl(context: Context) : IMiddlewareSettings {
     private val preferences = context.getSharedPreferences(REPOSITORY_PREFERENCE, Context.MODE_PRIVATE)
-    private var customFreqKhz: Int? = null
 
     override val deviceId: String
         get() = requireString(DEVICE_ID) {
@@ -40,14 +39,6 @@ internal class MiddlewareSettingsImpl(context: Context) : IMiddlewareSettings {
     override var wsPort = ServerConstants.PORT_AUTOFIT
     override var wssPort = ServerConstants.PORT_AUTOFIT
 
-    override var freqKhz: Int
-        get() = customFreqKhz ?: run {
-            frequencyLocation?.frequencyList?.firstOrNull() ?: 0
-        }
-        set(value) {
-            customFreqKhz = value
-        }
-
     private fun saveString(key: String, value: String): String {
         preferences.edit { putString(key, value) }
         return value
@@ -61,19 +52,28 @@ internal class MiddlewareSettingsImpl(context: Context) : IMiddlewareSettings {
         return loadString(key) ?: saveString(key, action.invoke())
     }
 
-    private fun stringToFrequencyLocation(flJsonStr: String): FrequencyLocation {
+    private fun stringToFrequencyLocation(flJsonStr: String): FrequencyLocation? {
         val frequencyLocationJson = JSONObject(flJsonStr)
-        val frequencyJSONArray = frequencyLocationJson.getJSONArray(FREQUENCY_LIST)
+
+        val frequencyJSONArray = frequencyLocationJson.optJSONArray(FREQUENCY_LIST)
         val frequencyList = mutableListOf<Int>().apply {
-            for (index in 0 until frequencyJSONArray.length()) {
-                add(index, frequencyJSONArray.get(index) as Int)
+            frequencyJSONArray?.let {
+                for (index in 0 until frequencyJSONArray.length()) {
+                    add(index, frequencyJSONArray.get(index) as Int)
+                }
             }
         }
-        return FrequencyLocation(
-                Location(frequencyLocationJson.getString(LOCATION_PROVIDER)).apply {
-                    latitude = frequencyLocationJson.getDouble(LOCATION_LATITUDE)
-                    longitude = frequencyLocationJson.getDouble(LOCATION_LONGITUDE)
-                }, frequencyList)
+
+        val location = if (frequencyLocationJson.has(LOCATION_PROVIDER)) {
+            Location(frequencyLocationJson.getString(LOCATION_PROVIDER)).apply {
+                latitude = frequencyLocationJson.optDouble(LOCATION_LATITUDE, 0.0)
+                longitude = frequencyLocationJson.optDouble(LOCATION_LONGITUDE, 0.0)
+            }
+        } else {
+            return null
+        }
+
+        return FrequencyLocation(location, frequencyList)
     }
 
     private fun frequencyLocationToString(frequencyLocation: FrequencyLocation?): String? {
