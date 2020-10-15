@@ -44,9 +44,15 @@ android {
         }
     }
 
-    externalNativeBuild {
-        ndkBuild {
-            path 'Android.mk'
+    def ndkBuildAdded = false
+    gradle.startParameter.taskNames.each { name ->
+        if (name.contains("assembleRelease") && !ndkBuildAdded) {
+            ndkBuildAdded = true
+            externalNativeBuild {
+                ndkBuild {
+                    path 'Android.mk'
+                }
+            }
         }
     }
 
