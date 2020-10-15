@@ -7,6 +7,6 @@
     <string name="warning_access_background_location_permission">Location permission is necessary yo tune the receiver </string>
     <string name="source_loading">Loading %s…</string>
     <string name="settings_title">Settings</string>
-    <string name="settings_frequency_hint">Receiver frequency</string>
+    <string name="settings_frequency_hint">Receiver frequency megahertz</string>
     <string name="settings_apply_btn">Tune</string>
 </resources>
