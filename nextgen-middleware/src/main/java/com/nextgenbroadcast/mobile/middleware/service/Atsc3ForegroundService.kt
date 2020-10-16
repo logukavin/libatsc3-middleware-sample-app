@@ -42,7 +42,6 @@ import com.nextgenbroadcast.mobile.middleware.service.provider.MediaFileProvider
 import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
 import com.nextgenbroadcast.mobile.middleware.settings.MiddlewareSettingsImpl
 import kotlinx.coroutines.*
-import org.ngbp.libatsc3.middleware.android.phy.Atsc3NdkPHYClientBase
 import java.lang.ref.WeakReference
 
 abstract class Atsc3ForegroundService : BindableForegroundService() {
@@ -269,16 +268,10 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
     private fun startWebServer(rpc: IRPCGateway, web: IWebGateway) {
         webServer = MiddlewareWebServer.Builder()
-                .hostName(web.hostName)
-                .httpsPort(web.httpsPort)
-                .httpPort(web.httpPort)
-                .wssPort(web.wssPort)
-                .wsPort(web.wsPort)
                 .rpcGateway(rpc)
                 .webGateway(web)
-                .sslContext(UserAgentSSLContext(applicationContext))
                 .build().also {
-                    it.start()
+                    it.start(UserAgentSSLContext(applicationContext))
                 }
     }
 
