@@ -63,7 +63,9 @@ android {
 
 def lifecycleVersion = rootProject.ext.lifecycleVersion
 def libatsc3Version = rootProject.ext.libatsc3Version
-def jettyVersion = '9.4.30.v20200611'
+def coreKtxVersion = rootProject.ext.coreKtxVersion
+def coroutinesVersion = rootProject.ext.coroutinesVersion
+def jettyVersion = '9.4.32.v20200930'
 def powermock_version = "2.0.7"
 
 dependencies {
@@ -84,22 +86,22 @@ dependencies {
     implementation 'org.apache.commons:commons-lang3:3.9'
 
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
-    implementation 'androidx.core:core-ktx:1.3.1'
+    implementation "androidx.core:core-ktx:$coreKtxVersion"
     implementation 'androidx.appcompat:appcompat:1.2.0'
 
-    implementation group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.11.0'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.11.0'
     implementation 'com.google.code.gson:gson:2.8.6'
 
     implementation "org.eclipse.jetty:jetty-server:$jettyVersion"
     implementation "org.eclipse.jetty:jetty-servlet:$jettyVersion"
-    implementation group: 'org.eclipse.jetty.websocket', name: 'websocket-server', version: "$jettyVersion"
+    implementation "org.eclipse.jetty.websocket:websocket-server:$jettyVersion"
 
-    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.3.7'
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:$coroutinesVersion"
 
     implementation "androidx.lifecycle:lifecycle-livedata-ktx:$lifecycleVersion"
     implementation "androidx.lifecycle:lifecycle-service:$lifecycleVersion"
 
-    implementation("androidx.startup:startup-runtime:1.0.0-alpha03") {
+    implementation("androidx.startup:startup-runtime:1.0.0-beta01") {
         transitive = true
     }
 

@@ -44,7 +44,7 @@ class WebServerTests : ServerTest() {
         }
 
         webServer = MiddlewareWebServer(server, webGateway = null).also {
-            it.start()
+            it.start(null)
         }
     }
 
