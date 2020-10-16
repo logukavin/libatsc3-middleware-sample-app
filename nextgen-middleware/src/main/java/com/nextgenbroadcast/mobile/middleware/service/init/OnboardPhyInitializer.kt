@@ -3,6 +3,7 @@ package com.nextgenbroadcast.mobile.middleware.service.init
 import android.content.Context
 import android.content.res.Resources
 import android.content.res.XmlResourceParser
+import android.util.Log
 import com.nextgenbroadcast.mobile.middleware.atsc3.utils.XmlUtils
 import com.nextgenbroadcast.mobile.middleware.phy.Atsc3OnboardPhyConnector
 import org.ngbp.libatsc3.middleware.android.phy.Atsc3NdkPHYClientBase
@@ -33,7 +34,7 @@ internal class OnboardPhyInitializer : IServiceInitializer {
                     return true
                 }
             } catch (e: Resources.NotFoundException) {
-                e.printStackTrace()
+                Log.w(TAG, "Onboard Phy resource reading error: ", e)
             }
 
             if (!isActive) return@forEach
@@ -87,5 +88,9 @@ internal class OnboardPhyInitializer : IServiceInitializer {
             parser.close()
             return result
         }
+    }
+
+    companion object {
+        val TAG: String = OnboardPhyInitializer::class.java.simpleName
     }
 }

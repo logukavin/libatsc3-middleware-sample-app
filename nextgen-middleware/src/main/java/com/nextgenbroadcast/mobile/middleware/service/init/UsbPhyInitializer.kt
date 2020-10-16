@@ -3,6 +3,7 @@ package com.nextgenbroadcast.mobile.middleware.service.init
 import android.content.Context
 import android.content.res.Resources
 import android.content.res.XmlResourceParser
+import android.util.Log
 import com.nextgenbroadcast.mobile.middleware.atsc3.utils.XmlUtils
 import com.nextgenbroadcast.mobile.middleware.phy.Atsc3UsbPhyConnector
 import org.xmlpull.v1.XmlPullParser
@@ -29,7 +30,7 @@ internal class UsbPhyInitializer : IServiceInitializer {
                     return true
                 }
             } catch (e: Resources.NotFoundException) {
-                e.printStackTrace()
+                Log.w(TAG, "Usb Phy resource reading error: ", e)
             }
 
             if (!isActive) return@forEach
@@ -84,8 +85,6 @@ internal class UsbPhyInitializer : IServiceInitializer {
     }
 
     companion object {
-        fun isAssignable(clazz: Class<*>): Boolean {
-            return Atsc3UsbPhyConnector::class.java.isAssignableFrom(clazz)
-        }
+        val TAG: String = UsbPhyInitializer::class.java.simpleName
     }
 }
