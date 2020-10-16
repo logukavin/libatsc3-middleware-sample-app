@@ -21,7 +21,8 @@ class FrequencyLocator : IFrequencyLocator {
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) return null
 
         val location: Location? = suspendCancellableCoroutine { cont ->
-            LocationServices.getFusedLocationProviderClient(context).lastLocation.addOnSuccessListener { location ->
+            val taskLocation = LocationServices.getFusedLocationProviderClient(context).lastLocation
+            taskLocation.addOnSuccessListener { location ->
                 location?.let {
                     cont.resume(location)
                 } ?: let {
@@ -57,6 +58,12 @@ class FrequencyLocator : IFrequencyLocator {
                         locationRequest = Pair(locationManager, locationListener)
                     } ?: cont.resume(null)
                 }
+            }
+            taskLocation.addOnFailureListener {
+                cont.resume(null)
+            }
+            taskLocation.addOnCanceledListener {
+                cont.resume(null)
             }
         }
 
