@@ -1,6 +1,7 @@
 package com.nextgenbroadcast.mobile.middleware.service.init
 
 import android.content.Context
+import android.util.Log
 import com.nextgenbroadcast.mobile.core.presentation.IReceiverPresenter
 import com.nextgenbroadcast.mobile.middleware.location.FrequencyLocation
 import com.nextgenbroadcast.mobile.middleware.location.IFrequencyLocator
@@ -44,8 +45,8 @@ internal class LocatorInitializer(
                         }
                     }
                 } catch (e: TimeoutCancellationException) {
-                    e.printStackTrace()
                     initializer.cancel()
+                    Log.w(TAG, "Location request timeout")
                 }
 
                 if (!isActive) return@forEach
@@ -69,6 +70,8 @@ internal class LocatorInitializer(
     }
 
     companion object {
+        val TAG: String = LocatorInitializer::class.java.simpleName
+
         private val LOCATION_REQUEST_DELAY = TimeUnit.MINUTES.toMillis(1)
 
         private const val LOCATOR_STR = "nextgenbroadcast.locator"

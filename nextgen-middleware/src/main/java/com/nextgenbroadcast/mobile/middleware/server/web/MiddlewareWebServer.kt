@@ -12,10 +12,7 @@ import com.nextgenbroadcast.mobile.middleware.gateway.web.ConnectionType
 import com.nextgenbroadcast.mobile.middleware.gateway.web.IWebGateway
 import com.nextgenbroadcast.mobile.middleware.server.ServerConstants.ATSC_CMD_PATH
 import com.nextgenbroadcast.mobile.middleware.server.ws.MiddlewareWebSocket
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
 import org.eclipse.jetty.http.HttpVersion
 import org.eclipse.jetty.server.*
 import org.eclipse.jetty.server.handler.HandlerCollection
@@ -33,6 +30,9 @@ import org.eclipse.jetty.websocket.servlet.WebSocketServletFactory
 import java.io.IOException
 import java.security.GeneralSecurityException
 import java.util.*
+import java.util.concurrent.Executors
+import kotlin.coroutines.resume
+import kotlin.coroutines.suspendCoroutine
 
 
 class MiddlewareWebServer constructor(
@@ -54,9 +54,30 @@ class MiddlewareWebServer constructor(
     fun isRunning() = server.isRunning
 
     @Throws(MiddlewareWebServerError::class)
-    fun start() {
+    fun start(generatedSSLContext: IUserAgentSSLContext?) {
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_START)
+
         GlobalScope.launch {
+            webGateway?.let { gateway ->
+                server.connectors = gateway.hostName.let { hostName ->
+                    ArrayList<Connector>().apply {
+                        add(getServerConnector(ConnectionType.HTTP, server, hostName, gateway.httpPort))
+                        add(getServerConnector(ConnectionType.WS, server, hostName, gateway.wsPort))
+
+                        generatedSSLContext?.let { generatedSSLContext ->
+                            val sslContextFactory = suspendCoroutine<SslContextFactory> { cor ->
+                                CoroutineScope(Executors.newSingleThreadExecutor().asCoroutineDispatcher()).launch {
+                                    @Suppress("BlockingMethodInNonBlockingContext")
+                                    cor.resume(configureSSLFactory(generatedSSLContext))
+                                }
+                            }
+                            add(getSecureServerConnector(ConnectionType.HTTPS, server, hostName, gateway.httpsPort, sslContextFactory))
+                            add(getSecureServerConnector(ConnectionType.WSS, server, hostName, gateway.wssPort, sslContextFactory))
+                        }
+                    }.toTypedArray()
+                }
+            }
+
             server.start()
             withContext(Dispatchers.Main) {
                 setSelectedPorts(server.connectors.asList())
@@ -128,26 +149,8 @@ class MiddlewareWebServer constructor(
     )
 
     class Builder {
-        private var httpsPort: Int? = null
-        private var httpPort: Int? = null
-        private var wssPort: Int? = null
-        private var wsPort: Int? = null
-        private var hostName: String? = null
-        private var generatedSSLContext: IUserAgentSSLContext? = null
         private var rpcGateway: IRPCGateway? = null
         private var webGateway: IWebGateway? = null
-
-        fun httpsPort(value: Int) = apply { httpsPort = value }
-
-        fun httpPort(value: Int) = apply { httpPort = value }
-
-        fun wssPort(value: Int) = apply { wssPort = value }
-
-        fun wsPort(value: Int) = apply { wsPort = value }
-
-        fun hostName(value: String) = apply { hostName = value }
-
-        fun sslContext(value: IUserAgentSSLContext) = apply { generatedSSLContext = value }
 
         fun rpcGateway(value: IRPCGateway) = apply { rpcGateway = value }
 
@@ -155,27 +158,6 @@ class MiddlewareWebServer constructor(
 
         fun build(): MiddlewareWebServer {
             val server = Server()
-
-            val connectorArray = hostName?.let { hostName ->
-                ArrayList<Connector>().apply {
-                    httpPort?.let { port ->
-                        add(getServerConnector(ConnectionType.HTTP, server, hostName, port))
-                    }
-                    wsPort?.let { port ->
-                        add(getServerConnector(ConnectionType.WS, server, hostName, port))
-                    }
-                    generatedSSLContext?.let { generatedSSLContext ->
-                        val sslContextFactory = configureSSLFactory(generatedSSLContext)
-
-                        httpsPort?.let { port ->
-                            add(getSecureServerConnector(ConnectionType.HTTPS, server, hostName, port, sslContextFactory))
-                        }
-                        wssPort?.let { port ->
-                            add(getSecureServerConnector(ConnectionType.WSS, server, hostName, port, sslContextFactory))
-                        }
-                    }
-                }.toTypedArray()
-            }
 
             val handlerArray = ArrayList<Handler>().apply {
                 rpcGateway?.let { rpcGateway ->
@@ -190,7 +172,6 @@ class MiddlewareWebServer constructor(
             }.toTypedArray()
 
             with(server) {
-                connectors = connectorArray
                 handler = HandlerList().apply {
                     handlers = handlerArray
                 }
