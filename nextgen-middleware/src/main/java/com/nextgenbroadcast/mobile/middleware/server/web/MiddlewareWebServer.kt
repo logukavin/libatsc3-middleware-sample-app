@@ -35,12 +35,12 @@ import java.util.*
 class MiddlewareWebServer constructor(
         private val server: Server,
         private val webGateway: IWebGateway?,
-        unconfinedDispatcher: CoroutineDispatcher
+        defaultDispatcher: CoroutineDispatcher
 ) : AutoCloseable, LifecycleOwner {
 
     private val lifecycleRegistry = LifecycleRegistry(this)
     private val availResources = arrayListOf<AppResource>()
-    private val globalScope = CoroutineScope(unconfinedDispatcher)
+    private val defaultScope = CoroutineScope(defaultDispatcher)
 
     init {
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
@@ -55,7 +55,7 @@ class MiddlewareWebServer constructor(
     @Throws(MiddlewareWebServerError::class)
     fun start() {
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_START)
-        GlobalScope.launch {
+        defaultScope.launch {
             server.start()
             withContext(Dispatchers.Main) {
                 setSelectedPorts(server.connectors.asList())
@@ -195,7 +195,7 @@ class MiddlewareWebServer constructor(
                 }
             }
 
-            return MiddlewareWebServer(server, webGateway, Dispatchers.Unconfined)
+            return MiddlewareWebServer(server, webGateway, Dispatchers.Default)
         }
     }
 
