@@ -339,27 +339,16 @@ internal class Atsc3Module(
     }
 
     override fun onPackageExtractCompleted(packageMetadata: PackageExtractEnvelopeMetadataAndPayload) {
-        log("onPackageExtractCompleted with packageMetadata.appContextIdList: ${packageMetadata.appContextIdList}")
+        log("onPackageExtractCompleted packageName: ${packageMetadata.packageName}, appContextIdList: ${packageMetadata.appContextIdList}")
 
-        val appPackage = packageMap[packageMetadata.appContextIdList]
-        if (appPackage == null) {
-            val pkg = metadataToPackage(packageMetadata).also {
-                packageMap[packageMetadata.appContextIdList] = it
-            }
+        val pkgUid = "${packageMetadata.packageExtractPath}/${packageMetadata.packageName}"
+
+        val pkg = metadataToPackage(pkgUid, packageMetadata)
+
+        val appPackage = packageMap[pkgUid]
+        if (appPackage != pkg) {
+            packageMap[pkgUid] = pkg
             listener?.onPackageReceived(pkg)
-        } else {
-            val changedFiles = packageMetadata.multipartRelatedPayloadList.filter { file ->
-                appPackage.files[file.contentLocation]?.version != file.version
-            }.map { file ->
-                Atsc3ApplicationFile(file.contentLocation, file.contentType, file.version)
-            }
-
-            if (changedFiles.isNotEmpty()) {
-                val pkg = appPackage.updateFiles(changedFiles).also {
-                    packageMap[packageMetadata.appContextIdList] = it
-                }
-                listener?.onPackageReceived(pkg)
-            }
         }
     }
 
@@ -389,12 +378,13 @@ internal class Atsc3Module(
         } ?: cancel.invoke()
     }
 
-    private fun metadataToPackage(packageMetadata: PackageExtractEnvelopeMetadataAndPayload): Atsc3Application {
+    private fun metadataToPackage(uid: String, packageMetadata: PackageExtractEnvelopeMetadataAndPayload): Atsc3Application {
         val files = packageMetadata.multipartRelatedPayloadList?.map { file ->
             file.contentLocation to Atsc3ApplicationFile(file.contentLocation, file.contentType, file.version)
         }?.toMap() ?: emptyMap<String, Atsc3ApplicationFile>()
 
         return Atsc3Application(
+                uid,
                 packageMetadata.packageName,
                 packageMetadata.appContextIdList.split(" "),
                 String.format("%s/%s", jni_getCacheDir(), packageMetadata.packageExtractPath),

@@ -20,7 +20,7 @@ internal class RepositoryImpl : IRepository {
     override val heldPackage = MutableLiveData<Atsc3HeldPackage?>()
 
     override fun addOrUpdateApplication(application: Atsc3Application) {
-        _applications[application.cachePath] = application
+        _applications[application.uid] = application
         applications.postValue(_applications.values.toList())
     }
 
