@@ -106,9 +106,9 @@ dependencies {
 
     standaloneImplementation "androidx.startup:startup-runtime:1.0.0-rc01"
 
+    implementation 'com.google.android.gms:play-services-basement:17.4.0'
     implementation 'com.google.firebase:firebase-analytics-ktx:17.6.0'
     implementation 'com.google.firebase:firebase-crashlytics-ktx:17.2.2'
-    implementation 'com.google.android.gms:play-services-basement:17.4.0'
 
     implementation 'org.slf4j:slf4j-nop:1.7.25'
 

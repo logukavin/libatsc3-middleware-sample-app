@@ -109,8 +109,6 @@ dependencies {
         transitive = true
     }
 
-    implementation 'com.google.android.gms:play-services-location:17.1.0'
-
     testImplementation project(":nextgen-mmt")
     testImplementation 'junit:junit:4.12'
     androidTestImplementation 'androidx.test.ext:junit:1.1.2'
