@@ -59,8 +59,8 @@ class SocketServerTest : ServerTest() {
             }
         }
 
-        webServer = MiddlewareWebServer(server, webGateway = null, unconfinedDispatcher = testDispatcher).also {
-            server.start()
+        webServer = MiddlewareWebServer(server, webGateway = null, defaultDispatcher = testDispatcher).also {
+            it.start()
         }
         webSocketClient = WebSocketClient(HttpClient(configureSSLFactory(UserAgentSSLContext(mockApplicationContext))))
     }
