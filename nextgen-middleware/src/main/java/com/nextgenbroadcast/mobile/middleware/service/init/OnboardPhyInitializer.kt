@@ -4,12 +4,16 @@ import android.content.Context
 import android.content.res.Resources
 import android.content.res.XmlResourceParser
 import android.util.Log
+import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3Module
 import com.nextgenbroadcast.mobile.middleware.atsc3.utils.XmlUtils
 import com.nextgenbroadcast.mobile.middleware.phy.Atsc3OnboardPhyConnector
 import org.ngbp.libatsc3.middleware.android.phy.Atsc3NdkPHYClientBase
 import org.xmlpull.v1.XmlPullParser
+import java.lang.Exception
 
-internal class OnboardPhyInitializer : IServiceInitializer {
+internal class OnboardPhyInitializer(
+        private val atsc3Module: Atsc3Module
+) : IServiceInitializer {
 
     private var isActive = true
 
@@ -31,7 +35,14 @@ internal class OnboardPhyInitializer : IServiceInitializer {
                 val phy = instance as Atsc3NdkPHYClientBase
 
                 if (connector.connect(phy, params)) {
+                    atsc3Module.setPhyClient(phy)
                     return true
+                } else {
+                    try {
+                        phy.deinit()
+                    } catch (e: Exception) {
+                        Log.d(TAG, "Crash when trying deinit an Onboard Phy", e)
+                    }
                 }
             } catch (e: Resources.NotFoundException) {
                 Log.w(TAG, "Onboard Phy resource reading error: ", e)
