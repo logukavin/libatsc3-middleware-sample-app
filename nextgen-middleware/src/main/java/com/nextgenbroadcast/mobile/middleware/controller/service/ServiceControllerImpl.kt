@@ -26,14 +26,14 @@ internal class ServiceControllerImpl (
     private var heldResetJob: Job? = null
     private var mediaUrlAssignmentJob: Job? = null
 
-    override val receiverState = MutableLiveData<ReceiverState>(ReceiverState.IDLE)
+    override val receiverState = MutableLiveData(ReceiverState.IDLE)
 
     override val selectedService = repository.selectedService
     override val serviceGuidUrls = repository.serviceGuideUrls
 
     override val sltServices = repository.services
 
-    override val freqKhz = MutableLiveData(settings.freqKhz)
+    override val freqKhz = MutableLiveData(0)
 
     init {
         atsc3Module.setListener(this)
@@ -82,7 +82,13 @@ internal class ServiceControllerImpl (
     }
 
     override fun openRoute(device: UsbDevice): Boolean {
-        return atsc3Module.openUsbDevice(device)
+        if (atsc3Module.openUsbDevice(device)) {
+            settings.frequencyLocation?.firstFrequency?.let { freqKhz ->
+                atsc3Module.tune(freqKhz)
+            }
+            return true
+        }
+        return false
     }
 
     override fun stopRoute() {
@@ -132,7 +138,7 @@ internal class ServiceControllerImpl (
     }
 
     override fun tune(freqKhz: Int) {
-        settings.freqKhz = freqKhz
+        this.freqKhz.postValue(freqKhz)
         atsc3Module.tune(freqKhz)
     }
 

@@ -21,7 +21,6 @@ import org.ngbp.libatsc3.middleware.android.application.sync.mmt.MfuByteBufferFr
 import org.ngbp.libatsc3.middleware.android.application.sync.mmt.MpuMetadata_HEVC_NAL_Payload
 import org.ngbp.libatsc3.middleware.android.phy.Atsc3NdkPHYClientBase
 import org.ngbp.libatsc3.middleware.android.phy.Atsc3UsbDevice
-import org.ngbp.libatsc3.middleware.android.phy.SaankhyaPHYAndroid
 import org.ngbp.libatsc3.middleware.android.phy.virtual.PcapDemuxedVirtualPHYAndroid
 import org.ngbp.libatsc3.middleware.android.phy.virtual.PcapSTLTPVirtualPHYAndroid
 import org.ngbp.libatsc3.middleware.android.phy.virtual.srt.SRTRxSTLTPVirtualPHYAndroid
@@ -57,6 +56,7 @@ internal class Atsc3Module(
     private val usbManager by lazy { context.getSystemService(Context.USB_SERVICE) as UsbManager }
 
     private var atsc3NdkPHYClientInstance: Atsc3NdkPHYClientBase? = null //whomever is currently instantiated (e.g. SRTRxSTLTPVirtualPhyAndroid, etc..)
+    private var atsc3NdkPHYClientFreqKhz: Int = 0
 
     private val serviceMap = ConcurrentHashMap<Int, Atsc3Service>()
     private val packageMap = HashMap<String, Atsc3Application>()
@@ -83,6 +83,11 @@ internal class Atsc3Module(
     }
 
     fun tune(freqKhz: Int) {
+        if (atsc3NdkPHYClientFreqKhz == freqKhz) return
+        atsc3NdkPHYClientFreqKhz = freqKhz
+
+        reset()
+
         atsc3NdkPHYClientInstance?.tune(freqKhz, 0)
     }
 
@@ -159,9 +164,6 @@ internal class Atsc3Module(
 
                     atsc3NdkPHYClientBaseCandidate.setAtsc3UsbDevice(atsc3UsbDevice)
                     atsc3UsbDevice.setAtsc3NdkPHYClientBase(atsc3NdkPHYClientBaseCandidate)
-                    //jjustman-2020-08-31 - hack for LowaSIS - tune to 593000 - CH34
-                    //jjustman-2020-10-06 - chage for jj's lab to 659
-                    atsc3NdkPHYClientBaseCandidate.tune(659000, 0)
 
                     atsc3NdkPHYClientInstance = atsc3NdkPHYClientBaseCandidate
                     setState(State.OPENED)
@@ -173,17 +175,6 @@ internal class Atsc3Module(
         atsc3UsbDevice.destroy()
 
         return false
-    }
-
-    fun isDeviceCompatible(device: UsbDevice) = getPHYImplementations(device).isNotEmpty()
-
-    private fun getPHYImplementations(device: UsbDevice): List<Atsc3NdkPHYClientBase.USBVendorIDProductIDSupportedPHY> {
-        Atsc3UsbDevice.FindFromUsbDevice(device)?.let {
-            log("usbPHYLayerDeviceTryToInstantiateFromRegisteredPHYNDKs: Atsc3UsbDevice already instantiated: $device, instance: $it")
-            return emptyList()
-        } ?: log("usbPHYLayerDeviceTryToInstantiateFromRegisteredPHYNDKs: Atsc3UsbDevice map returned : $device, but null instance?")
-
-        return Atsc3NdkPHYClientBase.GetCandidatePHYImplementations(device) ?: emptyList()
     }
 
     fun selectService(serviceId: Int): Boolean {
@@ -221,9 +212,23 @@ internal class Atsc3Module(
             atsc3NdkPHYClientInstance = null
         }
 
-        clear()
+        atsc3NdkPHYClientFreqKhz = 0
 
+        reset()
+    }
+
+    private fun reset() {
+        clear()
         setState(State.IDLE)
+    }
+
+    private fun getPHYImplementations(device: UsbDevice): List<Atsc3NdkPHYClientBase.USBVendorIDProductIDSupportedPHY> {
+        Atsc3UsbDevice.FindFromUsbDevice(device)?.let {
+            log("usbPHYLayerDeviceTryToInstantiateFromRegisteredPHYNDKs: Atsc3UsbDevice already instantiated: $device, instance: $it")
+            return emptyList()
+        } ?: log("usbPHYLayerDeviceTryToInstantiateFromRegisteredPHYNDKs: Atsc3UsbDevice map returned : $device, but null instance?")
+
+        return Atsc3NdkPHYClientBase.GetCandidatePHYImplementations(device) ?: emptyList()
     }
 
     override fun setMMTSource(source: MMTDataConsumerType?) {
@@ -340,27 +345,16 @@ internal class Atsc3Module(
     }
 
     override fun onPackageExtractCompleted(packageMetadata: PackageExtractEnvelopeMetadataAndPayload) {
-        log("onPackageExtractCompleted with packageMetadata.appContextIdList: ${packageMetadata.appContextIdList}")
+        log("onPackageExtractCompleted packageName: ${packageMetadata.packageName}, appContextIdList: ${packageMetadata.appContextIdList}")
 
-        val appPackage = packageMap[packageMetadata.appContextIdList]
-        if (appPackage == null) {
-            val pkg = metadataToPackage(packageMetadata).also {
-                packageMap[packageMetadata.appContextIdList] = it
-            }
+        val pkgUid = "${packageMetadata.packageExtractPath}/${packageMetadata.packageName}"
+
+        val pkg = metadataToPackage(pkgUid, packageMetadata)
+
+        val appPackage = packageMap[pkgUid]
+        if (appPackage != pkg) {
+            packageMap[pkgUid] = pkg
             listener?.onPackageReceived(pkg)
-        } else {
-            val changedFiles = packageMetadata.multipartRelatedPayloadList.filter { file ->
-                appPackage.files[file.contentLocation]?.version != file.version
-            }.map { file ->
-                Atsc3ApplicationFile(file.contentLocation, file.contentType, file.version)
-            }
-
-            if (changedFiles.isNotEmpty()) {
-                val pkg = appPackage.updateFiles(changedFiles).also {
-                    packageMap[packageMetadata.appContextIdList] = it
-                }
-                listener?.onPackageReceived(pkg)
-            }
         }
     }
 
@@ -390,12 +384,13 @@ internal class Atsc3Module(
         } ?: cancel.invoke()
     }
 
-    private fun metadataToPackage(packageMetadata: PackageExtractEnvelopeMetadataAndPayload): Atsc3Application {
+    private fun metadataToPackage(uid: String, packageMetadata: PackageExtractEnvelopeMetadataAndPayload): Atsc3Application {
         val files = packageMetadata.multipartRelatedPayloadList?.map { file ->
             file.contentLocation to Atsc3ApplicationFile(file.contentLocation, file.contentType, file.version)
         }?.toMap() ?: emptyMap<String, Atsc3ApplicationFile>()
 
         return Atsc3Application(
+                uid,
                 packageMetadata.packageName,
                 packageMetadata.appContextIdList.split(" "),
                 String.format("%s/%s", jni_getCacheDir(), packageMetadata.packageExtractPath),

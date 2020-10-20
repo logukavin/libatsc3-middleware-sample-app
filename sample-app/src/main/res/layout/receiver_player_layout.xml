@@ -6,7 +6,7 @@
         android:id="@+id/receiver_media_player"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        app:resize_mode="fixed_width"
+        app:resize_mode="fit"
         app:use_controller="false" />
 
     <ProgressBar
