@@ -1,15 +1,16 @@
 package com.nextgenbroadcast.mobile.middleware.service.init
 
 import android.content.Context
+import android.util.Log
 import com.nextgenbroadcast.mobile.core.presentation.IReceiverPresenter
 import com.nextgenbroadcast.mobile.middleware.location.FrequencyLocation
 import com.nextgenbroadcast.mobile.middleware.location.IFrequencyLocator
-import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
+import com.nextgenbroadcast.mobile.middleware.settings.IReceiverSettings
 import kotlinx.coroutines.*
 import java.util.concurrent.TimeUnit
 
-internal class LocatorInitializer(
-        private val settings: IMiddlewareSettings,
+internal class FrequencyInitializer(
+        private val settings: IReceiverSettings,
         private val receiver: IReceiverPresenter
 ) : IServiceInitializer {
 
@@ -44,8 +45,8 @@ internal class LocatorInitializer(
                         }
                     }
                 } catch (e: TimeoutCancellationException) {
-                    e.printStackTrace()
                     initializer.cancel()
+                    Log.w(TAG, "Location request timeout")
                 }
 
                 if (!isActive) return@forEach
@@ -56,7 +57,7 @@ internal class LocatorInitializer(
     }
 
     private fun applyFrequencyLocation(frequencyLocation: FrequencyLocation) {
-        frequencyLocation.frequencyList.firstOrNull()?.let { frequency ->
+        frequencyLocation.firstFrequency?.let { frequency ->
             receiver.tune(frequency)
         }
     }
@@ -69,6 +70,8 @@ internal class LocatorInitializer(
     }
 
     companion object {
+        val TAG: String = FrequencyInitializer::class.java.simpleName
+
         private val LOCATION_REQUEST_DELAY = TimeUnit.MINUTES.toMillis(1)
 
         private const val LOCATOR_STR = "nextgenbroadcast.locator"
