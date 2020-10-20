@@ -29,8 +29,8 @@ import com.nextgenbroadcast.mobile.core.FileUtils
 import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.model.SLSService
-import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
 import com.nextgenbroadcast.mobile.core.presentation.IReceiverPresenter
+import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
 import com.nextgenbroadcast.mobile.middleware.sample.core.SwipeGestureDetector
 import com.nextgenbroadcast.mobile.middleware.sample.databinding.ActivityMainBinding
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.RMPViewModel
@@ -89,17 +89,23 @@ class MainActivity : BaseActivity() {
             receiverPresenter = it
         }
 
-        if (previewMode) {
-            receiver.receiverState.observe(this, { state ->
-                if (state == null || state == ReceiverState.IDLE) {
+        receiver.receiverState.observe(this, { state ->
+            if (state == null || state == ReceiverState.IDLE) {
+                if (previewMode) {
                     previewName?.let { source ->
                         sourceMap.find { (name, _, _) -> name == source }?.let { (_, path, _) ->
                             openRoute(path)
                         }
                     }
                 }
-            })
-        }
+
+                if (isInPictureInPictureMode) {
+                    startActivity(Intent(this, MainActivity::class.java).apply {
+                        flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+                    })
+                }
+            }
+        })
 
         if (initPlayer) {
             initPlayer = false
@@ -380,13 +386,14 @@ class MainActivity : BaseActivity() {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         if (requestCode == FILE_REQUEST_CODE && data != null) {
-            val path = data.getStringExtra("FILE") ?: data.data?.let { FileUtils.getPath(applicationContext, it) }
+            val path = data.getStringExtra("FILE")
+                    ?: data.data?.let { FileUtils.getPath(applicationContext, it) }
             path?.let { openRoute(it) }
 
             return
         }
 
-        if(requestCode == SETTINGS_REQUEST_CODE && data != null) {
+        if (requestCode == SETTINGS_REQUEST_CODE && data != null) {
             receiverPresenter?.tune(data.getIntExtra(SettingsDialog.PARAM_FREQUENCY, 0))
         }
 
