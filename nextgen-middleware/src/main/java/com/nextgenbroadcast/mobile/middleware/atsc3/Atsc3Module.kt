@@ -82,13 +82,22 @@ internal class Atsc3Module(
         this.listener = listener
     }
 
+    fun setPhyClient(phyClient: Atsc3NdkPHYClientBase) {
+        close()
+
+        atsc3NdkPHYClientInstance = phyClient
+    }
+
     fun tune(freqKhz: Int) {
         if (atsc3NdkPHYClientFreqKhz == freqKhz) return
-        atsc3NdkPHYClientFreqKhz = freqKhz
 
-        reset()
+        atsc3NdkPHYClientInstance?.let { phy ->
+            atsc3NdkPHYClientFreqKhz = freqKhz
 
-        atsc3NdkPHYClientInstance?.tune(freqKhz, 0)
+            reset()
+
+            phy.tune(freqKhz, 0)
+        }
     }
 
     fun openPcapFile(filename: String, type: PcapType): Boolean {
