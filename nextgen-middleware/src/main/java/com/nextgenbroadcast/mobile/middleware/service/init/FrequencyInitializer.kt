@@ -57,7 +57,7 @@ internal class FrequencyInitializer(
     }
 
     private fun applyFrequencyLocation(frequencyLocation: FrequencyLocation) {
-        frequencyLocation.frequencyList.firstOrNull()?.let { frequency ->
+        frequencyLocation.firstFrequency?.let { frequency ->
             receiver.tune(frequency)
         }
     }

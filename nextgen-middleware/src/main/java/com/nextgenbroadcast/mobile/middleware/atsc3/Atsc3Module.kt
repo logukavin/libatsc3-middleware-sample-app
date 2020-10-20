@@ -56,6 +56,7 @@ internal class Atsc3Module(
     private val usbManager by lazy { context.getSystemService(Context.USB_SERVICE) as UsbManager }
 
     private var atsc3NdkPHYClientInstance: Atsc3NdkPHYClientBase? = null //whomever is currently instantiated (e.g. SRTRxSTLTPVirtualPhyAndroid, etc..)
+    private var atsc3NdkPHYClientFreqKhz: Int = 0
 
     private val serviceMap = ConcurrentHashMap<Int, Atsc3Service>()
     private val packageMap = HashMap<String, Atsc3Application>()
@@ -82,6 +83,11 @@ internal class Atsc3Module(
     }
 
     fun tune(freqKhz: Int) {
+        if (atsc3NdkPHYClientFreqKhz == freqKhz) return
+        atsc3NdkPHYClientFreqKhz = freqKhz
+
+        reset()
+
         atsc3NdkPHYClientInstance?.tune(freqKhz, 0)
     }
 
@@ -171,17 +177,6 @@ internal class Atsc3Module(
         return false
     }
 
-    fun isDeviceCompatible(device: UsbDevice) = getPHYImplementations(device).isNotEmpty()
-
-    private fun getPHYImplementations(device: UsbDevice): List<Atsc3NdkPHYClientBase.USBVendorIDProductIDSupportedPHY> {
-        Atsc3UsbDevice.FindFromUsbDevice(device)?.let {
-            log("usbPHYLayerDeviceTryToInstantiateFromRegisteredPHYNDKs: Atsc3UsbDevice already instantiated: $device, instance: $it")
-            return emptyList()
-        } ?: log("usbPHYLayerDeviceTryToInstantiateFromRegisteredPHYNDKs: Atsc3UsbDevice map returned : $device, but null instance?")
-
-        return Atsc3NdkPHYClientBase.GetCandidatePHYImplementations(device) ?: emptyList()
-    }
-
     fun selectService(serviceId: Int): Boolean {
         if (selectedServiceId == serviceId) return false
 
@@ -217,9 +212,23 @@ internal class Atsc3Module(
             atsc3NdkPHYClientInstance = null
         }
 
-        clear()
+        atsc3NdkPHYClientFreqKhz = 0
 
+        reset()
+    }
+
+    private fun reset() {
+        clear()
         setState(State.IDLE)
+    }
+
+    private fun getPHYImplementations(device: UsbDevice): List<Atsc3NdkPHYClientBase.USBVendorIDProductIDSupportedPHY> {
+        Atsc3UsbDevice.FindFromUsbDevice(device)?.let {
+            log("usbPHYLayerDeviceTryToInstantiateFromRegisteredPHYNDKs: Atsc3UsbDevice already instantiated: $device, instance: $it")
+            return emptyList()
+        } ?: log("usbPHYLayerDeviceTryToInstantiateFromRegisteredPHYNDKs: Atsc3UsbDevice map returned : $device, but null instance?")
+
+        return Atsc3NdkPHYClientBase.GetCandidatePHYImplementations(device) ?: emptyList()
     }
 
     override fun setMMTSource(source: MMTDataConsumerType?) {

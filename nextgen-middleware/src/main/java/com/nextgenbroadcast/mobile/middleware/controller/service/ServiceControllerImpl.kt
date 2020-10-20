@@ -10,12 +10,14 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Applicatio
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPackage
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.service.Atsc3Service
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
+import com.nextgenbroadcast.mobile.middleware.settings.IReceiverSettings
 import com.nextgenbroadcast.mobile.mmt.atsc3.media.MMTDataBuffer
 import kotlinx.coroutines.*
 
 
 internal class ServiceControllerImpl (
         private val repository: IRepository,
+        private val settings: IReceiverSettings,
         private val atsc3Module: Atsc3Module,
 ) : IServiceController, Atsc3Module.Listener {
 
@@ -80,7 +82,13 @@ internal class ServiceControllerImpl (
     }
 
     override fun openRoute(device: UsbDevice): Boolean {
-        return atsc3Module.openUsbDevice(device)
+        if (atsc3Module.openUsbDevice(device)) {
+            settings.frequencyLocation?.firstFrequency?.let { freqKhz ->
+                atsc3Module.tune(freqKhz)
+            }
+            return true
+        }
+        return false
     }
 
     override fun stopRoute() {
