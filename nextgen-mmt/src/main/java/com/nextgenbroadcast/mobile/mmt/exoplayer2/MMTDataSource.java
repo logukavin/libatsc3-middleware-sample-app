@@ -74,6 +74,9 @@ public class MMTDataSource extends BaseDataSource {
          * 3. read sample header before every sample
          */
 
+        if (!inputSource.isActive()) {
+            return C.RESULT_END_OF_INPUT;
+        }
 
         // Read identification header
         if (readSignature) {
