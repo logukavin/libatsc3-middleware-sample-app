@@ -6,7 +6,6 @@ import android.content.res.XmlResourceParser
 import android.util.Log
 import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3Module
 import com.nextgenbroadcast.mobile.middleware.atsc3.utils.XmlUtils
-import com.nextgenbroadcast.mobile.middleware.phy.Atsc3OnboardPhyConnector
 import org.ngbp.libatsc3.middleware.android.phy.Atsc3NdkPHYClientBase
 import org.xmlpull.v1.XmlPullParser
 import java.lang.Exception
@@ -18,8 +17,6 @@ internal class OnboardPhyInitializer(
     private var isActive = true
 
     override fun initialize(context: Context, components: HashMap<Class<*>, Pair<Int, String>>): Boolean {
-        val connector = Atsc3OnboardPhyConnector()
-
         components.filter { (clazz, _) ->
             Atsc3NdkPHYClientBase::class.java.isAssignableFrom(clazz)
         }.map { (clazz, data) ->
@@ -34,8 +31,19 @@ internal class OnboardPhyInitializer(
                 val instance: Any = component.getDeclaredConstructor().newInstance()
                 val phy = instance as Atsc3NdkPHYClientBase
 
-                if (connector.connect(phy, params)) {
-                    atsc3Module.setPhyClient(phy)
+                var connected = false
+                params.forEach params@{ (fd, devicePath, freqKhz) ->
+                    try {
+                        connected = atsc3Module.openPhy(phy, fd, devicePath, freqKhz)
+                        if (connected) return@params
+                    } catch (t: Throwable) {
+                        t.printStackTrace()
+                    }
+
+                    if (!isActive) return@forEach
+                }
+
+                if (connected) {
                     return true
                 } else {
                     try {
