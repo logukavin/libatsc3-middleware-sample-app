@@ -1,5 +1,6 @@
 package com.nextgenbroadcast.mobile.mmt.exoplayer2;
 
+import android.util.Log;
 import android.util.SparseArray;
 
 import com.google.android.exoplayer2.C;
@@ -84,7 +85,9 @@ public class MMTExtractor implements Extractor {
             try {
                 peekNextSampleHeader(extractorInput);
                 //Log.d("!!!", "sample Type: " + currentSampleType + ", sample TimeUs: " + currentSampleTimeUs + ",  sample size: " + currentSampleSize);
-            } catch (EOFException e) {
+            } catch (Exception ex) {
+                Log.w("MMTExtractor", "readSample - Exception, returning END_OF_INPUT - causing ExoPlayer DataSource teardown/unwind, ex: "+ex+", messgae: "+ex.getMessage()+",  Type: " + currentSampleType + ", sample TimeUs: " + currentSampleTimeUs + ",  sample size: " + currentSampleSize);
+
                 return Extractor.RESULT_END_OF_INPUT;
             }
             currentSampleBytesRemaining = currentSampleSize;
@@ -118,7 +121,7 @@ public class MMTExtractor implements Extractor {
         }
 
         trackOutput.sampleMetadata(
-                currentSampleTimeUs - timeOffsetUs,
+                Math.max(0, currentSampleTimeUs - timeOffsetUs),
                 sampleFlags,
                 currentSampleSize,
                 /* offset= */ 0,
