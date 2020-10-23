@@ -74,8 +74,8 @@ public class MMTDataSource extends BaseDataSource {
          * 3. read sample header before every sample
          */
 
-        if (!inputSource.isActive()) {
-            return C.RESULT_END_OF_INPUT;
+        if (!opened || !inputSource.isActive()) {
+            return C.LENGTH_UNSET;
         }
 
         // Read identification header
@@ -185,8 +185,6 @@ public class MMTDataSource extends BaseDataSource {
 
             readSampleHeader = true;
         }
-
-        if (!opened) return C.LENGTH_UNSET;
 
         // read the sample header
         if (readSampleHeader) {
