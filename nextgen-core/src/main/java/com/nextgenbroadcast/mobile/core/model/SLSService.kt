@@ -7,5 +7,6 @@ import kotlinx.android.parcel.Parcelize
 data class SLSService(
         val id: Int,
         val shortName: String?,
-        val globalId: String?
+        val globalId: String?,
+        val serviceCategory: Int? = null
 ) : Parcelable
