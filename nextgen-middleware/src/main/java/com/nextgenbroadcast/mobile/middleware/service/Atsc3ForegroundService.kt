@@ -17,6 +17,7 @@ import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.model.SLSService
 import com.nextgenbroadcast.mobile.middleware.BuildConfig
+import com.nextgenbroadcast.mobile.middleware.analytics.AnalyticService
 import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3Module
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
 import com.nextgenbroadcast.mobile.middleware.controller.service.ServiceControllerImpl
@@ -83,7 +84,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
             atsc3Module = it
         }
 
-        serviceController = ServiceControllerImpl(repo, settings, atsc3)
+        serviceController = ServiceControllerImpl(repo, settings, atsc3, AnalyticService(applicationContext))
 
         state = MediatorLiveData<Triple<ReceiverState?, SLSService?, PlaybackState?>>().apply {
             addSource(serviceController.receiverState) { receiverState ->
