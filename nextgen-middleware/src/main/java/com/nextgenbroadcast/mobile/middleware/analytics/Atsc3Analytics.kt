@@ -9,55 +9,59 @@ class Atsc3Analytics: IAtsc3Analytics {
     private var activeSession: AVService? = null
 
     override fun startSession(bsid: Int, serviceId: Int, globalServiceId: String?, serviceType: Int) {
-        AVService(COUNTRY, bsid, serviceId, globalServiceId, serviceType).also {
+        finishSession()
+        AVService(BSID_REGISTRATION_COUNTRY, bsid, serviceId, globalServiceId, serviceType).also {
             activeSession = it
-        }.also {
-            avServiceQueue.add(it)
         }
     }
 
     override fun startDisplayContent() {
-        val dateTime = nowDateTimeInSec()
-        ReportInterval(
-                startTime = dateTime,
-                endTime = null,
-                destinationDeviceType = DESTINATION_DEVICE_TYPE
-        ).apply {
-            BroadcastInterval(
-                    broadcastStartTime = dateTime,
-                    broadcastEndTime = null,
-                    speed = SPEED,
-                    receiverStartTime = dateTime
-            ).also {
-                broadcastIntervals.add(it)
+        activeSession?.let { session ->
+            val currentTime = currentTimeSec()
+            ReportInterval(
+                    startTime = currentTime,
+                    endTime = null,
+                    destinationDeviceType = DEVICE_TYPE_PRIMARY
+            ).apply {
+                BroadcastInterval(
+                        broadcastStartTime = currentTime,
+                        broadcastEndTime = null,
+                        speed = PLAYBACK_SPEED_NORMAL,
+                        receiverStartTime = currentTime
+                ).also {
+                    broadcastIntervals.add(it)
+                }
+            }.also {
+                session.reportIntervalList.add(it)
             }
-        }.also {
-            activeSession?.reportIntervalList?.add(it)
         }
     }
 
     override fun finishDisplayContent() {
-        activeSession?.reportIntervalList?.firstOrNull()?.let { reportInterval ->
-            val dateTime = nowDateTimeInSec()
-            reportInterval.endTime = dateTime
-            reportInterval.broadcastIntervals.last().apply {
-                broadcastEndTime = dateTime
-                broadcastEndTime = dateTime
+        activeSession?.reportIntervalList?.lastOrNull()?.let { reportInterval ->
+            if(reportInterval.endTime == null) {
+                val currentTime = currentTimeSec()
+                reportInterval.endTime = currentTime
+                reportInterval.broadcastIntervals.lastOrNull()?.apply {
+                    broadcastEndTime = currentTime
+                }
             }
         }
     }
 
     override fun finishSession() {
         activeSession?.let {
+            avServiceQueue.add(it)
             finishDisplayContent()
+            activeSession = null
         }
     }
 
-    private fun nowDateTimeInSec() = System.currentTimeMillis() / 1000
+    private fun currentTimeSec() = System.currentTimeMillis() / 1000
 
     companion object {
-        private const val COUNTRY = "us"
-        private const val DESTINATION_DEVICE_TYPE = 0 // Content is presented on a Primary Device
-        private const val SPEED = 1 // The value 1 indicates a playback at the normal speed
+        private const val BSID_REGISTRATION_COUNTRY = "us"
+        private const val DEVICE_TYPE_PRIMARY = 0 // Content is presented on a Primary Device
+        private const val PLAYBACK_SPEED_NORMAL = 1 // The value 1 indicates a playback at the normal speed
     }
 }

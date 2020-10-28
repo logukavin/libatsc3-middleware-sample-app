@@ -51,6 +51,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     private lateinit var atsc3Module: Atsc3Module
     private lateinit var serviceController: IServiceController
     private lateinit var state: MediatorLiveData<Triple<ReceiverState?, SLSService?, PlaybackState?>>
+    private lateinit var atsc3Analytics: IAtsc3Analytics
 
     private var viewController: IViewController? = null
     private var webGateway: IWebGateway? = null
@@ -69,8 +70,6 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         MediaFileProvider(applicationContext)
     }
 
-    private val atsc3Analytics: IAtsc3Analytics = Atsc3Analytics()
-
     abstract fun createServiceBinder(serviceController: IServiceController, viewController: IViewController): IBinder
 
     override fun onCreate() {
@@ -86,6 +85,8 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         val atsc3 = Atsc3Module(this).also {
             atsc3Module = it
         }
+
+        atsc3Analytics = Atsc3Analytics()
 
         serviceController = ServiceControllerImpl(repo, settings, atsc3, atsc3Analytics)
 
