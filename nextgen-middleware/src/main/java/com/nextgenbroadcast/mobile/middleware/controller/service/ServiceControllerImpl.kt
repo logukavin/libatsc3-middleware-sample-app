@@ -5,7 +5,7 @@ import android.util.Log
 import androidx.lifecycle.MutableLiveData
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.model.SLSService
-import com.nextgenbroadcast.mobile.middleware.analytics.IAnalyticService
+import com.nextgenbroadcast.mobile.middleware.analytics.IAtsc3Analytics
 import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3Module
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPackage
@@ -20,7 +20,7 @@ internal class ServiceControllerImpl (
         private val repository: IRepository,
         private val settings: IReceiverSettings,
         private val atsc3Module: Atsc3Module,
-        private val analyticService: IAnalyticService
+        private val atsc3Analytics: IAtsc3Analytics
 ) : IServiceController, Atsc3Module.Listener {
 
     private val ioScope = CoroutineScope(Dispatchers.IO)
@@ -98,22 +98,25 @@ internal class ServiceControllerImpl (
     }
 
     override fun closeRoute() {
-        analyticService.finishSession()
+        atsc3Analytics.finishSession()
+
         cancelMediaUrlAssignment()
         atsc3Module.close()
     }
 
     override fun selectService(service: SLSService) {
+        atsc3Analytics.finishSession()
+
         // Reset current media. New media url will be received after service selection.
-        analyticService.finishSession()
         cancelMediaUrlAssignment()
         repository.setMediaUrl(null)
 
         val res = atsc3Module.selectService(service.id)
         if (res) {
+            atsc3Analytics.startSession(service.bsid, service.id, service.globalId, service.serviceCategory)
+
             // Store successfully selected service. This will lead to RMP reset
             repository.setSelectedService(service)
-            analyticService.startSession("bsid", service.id, service.globalId, service.serviceCategory!!)
 
             // Reset the current HELD if it's not compatible new service or start delayed reset otherwise.
             // Delayed reset will be canceled when a new HELD been received for selected service.
