@@ -15,13 +15,17 @@ class LLSParserSLT {
             parser.nextTag()
             parser.require(XmlPullParser.START_TAG, null, "SLT")
 
+            val bsid = parser.getAttributeValue(null, "bsid")?.let {
+                XmlUtils.strToInt(it)
+            } ?: 0
+
             while (parser.next() != XmlPullParser.END_DOCUMENT) {
                 if (parser.eventType != XmlPullParser.START_TAG) {
                     continue
                 }
                 val name = parser.name
                 if (name == ENTRY_SERVICE) {
-                    services.add(readService(parser))
+                    services.add(readService(bsid, parser))
                 } else {
                     XmlUtils.skip(parser)
                 }
@@ -35,8 +39,8 @@ class LLSParserSLT {
     }
 
     @Throws(IOException::class, XmlPullParserException::class)
-    private fun readService(parser: XmlPullParser): Atsc3Service {
-        val currentService = Atsc3Service()
+    private fun readService(bsid: Int, parser: XmlPullParser): Atsc3Service {
+        val currentService = Atsc3Service(bsid)
 
         val attrCount = parser.attributeCount
         for (i in 0 until attrCount) {
