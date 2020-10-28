@@ -20,6 +20,8 @@ import com.nextgenbroadcast.mobile.permission.UriPermissionProvider
 import com.nextgenbroadcast.mobile.mmt.atsc3.media.MMTDataBuffer
 import com.nextgenbroadcast.mobile.mmt.exoplayer2.MMTDataSource
 import com.nextgenbroadcast.mobile.mmt.exoplayer2.MMTExtractor
+import com.nextgenbroadcast.mobile.mmt.exoplayer2.MMTLoadControl
+import com.nextgenbroadcast.mobile.mmt.exoplayer2.RouteDASHLoadControl
 import java.io.IOException
 
 class ReceiverMediaPlayer @JvmOverloads constructor(
@@ -103,14 +105,11 @@ class ReceiverMediaPlayer @JvmOverloads constructor(
     }
 
     private fun createDefaultExoPlayer(): SimpleExoPlayer {
-        return createExoPlayer(DefaultLoadControl())
+        return createExoPlayer(RouteDASHLoadControl())
     }
 
     private fun createMMTExoPlayer(): SimpleExoPlayer {
-        val loadingControl = DefaultLoadControl.Builder()
-                .setBufferDurationsMs(15000, 50000, 2500, 5000)
-                .createDefaultLoadControl()
-        return createExoPlayer(loadingControl)
+        return createExoPlayer(MMTLoadControl())
     }
 
     private fun createExoPlayer(loadControl: LoadControl): SimpleExoPlayer {
