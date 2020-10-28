@@ -11,6 +11,7 @@ class Atsc3Analytics: IAtsc3Analytics {
     override fun startSession(bsid: Int, serviceId: Int, globalServiceId: String?, serviceType: Int) {
         AVService(COUNTRY, bsid, serviceId, globalServiceId, serviceType).also {
             activeSession = it
+        }.also {
             avServiceQueue.add(it)
         }
     }
