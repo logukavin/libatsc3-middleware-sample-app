@@ -2,11 +2,11 @@ package com.nextgenbroadcast.mobile.view
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.content.pm.ApplicationInfo
 import android.graphics.Color
 import android.net.Uri
 import android.net.http.SslError
 import android.util.AttributeSet
+import android.view.KeyCharacterMap
 import android.view.KeyEvent
 import android.webkit.*
 import com.nextgenbroadcast.mobile.core.cert.CertificateUtils
@@ -119,14 +119,14 @@ class UserAgentView @JvmOverloads constructor(
 
     fun closeMenu() {
         BANavController.navigateExit(this) { success ->
-            if (!success) sendKeyPress(KeyEvent.KEYCODE_DPAD_LEFT)
+            if (!success) sendKeyPress(KeyEvent.KEYCODE_DPAD_LEFT, 105)
         }
         isBAMenuOpened = false
     }
 
     fun openMenu() {
         BANavController.navigateNext(this) { success ->
-            if (!success) sendKeyPress(KeyEvent.KEYCODE_DPAD_RIGHT)
+            if (!success) sendKeyPress(KeyEvent.KEYCODE_DPAD_RIGHT, 106)
         }
         isBAMenuOpened = true
     }
@@ -138,10 +138,20 @@ class UserAgentView @JvmOverloads constructor(
         isBAMenuOpened = false
     }
 
-    private fun sendKeyPress(key: Int) {
-        dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, key))
-        dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, key))
+    private fun sendKeyPress(keyCode: Int, scanCode: Int) {
+        dispatchKeyEvent(keyEvent(KeyEvent.ACTION_DOWN, keyCode, scanCode))
+        dispatchKeyEvent(keyEvent(KeyEvent.ACTION_UP, keyCode, scanCode))
     }
+
+    private fun keyEvent(action: Int, keyCode: Int, scanCode: Int) = KeyEvent(
+            0,
+            0,
+            action,
+            keyCode,
+            0,
+            0,
+            KeyCharacterMap.VIRTUAL_KEYBOARD,
+            scanCode)
 
     companion object {
         private const val RETRY_DELAY = 500L
