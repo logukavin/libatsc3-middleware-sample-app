@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <data>
+
+        <import type="android.view.View" />
+
+        <variable
+            name="receiverModel"
+            type="com.nextgenbroadcast.mobile.middleware.sample.lifecycle.ReceiverViewModel" />
+
+        <variable
+            name="isPreviewMode"
+            type="java.lang.Boolean" />
+    </data>
+
+    <androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:app="http://schemas.android.com/apk/res-auto"
+        xmlns:tools="http://schemas.android.com/tools"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/black"
+        tools:context=".useragent.UserAgentActivity">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/user_agent_root"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <com.nextgenbroadcast.mobile.middleware.sample.view.ReceiverPlayerView
+                android:id="@+id/receiver_player"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <com.nextgenbroadcast.mobile.view.UserAgentView
+                android:id="@+id/user_agent_web_view"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:focusedByDefault="true" />
+
+            <TextView
+                android:id="@+id/atsc3_data_log"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_margin="10dp"
+                android:background="@color/semi_transparent"
+                android:paddingStart="10dp"
+                android:paddingEnd="10dp"
+                android:text="@{receiverModel.appDataLog}"
+                android:textColor="@color/white"
+                android:textSize="10sp"
+                android:visibility="@{isPreviewMode ? View.GONE : View.VISIBLE}"
+                app:layout_constraintEnd_toStartOf="@+id/settings_button"
+                app:layout_constraintStart_toStartOf="@+id/receiver_player"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <ImageButton
+                android:id="@+id/settings_button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@android:color/transparent"
+                android:padding="6dp"
+                android:src="@drawable/ic_settings"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintRight_toRightOf="parent" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <LinearLayout
+            android:id="@+id/bottom_sheet"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="end"
+            android:orientation="vertical"
+            app:behavior_hideable="true"
+            app:behavior_peekHeight="@dimen/item_spinner_height"
+            app:layout_behavior="@string/bottom_sheet_behavior">
+
+            <TextView
+                android:id="@+id/bottom_sheet_title"
+                android:layout_width="wrap_content"
+                android:layout_height="@dimen/item_spinner_height"
+                android:layout_gravity="end"
+                android:background="@color/semi_transparent"
+                android:gravity="center"
+                android:paddingStart="10dp"
+                android:paddingEnd="10dp"
+                android:shadowColor="@color/black"
+                android:shadowRadius="5"
+                android:text="@string/no_service_available"
+                android:textColor="@color/white"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <ListView
+                android:id="@+id/serviceList"
+                android:layout_width="@dimen/service_spinner_width"
+                android:layout_height="wrap_content"
+                android:background="@color/white"
+                android:nestedScrollingEnabled="true"
+                android:padding="6dp" />
+        </LinearLayout>
+
+    </androidx.coordinatorlayout.widget.CoordinatorLayout>
+</layout>
