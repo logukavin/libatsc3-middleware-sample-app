@@ -17,7 +17,8 @@ import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.model.SLSService
 import com.nextgenbroadcast.mobile.middleware.BuildConfig
-import com.nextgenbroadcast.mobile.middleware.analytics.AnalyticService
+import com.nextgenbroadcast.mobile.middleware.analytics.Atsc3Analytics
+import com.nextgenbroadcast.mobile.middleware.analytics.IAtsc3Analytics
 import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3Module
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
 import com.nextgenbroadcast.mobile.middleware.controller.service.ServiceControllerImpl
@@ -68,6 +69,8 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         MediaFileProvider(applicationContext)
     }
 
+    private val atsc3Analytics: IAtsc3Analytics = Atsc3Analytics()
+
     abstract fun createServiceBinder(serviceController: IServiceController, viewController: IViewController): IBinder
 
     override fun onCreate() {
@@ -84,7 +87,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
             atsc3Module = it
         }
 
-        serviceController = ServiceControllerImpl(repo, settings, atsc3, AnalyticService(applicationContext))
+        serviceController = ServiceControllerImpl(repo, settings, atsc3, atsc3Analytics)
 
         state = MediatorLiveData<Triple<ReceiverState?, SLSService?, PlaybackState?>>().apply {
             addSource(serviceController.receiverState) { receiverState ->
@@ -292,7 +295,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         // we release it only when destroy presentation layer
         if (wakeLock.isHeld) return
 
-        val view = ViewControllerImpl(repository, settings, mediaFileProvider).also {
+        val view = ViewControllerImpl(repository, settings, mediaFileProvider, atsc3Analytics).also {
             viewController = it
         }
         val web = WebGatewayImpl(serviceController, repository, settings).also {

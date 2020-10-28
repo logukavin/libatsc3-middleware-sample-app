@@ -6,6 +6,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.SLSService
+import com.nextgenbroadcast.mobile.middleware.analytics.IAtsc3Analytics
 import com.nextgenbroadcast.mobile.middleware.service.provider.IMediaFileProvider
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPackage
@@ -66,12 +67,15 @@ class IRPCControllerTest {
     @Mock
     private lateinit var mockedMediaUri: Uri
 
+    @Mock
+    private lateinit var atsc3Analytics: IAtsc3Analytics
+
     private lateinit var coordinator: RPCGatewayImpl
     private lateinit var mediaPlayerController: ViewControllerImpl
     private var scaleFactor: Double = 1.0
     private var xPos: Double = 11.0
     private var yPos: Double = 22.0
-    private val mockedSLSService: SLSService = SLSService(5003, "WZTV", "tag:sinclairplatform.com,2020:WZTV:2727")
+    private val mockedSLSService: SLSService = SLSService(1, 5003, "WZTV", "tag:sinclairplatform.com,2020:WZTV:2727", 0)
     private val mockedMediaUrl = "htttp://mockedurl.com"
     private val deviceId = UUID.randomUUID().toString()
     private val advertisingId = UUID.randomUUID().toString()
@@ -104,7 +108,7 @@ class IRPCControllerTest {
         Mockito.`when`(repository.selectedService).thenReturn(selectedService)
         Mockito.`when`(repository.routeMediaUrl).thenReturn(routeMediaUrl)
 
-        mediaPlayerController = ViewControllerImpl(repository, prefs, mediaFileProvider)
+        mediaPlayerController = ViewControllerImpl(repository, prefs, mediaFileProvider, atsc3Analytics)
         coordinator = RPCGatewayImpl(serviceController, mediaPlayerController, prefs, testDispatcher, testDispatcher)
         iRPCGateway = coordinator
         Dispatchers.setMain(testDispatcher)
