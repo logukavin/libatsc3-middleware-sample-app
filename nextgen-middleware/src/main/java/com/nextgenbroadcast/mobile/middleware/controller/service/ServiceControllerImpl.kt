@@ -98,12 +98,14 @@ internal class ServiceControllerImpl (
     }
 
     override fun closeRoute() {
+        analyticService.finishSession()
         cancelMediaUrlAssignment()
         atsc3Module.close()
     }
 
     override fun selectService(service: SLSService) {
         // Reset current media. New media url will be received after service selection.
+        analyticService.finishSession()
         cancelMediaUrlAssignment()
         repository.setMediaUrl(null)
 
@@ -111,7 +113,7 @@ internal class ServiceControllerImpl (
         if (res) {
             // Store successfully selected service. This will lead to RMP reset
             repository.setSelectedService(service)
-            analyticService.startSession("bsid", service.id, service.globalId, service.serviceCategory)
+            analyticService.startSession("bsid", service.id, service.globalId, service.serviceCategory!!)
 
             // Reset the current HELD if it's not compatible new service or start delayed reset otherwise.
             // Delayed reset will be canceled when a new HELD been received for selected service.
@@ -175,7 +177,6 @@ internal class ServiceControllerImpl (
     }
 
     private fun cancelMediaUrlAssignment() {
-        analyticService.finishSession()
         mediaUrlAssignmentJob?.let {
             it.cancel()
             mediaUrlAssignmentJob = null

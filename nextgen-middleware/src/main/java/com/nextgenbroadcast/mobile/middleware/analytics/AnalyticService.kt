@@ -9,17 +9,17 @@ class AnalyticService(
 ) {
 
     private val country = context.resources.configuration.locales[0].country
-    private var avService: AVService? = null
+    private var avServiceQueue: Queue<AVService> = LinkedList()
 
-    fun startSession(bsid: String, serviceId: Int, globalServiceId: String?, serviceType: Int?) {
-        Log.d("TEST", "startSession()")
-        avService = AVService(country, bsid, serviceId, globalServiceId, serviceType!!).apply {
+    fun startSession(bsid: String, serviceId: Int, globalServiceId: String?, serviceType: Int) {
+        Log.d("TEST", "startSession(${avServiceQueue.size})")
+        avServiceQueue.add(AVService(country, bsid, serviceId, globalServiceId, serviceType).apply {
             val dateTime = nowDateTimeInSec()
             reportIntervalList.add(ReportInterval(
                     startTime = dateTime,
                     endTime = null,
-                    destinationDeviceType = null,
-                    contentID = ContentID(null, null),
+                    destinationDeviceType = 0, // Content is presented on a Primary Device
+                    //contentID = ContentID(null, null),
 /*                    component = Component(
                             componentType = null,
                             componentRole = null,
@@ -33,13 +33,13 @@ class AnalyticService(
                 broadcastIntervals.add(BroadcastInterval(
                         broadcastStartTime = dateTime,
                         broadcastEndTime = null,
-                        speed = null,
+                        speed = 1, //  The value 1 indicates a playback at the normal speed
                         receiverStartTime = dateTime))
             })
-        }
+        })
     }
 
-    fun startAppInterval(appId: String) {
+/*    fun startAppInterval(appId: String) {
         Log.d("TEST", "startAppInterval($appId)")
         val dateTime = nowDateTimeInSec()
         avService?.reportIntervalList?.get(0)?.appIntervals?.add(AppInterval(
@@ -54,10 +54,10 @@ class AnalyticService(
         Log.d("TEST", "finishAppInterval()")
         val dateTime = nowDateTimeInSec()
         avService?.reportIntervalList?.get(0)?.appIntervals?.last()?.endTime = dateTime
-    }
+    }*/
 
     fun finishSession() {
-        avService?.reportIntervalList?.get(0)?.let { reportInterval ->
+        avServiceQueue.lastOrNull()?.reportIntervalList?.get(0)?.let { reportInterval ->
             Log.d("TEST", "finishSession()")
             val dateTime = nowDateTimeInSec()
             reportInterval.endTime = dateTime
@@ -65,14 +65,7 @@ class AnalyticService(
                 broadcastEndTime = dateTime
                 broadcastEndTime = dateTime
             }
-            save()
-            avService = null
         }
-    }
-
-    private fun save() {
-        Log.d("TEST", "save()")
-        // TODO Save AVService
     }
 
     private fun nowDateTimeInSec() = GregorianCalendar(TimeZone.getTimeZone("UTC")).timeInMillis / 1000
