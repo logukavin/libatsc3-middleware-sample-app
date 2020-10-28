@@ -51,7 +51,7 @@ internal class ServiceControllerImpl (
 
     override fun onServicesLoaded(services: List<Atsc3Service?>) {
         val slsServices = services.filterNotNull()
-                .map { SLSService(it.serviceId, it.shortServiceName, it.globalServiceId) }
+                .map { SLSService(it.bsid, it.serviceId, it.shortServiceName, it.globalServiceId) }
         repository.setServices(slsServices)
     }
 
