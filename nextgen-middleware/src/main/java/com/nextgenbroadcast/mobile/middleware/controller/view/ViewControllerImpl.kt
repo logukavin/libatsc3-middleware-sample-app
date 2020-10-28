@@ -88,7 +88,13 @@ internal class ViewControllerImpl(
 
     override fun rmpPlaybackChanged(state: PlaybackState) {
         when(state) {
-            PlaybackState.PLAYING -> atsc3Analytics.startDisplayContent()
+            PlaybackState.PLAYING -> {
+                atsc3Analytics.startDisplayContent()
+            }
+            PlaybackState.PAUSED,
+            PlaybackState.IDLE -> {
+                atsc3Analytics.finishDisplayContent()
+            }
         }
         rmpState.postValue(state)
     }

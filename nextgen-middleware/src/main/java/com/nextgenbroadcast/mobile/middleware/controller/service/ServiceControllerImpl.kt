@@ -105,8 +105,6 @@ internal class ServiceControllerImpl (
     }
 
     override fun selectService(service: SLSService) {
-        atsc3Analytics.finishSession()
-
         // Reset current media. New media url will be received after service selection.
         cancelMediaUrlAssignment()
         repository.setMediaUrl(null)
