@@ -72,7 +72,7 @@ internal class FrequencyInitializer(
     companion object {
         val TAG: String = FrequencyInitializer::class.java.simpleName
 
-        private val LOCATION_REQUEST_DELAY = TimeUnit.MINUTES.toMillis(1)
+        private val LOCATION_REQUEST_DELAY = TimeUnit.MINUTES.toMillis(5)
 
         private const val LOCATOR_STR = "nextgenbroadcast.locator"
     }
