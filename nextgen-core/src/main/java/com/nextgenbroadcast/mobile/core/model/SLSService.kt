@@ -5,6 +5,7 @@ import kotlinx.android.parcel.Parcelize
 
 @Parcelize
 data class SLSService(
+        val bsid: Int,
         val id: Int,
         val shortName: String?,
         val globalId: String?,

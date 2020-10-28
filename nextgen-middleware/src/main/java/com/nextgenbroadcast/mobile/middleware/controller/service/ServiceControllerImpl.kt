@@ -5,7 +5,7 @@ import android.util.Log
 import androidx.lifecycle.MutableLiveData
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.model.SLSService
-import com.nextgenbroadcast.mobile.middleware.analytics.AnalyticService
+import com.nextgenbroadcast.mobile.middleware.analytics.IAnalyticService
 import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3Module
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPackage
@@ -20,7 +20,7 @@ internal class ServiceControllerImpl (
         private val repository: IRepository,
         private val settings: IReceiverSettings,
         private val atsc3Module: Atsc3Module,
-        private val analyticService: AnalyticService
+        private val analyticService: IAnalyticService
 ) : IServiceController, Atsc3Module.Listener {
 
     private val ioScope = CoroutineScope(Dispatchers.IO)
@@ -53,7 +53,7 @@ internal class ServiceControllerImpl (
 
     override fun onServicesLoaded(services: List<Atsc3Service?>) {
         val slsServices = services.filterNotNull()
-                .map { SLSService(it.serviceId, it.shortServiceName, it.globalServiceId, it.serviceCategory) }
+                .map { SLSService(it.bsid, it.serviceId, it.shortServiceName, it.globalServiceId, it.serviceCategory) }
         repository.setServices(slsServices)
     }
 
