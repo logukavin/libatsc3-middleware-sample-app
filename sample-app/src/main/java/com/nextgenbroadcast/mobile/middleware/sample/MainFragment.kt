@@ -1,5 +1,6 @@
 package com.nextgenbroadcast.mobile.middleware.sample
 
+import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.view.GestureDetector
@@ -189,17 +190,23 @@ class MainFragment : Fragment() {
             receiverPresenter = it
         }
 
-        if (previewMode) {
-            receiver.receiverState.observe(this, { state ->
-                if (state == null || state == ReceiverState.IDLE) {
+        receiver.receiverState.observe(this, { state ->
+            if (state == null || state == ReceiverState.IDLE) {
+                if (previewMode) {
                     previewName?.let { source ->
                         sourceMap.find { (name, _, _) -> name == source }?.let { (_, path, _) ->
-                            (activity as MainActivity).openRoute( path)
+                            (activity as MainActivity).openRoute(path)
                         }
                     }
                 }
-            })
-        }
+
+                if ((activity as MainActivity).isInPictureInPictureMode) {
+                    startActivity(Intent(requireContext(), MainActivity::class.java).apply {
+                        flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+                    })
+                }
+            }
+        })
 
         if (initPlayer) {
             initPlayer = false
