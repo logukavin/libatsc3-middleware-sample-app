@@ -23,7 +23,7 @@ import java.util.Collections;
 public class MMTExtractor implements Extractor {
     private ExtractorOutput extractorOutput;
 
-    private long timeOffsetUs;
+//    private long timeOffsetUs;
     private int currentSampleBytesRemaining;
     private int currentSampleSize;
     private long currentSampleTimeUs;
@@ -64,7 +64,7 @@ public class MMTExtractor implements Extractor {
         currentSampleTimeUs = 0;
         currentSampleSize = 0;
         currentSampleBytesRemaining = 0;
-        timeOffsetUs = 0;
+//        timeOffsetUs = 0;
     }
 
     @Override
@@ -116,12 +116,29 @@ public class MMTExtractor implements Extractor {
             sampleFlags = C.BUFFER_FLAG_KEY_FRAME;
         }
 
-        if (timeOffsetUs == 0) {
-            timeOffsetUs = currentSampleTimeUs;
+//        if (timeOffsetUs == 0) {
+//            timeOffsetUs = currentSampleTimeUs;
+//        }
+
+        if (currentSampleTimeUs <= 0) {
+            long offset = 0;
+            if (track.someTime > 0) {
+                offset = (System.currentTimeMillis() - track.someTime) * 1000;
+            } else {
+                track.someTime = System.currentTimeMillis();
+            }
+            currentSampleTimeUs = track.timeOffsetUs + offset + 66000;
+        } else {
+            track.someTime = 0;
+            track.timeOffsetUs = currentSampleTimeUs;
         }
 
+        //currentSampleTimeUs += 66000;
+
+        //track.timeOffsetUs = currentSampleTimeUs;
+
         trackOutput.sampleMetadata(
-                Math.max(0, currentSampleTimeUs - timeOffsetUs),
+                currentSampleTimeUs/*Math.max(0, currentSampleTimeUs - timeOffsetUs)*/,
                 sampleFlags,
                 currentSampleSize,
                 /* offset= */ 0,
@@ -236,6 +253,9 @@ public class MMTExtractor implements Extractor {
     private static final class MmtTrack {
 
         public final TrackOutput trackOutput;
+        private long timeOffsetUs;
+
+        long someTime;
 
         public MmtTrack(TrackOutput trackOutput) {
             this.trackOutput = trackOutput;
