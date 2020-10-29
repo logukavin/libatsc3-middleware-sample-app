@@ -165,7 +165,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
             initializer.add(WeakReference(it))
         }.initialize(applicationContext, components)
 
-        val phyInitializer = OnboardPhyInitializer().also {
+        val phyInitializer = OnboardPhyInitializer(atsc3Module).also {
             initializer.add(WeakReference(it))
         }
 

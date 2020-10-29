@@ -4,6 +4,7 @@ import java.util.*
 import kotlin.collections.ArrayList
 
 data class Atsc3Service(
+        val bsid: Int,
         var serviceId: Int = 0,
         var globalServiceId: String? = null,
         var majorChannelNo: Int = 0,
