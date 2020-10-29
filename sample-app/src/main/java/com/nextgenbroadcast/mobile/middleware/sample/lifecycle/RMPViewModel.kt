@@ -4,9 +4,9 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Transformations
 import androidx.lifecycle.ViewModel
-import com.nextgenbroadcast.mobile.core.presentation.media.IObservablePlayer
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.presentation.IMediaPlayerPresenter
+import com.nextgenbroadcast.mobile.core.presentation.media.IObservablePlayer
 
 class RMPViewModel(
         private val presenter: IMediaPlayerPresenter
@@ -17,6 +17,7 @@ class RMPViewModel(
     val mediaUri = Transformations.distinctUntilChanged(presenter.rmpMediaUri)
 
     val playWhenReady: LiveData<Boolean> = _playWhenReady
+    val rmpState = MutableLiveData<PlaybackState>()
 
     init {
         presenter.addOnPlayerSateChangedCallback(this)
@@ -42,6 +43,7 @@ class RMPViewModel(
     }
 
     fun setCurrentPlayerState(state: PlaybackState) {
+        rmpState.value = state
         presenter.rmpPlaybackChanged(state)
     }
 
