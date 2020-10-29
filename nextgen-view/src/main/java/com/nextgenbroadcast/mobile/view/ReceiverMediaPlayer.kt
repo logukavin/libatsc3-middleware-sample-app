@@ -21,7 +21,7 @@ import com.nextgenbroadcast.mobile.mmt.atsc3.media.MMTDataBuffer
 import com.nextgenbroadcast.mobile.mmt.exoplayer2.MMTDataSource
 import com.nextgenbroadcast.mobile.mmt.exoplayer2.MMTExtractor
 import com.nextgenbroadcast.mobile.mmt.exoplayer2.MMTLoadControl
-import com.nextgenbroadcast.mobile.mmt.exoplayer2.RouteDASHLoadControl
+import com.nextgenbroadcast.mobile.exoplayer2.RouteDASHLoadControl
 import java.io.IOException
 
 class ReceiverMediaPlayer @JvmOverloads constructor(
