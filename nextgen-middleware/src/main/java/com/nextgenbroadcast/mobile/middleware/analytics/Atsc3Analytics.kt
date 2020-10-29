@@ -26,7 +26,6 @@ class Atsc3Analytics: IAtsc3Analytics {
                 BroadcastInterval(
                         broadcastStartTime = currentTime,
                         broadcastEndTime = null,
-                        speed = PLAYBACK_SPEED_NORMAL,
                         receiverStartTime = currentTime
                 ).also {
                     broadcastIntervals.add(it)
@@ -51,8 +50,8 @@ class Atsc3Analytics: IAtsc3Analytics {
 
     override fun finishSession() {
         activeSession?.let {
-            avServiceQueue.add(it)
             finishDisplayContent()
+            avServiceQueue.add(it)
             activeSession = null
         }
     }
@@ -62,6 +61,5 @@ class Atsc3Analytics: IAtsc3Analytics {
     companion object {
         private const val BSID_REGISTRATION_COUNTRY = "us"
         private const val DEVICE_TYPE_PRIMARY = 0 // Content is presented on a Primary Device
-        private const val PLAYBACK_SPEED_NORMAL = 1 // The value 1 indicates a playback at the normal speed
     }
 }
