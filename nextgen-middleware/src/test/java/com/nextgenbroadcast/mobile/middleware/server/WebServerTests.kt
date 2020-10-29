@@ -5,6 +5,7 @@ import com.nextgenbroadcast.mobile.middleware.server.web.MiddlewareWebServer
 import com.nextgenbroadcast.mobile.middleware.server.web.MiddlewareWebServerError
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestCoroutineDispatcher
+import kotlinx.coroutines.test.TestCoroutineScope
 import okhttp3.ConnectionSpec
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -40,7 +41,7 @@ class WebServerTests : ServerTest() {
             addServlet(ServletHolder(MiddlewareWebServerTestServlet()), "/index.html")
         }
 
-        webServer = MiddlewareWebServer(server, webGateway = null, defaultDispatcher = testDispatcher).also {
+        webServer = MiddlewareWebServer(server, webGateway = null, globalScope = TestCoroutineScope(testDispatcher)).also {
             it.start(null)
         }
     }
