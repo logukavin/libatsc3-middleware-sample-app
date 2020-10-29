@@ -40,7 +40,7 @@ class MainActivity : BaseActivity() {
 
         setContentView(R.layout.activity_main)
 
-        supportFragmentManager.beginTransaction().add(R.id.container, MainFragment()).commit()
+        supportFragmentManager.beginTransaction().add(R.id.container, MainFragment(), MAIN_FRAGMENT_TAG).commit()
 
         buildShortcuts(sourceMap.filter { (_, _, isShortcut) -> isShortcut }.map { (name, _, _) -> name })
 
@@ -127,11 +127,12 @@ class MainActivity : BaseActivity() {
         }
     }
 
-    private fun getMainFragment() = supportFragmentManager.findFragmentById(R.id.container) as MainFragment
+    private fun getMainFragment() = supportFragmentManager.findFragmentByTag(MAIN_FRAGMENT_TAG) as MainFragment
 
     companion object {
         const val ACTION_MODE_PREVIEW = "${BuildConfig.APPLICATION_ID}.MODE_PREVIEW"
         const val PARAM_MODE_PREVIEW = "PARAM_MODE_PREVIEW"
+        const val MAIN_FRAGMENT_TAG = "MAIN_FRAGMENT"
 
         private const val PERMISSION_REQUEST = 1000
 

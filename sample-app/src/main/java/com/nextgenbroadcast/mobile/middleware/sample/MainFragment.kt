@@ -35,6 +35,7 @@ import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.SelectorViewModel
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.UserAgentViewModel
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.factory.UserAgentViewModelFactory
 import com.nextgenbroadcast.mobile.middleware.sample.useragent.ServiceAdapter
+import com.nextgenbroadcast.mobile.middleware.service.Atsc3ForegroundService.Companion.openRoute
 import com.nextgenbroadcast.mobile.view.UserAgentView
 import kotlinx.android.synthetic.main.fragment_main.*
 import java.util.*
@@ -64,12 +65,12 @@ class MainFragment : Fragment() {
 
     private val getContent = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         val path = uri?.let { FileUtils.getPath(requireContext(), uri) }
-        path?.let { (activity as MainActivity).openRoute(path) }
+        path?.let { openRoute(requireContext(), path) }
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
 
-        with((activity as MainActivity).intent) {
+        with(requireActivity().intent) {
             previewName = getStringExtra(PARAM_MODE_PREVIEW)
             previewMode = action == ACTION_MODE_PREVIEW && !previewName.isNullOrBlank()
         }
@@ -123,7 +124,7 @@ class MainFragment : Fragment() {
                 showFileChooser()
             } else {
                 sourceMap.getOrNull(position)?.let { (_, path) ->
-                    (activity as MainActivity).openRoute(path)
+                    openRoute(requireContext(), path)
                 }
             }
         }
@@ -195,12 +196,12 @@ class MainFragment : Fragment() {
                 if (previewMode) {
                     previewName?.let { source ->
                         sourceMap.find { (name, _, _) -> name == source }?.let { (_, path, _) ->
-                            (activity as MainActivity).openRoute(path)
+                            (openRoute(requireContext(), path))
                         }
                     }
                 }
 
-                if ((activity as MainActivity).isInPictureInPictureMode) {
+                if (requireActivity().isInPictureInPictureMode) {
                     startActivity(Intent(requireContext(), MainActivity::class.java).apply {
                         flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
                     })
@@ -298,7 +299,7 @@ class MainFragment : Fragment() {
                         params.scale.toFloat() / 100
                 )
             })
-            (activity as MainActivity).preparePlayerView(receiver_player)
+//            (activity as MainActivity).preparePlayerView(receiver_player)
             mediaUri.observe(this@MainFragment, { mediaUri ->
                 mediaUri?.let { startPlayback(mediaUri) } ?: receiver_player.stopPlayback()
             })
@@ -340,7 +341,7 @@ class MainFragment : Fragment() {
     private fun switchApplication(appData: AppData?) {
         if (appData != null && appData.isAvailable()) {
 
-            if (!(activity as MainActivity).isInPictureInPictureMode) {
+            if (!requireActivity().isInPictureInPictureMode) {
                 setBAAvailability(true)
             }
             if (!appData.isAppEquals(currentAppData) || appData.isAvailable() != currentAppData?.isAvailable()) {
