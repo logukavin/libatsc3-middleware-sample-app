@@ -10,6 +10,7 @@ import com.nextgenbroadcast.mobile.middleware.server.web.configureSSLFactory
 import com.nextgenbroadcast.mobile.middleware.server.ws.MiddlewareWebSocket
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestCoroutineDispatcher
+import kotlinx.coroutines.test.TestCoroutineScope
 import org.eclipse.jetty.client.HttpClient
 import org.eclipse.jetty.websocket.api.WebSocketAdapter
 import org.eclipse.jetty.websocket.client.WebSocketClient
@@ -59,7 +60,7 @@ class SocketServerTest : ServerTest() {
             }
         }
 
-        webServer = MiddlewareWebServer(server, webGateway = null, defaultDispatcher = testDispatcher).also {
+        webServer = MiddlewareWebServer(server, webGateway = null, globalScope = TestCoroutineScope(testDispatcher)).also {
             it.start(null)
         }
         webSocketClient = WebSocketClient(HttpClient(configureSSLFactory(UserAgentSSLContext(mockApplicationContext))))

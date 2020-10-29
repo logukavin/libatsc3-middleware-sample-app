@@ -48,14 +48,10 @@ android {
         prefab true
     }
 
-    def ndkBuildAdded = false
-    gradle.startParameter.taskNames.each { name ->
-        if (name.contains("assembleRelease") && !ndkBuildAdded) {
-            ndkBuildAdded = true
-            externalNativeBuild {
-                ndkBuild {
-                    path 'Android.mk'
-                }
+    if (!isTasksContainsTest()) {
+        externalNativeBuild {
+            ndkBuild {
+                path 'Android.mk'
             }
         }
     }
@@ -69,6 +65,16 @@ android {
         unitTests.includeAndroidResources = true
         unitTests.returnDefaultValues = true
     }
+}
+
+def isTasksContainsTest() {
+    def result = false
+    gradle.startParameter.taskNames.each { name ->
+        if (name.contains("test")) {
+            result = true
+        }
+    }
+    return result
 }
 
 def lifecycleVersion = rootProject.ext.lifecycleVersion

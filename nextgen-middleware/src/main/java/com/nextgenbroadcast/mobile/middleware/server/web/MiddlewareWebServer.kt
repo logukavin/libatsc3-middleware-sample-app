@@ -38,12 +38,11 @@ import kotlin.coroutines.suspendCoroutine
 class MiddlewareWebServer constructor(
         private val server: Server,
         private val webGateway: IWebGateway?,
-        defaultDispatcher: CoroutineDispatcher
+        private val globalScope: CoroutineScope
 ) : AutoCloseable, LifecycleOwner {
 
     private val lifecycleRegistry = LifecycleRegistry(this)
     private val availResources = arrayListOf<AppResource>()
-    private val defaultScope = CoroutineScope(defaultDispatcher)
 
     init {
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
@@ -59,7 +58,7 @@ class MiddlewareWebServer constructor(
     fun start(generatedSSLContext: IUserAgentSSLContext?) {
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_START)
 
-        defaultScope.launch {
+        globalScope.launch {
             webGateway?.let { gateway ->
                 server.connectors = gateway.hostName.let { hostName ->
                     ArrayList<Connector>().apply {
@@ -179,7 +178,7 @@ class MiddlewareWebServer constructor(
                 }
             }
 
-            return MiddlewareWebServer(server, webGateway, Dispatchers.Default)
+            return MiddlewareWebServer(server, webGateway, GlobalScope)
         }
     }
 
