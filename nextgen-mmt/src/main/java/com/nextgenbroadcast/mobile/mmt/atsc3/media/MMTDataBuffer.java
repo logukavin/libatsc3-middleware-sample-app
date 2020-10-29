@@ -313,12 +313,11 @@ public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payl
         long ptsOffsetUs = 66000L;
 
         //by default for any missing MMT SI emissions or flash-cut into MMT flow emission, use now_Us + 66000uS for our presentationTimestampUs
-        long computedPresentationTimestampUs = System.currentTimeMillis() * 1000 + ptsOffsetUs;
+        long computedPresentationTimestampUs = 0;//ptsOffsetUs;
 
         if (toProcessMfuByteBufferFragment.mfu_presentation_time_uS_computed != null && toProcessMfuByteBufferFragment.mfu_presentation_time_uS_computed > 0) {
             //default values here as fallback
             long anchorMfuPresentationTimestampUs = toProcessMfuByteBufferFragment.mpu_presentation_time_uS_from_SI;
-            long anchorSystemTimeUs = System.currentTimeMillis() * 1000;
 
             //todo: expand size as needed, every ~ mfu_presentation_time_uS_computed 1000000uS
             if (toProcessMfuByteBufferFragment.packet_id == MmtPacketIdContext.video_packet_id) {
@@ -328,7 +327,6 @@ public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payl
                 }
                 for (Map.Entry<Long, Long> anchor : MapVideoMfuPresentationTimestampUsAnchorSystemTimeUs.entrySet()) {
                     anchorMfuPresentationTimestampUs = anchor.getKey();
-                    anchorSystemTimeUs = anchor.getValue();
                 }
             } else if (toProcessMfuByteBufferFragment.packet_id == MmtPacketIdContext.audio_packet_id) {
                 if (MapAudioMfuPresentationTimestampUsAnchorSystemTimeUs.size() == 0) {
@@ -336,12 +334,13 @@ public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payl
                 }
                 for (Map.Entry<Long, Long> anchor : MapAudioMfuPresentationTimestampUsAnchorSystemTimeUs.entrySet()) {
                     anchorMfuPresentationTimestampUs = anchor.getKey();
-                    anchorSystemTimeUs = anchor.getValue();
                 }
             }
 
             long mpuPresentationTimestampDeltaUs = toProcessMfuByteBufferFragment.mfu_presentation_time_uS_computed - anchorMfuPresentationTimestampUs;
-            computedPresentationTimestampUs = anchorSystemTimeUs + mpuPresentationTimestampDeltaUs + ptsOffsetUs;
+            computedPresentationTimestampUs = mpuPresentationTimestampDeltaUs + ptsOffsetUs;
+        } else {
+            Log.d("!!!", "empty presentation time. packet_id: " + toProcessMfuByteBufferFragment.packet_id);
         }
 
         return computedPresentationTimestampUs;
