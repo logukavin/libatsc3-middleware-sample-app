@@ -1,5 +1,6 @@
 package com.nextgenbroadcast.mobile.middleware.sample
 
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -10,6 +11,7 @@ import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.ListAdapter
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.databinding.DataBindingUtil
@@ -24,9 +26,8 @@ import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.model.SLSService
 import com.nextgenbroadcast.mobile.core.presentation.IReceiverPresenter
 import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
-import com.nextgenbroadcast.mobile.middleware.sample.MainActivity.Companion.ACTION_MODE_PREVIEW
-import com.nextgenbroadcast.mobile.middleware.sample.MainActivity.Companion.PARAM_MODE_PREVIEW
 import com.nextgenbroadcast.mobile.middleware.sample.MainActivity.Companion.sourceMap
+import com.nextgenbroadcast.mobile.middleware.sample.SettingsDialog.Companion.REQUEST_KEY_FREQUENCY
 import com.nextgenbroadcast.mobile.middleware.sample.core.SwipeGestureDetector
 import com.nextgenbroadcast.mobile.middleware.sample.databinding.FragmentMainBinding
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.RMPViewModel
@@ -68,16 +69,35 @@ class MainFragment : Fragment() {
         path?.let { openRoute(requireContext(), path) }
     }
 
+    override fun onAttach(context: Context) {
+        super.onAttach(context)
+
+        val callback: OnBackPressedCallback = object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (user_agent_web_view.isBAMenuOpened) {
+                    user_agent_web_view.closeMenu()
+                } else {
+                    if (isEnabled) {
+                        isEnabled = false
+                        requireActivity().onBackPressed()
+                    }
+                }
+            }
+        }
+        requireActivity().onBackPressedDispatcher.addCallback(this, callback)
+    }
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
 
-        with(requireActivity().intent) {
-            previewName = getStringExtra(PARAM_MODE_PREVIEW)
-            previewMode = action == ACTION_MODE_PREVIEW && !previewName.isNullOrBlank()
+        arguments?. let {
+            previewName = it.getString(PARAM_PREVIEW_NAME)
+            previewMode = it.getBoolean(PARAM_PREVIEW_MODE)
         }
 
-        binding = DataBindingUtil.inflate(inflater, R.layout.fragment_main, container, false)
-        binding.lifecycleOwner = this@MainFragment
-        binding.isPreviewMode = previewMode
+        binding = DataBindingUtil.inflate<FragmentMainBinding>(inflater, R.layout.fragment_main, container, false).apply {
+            lifecycleOwner = viewLifecycleOwner
+            isPreviewMode = previewMode
+        }
 
         return binding.root
     }
@@ -136,10 +156,11 @@ class MainFragment : Fragment() {
             }
         }
 
-        setFragmentResultListener("requestKey") { key, bundle ->
+        setFragmentResultListener(REQUEST_KEY_FREQUENCY) { key, bundle ->
             receiverPresenter?.tune(bundle.getInt(SettingsDialog.PARAM_FREQUENCY, 0))
         }
     }
+
     override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean) {
         val visibility = if (isInPictureInPictureMode) {
             user_agent_web_view.closeMenu()
@@ -155,12 +176,6 @@ class MainFragment : Fragment() {
         bottom_sheet.visibility = visibility
     }
 
-    fun isBAMenuOpened() = user_agent_web_view.isBAMenuOpened
-
-    fun closeMenu() = user_agent_web_view.closeMenu()
-
-    fun receiverIsPlaying() = receiver_player.isPlaying()
-
     fun onUnbind() {
         receiver_player.unbind()
 
@@ -168,18 +183,11 @@ class MainFragment : Fragment() {
         userAgentViewModel = null
         selectorViewModel = null
         receiverViewModel = null
-
-        viewModelStore.clear()
     }
 
-    fun onBind(binder: IServiceBinder) {
-        val factory = UserAgentViewModelFactory(
-                binder.userAgentPresenter,
-                binder.mediaPlayerPresenter,
-                binder.selectorPresenter
-        )
+    fun onBind(binder: IServiceBinder, factory: UserAgentViewModelFactory) {
 
-        val provider = ViewModelProvider(viewModelStore, factory)
+        val provider = ViewModelProvider(requireActivity().viewModelStore, factory)
 
         bindViewModels(provider).let { (rmp, userAgent, selector) ->
             bindSelector(selector)
@@ -369,5 +377,12 @@ class MainFragment : Fragment() {
         super.onStop()
 
         receiver_player.stopPlayback()
+    }
+
+    companion object {
+        val TAG: String = MainFragment::class.java.simpleName
+        const val PARAM_PREVIEW_NAME = "PREVIEW_NAME"
+        const val PARAM_PREVIEW_MODE = "PREVIEW_MODE"
+
     }
 }

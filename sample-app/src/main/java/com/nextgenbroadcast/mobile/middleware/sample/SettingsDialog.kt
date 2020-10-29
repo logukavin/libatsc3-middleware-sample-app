@@ -13,11 +13,6 @@ import kotlinx.android.synthetic.main.dialog_settings.view.*
 
 class SettingsDialog: DialogFragment() {
 
-    override fun onResume() {
-        super.onResume()
-        dialog?.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-    }
-
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val view = inflater.inflate(R.layout.dialog_settings, null)
 
@@ -45,23 +40,26 @@ class SettingsDialog: DialogFragment() {
 
     private fun done() {
         val freqKhz = frequencyEditText.text.toString().toIntOrNull()?.let { it * 1000 } ?: 0
-        val result = Bundle()
-        result.putInt(PARAM_FREQUENCY, freqKhz)
-        setFragmentResult("requestKey", result)
+        val result = Bundle().apply{
+            putInt(PARAM_FREQUENCY, freqKhz)
+        }
+        setFragmentResult(REQUEST_KEY_FREQUENCY, result)
 
         dismiss()
     }
 
     companion object {
         const val PARAM_FREQUENCY = "param_frequency"
+        const val REQUEST_KEY_FREQUENCY = "requestKey_frequency"
 
         fun newInstance(freqKhz: Int?): SettingsDialog {
-            val dialog = SettingsDialog()
-            val args = Bundle()
-            if (freqKhz != null)
-                args.putInt(PARAM_FREQUENCY, freqKhz)
-            dialog.arguments = args
-            return dialog
+            return SettingsDialog().apply {
+                if (freqKhz != null) {
+                    arguments = Bundle().apply {
+                        putInt(PARAM_FREQUENCY, freqKhz)
+                    }
+                }
+            }
         }
     }
 }

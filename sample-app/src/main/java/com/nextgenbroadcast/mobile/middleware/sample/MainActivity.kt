@@ -15,21 +15,43 @@ import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.os.bundleOf
+import androidx.lifecycle.ViewModelProvider
+import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
+import com.nextgenbroadcast.mobile.middleware.sample.MainFragment.Companion.PARAM_PREVIEW_MODE
+import com.nextgenbroadcast.mobile.middleware.sample.MainFragment.Companion.PARAM_PREVIEW_NAME
+import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.RMPViewModel
+import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.factory.UserAgentViewModelFactory
 import dagger.android.AndroidInjection
 import java.util.*
 
 class MainActivity : BaseActivity() {
+
+    private var previewMode = false
+    private var previewName: String? = null
+    private var rmpViewModel: RMPViewModel? = null
 
     private val hasFeaturePIP: Boolean by lazy {
         packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)
     }
 
     override fun onBind(binder: IServiceBinder) {
-        getMainFragment().onBind(binder)
+
+        val factory = UserAgentViewModelFactory(
+                binder.userAgentPresenter,
+                binder.mediaPlayerPresenter,
+                binder.selectorPresenter
+        )
+
+        rmpViewModel = ViewModelProvider(viewModelStore, factory).get(RMPViewModel::class.java)
+
+        getMainFragment().onBind(binder, factory)
     }
 
     override fun onUnbind() {
+        rmpViewModel = null
+        viewModelStore.clear()
+
         getMainFragment().onUnbind()
     }
 
@@ -38,9 +60,20 @@ class MainActivity : BaseActivity() {
         AndroidInjection.inject(this)
         super.onCreate(savedInstanceState)
 
-        setContentView(R.layout.activity_main)
+        with(intent) {
+            previewName = getStringExtra(PARAM_MODE_PREVIEW)
+            previewMode = action == ACTION_MODE_PREVIEW && !previewName.isNullOrBlank()
+        }
 
-        supportFragmentManager.beginTransaction().add(R.id.container, MainFragment(), MAIN_FRAGMENT_TAG).commit()
+        supportFragmentManager
+                .beginTransaction()
+                .add( android.R.id.content,
+                        MainFragment().apply {
+                            arguments = bundleOf(PARAM_PREVIEW_NAME to previewName, PARAM_PREVIEW_MODE to previewMode)
+                        },
+                        MainFragment.TAG
+                )
+                .commit()
 
         buildShortcuts(sourceMap.filter { (_, _, isShortcut) -> isShortcut }.map { (name, _, _) -> name })
 
@@ -84,7 +117,7 @@ class MainActivity : BaseActivity() {
     }
 
     override fun onUserLeaveHint() {
-        if (hasFeaturePIP && getMainFragment().receiverIsPlaying()) {
+        if (hasFeaturePIP && (rmpViewModel?.rmpState?.value == PlaybackState.PLAYING)) {
             enterPictureInPictureMode(PictureInPictureParams.Builder().build())
         }
     }
@@ -104,14 +137,6 @@ class MainActivity : BaseActivity() {
         }
     }
 
-    override fun onBackPressed() {
-        if (getMainFragment().isBAMenuOpened()) {
-            getMainFragment().closeMenu()
-        } else {
-            super.onBackPressed()
-        }
-    }
-
     private fun buildShortcuts(sources: List<String>) {
         getSystemService(ShortcutManager::class.java)?.let { shortcutManager ->
             shortcutManager.dynamicShortcuts = sources.map { name ->
@@ -127,12 +152,11 @@ class MainActivity : BaseActivity() {
         }
     }
 
-    private fun getMainFragment() = supportFragmentManager.findFragmentByTag(MAIN_FRAGMENT_TAG) as MainFragment
+    private fun getMainFragment() = supportFragmentManager.findFragmentByTag(MainFragment.TAG) as MainFragment
 
     companion object {
         const val ACTION_MODE_PREVIEW = "${BuildConfig.APPLICATION_ID}.MODE_PREVIEW"
         const val PARAM_MODE_PREVIEW = "PARAM_MODE_PREVIEW"
-        const val MAIN_FRAGMENT_TAG = "MAIN_FRAGMENT"
 
         private const val PERMISSION_REQUEST = 1000
 
