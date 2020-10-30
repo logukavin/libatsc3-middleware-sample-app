@@ -1,23 +1,19 @@
 package com.nextgenbroadcast.mobile.service.binder
 
 import android.net.Uri
-import android.os.Bundle
-import android.os.IBinder
-import android.os.Message
-import android.os.Messenger
+import android.os.*
 import androidx.core.os.bundleOf
 import androidx.lifecycle.MutableLiveData
+import com.nextgenbroadcast.mobile.permission.UriPermissionProvider
 import com.nextgenbroadcast.mobile.core.model.*
-import com.nextgenbroadcast.mobile.core.presentation.IMediaPlayerPresenter
-import com.nextgenbroadcast.mobile.core.presentation.IReceiverPresenter
-import com.nextgenbroadcast.mobile.core.presentation.ISelectorPresenter
-import com.nextgenbroadcast.mobile.core.presentation.IUserAgentPresenter
+import com.nextgenbroadcast.mobile.core.presentation.*
 import com.nextgenbroadcast.mobile.core.presentation.media.IObservablePlayer
 import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
-import com.nextgenbroadcast.mobile.permission.IUriPermissionRequester
-import com.nextgenbroadcast.mobile.permission.UriPermissionProvider
-import com.nextgenbroadcast.mobile.service.handler.OnIncomingPlayerStateListener
+import com.nextgenbroadcast.mobile.core.presentation.IReceiverPresenter
 import com.nextgenbroadcast.mobile.service.handler.StandaloneClientHandler
+import com.nextgenbroadcast.mobile.service.handler.OnIncomingPlayerStateListener
+import com.nextgenbroadcast.mobile.permission.IUriPermissionRequester
+import java.lang.UnsupportedOperationException
 
 class InterprocessServiceBinder(
         service: IBinder,
