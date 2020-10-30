@@ -14,6 +14,7 @@ import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.constraintlayout.widget.ConstraintSet
+import androidx.core.os.bundleOf
 import androidx.databinding.DataBindingUtil
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.Fragment
@@ -384,5 +385,10 @@ class MainFragment : Fragment() {
         const val PARAM_PREVIEW_NAME = "PREVIEW_NAME"
         const val PARAM_PREVIEW_MODE = "PREVIEW_MODE"
 
+        fun newInstance(previewName: String?, previewMode: Boolean): MainFragment {
+            return MainFragment().apply {
+                arguments = bundleOf(PARAM_PREVIEW_NAME to previewName, PARAM_PREVIEW_MODE to previewMode)
+            }
+        }
     }
 }
