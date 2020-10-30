@@ -5,13 +5,7 @@ import com.nextgenbroadcast.mobile.core.model.AppData
 
 interface IUserAgentPresenter {
     val appData: LiveData<AppData?>
-    val appState: LiveData<Int>
+    val appState: LiveData<ApplicationState>
 
-    fun setState(state: Int)
-
-    companion object {
-        const val STATE_UNAVAILABLE = 0
-        const val STATE_LOADED = 1
-        const val STATE_OPENED = 2
-    }
+    fun setState(state: ApplicationState)
 }
