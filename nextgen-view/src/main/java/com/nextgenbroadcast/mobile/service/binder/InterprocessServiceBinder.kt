@@ -62,7 +62,7 @@ class InterprocessServiceBinder(
 
     inner class UserAgentPresenter : IUserAgentPresenter {
         override val appData = MutableLiveData<AppData?>()
-        override val appState = MutableLiveData<Int?>()
+        override val appState = MutableLiveData<Int>()
 
         override fun setState(state: Int) {
             sendAction(IServiceBinder.ACTION_BA_STATE_CHANGED, bundleOf(

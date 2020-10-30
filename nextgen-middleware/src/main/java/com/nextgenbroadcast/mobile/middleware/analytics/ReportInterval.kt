@@ -7,4 +7,5 @@ class ReportInterval(
 ) {
 
     val broadcastIntervals = mutableListOf<BroadcastInterval>()
+    val appIntervals = mutableListOf<AppInterval>()
 }
