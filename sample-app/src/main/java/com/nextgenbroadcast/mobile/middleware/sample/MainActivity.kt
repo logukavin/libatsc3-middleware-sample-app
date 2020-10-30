@@ -18,8 +18,6 @@ import androidx.core.os.bundleOf
 import androidx.lifecycle.ViewModelProvider
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
-import com.nextgenbroadcast.mobile.middleware.sample.MainFragment.Companion.PARAM_PREVIEW_MODE
-import com.nextgenbroadcast.mobile.middleware.sample.MainFragment.Companion.PARAM_PREVIEW_NAME
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.RMPViewModel
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.factory.UserAgentViewModelFactory
 import dagger.android.AndroidInjection
@@ -36,7 +34,6 @@ class MainActivity : BaseActivity() {
     }
 
     override fun onBind(binder: IServiceBinder) {
-
         val factory = UserAgentViewModelFactory(
                 binder.userAgentPresenter,
                 binder.mediaPlayerPresenter,
@@ -67,7 +64,7 @@ class MainActivity : BaseActivity() {
 
         supportFragmentManager
                 .beginTransaction()
-                .add( android.R.id.content,
+                .add(android.R.id.content,
                         MainFragment.newInstance(previewName, previewMode),
                         MainFragment.TAG
                 )
@@ -115,7 +112,7 @@ class MainActivity : BaseActivity() {
     }
 
     override fun onUserLeaveHint() {
-        if (hasFeaturePIP && (rmpViewModel?.rmpState?.value == PlaybackState.PLAYING)) {
+        if (hasFeaturePIP && (rmpViewModel?.rmpState == PlaybackState.PLAYING)) {
             enterPictureInPictureMode(PictureInPictureParams.Builder().build())
         }
     }

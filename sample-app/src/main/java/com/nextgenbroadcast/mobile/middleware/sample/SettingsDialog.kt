@@ -13,8 +13,13 @@ import kotlinx.android.synthetic.main.dialog_settings.view.*
 
 class SettingsDialog: DialogFragment() {
 
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setStyle(STYLE_NORMAL, R.style.Dialog)
+    }
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        val view = inflater.inflate(R.layout.dialog_settings, null)
+        val view = inflater.inflate(R.layout.dialog_settings, container)
 
         view.frequencyEditText.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_DONE) {
@@ -24,8 +29,8 @@ class SettingsDialog: DialogFragment() {
             return@setOnEditorActionListener false
         }
 
-        arguments?.let {
-            val freqKhz = it.getInt(PARAM_FREQUENCY, 0)
+        arguments?.let { args ->
+            val freqKhz = args.getInt(PARAM_FREQUENCY, 0)
             if (freqKhz > 0) {
                 view.frequencyEditText.setText((freqKhz / 1000).toString())
             }
@@ -49,6 +54,8 @@ class SettingsDialog: DialogFragment() {
     }
 
     companion object {
+        val TAG: String = SettingsDialog::class.java.simpleName
+
         const val PARAM_FREQUENCY = "param_frequency"
         const val REQUEST_KEY_FREQUENCY = "requestKey_frequency"
 

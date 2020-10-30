@@ -17,7 +17,9 @@ class RMPViewModel(
     val mediaUri = Transformations.distinctUntilChanged(presenter.rmpMediaUri)
 
     val playWhenReady: LiveData<Boolean> = _playWhenReady
-    val rmpState = MutableLiveData<PlaybackState>()
+
+    var rmpState = PlaybackState.IDLE
+        private set
 
     init {
         presenter.addOnPlayerSateChangedCallback(this)
@@ -43,7 +45,7 @@ class RMPViewModel(
     }
 
     fun setCurrentPlayerState(state: PlaybackState) {
-        rmpState.value = state
+        rmpState = state
         presenter.rmpPlaybackChanged(state)
     }
 
