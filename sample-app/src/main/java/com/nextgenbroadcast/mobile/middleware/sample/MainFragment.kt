@@ -1,5 +1,6 @@
 package com.nextgenbroadcast.mobile.middleware.sample
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -16,7 +17,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.os.bundleOf
 import androidx.databinding.DataBindingUtil
-import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.setFragmentResultListener
 import androidx.lifecycle.ViewModelProvider
@@ -73,7 +73,7 @@ class MainFragment : Fragment() {
     override fun onAttach(context: Context) {
         super.onAttach(context)
 
-        val callback: OnBackPressedCallback = object : OnBackPressedCallback(true) {
+        val callback = object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 if (user_agent_web_view.isBAMenuOpened) {
                     user_agent_web_view.closeMenu()
@@ -90,9 +90,9 @@ class MainFragment : Fragment() {
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
 
-        arguments?. let {
-            previewName = it.getString(PARAM_PREVIEW_NAME)
-            previewMode = it.getBoolean(PARAM_PREVIEW_MODE)
+        arguments?.let { args ->
+            previewName = args.getString(PARAM_PREVIEW_NAME)
+            previewMode = args.getBoolean(PARAM_PREVIEW_MODE)
         }
 
         binding = DataBindingUtil.inflate<FragmentMainBinding>(inflater, R.layout.fragment_main, container, false).apply {
@@ -103,6 +103,7 @@ class MainFragment : Fragment() {
         return binding.root
     }
 
+    @SuppressLint("ClickableViewAccessibility")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -154,10 +155,13 @@ class MainFragment : Fragment() {
             when (bottomSheetBehavior.state) {
                 BottomSheetBehavior.STATE_COLLAPSED -> bottomSheetBehavior.state = BottomSheetBehavior.STATE_EXPANDED
                 BottomSheetBehavior.STATE_EXPANDED -> bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
+                else -> {
+                    // do nothing
+                }
             }
         }
 
-        setFragmentResultListener(REQUEST_KEY_FREQUENCY) { key, bundle ->
+        setFragmentResultListener(REQUEST_KEY_FREQUENCY) { _, bundle ->
             receiverPresenter?.tune(bundle.getInt(SettingsDialog.PARAM_FREQUENCY, 0))
         }
     }
@@ -187,7 +191,6 @@ class MainFragment : Fragment() {
     }
 
     fun onBind(binder: IServiceBinder, factory: UserAgentViewModelFactory) {
-
         val provider = ViewModelProvider(requireActivity().viewModelStore, factory)
 
         bindViewModels(provider).let { (rmp, userAgent, selector) ->
@@ -226,7 +229,7 @@ class MainFragment : Fragment() {
         }
 
         settings_button.setOnClickListener {
-            openSettings(receiver)
+            openSettings(receiver.freqKhz.value)
         }
     }
 
@@ -235,9 +238,9 @@ class MainFragment : Fragment() {
         changeService(serviceId)
     }
 
-    private fun openSettings(receiverPresenter: IReceiverPresenter) {
-        val newFragment: DialogFragment = SettingsDialog.newInstance(receiverPresenter.freqKhz.value)
-        newFragment.show(parentFragmentManager, "dialog")
+    private fun openSettings(freqKhz: Int?) {
+        SettingsDialog.newInstance(freqKhz)
+                .show(parentFragmentManager, SettingsDialog.TAG)
     }
 
     private fun bindViewModels(provider: ViewModelProvider): Triple<RMPViewModel, UserAgentViewModel, SelectorViewModel> {
@@ -308,7 +311,7 @@ class MainFragment : Fragment() {
                         params.scale.toFloat() / 100
                 )
             })
-//            (activity as MainActivity).preparePlayerView(receiver_player)
+            //TODO: (activity as MainActivity).preparePlayerView(receiver_player)
             mediaUri.observe(this@MainFragment, { mediaUri ->
                 mediaUri?.let { startPlayback(mediaUri) } ?: receiver_player.stopPlayback()
             })
