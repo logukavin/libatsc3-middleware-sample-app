@@ -9,8 +9,11 @@ import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Bundle
+import android.util.Log
 import androidx.core.content.ContextCompat
+import com.nextgenbroadcast.mobile.middleware.service.init.FrequencyInitializer
 import kotlinx.coroutines.*
+import java.lang.Exception
 import kotlin.coroutines.resume
 
 class FrequencyLocator : IFrequencyLocator {
@@ -24,37 +27,43 @@ class FrequencyLocator : IFrequencyLocator {
         val location: Location? = suspendCancellableCoroutine { cont ->
             val locationManager = (context.getSystemService(Context.LOCATION_SERVICE) as LocationManager)
 
-            locationManager.getBestProvider(Criteria(), true)?.let { provider ->
-                locationManager.getLastKnownLocation(provider)?.let { location ->
-                    //TODO: check location time
-                    cont.resume(location)
-                    return@suspendCancellableCoroutine
-                }
-
-                val locationListener = object : LocationListener {
-                    override fun onLocationChanged(location: Location?) {
-                        locationManager.removeUpdates(this)
+            try {
+                locationManager.getBestProvider(Criteria(), true)?.let { provider ->
+                    locationManager.getLastKnownLocation(provider)?.let { location ->
+                        //TODO: check location time
                         cont.resume(location)
+                        return@suspendCancellableCoroutine
                     }
 
-                    override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {
-                        // do nothing
+                    val locationListener = object : LocationListener {
+                        override fun onLocationChanged(location: Location?) {
+                            locationManager.removeUpdates(this)
+                            cont.resume(location)
+                        }
+
+                        override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {
+                            // do nothing
+                        }
+
+                        override fun onProviderEnabled(provider: String?) {
+                            // do nothing
+                        }
+
+                        override fun onProviderDisabled(provider: String?) {
+                            cont.resume(null)
+                        }
+                    }.also { listener ->
+                        CoroutineScope(Dispatchers.Main).launch {
+                            locationManager.requestLocationUpdates(provider, 0, 0f, listener)
+                        }
                     }
 
-                    override fun onProviderEnabled(provider: String?) {
-                        // do nothing
-                    }
-
-                    override fun onProviderDisabled(provider: String?) {
-                        // do nothing
-                    }
-                }.also { listener ->
-                    CoroutineScope(Dispatchers.Main).launch {
-                        locationManager.requestLocationUpdates(provider, 0, 0f, listener)
-                    }
+                    locationRequest = Pair(locationManager, locationListener)
                 }
-
-                locationRequest = Pair(locationManager, locationListener)
+            } catch (e: Exception) {
+                Log.w(FrequencyInitializer.TAG, "Error on location request ", e)
+                cancel()
+                cont.resume(null)
             }
         }
 
