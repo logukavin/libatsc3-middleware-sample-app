@@ -85,6 +85,10 @@ internal class Atsc3Module(
     fun tune(freqKhz: Int) {
         if (atsc3NdkPHYClientFreqKhz == freqKhz) return
 
+        //TODO: ignore if RfPhyStatistics.demod_lock_status != 0
+        // atsc3NdkPHYBridge = new Atsc3NdkPHYBridge(this);
+        // IAtsc3NdkPHYBridgeCallbacks.pushRfPhyStatisticsUpdate
+
         atsc3NdkPHYClientInstance?.let { phy ->
             atsc3NdkPHYClientFreqKhz = freqKhz
 
