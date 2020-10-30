@@ -68,9 +68,7 @@ class MainActivity : BaseActivity() {
         supportFragmentManager
                 .beginTransaction()
                 .add( android.R.id.content,
-                        MainFragment().apply {
-                            arguments = bundleOf(PARAM_PREVIEW_NAME to previewName, PARAM_PREVIEW_MODE to previewMode)
-                        },
+                        MainFragment.newInstance(previewName, previewMode),
                         MainFragment.TAG
                 )
                 .commit()
