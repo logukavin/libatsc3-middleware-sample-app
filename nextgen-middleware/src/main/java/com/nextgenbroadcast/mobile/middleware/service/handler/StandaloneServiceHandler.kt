@@ -106,6 +106,10 @@ internal class StandaloneServiceHandler(
                 receiverPresenter.tune(msg.data.getInt(IServiceBinder.PARAM_FREQUENCY_KHZ))
             }
 
+            IServiceBinder.ACTION_BA_STATE_CHANGED -> {
+                viewController.setState(msg.data.getInt(IServiceBinder.PARAM_APPSTATE))
+            }
+
             else -> super.handleMessage(msg)
         }
     }

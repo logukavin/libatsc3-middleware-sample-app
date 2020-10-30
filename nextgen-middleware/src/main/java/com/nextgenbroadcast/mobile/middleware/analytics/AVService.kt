@@ -7,5 +7,6 @@ class AVService(
         val globalServiceID: String?,
         val serviceType: Int
 ) {
-    val reportIntervalList = mutableListOf<ReportInterval>()
+    val reportIntervals = mutableListOf<ReportInterval>()
+    val appIntervals = mutableListOf<AppInterval>()
 }

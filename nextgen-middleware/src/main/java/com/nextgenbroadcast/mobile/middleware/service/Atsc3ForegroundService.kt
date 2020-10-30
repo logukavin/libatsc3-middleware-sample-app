@@ -16,6 +16,7 @@ import com.nextgenbroadcast.mobile.core.cert.UserAgentSSLContext
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.model.SLSService
+import com.nextgenbroadcast.mobile.core.presentation.IUserAgentPresenter
 import com.nextgenbroadcast.mobile.middleware.BuildConfig
 import com.nextgenbroadcast.mobile.middleware.analytics.Atsc3Analytics
 import com.nextgenbroadcast.mobile.middleware.analytics.IAtsc3Analytics
@@ -309,6 +310,16 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         state.addSource(view.rmpState) { playbackState ->
             state.value = newState(playbackState = playbackState)
         }
+
+        viewController?.appState?.observe(this, { appState ->
+            viewController?.appData?.value?.appContextId?.let { appId ->
+                when (appState) {
+                    IUserAgentPresenter.STATE_OPENED -> atsc3Analytics.startBASession(appId = appId)
+                    IUserAgentPresenter.STATE_LOADED,
+                    IUserAgentPresenter.STATE_UNAVAILABLE -> atsc3Analytics.finishBASession()
+                }
+            }
+        })
 
         startWebServer(rpc, web)
 

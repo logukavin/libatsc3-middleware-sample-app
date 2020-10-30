@@ -39,6 +39,8 @@ interface IServiceBinder {
 
         const val ACTION_TYNE_FREQUENCY = 20
 
+        const val ACTION_BA_STATE_CHANGED = 21
+
         const val PARAM_RECEIVER_STATE = "PARAM_RECEIVER_STATE"
         const val PARAM_SERVICE_LIST = "PARAM_SERVICE_LIST"
         const val PARAM_SERVICE_SELECTED = "PARAM_SERVICE_SELECTED"
@@ -55,5 +57,7 @@ interface IServiceBinder {
         const val PARAM_PERMISSION_PACKAGE = "PARAM_PERMISSION_PACKAGE"
 
         const val PARAM_FREQUENCY_KHZ = "PARAM_FREQUENCY_KHZ"
+
+        const val PARAM_APPSTATE = "PARAM_APPSTATE"
     }
 }

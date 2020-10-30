@@ -6,6 +6,7 @@ import com.nextgenbroadcast.mobile.core.mapWith
 import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.RPMParams
+import com.nextgenbroadcast.mobile.core.presentation.IUserAgentPresenter
 import com.nextgenbroadcast.mobile.core.presentation.media.IObservablePlayer
 import com.nextgenbroadcast.mobile.core.presentation.media.PlayerStateRegistry
 import com.nextgenbroadcast.mobile.middleware.analytics.IAtsc3Analytics
@@ -47,6 +48,12 @@ internal class ViewControllerImpl(
                     application?.cachePath
             )
         }
+    }
+
+    override val appState = MutableLiveData(IUserAgentPresenter.STATE_UNAVAILABLE)
+
+    override fun setState(state: Int) {
+        appState.postValue(state)
     }
 
     override val rmpLayoutParams = MutableLiveData(RPMParams())
