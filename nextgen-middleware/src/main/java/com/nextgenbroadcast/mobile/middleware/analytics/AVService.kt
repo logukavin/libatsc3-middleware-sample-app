@@ -8,5 +8,4 @@ class AVService(
         val serviceType: Int
 ) {
     val reportIntervals = mutableListOf<ReportInterval>()
-    val appIntervals = mutableListOf<AppInterval>()
 }

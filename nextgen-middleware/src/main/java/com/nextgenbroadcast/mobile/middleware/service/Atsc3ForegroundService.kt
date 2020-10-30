@@ -312,12 +312,10 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         }
 
         viewController?.appState?.observe(this, { appState ->
-            viewController?.appData?.value?.appContextId?.let { appId ->
-                when (appState) {
-                    IUserAgentPresenter.STATE_OPENED -> atsc3Analytics.startBASession(appId = appId)
-                    IUserAgentPresenter.STATE_LOADED,
-                    IUserAgentPresenter.STATE_UNAVAILABLE -> atsc3Analytics.finishBASession()
-                }
+            when (appState) {
+                IUserAgentPresenter.STATE_OPENED -> atsc3Analytics.startApplicationSession()
+                IUserAgentPresenter.STATE_LOADED,
+                IUserAgentPresenter.STATE_UNAVAILABLE -> atsc3Analytics.finishApplicationSession()
             }
         })
 

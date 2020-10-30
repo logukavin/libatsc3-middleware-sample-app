@@ -47,25 +47,25 @@ class Atsc3Analytics: IAtsc3Analytics {
                     broadcastEndTime = currentTime
                 }
             }
+            finishApplicationSession()
         }
     }
 
-    override fun startBASession(appId: String) {
-        activeSession?.let { session ->
+    override fun startApplicationSession() {
+        activeSession?.reportIntervals?.lastOrNull()?.let { reportInterval ->
             val currentTime = currentTimeSec()
             AppInterval(
-                    appId = appId,
                     startTime = currentTime,
                     endTime = null,
                     lifeCycle = AppInterval.DOWNLOADED_AND_USER_LAUNCHED
             ).also {
-                session.appIntervals.add(it)
+                reportInterval.appIntervals.add(it)
             }
         }
     }
 
-    override fun finishBASession() {
-        activeSession?.appIntervals?.lastOrNull()?.let { appInterval ->
+    override fun finishApplicationSession() {
+        activeSession?.reportIntervals?.lastOrNull()?.appIntervals?.lastOrNull()?.let { appInterval ->
             if(appInterval.endTime == null) {
                 val currentTime = currentTimeSec()
                 appInterval.endTime = currentTime
@@ -75,7 +75,6 @@ class Atsc3Analytics: IAtsc3Analytics {
 
     override fun finishSession() {
         activeSession?.let {
-            finishBASession()
             finishDisplayContent()
             avServiceQueue.add(it)
             if(IS_SHOW_LOGS)
@@ -91,46 +90,49 @@ class Atsc3Analytics: IAtsc3Analytics {
         private const val DEVICE_TYPE_PRIMARY = 0 // Content is presented on a Primary Device
 
         private const val IS_SHOW_LOGS = true
-        private const val LOG = "ANALYTICS_LOG"
+        private const val LOG_TAG = "ANALYTICS_LOG"
     }
 
     private fun showLogs() {
-        activeSession?.let { session ->
-            Log.d(LOG, "--------------------------------- SESSION START -----------------------------------")
-            Log.d(LOG, "|bsid: ${session.bsid}")
-            Log.d(LOG, "|country: ${session.country}")
-            Log.d(LOG, "|serviceID: ${session.serviceID}")
-            Log.d(LOG, "|globalServiceID: ${session.globalServiceID}")
-            Log.d(LOG, "|serviceType: ${session.serviceType}")
+        StringBuffer().apply {
+            append("-\n")
+            activeSession?.let { session ->
+                append("--------------------------------- SESSION START -----------------------------------\n")
+                append( "|bsid: ${session.bsid}\n")
+                append( "|country: ${session.country}\n")
+                append( "|serviceID: ${session.serviceID}\n")
+                append( "|globalServiceID: ${session.globalServiceID}\n")
+                append( "|serviceType: ${session.serviceType}\n")
 
-            session.reportIntervals.forEach { reportInterval ->
-                Log.d(LOG, "|     -- INTERVAL START --------------------------------------------")
-                Log.d(LOG, "|        startTime: ${getDateStr(reportInterval.startTime)}")
-                Log.d(LOG, "|        endTime: ${getDateStr(reportInterval.endTime)}")
-                Log.d(LOG, "|        destinationDeviceType: ${reportInterval.destinationDeviceType}")
+                session.reportIntervals.forEach { reportInterval ->
+                    append( "|     -- INTERVAL START --------------------------------------------\n")
+                    append( "|        startTime: ${getDateStr(reportInterval.startTime)}\n")
+                    append( "|        endTime: ${getDateStr(reportInterval.endTime)}\n")
+                    append( "|        destinationDeviceType: ${reportInterval.destinationDeviceType}\n")
 
-                if(reportInterval.broadcastIntervals.size > 0) {
-                    Log.d(LOG, "|          -- BROADCAST INTERVAL START -----")
                     reportInterval.broadcastIntervals.forEach { broadcastInterval ->
-                        Log.d(LOG, "|             broadcastStartTime: ${getDateStr(broadcastInterval.broadcastStartTime)}")
-                        Log.d(LOG, "|             broadcastEndTime: ${getDateStr(broadcastInterval.broadcastEndTime)}")
-                        Log.d(LOG, "|             receiverStartTime: ${getDateStr(broadcastInterval.receiverStartTime)}")
+                        append( "|          -- BROADCAST INTERVAL START -----\n")
+                        append( "|             broadcastStartTime: ${getDateStr(broadcastInterval.broadcastStartTime)}\n")
+                        append( "|             broadcastEndTime: ${getDateStr(broadcastInterval.broadcastEndTime)}\n")
+                        append( "|             receiverStartTime: ${getDateStr(broadcastInterval.receiverStartTime)}\n")
+                        append( "|          -- BROADCAST INTERVAL END -------\n")
                     }
-                    Log.d(LOG, "|          -- BROADCAST INTERVAL END -------")
+
+                    reportInterval.appIntervals.forEach { appInterval ->
+                        append( "|          -- APP INTERVAL START ----------------------------------------\n")
+                        append( "|             startTime: ${getDateStr(appInterval.startTime)}\n")
+                        append( "|             endTime: ${getDateStr(appInterval.endTime)}\n")
+                        append( "|             lifeCycle: ${appInterval.lifeCycle}\n")
+                        append( "|          -- APP INTERVAL END ------------------------------------------\n")
+                    }
+
+                    append( "|     -- INTERVAL END ----------------------------------------------\n")
                 }
-                Log.d(LOG, "|     -- INTERVAL END ----------------------------------------------")
-            }
 
-            session.appIntervals.forEach { appInterval ->
-                Log.d(LOG, "|     -- APP INTERVAL START ----------------------------------------")
-                Log.d(LOG, "|        appId: ${appInterval.appId}")
-                Log.d(LOG, "|        startTime: ${getDateStr(appInterval.startTime)}")
-                Log.d(LOG, "|        endTime: ${getDateStr(appInterval.endTime)}")
-                Log.d(LOG, "|        lifeCycle: ${appInterval.lifeCycle}")
-                Log.d(LOG, "|     -- APP INTERVAL END ------------------------------------------")
+                append( "--------------------------------- SESSION END -------------------------------------\n")
             }
-
-            Log.d(LOG, "--------------------------------- SESSION END -------------------------------------")
+        }.also {
+            Log.d(LOG_TAG, it.toString())
         }
     }
 
