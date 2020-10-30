@@ -7,6 +7,7 @@ import com.nextgenbroadcast.mobile.middleware.location.FrequencyLocation
 import com.nextgenbroadcast.mobile.middleware.location.IFrequencyLocator
 import com.nextgenbroadcast.mobile.middleware.settings.IReceiverSettings
 import kotlinx.coroutines.*
+import java.lang.Exception
 import java.util.concurrent.TimeUnit
 
 internal class FrequencyInitializer(
@@ -28,35 +29,57 @@ internal class FrequencyInitializer(
         }
 
         locationJob = CoroutineScope(Dispatchers.IO).launch {
-            locators.forEach { component ->
-                val instance: Any = component.getDeclaredConstructor().newInstance()
-                val initializer = instance as IFrequencyLocator
+            var locationTaken = false
+            var frequencyApplied = false
+            val prevFrequencyLocation = settings.frequencyLocation
 
-                try {
-                    val prevLocation = settings.frequencyLocation?.location
-                    withTimeout(LOCATION_REQUEST_DELAY) {
+            val defaultTune = prevFrequencyLocation?.let {
+                async {
+                    delay(FAST_TUNE_DELAY)
+
+                    if (!isActive) return@async
+
+                    frequencyApplied = true
+                    applyFrequency(prevFrequencyLocation)
+                }
+            }
+
+            withTimeout(LOCATION_REQUEST_DELAY) {
+                locators.forEach { component ->
+                    val instance: Any = component.getDeclaredConstructor().newInstance()
+                    val initializer = instance as IFrequencyLocator
+
+                    try {
                         initializer.locateFrequency(context) { location ->
+                            val prevLocation = prevFrequencyLocation?.location
                             prevLocation == null || location.distanceTo(prevLocation) > IFrequencyLocator.RECEPTION_RADIUS
                         }?.let { frequencyLocation ->
                             settings.frequencyLocation = frequencyLocation
-                            applyFrequencyLocation(frequencyLocation)
-                        } ?: settings.frequencyLocation?.let { frequencyLocation ->
-                            applyFrequencyLocation(frequencyLocation)
+                            applyFrequency(frequencyLocation)
+                            locationTaken = true
                         }
-                    }
-                } catch (e: TimeoutCancellationException) {
-                    initializer.cancel()
-                    Log.w(TAG, "Location request timeout")
-                }
 
-                if (!isActive) return@forEach
+                        defaultTune?.cancel()
+                    } catch (e: TimeoutCancellationException) {
+                        initializer.cancel()
+                        Log.w(TAG, "Location request timeout")
+                    }
+
+                    if (!isActive || locationTaken) return@forEach
+                }
+            }
+
+            if (!locationTaken && !frequencyApplied) {
+                prevFrequencyLocation?.let {
+                    applyFrequency(prevFrequencyLocation)
+                }
             }
         }
 
         return true
     }
 
-    private fun applyFrequencyLocation(frequencyLocation: FrequencyLocation) {
+    private fun applyFrequency(frequencyLocation: FrequencyLocation) {
         frequencyLocation.firstFrequency?.let { frequency ->
             receiver.tune(frequency)
         }
@@ -72,6 +95,7 @@ internal class FrequencyInitializer(
     companion object {
         val TAG: String = FrequencyInitializer::class.java.simpleName
 
+        private val FAST_TUNE_DELAY = TimeUnit.SECONDS.toMillis(10)
         private val LOCATION_REQUEST_DELAY = TimeUnit.MINUTES.toMillis(5)
 
         private const val LOCATOR_STR = "nextgenbroadcast.locator"
