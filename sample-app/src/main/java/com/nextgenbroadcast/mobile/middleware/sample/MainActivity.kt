@@ -107,6 +107,8 @@ class MainActivity : BaseActivity() {
             }
         })
 
+        user_agent_web_view.setUserAgentPresenter(binder.userAgentPresenter)
+
         if (initPlayer) {
             initPlayer = false
             rmpViewModel?.mediaUri?.value?.let { uri ->

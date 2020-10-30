@@ -10,6 +10,7 @@ import android.view.KeyCharacterMap
 import android.view.KeyEvent
 import android.webkit.*
 import com.nextgenbroadcast.mobile.core.cert.CertificateUtils
+import com.nextgenbroadcast.mobile.core.presentation.IUserAgentPresenter
 import kotlinx.coroutines.*
 
 class UserAgentView @JvmOverloads constructor(
@@ -26,6 +27,8 @@ class UserAgentView @JvmOverloads constructor(
     private var appEntryPoint: String? = null
     private var loadingRetryCount: Int = 0
     private var reloadJob: Job? = null
+
+    private var userAgentPresenter: IUserAgentPresenter? = null
 
     interface IErrorListener {
         fun onLoadingError()
@@ -115,6 +118,7 @@ class UserAgentView @JvmOverloads constructor(
     fun unloadBAContent() {
         reset()
         loadUrl("about:blank")
+        userAgentPresenter?.setState(IUserAgentPresenter.STATE_UNAVAILABLE)
     }
 
     fun closeMenu() {
@@ -122,6 +126,7 @@ class UserAgentView @JvmOverloads constructor(
             if (!success) sendKeyPress(KeyEvent.KEYCODE_DPAD_LEFT, 105)
         }
         isBAMenuOpened = false
+        userAgentPresenter?.setState(IUserAgentPresenter.STATE_LOADED)
     }
 
     fun openMenu() {
@@ -129,6 +134,11 @@ class UserAgentView @JvmOverloads constructor(
             if (!success) sendKeyPress(KeyEvent.KEYCODE_DPAD_RIGHT, 106)
         }
         isBAMenuOpened = true
+        userAgentPresenter?.setState(IUserAgentPresenter.STATE_OPENED)
+    }
+
+    fun setUserAgentPresenter(presenter: IUserAgentPresenter?) {
+        userAgentPresenter = presenter
     }
 
     private fun reset() {
