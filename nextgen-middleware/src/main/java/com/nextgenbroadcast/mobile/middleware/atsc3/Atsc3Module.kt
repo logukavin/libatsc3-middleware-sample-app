@@ -242,8 +242,8 @@ internal class Atsc3Module(
     }
 
     private fun reset() {
-        clear()
         setState(State.IDLE)
+        clear()
     }
 
     private fun getPHYImplementations(device: UsbDevice): List<Atsc3NdkPHYClientBase.USBVendorIDProductIDSupportedPHY> {

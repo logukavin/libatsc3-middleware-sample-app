@@ -9,6 +9,8 @@ import com.nextgenbroadcast.mobile.middleware.server.web.MiddlewareWebServer
 import com.nextgenbroadcast.mobile.middleware.server.web.configureSSLFactory
 import com.nextgenbroadcast.mobile.middleware.server.ws.MiddlewareWebSocket
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.TestCoroutineDispatcher
+import kotlinx.coroutines.test.TestCoroutineScope
 import org.eclipse.jetty.client.HttpClient
 import org.eclipse.jetty.websocket.api.WebSocketAdapter
 import org.eclipse.jetty.websocket.client.WebSocketClient
@@ -28,6 +30,9 @@ class SocketServerTest : ServerTest() {
     private lateinit var rpcGateway: IRPCGateway
     private lateinit var webServer: MiddlewareWebServer
     private lateinit var webSocketClient: WebSocketClient
+
+    @ExperimentalCoroutinesApi
+    private val testDispatcher = TestCoroutineDispatcher()
 
     @ExperimentalCoroutinesApi
     @Before
@@ -55,7 +60,7 @@ class SocketServerTest : ServerTest() {
             }
         }
 
-        webServer = MiddlewareWebServer(server, webGateway = null).also {
+        webServer = MiddlewareWebServer(server, webGateway = null, globalScope = TestCoroutineScope(testDispatcher)).also {
             it.start(null)
         }
         webSocketClient = WebSocketClient(HttpClient(configureSSLFactory(UserAgentSSLContext(mockApplicationContext))))
@@ -87,6 +92,12 @@ class SocketServerTest : ServerTest() {
         val session = webSocketClient.connect(WebSocketAdapter(), URI("wss://localhost:$WSS_PORT/")).get()
 
         Assert.assertTrue(session.isOpen)
+    }
+
+    @ExperimentalCoroutinesApi
+    @After
+    fun cleanUp() {
+        testDispatcher.cleanupTestCoroutines()
     }
 }
 

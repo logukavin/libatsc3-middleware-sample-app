@@ -4,9 +4,8 @@ import com.nextgenbroadcast.mobile.core.cert.UserAgentSSLContext
 import com.nextgenbroadcast.mobile.middleware.server.web.MiddlewareWebServer
 import com.nextgenbroadcast.mobile.middleware.server.web.MiddlewareWebServerError
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.TestCoroutineDispatcher
-import kotlinx.coroutines.test.runBlockingTest
+import kotlinx.coroutines.test.TestCoroutineScope
 import okhttp3.ConnectionSpec
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -31,10 +30,9 @@ import javax.servlet.http.HttpServletResponse
 
 @RunWith(PowerMockRunner::class)
 class WebServerTests : ServerTest() {
+    private lateinit var webServer: MiddlewareWebServer
     @ExperimentalCoroutinesApi
     private val testDispatcher = TestCoroutineDispatcher()
-
-    private lateinit var webServer: MiddlewareWebServer
 
     @ExperimentalCoroutinesApi
     @Before
@@ -43,27 +41,23 @@ class WebServerTests : ServerTest() {
             addServlet(ServletHolder(MiddlewareWebServerTestServlet()), "/index.html")
         }
 
-        webServer = MiddlewareWebServer(server, webGateway = null).also {
+        webServer = MiddlewareWebServer(server, webGateway = null, globalScope = TestCoroutineScope(testDispatcher)).also {
             it.start(null)
         }
     }
 
-    @ExperimentalCoroutinesApi
     @Test
     @After
-    fun tearDown() = testDispatcher.runBlockingTest {
+    fun tearDown() {
         if (webServer.isRunning()) {
             webServer.stop()
-            delay(500) // wait server get stopped
         }
         Assert.assertEquals(false, (webServer.isRunning()))
     }
 
-    @ExperimentalCoroutinesApi
     @Test
     @Throws(MiddlewareWebServerError::class)
-    fun startServer() = testDispatcher.runBlockingTest {
-        delay(500) // wait server get started
+    fun startServer() {
         Assert.assertEquals(true, webServer.isRunning())
     }
 
@@ -81,7 +75,7 @@ class WebServerTests : ServerTest() {
 
     @Test
     fun makeHttpErrorCall() {
-        val client = OkHttpClient().newBuilder().build()
+        val client = OkHttpClient.Builder().connectionSpecs(listOf(ConnectionSpec.CLEARTEXT)).build()
         val request: Request = Request.Builder().url("http://localhost:8080/index1.html").build()
         val response = client.newCall(request).execute()
         val serverMessage = response.body()?.string()
@@ -126,6 +120,12 @@ class WebServerTests : ServerTest() {
 
     companion object {
         const val SERVER_MESSAGE = "Hello World"
+    }
+
+    @ExperimentalCoroutinesApi
+    @After
+    fun cleanUp() {
+        testDispatcher.cleanupTestCoroutines()
     }
 }
 
