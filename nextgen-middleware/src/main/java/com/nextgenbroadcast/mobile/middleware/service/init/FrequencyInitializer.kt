@@ -31,7 +31,7 @@ internal class FrequencyInitializer(
             var locationTaken = false
             var frequencyApplied = false
             val prevFrequencyLocation = settings.frequencyLocation
-            val userFreqKhz = settings.userFreqKhz
+            val userFreqKhz = settings.lastFrequency
 
             val defaultTune = prevFrequencyLocation?.let {
                 async {

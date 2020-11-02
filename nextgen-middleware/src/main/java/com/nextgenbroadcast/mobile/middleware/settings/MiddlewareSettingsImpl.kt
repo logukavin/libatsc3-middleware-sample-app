@@ -33,7 +33,7 @@ internal class MiddlewareSettingsImpl(context: Context) : IMiddlewareSettings {
             }
         }
 
-    override var userFreqKhz: Int
+    override var lastFrequency: Int
         get() = loadInt(FREQUENCY_USER)
         set(value) {
             saveInt(FREQUENCY_USER, value)

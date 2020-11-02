@@ -4,5 +4,5 @@ import com.nextgenbroadcast.mobile.middleware.location.FrequencyLocation
 
 interface IReceiverSettings {
     var frequencyLocation: FrequencyLocation?
-    var userFreqKhz: Int
+    var lastFrequency: Int
 }
