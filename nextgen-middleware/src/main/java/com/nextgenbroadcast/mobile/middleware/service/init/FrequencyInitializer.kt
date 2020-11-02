@@ -31,7 +31,7 @@ internal class FrequencyInitializer(
             var locationTaken = false
             var frequencyApplied = false
             val prevFrequencyLocation = settings.frequencyLocation
-            val userFreqKhz = settings.lastFrequency
+            val lastFrequency = settings.lastFrequency
 
             val defaultTune = prevFrequencyLocation?.let {
                 async {
@@ -72,8 +72,8 @@ internal class FrequencyInitializer(
             if (!locationTaken && !frequencyApplied) {
                 if(prevFrequencyLocation != null) {
                     applyFrequency(prevFrequencyLocation)
-                } else if(userFreqKhz > 0) {
-                    receiver.tune(userFreqKhz)
+                } else if(lastFrequency > 0) {
+                    receiver.tune(lastFrequency)
                 }
             }
         }
