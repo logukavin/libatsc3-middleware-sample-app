@@ -9,6 +9,7 @@ import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.SLSService
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPackage
+import com.nextgenbroadcast.mobile.middleware.cache.IApplicationCache
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
 import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
 import com.nextgenbroadcast.mobile.middleware.controller.view.ViewControllerImpl
@@ -54,6 +55,9 @@ class RPCGatewayTest {
 
     @Mock
     private lateinit var serviceController: IServiceController
+
+    @Mock
+    private lateinit var applicationCache: IApplicationCache
 
     @Mock
     private lateinit var viewController: IViewController
@@ -117,7 +121,7 @@ class RPCGatewayTest {
 
         `when`(mockedMediaUri.toString()).thenReturn(mockedMediaUrl)
 
-        iRPCGateway = RPCGatewayImpl(serviceController, viewController, prefs, testDispatcher, testDispatcher)
+        iRPCGateway = RPCGatewayImpl(serviceController, viewController, applicationCache, prefs, testDispatcher, testDispatcher)
         middlewareWebSocket = PowerMockito.spy(MiddlewareWebSocket(iRPCGateway))
         iRPCGateway.onSocketOpened(middlewareWebSocket)
 
