@@ -33,6 +33,12 @@ internal class MiddlewareSettingsImpl(context: Context) : IMiddlewareSettings {
             }
         }
 
+    override var lastFrequency: Int
+        get() = loadInt(FREQUENCY_USER)
+        set(value) {
+            saveInt(FREQUENCY_USER, value)
+        }
+
     override val hostName = ServerConstants.HOST_NAME
     override var httpPort = ServerConstants.PORT_AUTOFIT
     override var httpsPort = ServerConstants.PORT_AUTOFIT
@@ -50,6 +56,15 @@ internal class MiddlewareSettingsImpl(context: Context) : IMiddlewareSettings {
 
     private fun requireString(key: String, action: () -> String): String {
         return loadString(key) ?: saveString(key, action.invoke())
+    }
+
+    private fun saveInt(key: String, value: Int): Int {
+        preferences.edit { putInt(key, value) }
+        return value
+    }
+
+    private fun loadInt(key: String): Int {
+        return preferences.getInt(key, 0)
     }
 
     private fun stringToFrequencyLocation(flJsonStr: String): FrequencyLocation? {
@@ -96,5 +111,6 @@ internal class MiddlewareSettingsImpl(context: Context) : IMiddlewareSettings {
         private const val LOCATION_LATITUDE = "location_latitude"
         private const val LOCATION_LONGITUDE = "location_longitude"
         private const val FREQUENCY_LIST = "frequency_list"
+        private const val FREQUENCY_USER = "frequency_user"
     }
 }
