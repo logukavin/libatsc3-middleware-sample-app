@@ -7,7 +7,6 @@ import com.nextgenbroadcast.mobile.middleware.location.FrequencyLocation
 import com.nextgenbroadcast.mobile.middleware.location.IFrequencyLocator
 import com.nextgenbroadcast.mobile.middleware.settings.IReceiverSettings
 import kotlinx.coroutines.*
-import java.lang.Exception
 import java.util.concurrent.TimeUnit
 
 internal class FrequencyInitializer(
@@ -32,6 +31,7 @@ internal class FrequencyInitializer(
             var locationTaken = false
             var frequencyApplied = false
             val prevFrequencyLocation = settings.frequencyLocation
+            val userFreqKhz = settings.userFreqKhz
 
             val defaultTune = prevFrequencyLocation?.let {
                 async {
@@ -70,8 +70,10 @@ internal class FrequencyInitializer(
             }
 
             if (!locationTaken && !frequencyApplied) {
-                prevFrequencyLocation?.let {
+                if(prevFrequencyLocation != null) {
                     applyFrequency(prevFrequencyLocation)
+                } else if(userFreqKhz > 0) {
+                    receiver.tune(userFreqKhz)
                 }
             }
         }
