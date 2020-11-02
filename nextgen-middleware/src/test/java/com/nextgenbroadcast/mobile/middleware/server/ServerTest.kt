@@ -9,7 +9,6 @@ import com.nextgenbroadcast.mobile.middleware.gateway.web.ConnectionType
 import com.nextgenbroadcast.mobile.middleware.server.web.configureSSLFactory
 import com.nextgenbroadcast.mobile.middleware.server.web.getSecureServerConnector
 import com.nextgenbroadcast.mobile.middleware.server.web.getServerConnector
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.eclipse.jetty.server.Server
 import org.junit.Before
 import org.junit.ClassRule
@@ -38,7 +37,6 @@ open class ServerTest {
 
     lateinit var server: Server
 
-    @ExperimentalCoroutinesApi
     @Before
     fun setupContext() {
         Mockito.`when`(mockApplicationContext.resources).thenReturn(mockContextResources)

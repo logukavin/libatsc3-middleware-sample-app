@@ -26,6 +26,7 @@ public class MMTDataSource extends BaseDataSource {
     }
 
     private final MMTDataBuffer inputSource;
+    private final ByteBuffer sampleHeaderBuffer = ByteBuffer.allocate(MMTDef.SIZE_SAMPLE_HEADER);
 
     @Nullable
     private Uri uri;
@@ -34,7 +35,6 @@ public class MMTDataSource extends BaseDataSource {
     private boolean readSignature = true;
     private boolean readHeader = true;
     private boolean readSampleHeader = false;
-    private ByteBuffer sampleHeaderBuffer = ByteBuffer.allocate(MMTDef.SIZE_SAMPLE_HEADER);
     private MfuByteBufferFragment currentSample = null;
 
     public MMTDataSource(MMTDataBuffer dataSource) {
@@ -74,6 +74,9 @@ public class MMTDataSource extends BaseDataSource {
          * 3. read sample header before every sample
          */
 
+        if (!opened || !inputSource.isActive()) {
+            return C.LENGTH_UNSET;
+        }
 
         // Read identification header
         if (readSignature) {
@@ -127,7 +130,8 @@ public class MMTDataSource extends BaseDataSource {
                         .putFloat(inputSource.getVideoFrameRate())
                         .putInt(inputSource.getMpuMetadataSize())
                         .putInt(inputSource.getAudioChannelCount())
-                        .putInt(inputSource.getAudioSampleRate());
+                        .putInt(inputSource.getAudioSampleRate())
+                        .putLong(inputSource.ptsOffsetUs());
                 bb.rewind();
                 bb.get(buffer, 0, MMTDef.SIZE_HEADER);
 
@@ -182,8 +186,6 @@ public class MMTDataSource extends BaseDataSource {
 
             readSampleHeader = true;
         }
-
-        if (!opened) return C.LENGTH_UNSET;
 
         // read the sample header
         if (readSampleHeader) {
