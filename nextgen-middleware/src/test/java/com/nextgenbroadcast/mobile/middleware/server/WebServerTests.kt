@@ -66,8 +66,8 @@ class WebServerTests : ServerTest() {
         val client = OkHttpClient.Builder().connectionSpecs(listOf(ConnectionSpec.CLEARTEXT)).build()
         val request: Request = Request.Builder().url("http://localhost:8080/index.html").build()
         val response = client.newCall(request).execute()
-        val serverMessage = response.body()?.string()
-        val code = response.code()
+        val serverMessage = response.body?.string()
+        val code = response.code
         Assert.assertEquals(SERVER_MESSAGE, serverMessage)
         Assert.assertEquals(200, code)
         Assert.assertEquals(true, response.isSuccessful)
@@ -78,8 +78,8 @@ class WebServerTests : ServerTest() {
         val client = OkHttpClient.Builder().connectionSpecs(listOf(ConnectionSpec.CLEARTEXT)).build()
         val request: Request = Request.Builder().url("http://localhost:8080/index1.html").build()
         val response = client.newCall(request).execute()
-        val serverMessage = response.body()?.string()
-        val code = response.code()
+        val serverMessage = response.body?.string()
+        val code = response.code
         Assert.assertNotEquals(SERVER_MESSAGE, serverMessage)
         Assert.assertEquals(404, code)
         Assert.assertEquals(false, response.isSuccessful)
@@ -91,8 +91,8 @@ class WebServerTests : ServerTest() {
         val client = OkHttpClient().newBuilder().sslSocketFactory(sslContext.socketFactory, getTrustManager()).build()
         val request: Request = Request.Builder().url("https://localhost:8443/index.html").build()
         val response = client.newCall(request).execute()
-        val serverMessage = response.body()?.string()
-        val code = response.code()
+        val serverMessage = response.body?.string()
+        val code = response.code
         Assert.assertEquals(SERVER_MESSAGE, serverMessage)
         Assert.assertEquals(200, code)
     }
@@ -103,8 +103,8 @@ class WebServerTests : ServerTest() {
         val client = OkHttpClient().newBuilder().sslSocketFactory(sslContext.socketFactory, getTrustManager()).build()
         val request: Request = Request.Builder().url("https://localhost:8443/index1.html").build()
         val response = client.newCall(request).execute()
-        val serverMessage = response.body()?.string()
-        val code = response.code()
+        val serverMessage = response.body?.string()
+        val code = response.code
         Assert.assertNotEquals(SERVER_MESSAGE, serverMessage)
         Assert.assertEquals(404, code)
         Assert.assertEquals(false, response.isSuccessful)
