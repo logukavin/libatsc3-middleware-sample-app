@@ -32,12 +32,6 @@ abstract class BaseActivity : AppCompatActivity() {
         onUnbind()
     }
 
-    fun openRoute(path: String) {
-        Atsc3ForegroundService.openRoute(this, path)
-    }
-
-    fun preparePlayerView(playerView: ReceiverPlayerView) {}
-
     abstract fun onBind(binder: IServiceBinder)
     abstract fun onUnbind()
 
