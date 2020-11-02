@@ -18,8 +18,9 @@ import java.util.concurrent.TimeUnit;
 
 public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payload, MfuByteBufferFragment> {
     private final LinkedBlockingDeque<MfuByteBufferFragment> mfuBufferQueue = new LinkedBlockingDeque<>();
-    private final LinkedHashMap<Long, Long> MapVideoMfuPresentationTimestampUsAnchorSystemTimeUs = new LinkedHashMap<>();
-    private final LinkedHashMap<Long, Long> MapAudioMfuPresentationTimestampUsAnchorSystemTimeUs = new LinkedHashMap<>();
+
+    private long videoMfuPresentationTimestampUs;
+    private long audioMfuPresentationTimestampUs;
 
     private MpuMetadata_HEVC_NAL_Payload InitMpuMetadata_HEVC_NAL_Payload = null;
 
@@ -108,8 +109,9 @@ public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payl
         isActive = false;
 
         mfuBufferQueue.clear();
-        MapAudioMfuPresentationTimestampUsAnchorSystemTimeUs.clear();
-        MapVideoMfuPresentationTimestampUsAnchorSystemTimeUs.clear();
+
+        videoMfuPresentationTimestampUs = 0;
+        audioMfuPresentationTimestampUs = 0;
 
         notify();
     }
@@ -309,41 +311,32 @@ public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payl
         return false;
     }
 
+    public long ptsOffsetUs() {
+        return 66000L;
+    }
+
     public long getPresentationTimestampUs(MfuByteBufferFragment toProcessMfuByteBufferFragment) {
-        long ptsOffsetUs = 66000L;
-
-        //by default for any missing MMT SI emissions or flash-cut into MMT flow emission, use now_Us + 66000uS for our presentationTimestampUs
-        long computedPresentationTimestampUs = System.currentTimeMillis() * 1000 + ptsOffsetUs;
-
         if (toProcessMfuByteBufferFragment.mfu_presentation_time_uS_computed != null && toProcessMfuByteBufferFragment.mfu_presentation_time_uS_computed > 0) {
             //default values here as fallback
             long anchorMfuPresentationTimestampUs = toProcessMfuByteBufferFragment.mpu_presentation_time_uS_from_SI;
-            long anchorSystemTimeUs = System.currentTimeMillis() * 1000;
 
             //todo: expand size as needed, every ~ mfu_presentation_time_uS_computed 1000000uS
             if (toProcessMfuByteBufferFragment.packet_id == MmtPacketIdContext.video_packet_id) {
-
-                if (MapVideoMfuPresentationTimestampUsAnchorSystemTimeUs.size() == 0) {
-                    MapVideoMfuPresentationTimestampUsAnchorSystemTimeUs.put(toProcessMfuByteBufferFragment.mfu_presentation_time_uS_computed, System.currentTimeMillis() * 1000);
+                if (videoMfuPresentationTimestampUs == 0) {
+                    videoMfuPresentationTimestampUs = toProcessMfuByteBufferFragment.mfu_presentation_time_uS_computed;
                 }
-                for (Map.Entry<Long, Long> anchor : MapVideoMfuPresentationTimestampUsAnchorSystemTimeUs.entrySet()) {
-                    anchorMfuPresentationTimestampUs = anchor.getKey();
-                    anchorSystemTimeUs = anchor.getValue();
-                }
+                anchorMfuPresentationTimestampUs = videoMfuPresentationTimestampUs;
             } else if (toProcessMfuByteBufferFragment.packet_id == MmtPacketIdContext.audio_packet_id) {
-                if (MapAudioMfuPresentationTimestampUsAnchorSystemTimeUs.size() == 0) {
-                    MapAudioMfuPresentationTimestampUsAnchorSystemTimeUs.put(toProcessMfuByteBufferFragment.mfu_presentation_time_uS_computed, System.currentTimeMillis() * 1000);
+                if (audioMfuPresentationTimestampUs == 0) {
+                    audioMfuPresentationTimestampUs = toProcessMfuByteBufferFragment.mfu_presentation_time_uS_computed;
                 }
-                for (Map.Entry<Long, Long> anchor : MapAudioMfuPresentationTimestampUsAnchorSystemTimeUs.entrySet()) {
-                    anchorMfuPresentationTimestampUs = anchor.getKey();
-                    anchorSystemTimeUs = anchor.getValue();
-                }
+                anchorMfuPresentationTimestampUs = audioMfuPresentationTimestampUs;
             }
 
             long mpuPresentationTimestampDeltaUs = toProcessMfuByteBufferFragment.mfu_presentation_time_uS_computed - anchorMfuPresentationTimestampUs;
-            computedPresentationTimestampUs = anchorSystemTimeUs + mpuPresentationTimestampDeltaUs + ptsOffsetUs;
+            return mpuPresentationTimestampDeltaUs + ptsOffsetUs();
         }
 
-        return computedPresentationTimestampUs;
+        return 0;
     }
 }
