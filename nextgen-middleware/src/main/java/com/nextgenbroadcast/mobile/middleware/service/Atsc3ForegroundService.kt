@@ -17,7 +17,6 @@ import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.model.SLSService
 import com.nextgenbroadcast.mobile.core.presentation.ApplicationState
-import com.nextgenbroadcast.mobile.core.presentation.IUserAgentPresenter
 import com.nextgenbroadcast.mobile.middleware.BuildConfig
 import com.nextgenbroadcast.mobile.middleware.analytics.Atsc3Analytics
 import com.nextgenbroadcast.mobile.middleware.analytics.IAtsc3Analytics
@@ -314,9 +313,9 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
         viewController?.appState?.observe(this, { appState ->
             when (appState) {
-                ApplicationState.STATE_OPENED -> atsc3Analytics.startApplicationSession()
-                ApplicationState.STATE_LOADED,
-                ApplicationState.STATE_UNAVAILABLE -> atsc3Analytics.finishApplicationSession()
+                ApplicationState.OPENED -> atsc3Analytics.startApplicationSession()
+                ApplicationState.LOADED,
+                ApplicationState.UNAVAILABLE -> atsc3Analytics.finishApplicationSession()
             }
         })
 

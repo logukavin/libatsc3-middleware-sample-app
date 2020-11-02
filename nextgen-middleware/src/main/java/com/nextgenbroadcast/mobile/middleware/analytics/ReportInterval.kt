@@ -5,7 +5,11 @@ class ReportInterval(
         var endTime: Long?,
         var destinationDeviceType: Int?
 ) {
-
     val broadcastIntervals = mutableListOf<BroadcastInterval>()
     val appIntervals = mutableListOf<AppInterval>()
+
+    val isFinished: Boolean
+        get() {
+            return endTime != null
+        }
 }

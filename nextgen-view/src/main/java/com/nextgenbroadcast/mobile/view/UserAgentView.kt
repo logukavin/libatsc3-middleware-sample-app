@@ -10,8 +10,6 @@ import android.view.KeyCharacterMap
 import android.view.KeyEvent
 import android.webkit.*
 import com.nextgenbroadcast.mobile.core.cert.CertificateUtils
-import com.nextgenbroadcast.mobile.core.presentation.ApplicationState
-import com.nextgenbroadcast.mobile.core.presentation.IUserAgentPresenter
 import kotlinx.coroutines.*
 
 class UserAgentView @JvmOverloads constructor(
@@ -23,20 +21,20 @@ class UserAgentView @JvmOverloads constructor(
     var isBAMenuOpened = false
         private set
 
-    private var errorListener: IErrorListener? = null
+    private var listener: IListener? = null
 
     private var appEntryPoint: String? = null
     private var loadingRetryCount: Int = 0
     private var reloadJob: Job? = null
 
-    private var userAgentPresenter: IUserAgentPresenter? = null
-
-    interface IErrorListener {
+    interface IListener {
+        fun onOpen()
+        fun onClose()
         fun onLoadingError()
     }
 
-    fun setErrorListener(listener: IErrorListener) {
-        errorListener = listener
+    fun setListener(listener: IListener) {
+        this.listener = listener
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -106,7 +104,7 @@ class UserAgentView @JvmOverloads constructor(
                 }
             }
         } else {
-            errorListener?.onLoadingError()
+            listener?.onLoadingError()
         }
     }
 
@@ -119,7 +117,6 @@ class UserAgentView @JvmOverloads constructor(
     fun unloadBAContent() {
         reset()
         loadUrl("about:blank")
-        userAgentPresenter?.setState(ApplicationState.STATE_UNAVAILABLE)
     }
 
     fun closeMenu() {
@@ -127,7 +124,8 @@ class UserAgentView @JvmOverloads constructor(
             if (!success) sendKeyPress(KeyEvent.KEYCODE_DPAD_LEFT, 105)
         }
         isBAMenuOpened = false
-        userAgentPresenter?.setState(ApplicationState.STATE_LOADED)
+
+        listener?.onClose()
     }
 
     fun openMenu() {
@@ -135,11 +133,8 @@ class UserAgentView @JvmOverloads constructor(
             if (!success) sendKeyPress(KeyEvent.KEYCODE_DPAD_RIGHT, 106)
         }
         isBAMenuOpened = true
-        userAgentPresenter?.setState(ApplicationState.STATE_OPENED)
-    }
 
-    fun setUserAgentPresenter(presenter: IUserAgentPresenter?) {
-        userAgentPresenter = presenter
+        listener?.onOpen()
     }
 
     private fun reset() {

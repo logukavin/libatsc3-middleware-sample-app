@@ -1,7 +1,7 @@
 package com.nextgenbroadcast.mobile.middleware.analytics
 
 class AppInterval(
-        var startTime: Long?,
+        var startTime: Long,
         var endTime: Long?,
         var lifeCycle: Int?,
 ) {

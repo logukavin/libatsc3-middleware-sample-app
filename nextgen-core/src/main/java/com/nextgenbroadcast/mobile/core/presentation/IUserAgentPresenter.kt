@@ -7,5 +7,5 @@ interface IUserAgentPresenter {
     val appData: LiveData<AppData?>
     val appState: LiveData<ApplicationState>
 
-    fun setState(state: ApplicationState)
+    fun setApplicationState(state: ApplicationState)
 }

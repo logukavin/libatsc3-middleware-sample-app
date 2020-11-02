@@ -4,9 +4,10 @@ import androidx.lifecycle.Transformations
 import androidx.lifecycle.ViewModel
 import com.nextgenbroadcast.mobile.core.presentation.IUserAgentPresenter
 import com.nextgenbroadcast.mobile.core.model.AppData
+import com.nextgenbroadcast.mobile.core.presentation.ApplicationState
 
 class UserAgentViewModel(
-        presenter: IUserAgentPresenter
+        private val presenter: IUserAgentPresenter
 ) : ViewModel() {
 
     val isReady = Transformations.map(presenter.appData) { isAppReady(it) }
@@ -14,5 +15,9 @@ class UserAgentViewModel(
 
     private fun isAppReady(appData: AppData?): Boolean {
         return appData?.isAvailable() ?: false
+    }
+
+    fun setApplicationState(state: ApplicationState) {
+        presenter.setApplicationState(state)
     }
 }

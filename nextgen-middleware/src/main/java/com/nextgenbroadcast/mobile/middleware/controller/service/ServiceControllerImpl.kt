@@ -111,7 +111,7 @@ internal class ServiceControllerImpl (
 
         val res = atsc3Module.selectService(service.id)
         if (res) {
-            atsc3Analytics.startSession(service.bsid, service.id, service.globalId, service.serviceCategory)
+            atsc3Analytics.startSession(service.bsid, service.id, service.globalId, service.category)
 
             // Store successfully selected service. This will lead to RMP reset
             repository.setSelectedService(service)

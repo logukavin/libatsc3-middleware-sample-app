@@ -29,6 +29,7 @@ import com.nextgenbroadcast.mobile.core.FileUtils
 import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.model.SLSService
+import com.nextgenbroadcast.mobile.core.presentation.ApplicationState
 import com.nextgenbroadcast.mobile.core.presentation.IReceiverPresenter
 import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
 import com.nextgenbroadcast.mobile.middleware.sample.core.SwipeGestureDetector
@@ -107,17 +108,11 @@ class MainActivity : BaseActivity() {
             }
         })
 
-        user_agent_web_view.setUserAgentPresenter(binder.userAgentPresenter)
-
         if (initPlayer) {
             initPlayer = false
             rmpViewModel?.mediaUri?.value?.let { uri ->
                 startPlayback(uri)
             }
-        }
-
-        settings_button.setOnClickListener {
-            openSettings(receiver)
         }
     }
 
@@ -187,7 +182,15 @@ class MainActivity : BaseActivity() {
             }
         })
         user_agent_web_view.setOnTouchListener { _, motionEvent -> swipeGD.onTouchEvent(motionEvent) }
-        user_agent_web_view.setErrorListener(object : UserAgentView.IErrorListener {
+        user_agent_web_view.setListener(object : UserAgentView.IListener {
+            override fun onOpen() {
+                userAgentViewModel?.setApplicationState(ApplicationState.OPENED)
+            }
+
+            override fun onClose() {
+                userAgentViewModel?.setApplicationState(ApplicationState.LOADED)
+            }
+
             override fun onLoadingError() {
                 onBALoadingError()
             }
@@ -216,6 +219,12 @@ class MainActivity : BaseActivity() {
             when (bottomSheetBehavior.state) {
                 BottomSheetBehavior.STATE_COLLAPSED -> bottomSheetBehavior.state = BottomSheetBehavior.STATE_EXPANDED
                 BottomSheetBehavior.STATE_EXPANDED -> bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
+            }
+        }
+
+        settings_button.setOnClickListener {
+            receiverPresenter?.let {
+                openSettings(it)
             }
         }
 
@@ -302,7 +311,7 @@ class MainActivity : BaseActivity() {
     private fun onBALoadingError() {
         currentAppData = null
         setBAAvailability(false)
-        user_agent_web_view.unloadBAContent()
+        unloadBroadcasterApplication()
 
         Toast.makeText(this, getText(R.string.ba_loading_problem), Toast.LENGTH_SHORT).show()
     }
@@ -447,12 +456,22 @@ class MainActivity : BaseActivity() {
                 setBAAvailability(true)
             }
             if (!appData.isAppEquals(currentAppData) || appData.isAvailable() != currentAppData?.isAvailable()) {
-                user_agent_web_view.loadBAContent(appData.appEntryPage)
+                loadBroadcasterApplication(appData)
             }
         } else {
-            user_agent_web_view.unloadBAContent()
+            unloadBroadcasterApplication()
         }
         currentAppData = appData
+    }
+
+    private fun loadBroadcasterApplication(appData: AppData) {
+        user_agent_web_view.loadBAContent(appData.appEntryPage)
+        userAgentViewModel?.setApplicationState(ApplicationState.LOADED)
+    }
+
+    private fun unloadBroadcasterApplication() {
+        user_agent_web_view.unloadBAContent()
+        userAgentViewModel?.setApplicationState(ApplicationState.UNAVAILABLE)
     }
 
     private fun isBAvailable() = currentAppData?.isAvailable() ?: false
