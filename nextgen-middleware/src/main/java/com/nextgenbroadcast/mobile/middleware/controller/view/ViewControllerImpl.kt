@@ -7,7 +7,6 @@ import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.RPMParams
 import com.nextgenbroadcast.mobile.core.presentation.ApplicationState
-import com.nextgenbroadcast.mobile.core.presentation.IUserAgentPresenter
 import com.nextgenbroadcast.mobile.core.presentation.media.IObservablePlayer
 import com.nextgenbroadcast.mobile.core.presentation.media.PlayerStateRegistry
 import com.nextgenbroadcast.mobile.middleware.analytics.IAtsc3Analytics
@@ -51,9 +50,9 @@ internal class ViewControllerImpl(
         }
     }
 
-    override val appState = MutableLiveData(ApplicationState.STATE_UNAVAILABLE)
+    override val appState = MutableLiveData(ApplicationState.UNAVAILABLE)
 
-    override fun setState(state: ApplicationState) {
+    override fun setApplicationState(state: ApplicationState) {
         appState.postValue(state)
     }
 
@@ -95,16 +94,8 @@ internal class ViewControllerImpl(
     }
 
     override fun rmpPlaybackChanged(state: PlaybackState) {
-        when(state) {
-            PlaybackState.PLAYING -> {
-                atsc3Analytics.startDisplayContent()
-            }
-            PlaybackState.PAUSED,
-            PlaybackState.IDLE -> {
-                atsc3Analytics.finishDisplayContent()
-            }
-        }
         rmpState.postValue(state)
+        reportPlaybackState(state)
     }
 
     override fun rmpPause() {
@@ -150,5 +141,17 @@ internal class ViewControllerImpl(
     //TODO: currently delay not supported and blocked on RPC level
     override fun requestMediaStop(delay: Long) {
         rmpPause()
+    }
+
+    private fun reportPlaybackState(state: PlaybackState) {
+        when (state) {
+            PlaybackState.PLAYING -> {
+                atsc3Analytics.startDisplayMediaContent()
+            }
+            PlaybackState.PAUSED,
+            PlaybackState.IDLE -> {
+                atsc3Analytics.finishDisplayMediaContent()
+            }
+        }
     }
 }

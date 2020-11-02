@@ -64,7 +64,7 @@ class InterprocessServiceBinder(
         override val appData = MutableLiveData<AppData?>()
         override val appState = MutableLiveData<ApplicationState>()
 
-        override fun setState(appState: ApplicationState) {
+        override fun setApplicationState(state: ApplicationState) {
             sendAction(IServiceBinder.ACTION_BA_STATE_CHANGED, bundleOf(
                     IServiceBinder.PARAM_APPSTATE to appState
             ))

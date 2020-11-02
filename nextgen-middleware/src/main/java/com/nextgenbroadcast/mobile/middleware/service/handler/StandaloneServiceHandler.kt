@@ -109,7 +109,7 @@ internal class StandaloneServiceHandler(
 
             IServiceBinder.ACTION_BA_STATE_CHANGED -> {
                 msg.data.getParcelable(ApplicationState::class.java, IServiceBinder.PARAM_APPSTATE)?.let {
-                    viewController.setState(it)
+                    viewController.setApplicationState(it)
                 }
             }
 
