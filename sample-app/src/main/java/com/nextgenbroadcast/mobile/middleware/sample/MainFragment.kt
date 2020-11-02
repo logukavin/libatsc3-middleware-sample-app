@@ -37,13 +37,12 @@ import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.SelectorViewModel
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.UserAgentViewModel
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.factory.UserAgentViewModelFactory
 import com.nextgenbroadcast.mobile.middleware.sample.useragent.ServiceAdapter
-import com.nextgenbroadcast.mobile.middleware.service.Atsc3ForegroundService.Companion.openRoute
 import com.nextgenbroadcast.mobile.view.UserAgentView
 import kotlinx.android.synthetic.main.fragment_main.*
 import java.util.*
 
 
-class MainFragment : Fragment() {
+class MainFragment : BaseFragment() {
 
     private lateinit var binding: FragmentMainBinding
 
@@ -67,7 +66,7 @@ class MainFragment : Fragment() {
 
     private val getContent = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         val path = uri?.let { FileUtils.getPath(requireContext(), uri) }
-        path?.let { openRoute(requireContext(), path) }
+        path?.let { openRoute(path) }
     }
 
     override fun onAttach(context: Context) {
@@ -146,7 +145,7 @@ class MainFragment : Fragment() {
                 showFileChooser()
             } else {
                 sourceMap.getOrNull(position)?.let { (_, path) ->
-                    openRoute(requireContext(), path)
+                    openRoute(path)
                 }
             }
         }
@@ -208,7 +207,7 @@ class MainFragment : Fragment() {
                 if (previewMode) {
                     previewName?.let { source ->
                         sourceMap.find { (name, _, _) -> name == source }?.let { (_, path, _) ->
-                            (openRoute(requireContext(), path))
+                            (openRoute(path))
                         }
                     }
                 }
@@ -311,7 +310,7 @@ class MainFragment : Fragment() {
                         params.scale.toFloat() / 100
                 )
             })
-            //TODO: (activity as MainActivity).preparePlayerView(receiver_player)
+            preparePlayerView(receiver_player)
             mediaUri.observe(this@MainFragment, { mediaUri ->
                 mediaUri?.let { startPlayback(mediaUri) } ?: receiver_player.stopPlayback()
             })

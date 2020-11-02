@@ -6,10 +6,9 @@ import android.content.Intent
 import android.content.ServiceConnection
 import android.os.IBinder
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
+import androidx.fragment.app.Fragment
 import com.nextgenbroadcast.mobile.permission.UriPermissionProvider
 import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
-import com.nextgenbroadcast.mobile.middleware.sample.view.ReceiverPlayerView
 import com.nextgenbroadcast.mobile.service.binder.InterprocessServiceBinder
 
 abstract class BaseActivity : AppCompatActivity() {
@@ -35,18 +34,11 @@ abstract class BaseActivity : AppCompatActivity() {
         onUnbind()
     }
 
-    fun openRoute(path: String) {
-        newServiceIntent().apply {
-            action = /*Atsc3ForegroundService.ACTION_OPEN_ROUTE*/ "com.nextgenbroadcast.mobile.middleware.intent.action.OPEN_ROUTE"
-            putExtra(/*BindableForegroundService.EXTRA_FOREGROUND*/"foreground", true)
-            putExtra(/*Atsc3ForegroundService.EXTRA_ROUTE_PATH*/ "route_path", path)
-        }.also { intent ->
-            ContextCompat.startForegroundService(this, intent)
+    override fun onAttachFragment(fragment: Fragment) {
+        if (fragment is BaseFragment) {
+            fragment.uriPermissionProvider = uriPermissionProvider
+            fragment.newServiceIntent = newServiceIntent()
         }
-    }
-
-    fun preparePlayerView(playerView: ReceiverPlayerView) {
-        playerView.setUriPermissionProvider(uriPermissionProvider)
     }
 
     abstract fun onBind(binder: IServiceBinder)
