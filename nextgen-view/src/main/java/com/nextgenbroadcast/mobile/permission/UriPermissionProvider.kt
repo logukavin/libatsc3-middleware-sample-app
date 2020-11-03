@@ -4,9 +4,10 @@ import android.net.Uri
 import java.util.concurrent.ConcurrentHashMap
 
 class UriPermissionProvider(
-        val clientPackage: String
+        private val clientPackage: String
 ) {
 
+    @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
     private val permissionRequests = ConcurrentHashMap<String, Object>()
 
     @Volatile

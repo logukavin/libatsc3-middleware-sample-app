@@ -17,6 +17,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.os.bundleOf
 import androidx.lifecycle.ViewModelProvider
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
+import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.RMPViewModel
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.factory.UserAgentViewModelFactory
@@ -34,6 +35,24 @@ class MainActivity : BaseActivity() {
     }
 
     override fun onBind(binder: IServiceBinder) {
+        binder.receiverPresenter.receiverState.observe(this, { state ->
+            if (state == null || state == ReceiverState.IDLE) {
+                if (previewMode) {
+                    previewName?.let { source ->
+                        sourceMap.find { (name, _, _) -> name == source }?.let { (_, path, _) ->
+                            openRoute(this, path)
+                        }
+                    }
+                }
+
+                if (isInPictureInPictureMode) {
+                    startActivity(Intent(this, MainActivity::class.java).apply {
+                        flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+                    })
+                }
+            }
+        })
+
         val factory = UserAgentViewModelFactory(
                 binder.userAgentPresenter,
                 binder.mediaPlayerPresenter,
@@ -42,7 +61,7 @@ class MainActivity : BaseActivity() {
 
         rmpViewModel = ViewModelProvider(viewModelStore, factory).get(RMPViewModel::class.java)
 
-        getMainFragment().onBind(binder, factory)
+        getMainFragment().onBind(binder)
     }
 
     override fun onUnbind() {

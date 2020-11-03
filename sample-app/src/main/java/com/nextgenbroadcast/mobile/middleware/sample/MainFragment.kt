@@ -2,7 +2,6 @@ package com.nextgenbroadcast.mobile.middleware.sample
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.view.GestureDetector
@@ -17,13 +16,11 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.os.bundleOf
 import androidx.databinding.DataBindingUtil
-import androidx.fragment.app.Fragment
 import androidx.fragment.app.setFragmentResultListener
 import androidx.lifecycle.ViewModelProvider
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.nextgenbroadcast.mobile.core.FileUtils
 import com.nextgenbroadcast.mobile.core.model.AppData
-import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.model.SLSService
 import com.nextgenbroadcast.mobile.core.presentation.IReceiverPresenter
 import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
@@ -66,7 +63,7 @@ class MainFragment : BaseFragment() {
 
     private val getContent = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         val path = uri?.let { FileUtils.getPath(requireContext(), uri) }
-        path?.let { openRoute(path) }
+        path?.let { openRoute(requireContext(), path) }
     }
 
     override fun onAttach(context: Context) {
@@ -145,7 +142,7 @@ class MainFragment : BaseFragment() {
                 showFileChooser()
             } else {
                 sourceMap.getOrNull(position)?.let { (_, path) ->
-                    openRoute(path)
+                    openRoute(requireContext(), path)
                 }
             }
         }
@@ -162,6 +159,12 @@ class MainFragment : BaseFragment() {
 
         setFragmentResultListener(REQUEST_KEY_FREQUENCY) { _, bundle ->
             receiverPresenter?.tune(bundle.getInt(SettingsDialog.PARAM_FREQUENCY, 0))
+        }
+
+        settings_button.setOnClickListener {
+            receiverPresenter?.let {
+                openSettings(it.freqKhz.value)
+            }
         }
     }
 
@@ -180,16 +183,15 @@ class MainFragment : BaseFragment() {
         bottom_sheet.visibility = visibility
     }
 
-    fun onUnbind() {
-        receiver_player.unbind()
+    override fun onBind(binder: IServiceBinder) {
+        super.onBind(binder)
 
-        rmpViewModel = null
-        userAgentViewModel = null
-        selectorViewModel = null
-        receiverViewModel = null
-    }
+        val factory = UserAgentViewModelFactory(
+                binder.userAgentPresenter,
+                binder.mediaPlayerPresenter,
+                binder.selectorPresenter
+        )
 
-    fun onBind(binder: IServiceBinder, factory: UserAgentViewModelFactory) {
         val provider = ViewModelProvider(requireActivity().viewModelStore, factory)
 
         bindViewModels(provider).let { (rmp, userAgent, selector) ->
@@ -198,27 +200,7 @@ class MainFragment : BaseFragment() {
             bindMediaPlayer(rmp)
         }
 
-        val receiver = binder.receiverPresenter.also {
-            receiverPresenter = it
-        }
-
-        receiver.receiverState.observe(this, { state ->
-            if (state == null || state == ReceiverState.IDLE) {
-                if (previewMode) {
-                    previewName?.let { source ->
-                        sourceMap.find { (name, _, _) -> name == source }?.let { (_, path, _) ->
-                            (openRoute(path))
-                        }
-                    }
-                }
-
-                if (requireActivity().isInPictureInPictureMode) {
-                    startActivity(Intent(requireContext(), MainActivity::class.java).apply {
-                        flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-                    })
-                }
-            }
-        })
+        receiverPresenter = binder.receiverPresenter
 
         if (initPlayer) {
             initPlayer = false
@@ -226,10 +208,17 @@ class MainFragment : BaseFragment() {
                 startPlayback(uri)
             }
         }
+    }
 
-        settings_button.setOnClickListener {
-            openSettings(receiver.freqKhz.value)
-        }
+    override fun onUnbind() {
+        super.onUnbind()
+
+        receiver_player.unbind()
+
+        rmpViewModel = null
+        userAgentViewModel = null
+        selectorViewModel = null
+        receiverViewModel = null
     }
 
     private fun setSelectedService(serviceId: Int, serviceName: String?) {

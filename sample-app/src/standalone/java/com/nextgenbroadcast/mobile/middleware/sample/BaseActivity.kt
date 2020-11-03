@@ -46,3 +46,7 @@ abstract class BaseActivity : AppCompatActivity() {
         }
     }
 }
+
+fun openRoute(context: Context, path: String) {
+    Atsc3ForegroundService.openRoute(context, path)
+}
