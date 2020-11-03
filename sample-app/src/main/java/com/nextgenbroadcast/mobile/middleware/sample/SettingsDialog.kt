@@ -1,19 +1,27 @@
 package com.nextgenbroadcast.mobile.middleware.sample
 
-import android.app.Activity
-import android.content.Intent
 import android.os.Bundle
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
+import androidx.fragment.app.DialogFragment
+import androidx.fragment.app.setFragmentResult
 import kotlinx.android.synthetic.main.dialog_settings.*
+import kotlinx.android.synthetic.main.dialog_settings.view.*
 
-class SettingsDialog: Activity() {
+
+class SettingsDialog: DialogFragment() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        setStyle(STYLE_NORMAL, R.style.Dialog)
+    }
 
-        setContentView(R.layout.dialog_settings)
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+        val view = inflater.inflate(R.layout.dialog_settings, container)
 
-        frequencyEditText.setOnEditorActionListener { _, actionId, _ ->
+        view.frequencyEditText.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_DONE) {
                 done()
                 return@setOnEditorActionListener true
@@ -21,25 +29,44 @@ class SettingsDialog: Activity() {
             return@setOnEditorActionListener false
         }
 
-        val freqKhz = intent.getIntExtra(PARAM_FREQUENCY, 0)
-        if (freqKhz > 0) {
-            frequencyEditText.setText((freqKhz / 1000).toString())
+        arguments?.let { args ->
+            val freqKhz = args.getInt(PARAM_FREQUENCY, 0)
+            if (freqKhz > 0) {
+                view.frequencyEditText.setText((freqKhz / 1000).toString())
+            }
         }
 
-        applyButton.setOnClickListener {
+        view.applyButton.setOnClickListener {
             done()
         }
+
+        return view
     }
 
     private fun done() {
-        setResult(RESULT_OK, Intent().apply {
-            val freqKhz = frequencyEditText.text.toString().toIntOrNull()?.let { it * 1000 } ?: 0
-            putExtra(PARAM_FREQUENCY, freqKhz)
-        })
-        finish()
+        val freqKhz = frequencyEditText.text.toString().toIntOrNull()?.let { it * 1000 } ?: 0
+        val result = Bundle().apply{
+            putInt(PARAM_FREQUENCY, freqKhz)
+        }
+        setFragmentResult(REQUEST_KEY_FREQUENCY, result)
+
+        dismiss()
     }
 
     companion object {
+        val TAG: String = SettingsDialog::class.java.simpleName
+
         const val PARAM_FREQUENCY = "param_frequency"
+        const val REQUEST_KEY_FREQUENCY = "requestKey_frequency"
+
+        fun newInstance(freqKhz: Int?): SettingsDialog {
+            return SettingsDialog().apply {
+                if (freqKhz != null) {
+                    arguments = Bundle().apply {
+                        putInt(PARAM_FREQUENCY, freqKhz)
+                    }
+                }
+            }
+        }
     }
 }
