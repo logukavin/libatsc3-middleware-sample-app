@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.lifecycle.MutableLiveData
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.model.SLSService
+import com.nextgenbroadcast.mobile.middleware.analytics.IAtsc3Analytics
 import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3Module
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPackage
@@ -19,6 +20,7 @@ internal class ServiceControllerImpl (
         private val repository: IRepository,
         private val settings: IReceiverSettings,
         private val atsc3Module: Atsc3Module,
+        private val atsc3Analytics: IAtsc3Analytics
 ) : IServiceController, Atsc3Module.Listener {
 
     private val ioScope = CoroutineScope(Dispatchers.IO)
@@ -51,7 +53,7 @@ internal class ServiceControllerImpl (
 
     override fun onServicesLoaded(services: List<Atsc3Service?>) {
         val slsServices = services.filterNotNull()
-                .map { SLSService(it.bsid, it.serviceId, it.shortServiceName, it.globalServiceId) }
+                .map { SLSService(it.bsid, it.serviceId, it.shortServiceName, it.globalServiceId, it.serviceCategory) }
         repository.setServices(slsServices)
     }
 
@@ -96,6 +98,8 @@ internal class ServiceControllerImpl (
     }
 
     override fun closeRoute() {
+        atsc3Analytics.finishSession()
+
         cancelMediaUrlAssignment()
         atsc3Module.close()
     }
@@ -107,6 +111,8 @@ internal class ServiceControllerImpl (
 
         val res = atsc3Module.selectService(service.id)
         if (res) {
+            atsc3Analytics.startSession(service.bsid, service.id, service.globalId, service.category)
+
             // Store successfully selected service. This will lead to RMP reset
             repository.setSelectedService(service)
 
@@ -139,6 +145,7 @@ internal class ServiceControllerImpl (
 
     override fun tune(freqKhz: Int) {
         this.freqKhz.postValue(freqKhz)
+        settings.lastFrequency = freqKhz
         atsc3Module.tune(freqKhz)
     }
 

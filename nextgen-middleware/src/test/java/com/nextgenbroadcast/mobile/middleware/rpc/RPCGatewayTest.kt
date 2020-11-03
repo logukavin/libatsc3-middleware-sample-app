@@ -9,16 +9,17 @@ import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.SLSService
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPackage
+import com.nextgenbroadcast.mobile.middleware.cache.IApplicationCache
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
 import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
 import com.nextgenbroadcast.mobile.middleware.controller.view.ViewControllerImpl
 import com.nextgenbroadcast.mobile.middleware.gateway.rpc.IRPCGateway
 import com.nextgenbroadcast.mobile.middleware.gateway.rpc.RPCGatewayImpl
+import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
 import com.nextgenbroadcast.mobile.middleware.rpc.notification.NotificationType
 import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.Urls
 import com.nextgenbroadcast.mobile.middleware.server.ws.MiddlewareWebSocket
-import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
 import junit.framework.TestCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -56,6 +57,9 @@ class RPCGatewayTest {
     private lateinit var serviceController: IServiceController
 
     @Mock
+    private lateinit var applicationCache: IApplicationCache
+
+    @Mock
     private lateinit var viewController: IViewController
 
     @Mock
@@ -78,7 +82,7 @@ class RPCGatewayTest {
     private var scaleFactor: Double = 1.0
     private var xPos: Double = 11.0
     private var yPos: Double = 22.0
-    private val mockedSLSService: SLSService = SLSService(1,5003, "WZTV", "tag:sinclairplatform.com,2020:WZTV:2727")
+    private val mockedSLSService: SLSService = SLSService(1, 5003, "WZTV", "tag:sinclairplatform.com,2020:WZTV:2727", 0)
     private val mockedMediaUrl: String = "htttp://mockedurl.com"
     private val deviceId = UUID.randomUUID().toString()
     private val advertisingId = UUID.randomUUID().toString()
@@ -117,7 +121,7 @@ class RPCGatewayTest {
 
         `when`(mockedMediaUri.toString()).thenReturn(mockedMediaUrl)
 
-        iRPCGateway = RPCGatewayImpl(serviceController, viewController, prefs, testDispatcher, testDispatcher)
+        iRPCGateway = RPCGatewayImpl(serviceController, viewController, applicationCache, prefs, testDispatcher, testDispatcher)
         middlewareWebSocket = PowerMockito.spy(MiddlewareWebSocket(iRPCGateway))
         iRPCGateway.onSocketOpened(middlewareWebSocket)
 
