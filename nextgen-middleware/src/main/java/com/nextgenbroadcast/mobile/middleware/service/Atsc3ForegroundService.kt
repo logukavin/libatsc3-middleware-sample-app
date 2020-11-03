@@ -16,7 +16,10 @@ import com.nextgenbroadcast.mobile.core.cert.UserAgentSSLContext
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.model.SLSService
+import com.nextgenbroadcast.mobile.core.presentation.ApplicationState
 import com.nextgenbroadcast.mobile.middleware.BuildConfig
+import com.nextgenbroadcast.mobile.middleware.analytics.Atsc3Analytics
+import com.nextgenbroadcast.mobile.middleware.analytics.IAtsc3Analytics
 import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3Module
 import com.nextgenbroadcast.mobile.middleware.cache.ApplicationCache
 import com.nextgenbroadcast.mobile.middleware.cache.DownloadManager
@@ -53,6 +56,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     private lateinit var serviceController: IServiceController
     private lateinit var appCache: IApplicationCache
     private lateinit var state: MediatorLiveData<Triple<ReceiverState?, SLSService?, PlaybackState?>>
+    private lateinit var atsc3Analytics: IAtsc3Analytics
 
     private var viewController: IViewController? = null
     private var webGateway: IWebGateway? = null
@@ -87,7 +91,9 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
             atsc3Module = it
         }
 
-        serviceController = ServiceControllerImpl(repo, settings, atsc3)
+        atsc3Analytics = Atsc3Analytics()
+
+        serviceController = ServiceControllerImpl(repo, settings, atsc3, atsc3Analytics)
 
         appCache = ApplicationCache(atsc3.jni_getCacheDir(), DownloadManager())
 
@@ -297,7 +303,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         // we release it only when destroy presentation layer
         if (wakeLock.isHeld) return
 
-        val view = ViewControllerImpl(repository, settings, mediaFileProvider).also {
+        val view = ViewControllerImpl(repository, settings, mediaFileProvider, atsc3Analytics).also {
             viewController = it
         }
         val web = WebGatewayImpl(serviceController, repository, settings).also {
@@ -310,6 +316,14 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         state.addSource(view.rmpState) { playbackState ->
             state.value = newState(playbackState = playbackState)
         }
+
+        viewController?.appState?.observe(this, { appState ->
+            when (appState) {
+                ApplicationState.OPENED -> atsc3Analytics.startApplicationSession()
+                ApplicationState.LOADED,
+                ApplicationState.UNAVAILABLE -> atsc3Analytics.finishApplicationSession()
+            }
+        })
 
         startWebServer(rpc, web)
 
