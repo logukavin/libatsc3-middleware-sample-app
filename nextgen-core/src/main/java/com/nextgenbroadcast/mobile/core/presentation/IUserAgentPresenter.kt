@@ -5,4 +5,7 @@ import com.nextgenbroadcast.mobile.core.model.AppData
 
 interface IUserAgentPresenter {
     val appData: LiveData<AppData?>
+    val appState: LiveData<ApplicationState>
+
+    fun setApplicationState(state: ApplicationState)
 }

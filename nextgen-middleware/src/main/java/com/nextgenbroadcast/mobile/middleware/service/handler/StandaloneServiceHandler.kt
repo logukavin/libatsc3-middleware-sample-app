@@ -6,6 +6,7 @@ import androidx.core.os.bundleOf
 import androidx.lifecycle.LifecycleOwner
 import com.nextgenbroadcast.mobile.core.getParcelable
 import com.nextgenbroadcast.mobile.core.model.*
+import com.nextgenbroadcast.mobile.core.presentation.ApplicationState
 import com.nextgenbroadcast.mobile.core.presentation.media.IObservablePlayer
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
 import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
@@ -104,6 +105,12 @@ internal class StandaloneServiceHandler(
 
             IServiceBinder.ACTION_TYNE_FREQUENCY -> {
                 receiverPresenter.tune(msg.data.getInt(IServiceBinder.PARAM_FREQUENCY_KHZ))
+            }
+
+            IServiceBinder.ACTION_BA_STATE_CHANGED -> {
+                msg.data.getParcelable(ApplicationState::class.java, IServiceBinder.PARAM_APPSTATE)?.let {
+                    viewController.setApplicationState(it)
+                }
             }
 
             else -> super.handleMessage(msg)
