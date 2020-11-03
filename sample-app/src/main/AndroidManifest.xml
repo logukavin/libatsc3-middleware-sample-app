@@ -34,8 +34,6 @@
             </intent-filter>
         </activity>
 
-        <activity android:name=".SettingsDialog" android:theme="@style/Dialog" />
-
     </application>
 
 </manifest>
