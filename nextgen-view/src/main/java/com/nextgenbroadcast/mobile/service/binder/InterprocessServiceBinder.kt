@@ -17,10 +17,10 @@ import java.lang.UnsupportedOperationException
 
 class InterprocessServiceBinder(
         service: IBinder,
-        private val clientPackage: String,
-        uriPermissionProvider: UriPermissionProvider? = null
+        clientPackage: String
 ) : IServiceBinder, IUriPermissionRequester {
 
+    private var uriPermissionProvider: UriPermissionProvider? = null
     private var playerStateListener: IObservablePlayer.IPlayerStateListener? = null
 
     inner class SelectorPresenter : ISelectorPresenter {
@@ -101,6 +101,11 @@ class InterprocessServiceBinder(
         }
     }
 
+    fun setPermissionProvider(permissionProvider: UriPermissionProvider) {
+        uriPermissionProvider = permissionProvider
+        permissionProvider.setPermissionRequester(this)
+    }
+
     override val selectorPresenter = SelectorPresenter()
 
     override val receiverPresenter = ReceiverPresenter()
@@ -112,7 +117,6 @@ class InterprocessServiceBinder(
     private var sendingMessenger: Messenger? = Messenger(service)
 
     private val incomingMessenger = Messenger(StandaloneClientHandler(
-            uriPermissionProvider,
             selectorPresenter,
             receiverPresenter,
             userAgentPresenter,
@@ -124,6 +128,10 @@ class InterprocessServiceBinder(
 
                 override fun onPlayerStateResume() {
                     playerStateListener?.onResume(mediaPlayerPresenter)
+                }
+
+                override fun onPermissionGranted(uriPath: String) {
+                    uriPermissionProvider?.permissionGranted(uriPath)
                 }
             }
     ))
