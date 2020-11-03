@@ -18,7 +18,6 @@ import com.nextgenbroadcast.mobile.middleware.gateway.rpc.IRPCGateway
 import com.nextgenbroadcast.mobile.middleware.gateway.rpc.RPCGatewayImpl
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
 import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.Urls
-import com.nextgenbroadcast.mobile.middleware.service.provider.IMediaFileProvider
 import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
 import junit.framework.TestCase
 import kotlinx.coroutines.Dispatchers
