@@ -27,14 +27,13 @@ class FrequencyLocator : IFrequencyLocator {
         val location: Location? = suspendCancellableCoroutine { cont ->
             val locationManager = (context.getSystemService(Context.LOCATION_SERVICE) as LocationManager)
 
+            getNewestLastKnownLocation(locationManager)?.let {
+                cont.resume(it)
+                return@suspendCancellableCoroutine
+            }
+
             try {
                 locationManager.getBestProvider(Criteria(), true)?.let { provider ->
-                    locationManager.getLastKnownLocation(provider)?.let { location ->
-                        //TODO: check location time
-                        cont.resume(location)
-                        return@suspendCancellableCoroutine
-                    }
-
                     val locationListener = object : LocationListener {
                         override fun onLocationChanged(location: Location?) {
                             locationManager.removeUpdates(this)
@@ -80,6 +79,28 @@ class FrequencyLocator : IFrequencyLocator {
             locationManager.removeUpdates(locationListener)
             locationRequest = null
         }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun getNewestLastKnownLocation(locationManager: LocationManager): Location? {
+        var bestLocation: Location? = null
+        locationManager.getProviders(true).forEach { provider ->
+            try {
+                locationManager.getLastKnownLocation(provider)?.let { location ->
+                    bestLocation?.let { lastLocation ->
+                        if (location.elapsedRealtimeNanos < lastLocation.elapsedRealtimeNanos) {
+                            bestLocation = location
+                        }
+                    } ?: let {
+                        bestLocation = location
+                    }
+                }
+            } catch (e: Exception) {
+                Log.w(FrequencyInitializer.TAG, "Error on location request ", e)
+            }
+        }
+
+        return bestLocation
     }
 
     private suspend fun getFrequencyByLocation(longitude: Double, latitude: Double): List<Int> {
