@@ -145,6 +145,7 @@ internal class ServiceControllerImpl (
 
     override fun tune(freqKhz: Int) {
         this.freqKhz.postValue(freqKhz)
+        settings.lastFrequency = freqKhz
         atsc3Module.tune(freqKhz)
     }
 
