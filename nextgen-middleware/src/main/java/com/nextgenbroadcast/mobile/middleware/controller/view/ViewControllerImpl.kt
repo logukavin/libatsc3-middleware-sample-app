@@ -6,8 +6,10 @@ import com.nextgenbroadcast.mobile.core.mapWith
 import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.RPMParams
+import com.nextgenbroadcast.mobile.core.presentation.ApplicationState
 import com.nextgenbroadcast.mobile.core.presentation.media.IObservablePlayer
 import com.nextgenbroadcast.mobile.core.presentation.media.PlayerStateRegistry
+import com.nextgenbroadcast.mobile.middleware.analytics.IAtsc3Analytics
 import com.nextgenbroadcast.mobile.middleware.service.provider.IMediaFileProvider
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
 import com.nextgenbroadcast.mobile.middleware.server.ServerUtils
@@ -16,7 +18,8 @@ import com.nextgenbroadcast.mobile.middleware.settings.IClientSettings
 internal class ViewControllerImpl(
         private val repository: IRepository,
         private val settings: IClientSettings,
-        private val fileProvider: IMediaFileProvider
+        private val fileProvider: IMediaFileProvider,
+        private val atsc3Analytics: IAtsc3Analytics
 ) : IViewController {
 
     private enum class PlaybackSource {
@@ -45,6 +48,12 @@ internal class ViewControllerImpl(
                     application?.cachePath
             )
         }
+    }
+
+    override val appState = MutableLiveData(ApplicationState.UNAVAILABLE)
+
+    override fun setApplicationState(state: ApplicationState) {
+        appState.postValue(state)
     }
 
     override val rmpLayoutParams = MutableLiveData(RPMParams())
@@ -86,6 +95,7 @@ internal class ViewControllerImpl(
 
     override fun rmpPlaybackChanged(state: PlaybackState) {
         rmpState.postValue(state)
+        reportPlaybackState(state)
     }
 
     override fun rmpPause() {
@@ -131,5 +141,17 @@ internal class ViewControllerImpl(
     //TODO: currently delay not supported and blocked on RPC level
     override fun requestMediaStop(delay: Long) {
         rmpPause()
+    }
+
+    private fun reportPlaybackState(state: PlaybackState) {
+        when (state) {
+            PlaybackState.PLAYING -> {
+                atsc3Analytics.startDisplayMediaContent()
+            }
+            PlaybackState.PAUSED,
+            PlaybackState.IDLE -> {
+                atsc3Analytics.finishDisplayMediaContent()
+            }
+        }
     }
 }
