@@ -22,6 +22,7 @@ import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.nextgenbroadcast.mobile.core.FileUtils
 import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.model.SLSService
+import com.nextgenbroadcast.mobile.core.presentation.ApplicationState
 import com.nextgenbroadcast.mobile.core.presentation.IReceiverPresenter
 import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
 import com.nextgenbroadcast.mobile.middleware.sample.MainActivity.Companion.sourceMap
@@ -122,7 +123,15 @@ class MainFragment : BaseFragment() {
         })
 
         user_agent_web_view.setOnTouchListener { _, motionEvent -> swipeGD.onTouchEvent(motionEvent) }
-        user_agent_web_view.setErrorListener(object : UserAgentView.IErrorListener {
+        user_agent_web_view.setListener(object : UserAgentView.IListener {
+            override fun onOpen() {
+                userAgentViewModel?.setApplicationState(ApplicationState.OPENED)
+            }
+
+            override fun onClose() {
+                userAgentViewModel?.setApplicationState(ApplicationState.LOADED)
+            }
+
             override fun onLoadingError() {
                 onBALoadingError()
             }
@@ -254,7 +263,7 @@ class MainFragment : BaseFragment() {
     private fun onBALoadingError() {
         currentAppData = null
         setBAAvailability(false)
-        user_agent_web_view.unloadBAContent()
+        unloadBroadcasterApplication()
 
         Toast.makeText(requireContext(), getText(R.string.ba_loading_problem), Toast.LENGTH_SHORT).show()
     }
@@ -345,10 +354,10 @@ class MainFragment : BaseFragment() {
                 setBAAvailability(true)
             }
             if (!appData.isAppEquals(currentAppData) || appData.isAvailable() != currentAppData?.isAvailable()) {
-                user_agent_web_view.loadBAContent(appData.appEntryPage)
+                loadBroadcasterApplication(appData)
             }
         } else {
-            user_agent_web_view.unloadBAContent()
+            unloadBroadcasterApplication()
         }
         currentAppData = appData
     }
@@ -363,6 +372,16 @@ class MainFragment : BaseFragment() {
             constrainPercentHeight(R.id.receiver_player, scale)
             constrainPercentWidth(R.id.receiver_player, scale)
         }.applyTo(user_agent_root)
+    }
+
+    private fun loadBroadcasterApplication(appData: AppData) {
+        user_agent_web_view.loadBAContent(appData.appEntryPage)
+        userAgentViewModel?.setApplicationState(ApplicationState.LOADED)
+    }
+
+    private fun unloadBroadcasterApplication() {
+        user_agent_web_view.unloadBAContent()
+        userAgentViewModel?.setApplicationState(ApplicationState.UNAVAILABLE)
     }
 
     override fun onStop() {
