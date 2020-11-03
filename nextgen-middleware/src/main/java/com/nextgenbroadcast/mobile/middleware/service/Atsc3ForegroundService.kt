@@ -21,6 +21,9 @@ import com.nextgenbroadcast.mobile.middleware.BuildConfig
 import com.nextgenbroadcast.mobile.middleware.analytics.Atsc3Analytics
 import com.nextgenbroadcast.mobile.middleware.analytics.IAtsc3Analytics
 import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3Module
+import com.nextgenbroadcast.mobile.middleware.cache.ApplicationCache
+import com.nextgenbroadcast.mobile.middleware.cache.DownloadManager
+import com.nextgenbroadcast.mobile.middleware.cache.IApplicationCache
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
 import com.nextgenbroadcast.mobile.middleware.controller.service.ServiceControllerImpl
 import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
@@ -51,6 +54,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     private lateinit var repository: IRepository
     private lateinit var atsc3Module: Atsc3Module
     private lateinit var serviceController: IServiceController
+    private lateinit var appCache: IApplicationCache
     private lateinit var state: MediatorLiveData<Triple<ReceiverState?, SLSService?, PlaybackState?>>
     private lateinit var atsc3Analytics: IAtsc3Analytics
 
@@ -90,6 +94,8 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         atsc3Analytics = Atsc3Analytics()
 
         serviceController = ServiceControllerImpl(repo, settings, atsc3, atsc3Analytics)
+
+        appCache = ApplicationCache(atsc3.jni_getCacheDir(), DownloadManager())
 
         state = MediatorLiveData<Triple<ReceiverState?, SLSService?, PlaybackState?>>().apply {
             addSource(serviceController.receiverState) { receiverState ->
@@ -303,7 +309,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         val web = WebGatewayImpl(serviceController, repository, settings).also {
             webGateway = it
         }
-        val rpc = RPCGatewayImpl(serviceController, view, settings, Dispatchers.Main, Dispatchers.IO).also {
+        val rpc = RPCGatewayImpl(serviceController, view, appCache, settings, Dispatchers.Main, Dispatchers.IO).also {
             rpcGateway = it
         }
 

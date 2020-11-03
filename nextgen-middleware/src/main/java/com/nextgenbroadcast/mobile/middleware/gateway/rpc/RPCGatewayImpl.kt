@@ -3,6 +3,7 @@ package com.nextgenbroadcast.mobile.middleware.gateway.rpc
 import androidx.lifecycle.distinctUntilChanged
 import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
+import com.nextgenbroadcast.mobile.middleware.cache.IApplicationCache
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
 import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
 import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
@@ -17,6 +18,7 @@ import java.util.concurrent.CopyOnWriteArrayList
 internal class RPCGatewayImpl(
         private val serviceController: IServiceController,
         private val viewController: IViewController,
+        private val applicationCache: IApplicationCache,
         settings: IMiddlewareSettings,
         mainDispatcher: CoroutineDispatcher,
         ioDispatcher: CoroutineDispatcher
