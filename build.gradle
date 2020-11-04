@@ -56,4 +56,5 @@ ext {
     libatsc3Version = "1.0.12"
     exoplayerVersion = "2.10.7.3"
     coroutinesVersion = "1.3.9"
+    startupRuntime = '1.0.0'
 }

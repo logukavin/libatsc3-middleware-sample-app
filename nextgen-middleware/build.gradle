@@ -29,7 +29,16 @@ android {
             abiFilters 'arm64-v8a', 'x86', 'x86_64'
         }
 
-        resValue "string", "nextgenMediaFileProvider", "com.nextgenbroadcast.mobile.middleware.provider"
+        resValue("string", "nextgenMediaFileProvider", "com.nextgenbroadcast.mobile.middleware.provider")
+
+        resValue("string", "Auth0TokenUrl", "https://int-sinclairplatform.auth0.com/oauth/token")
+        resValue("string", "Auth0Username", "middleware-service@sinclairplatform.com")
+        resValue("string", "Auth0Password", "Qazwsx123")
+        resValue("string", "Auth0Audience", "https://api.int.sinclairplatform.com")
+        resValue("string", "Auth0ClientId", "NddpBjtN4TO4L5iB2mflkHUsFQ3kngJM")
+        resValue("string", "Auth0ClientSecret", "82cbuq_2qAillIHxR7pmuHaH-HULwzrbB-EQs0dwR09nGMtEWRVBLWDAmRw7OIlO")
+
+        resValue("string", "SinclairPlatformUrl", "https://int-property-gateway.sinclairplatform.com")
     }
 
     buildTypes {
@@ -83,6 +92,7 @@ def coreKtxVersion = rootProject.ext.coreKtxVersion
 def coroutinesVersion = rootProject.ext.coroutinesVersion
 def jettyVersion = '9.4.32.v20200930'
 def powermock_version = "2.0.7"
+def startupRuntime = rootProject.ext.startupRuntime
 
 dependencies {
     implementation fileTree(dir: "libs", include: ["*.jar"])
@@ -117,7 +127,7 @@ dependencies {
     implementation "androidx.lifecycle:lifecycle-livedata-ktx:$lifecycleVersion"
     implementation "androidx.lifecycle:lifecycle-service:$lifecycleVersion"
 
-    implementation("androidx.startup:startup-runtime:1.0.0-rc01") {
+    implementation("androidx.startup:startup-runtime:$startupRuntime") {
         transitive = true
     }
 
