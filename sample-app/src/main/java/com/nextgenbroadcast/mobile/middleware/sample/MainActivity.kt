@@ -95,10 +95,7 @@ class MainActivity : BaseActivity() {
         buildShortcuts(sourceMap.filter { (_, _, isShortcut) -> isShortcut }.map { (name, _, _) -> name })
 
         //make sure we can read from device pcap files and get location
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED ||
-                ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.ACCESS_COARSE_LOCATION), PERMISSION_REQUEST)
-        }
+        checkSelfPermission()
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
@@ -117,18 +114,21 @@ class MainActivity : BaseActivity() {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
 
         if (requestCode == PERMISSION_REQUEST) {
-            val indexWriteExternalStorage = permissions.indexOf(Manifest.permission.WRITE_EXTERNAL_STORAGE)
-            val grantedWriteExternalStorage = (indexWriteExternalStorage >= 0) && grantResults[indexWriteExternalStorage] == PackageManager.PERMISSION_GRANTED
-
-            if (!grantedWriteExternalStorage) {
-                Toast.makeText(this, getText(R.string.warning_external_stortage_permission), Toast.LENGTH_SHORT).show()
+            val requiredPermissions = mutableListOf<String>()
+            permissions.forEachIndexed { i, permission ->
+                if (grantResults[i] != PackageManager.PERMISSION_GRANTED) {
+                    requiredPermissions.add(permission)
+                }
             }
 
-            val indexAccessLocation = permissions.indexOf(Manifest.permission.ACCESS_COARSE_LOCATION)
-            val grantedAccessLocation = (indexAccessLocation >= 0) && grantResults[indexAccessLocation] == PackageManager.PERMISSION_GRANTED
-
-            if (!grantedAccessLocation) {
-                Toast.makeText(this, getText(R.string.warning_access_background_location_permission), Toast.LENGTH_SHORT).show()
+            if (requiredPermissions.isNotEmpty()) {
+                if (requiredPermissions.contains(Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+                    Toast.makeText(this, getString(R.string.warning_external_stortage_permission), Toast.LENGTH_SHORT).show()
+                }
+                if (requiredPermissions.contains(Manifest.permission.ACCESS_COARSE_LOCATION)
+                        || requiredPermissions.contains(Manifest.permission.ACCESS_FINE_LOCATION)) {
+                    Toast.makeText(this, getString(R.string.warning_access_background_location_permission), Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }
@@ -136,6 +136,20 @@ class MainActivity : BaseActivity() {
     override fun onUserLeaveHint() {
         if (hasFeaturePIP && (rmpViewModel?.rmpState == PlaybackState.PLAYING)) {
             enterPictureInPictureMode(PictureInPictureParams.Builder().build())
+        }
+    }
+
+    private fun checkSelfPermission() {
+        val needsPermission = mutableListOf<String>()
+
+        necessaryPermissions.forEach { permission ->
+            if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
+                needsPermission.add(permission)
+            }
+        }
+
+        if (needsPermission.isNotEmpty()) {
+            ActivityCompat.requestPermissions(this, needsPermission.toTypedArray(), PERMISSION_REQUEST)
         }
     }
 
@@ -176,6 +190,12 @@ class MainActivity : BaseActivity() {
         const val PARAM_MODE_PREVIEW = "PARAM_MODE_PREVIEW"
 
         private const val PERMISSION_REQUEST = 1000
+
+        val necessaryPermissions = listOf(
+                Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                Manifest.permission.ACCESS_COARSE_LOCATION,
+                Manifest.permission.ACCESS_FINE_LOCATION
+        )
 
         val sourceMap = listOf(
                 Triple("Select pcap file...", "", false),
