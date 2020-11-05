@@ -77,7 +77,7 @@ class RPCProcessorTest {
             }
 
             override fun addFilesToCache(baseUrl: String?, rootPath: String?, paths: List<String>, filters: List<String>?): Boolean {
-                TODO("Not yet implemented")
+                return false
             }
         })
     }
@@ -190,6 +190,19 @@ class RPCProcessorTest {
         assertNotNull(response)
         assertTrue(response?.contains(JSON_RPC_2_0) ?: false)
         assertTrue(response?.contains(JSON_RPC_ERROR) ?: false)
+    }
+
+    @Test
+    fun cacheRequestTest() {
+        val properties = HashMap<String?, Any?>()
+        properties["sourceURL"] = "https://dummyimage.com/3600/09f/"
+        properties["targetURL"] = "images/"
+        properties["URLs"] = listOf("ffa.png","ffb.png")
+        properties["filters"] = listOf(1007,1009)
+        val response = getResponse("org.atsc.CacheRequest", properties)
+        assertNotNull(response)
+        assertTrue(response?.contains(JSON_RPC_2_0) ?: false)
+        assertFalse(response?.contains(JSON_RPC_ERROR) ?: true)
     }
 
     @Test

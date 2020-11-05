@@ -29,6 +29,7 @@ import kotlinx.coroutines.test.runBlockingTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -206,6 +207,17 @@ class RPCGatewayTest {
         val message = "message"
         iRPCGateway.sendNotification(message)
         verify(middlewareWebSocket)?.sendMessage(message)
+    }
+
+    @Test
+    fun testAddFilesToCache() {
+        val baseUrl = "https://dummyimage.com/3600/09f/"
+        val rootPath = "images/"
+        val paths = listOf("ffa.png","ffb.png")
+        assertFalse( iRPCGateway.addFilesToCache(baseUrl, rootPath, paths, null))
+        assertFalse( iRPCGateway.addFilesToCache(null, rootPath, paths, null))
+        assertFalse( iRPCGateway.addFilesToCache(baseUrl, null, paths, null))
+        assertFalse( iRPCGateway.addFilesToCache(null, null, paths, null))
     }
 
     @ExperimentalCoroutinesApi
