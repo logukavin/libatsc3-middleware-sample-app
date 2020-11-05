@@ -33,16 +33,18 @@ internal class FrequencyInitializer(
             val prevFrequencyLocation = settings.frequencyLocation
             val lastFrequency = settings.lastFrequency
 
-            val defaultTune = prevFrequencyLocation?.let {
-                async {
+            val defaultTune = async {
                     delay(FAST_TUNE_DELAY)
 
                     if (!isActive) return@async
 
                     frequencyApplied = true
-                    applyFrequency(prevFrequencyLocation)
+                    if (prevFrequencyLocation != null) {
+                        applyFrequency(prevFrequencyLocation)
+                    } else if (lastFrequency > 0) {
+                        receiver.tune(lastFrequency)
+                    }
                 }
-            }
 
             withTimeout(LOCATION_REQUEST_DELAY) {
                 locators.forEach { component ->
@@ -59,7 +61,7 @@ internal class FrequencyInitializer(
                             locationTaken = true
                         }
 
-                        defaultTune?.cancel()
+                        defaultTune.cancel()
                     } catch (e: TimeoutCancellationException) {
                         initializer.cancel()
                         Log.w(TAG, "Location request timeout")
