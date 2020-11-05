@@ -1,5 +1,6 @@
 package com.nextgenbroadcast.mobile.middleware.cache
 
+import android.util.Log
 import com.nextgenbroadcast.mobile.core.md5
 import kotlinx.coroutines.Job
 import java.io.File
@@ -10,24 +11,23 @@ internal class ApplicationCache(
 ) : IApplicationCache {
 
     private val cacheMap: HashMap<String, CacheEntry> by lazy {
-        HashMap()
+        hashMapOf()
     }
 
-    override fun requestFiles(appContextId: String, files: List<Pair<String, String?>>): List<Pair<String, Boolean>> {
+    override fun requestFiles(appContextId: String, targetUrls: String?, sourceUrl: String?, URLs: List<String>, filters: List<String>?): Boolean {
         val cacheEntry = cacheMap.getOrElse(appContextId) {
-            CacheEntry(getCachePathForAppContextId(appContextId)).also {
+            val cachePath = getCachePathForAppContextId(appContextId) + (targetUrls ?: "")
+            CacheEntry(cachePath).also {
                 cacheMap[appContextId] = it
             }
         }
 
-        val result = ArrayList<Pair<String, Boolean>>(files.size)
+        var result = true
 
-        files.forEach { (filePath, sourceUrl) ->
-            val file = File(cacheEntry.folder, filePath)
-            if (file.exists()) {
-                result.add(Pair(filePath, true))
-            } else {
-                result.add(Pair(filePath, false))
+        URLs.forEach { relativeFilePath ->
+            val file = File(cacheEntry.folder, relativeFilePath)
+            if (!file.exists()) {
+                result = false
 
                 if (sourceUrl != null) {
                     downloadManager.downloadFile(sourceUrl, file).also { job ->
@@ -60,7 +60,7 @@ internal class ApplicationCache(
     }
 
     private fun getCachePathForAppContextId(appContextId: String): String {
-        return cacheRoot.absolutePath + appContextId.md5()
+        return "${cacheRoot.absolutePath}/${appContextId.md5()}/"
     }
 }
 

@@ -26,4 +26,6 @@ interface IRPCGateway {
     fun unsubscribeNotifications(notifications: Set<NotificationType>): Set<NotificationType>
 
     fun sendNotification(message: String)
+
+    fun addFilesToCache(sourceURL: String?, targetURL: String?, URLs: List<String>, filters: List<String>?): Boolean
 }

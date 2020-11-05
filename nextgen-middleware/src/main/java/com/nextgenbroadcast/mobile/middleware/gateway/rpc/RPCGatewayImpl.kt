@@ -134,7 +134,17 @@ internal class RPCGatewayImpl(
         }
     }
 
+    override fun addFilesToCache(sourceURL: String?, targetURL: String?, URLs: List<String>, filters: List<String>?): Boolean {
+        val allFilesPreviouslyCached = currentAppData?.appContextId?.let { appContextId ->
+            applicationCache.requestFiles(appContextId, targetURL, sourceURL, URLs, filters )
+        } ?: false
+
+        return allFilesPreviouslyCached
+    }
+
     private fun onAppDataUpdated(appData: AppData?) {
+        currentAppData?.appContextId?. let { applicationCache.clearCache(it) }
+
         // Notify the user changes to another service also associated with the same Broadcaster Application
         appData?.let {
             if (appData.isAppEquals(currentAppData)) {
