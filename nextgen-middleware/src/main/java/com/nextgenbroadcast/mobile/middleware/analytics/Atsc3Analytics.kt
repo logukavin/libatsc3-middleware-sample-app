@@ -2,18 +2,22 @@ package com.nextgenbroadcast.mobile.middleware.analytics
 
 import android.content.Context
 import android.location.Location
-import android.provider.Settings
 import android.util.Log
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.nextgenbroadcast.mobile.middleware.analytics.serializer.DateSerializer
 import com.nextgenbroadcast.mobile.middleware.analytics.serializer.LocationSerializer
+import com.nextgenbroadcast.mobile.middleware.location.LocationGatherer
 import com.squareup.tape2.QueueFile
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.*
 
 class Atsc3Analytics(
-        protected val context: Context
+        private val context: Context
 ) : IAtsc3Analytics {
 
     private val persistedStore = QueueFile.Builder(File(context.cacheDir, "analytics.dat")).build()
@@ -26,6 +30,17 @@ class Atsc3Analytics(
     }
 
     private var activeSession: AVService? = null
+    private var deviceLocation: Location? = null
+
+    init {
+        CoroutineScope(Dispatchers.IO).launch {
+            LocationGatherer().getLastLocation(context)?.let { lastLocation ->
+                withContext(Dispatchers.Main) {
+                    deviceLocation = lastLocation
+                }
+            }
+        }
+    }
 
     override fun startSession(bsid: Int, serviceId: Int, globalServiceId: String?, serviceType: Int) {
         finishSession()
@@ -173,7 +188,7 @@ class Atsc3Analytics(
 //
 //        val cdm = CDMObject(
 //                DeviceInfo(
-//                        null,//TODO:settings.frequencyLocation?.location),
+//                        deviceLocation,
 //                        Settings.Global.getInt(context.contentResolver, Settings.Global.AUTO_TIME, 0)
 //                ),
 //                listOf()
