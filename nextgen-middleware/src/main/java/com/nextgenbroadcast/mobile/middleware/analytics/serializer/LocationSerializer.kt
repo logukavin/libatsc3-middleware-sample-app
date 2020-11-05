@@ -6,12 +6,22 @@ import com.nextgenbroadcast.mobile.core.toDegrees
 import java.lang.reflect.Type
 
 class LocationSerializer : JsonSerializer<Location> {
-    override fun serialize(src: Location?, typeOfSrc: Type?, context: JsonSerializationContext?): JsonElement {
-        return src?.let {
-            JsonObject().apply {
-                addProperty("latitude", src.latitude.toDegrees())
-                addProperty("longitude", src.longitude.toDegrees())
+    override fun serialize(src: Location, typeOfSrc: Type, context: JsonSerializationContext?): JsonElement {
+        return JsonObject().apply {
+                addProperty("latitude", degrees(src.latitude))
+                addProperty("longitude", degrees(src.longitude))
             }
-        } ?: JsonNull.INSTANCE
+    }
+
+    private fun degrees(value: Double): String {
+        return if (value != 0.0) {
+            value.toDegrees()
+        } else {
+            EMPTY
+        }
+    }
+
+    companion object {
+        const val EMPTY = "NOTREPORTED"
     }
 }
