@@ -27,5 +27,5 @@ interface IRPCGateway {
 
     fun sendNotification(message: String)
 
-    fun addFilesToCache(sourceURL: String?, targetURL: String?, URLs: List<String>, filters: List<String>?): Boolean
+    fun addFilesToCache(baseUrl: String?, rootPath: String?, paths: List<String>, filters: List<String>?): Boolean
 }

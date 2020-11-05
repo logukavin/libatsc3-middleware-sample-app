@@ -134,7 +134,7 @@ abstract class RPCGatewayAdapter : IRPCGateway {
         Assert.assertNotNull(socket)
     }
 
-    override fun addFilesToCache(sourceURL: String?, targetURL: String?, URLs: List<String>, filters: List<String>?): Boolean {
+    override fun addFilesToCache(baseUrl: String?, rootPath: String?, paths: List<String>, filters: List<String>?): Boolean {
         TODO("Not yet implemented")
     }
 }
