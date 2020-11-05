@@ -30,7 +30,7 @@ class Atsc3Analytics(
     }
 
     private var activeSession: AVService? = null
-    private var deviceLocation: Location? = null
+    private var deviceLocation: Location = Location("none")
 
     init {
         CoroutineScope(Dispatchers.IO).launch {

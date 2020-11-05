@@ -10,7 +10,7 @@ class DateSerializer : JsonSerializer<Date> {
         SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ", Locale.US)
     }
 
-    override fun serialize(src: Date?, typeOfSrc: Type?, context: JsonSerializationContext?): JsonElement {
-        return src?.let { JsonPrimitive(dateFormat.format(src.time)) } ?: JsonNull.INSTANCE
+    override fun serialize(src: Date, typeOfSrc: Type, context: JsonSerializationContext?): JsonElement {
+        return JsonPrimitive(dateFormat.format(src.time))
     }
 }
