@@ -9,7 +9,7 @@ class CacheRequestImpl(
 ) : ICacheRequest {
 
     override fun cacheRequest(sourceURL: String?, targetURL: String?, URLs: List<String>, filters: List<String>?): CacheRequest {
-        val cached = gateway.addFilesToCache(sourceURL, targetURL, URLs, filters)
+        val cached = gateway.requestFileCache(sourceURL, targetURL, URLs, filters)
         return CacheRequest(cached)
     }
 

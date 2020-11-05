@@ -136,12 +136,12 @@ internal class RPCGatewayImpl(
         }
     }
 
-    override fun addFilesToCache(baseUrl: String?, rootPath: String?, paths: List<String>, filters: List<String>?): Boolean {
-        val requestFileCache = currentAppContextId?.let { appContextId ->
+    override fun requestFileCache(baseUrl: String?, rootPath: String?, paths: List<String>, filters: List<String>?): Boolean {
+        val cached = currentAppContextId?.let { appContextId ->
             applicationCache.requestFiles(appContextId, rootPath, baseUrl, paths, filters )
         } ?: false
 
-        return requestFileCache
+        return cached
     }
 
     private fun onAppDataUpdated(appData: AppData?) {

@@ -210,14 +210,14 @@ class RPCGatewayTest {
     }
 
     @Test
-    fun testAddFilesToCache() {
+    fun testRequestFileCache() {
         val baseUrl = "https://dummyimage.com/3600/09f/"
         val rootPath = "images/"
         val paths = listOf("ffa.png","ffb.png")
-        assertFalse( iRPCGateway.addFilesToCache(baseUrl, rootPath, paths, null))
-        assertFalse( iRPCGateway.addFilesToCache(null, rootPath, paths, null))
-        assertFalse( iRPCGateway.addFilesToCache(baseUrl, null, paths, null))
-        assertFalse( iRPCGateway.addFilesToCache(null, null, paths, null))
+        assertFalse( iRPCGateway.requestFileCache(baseUrl, rootPath, paths, null))
+        assertFalse( iRPCGateway.requestFileCache(null, rootPath, paths, null))
+        assertFalse( iRPCGateway.requestFileCache(baseUrl, null, paths, null))
+        assertFalse( iRPCGateway.requestFileCache(null, null, paths, null))
     }
 
     @ExperimentalCoroutinesApi

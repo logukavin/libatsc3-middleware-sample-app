@@ -76,7 +76,7 @@ class RPCProcessorTest {
                 TODO("Not yet implemented")
             }
 
-            override fun addFilesToCache(baseUrl: String?, rootPath: String?, paths: List<String>, filters: List<String>?): Boolean {
+            override fun requestFileCache(baseUrl: String?, rootPath: String?, paths: List<String>, filters: List<String>?): Boolean {
                 return false
             }
         })
