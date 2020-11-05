@@ -1,6 +1,5 @@
 package com.nextgenbroadcast.mobile.middleware.cache
 
-import android.util.Log
 import com.nextgenbroadcast.mobile.core.md5
 import kotlinx.coroutines.Job
 import java.io.File
@@ -14,9 +13,9 @@ internal class ApplicationCache(
         hashMapOf()
     }
 
-    override fun requestFiles(appContextId: String, targetUrls: String?, sourceUrl: String?, URLs: List<String>, filters: List<String>?): Boolean {
+    override fun requestFiles(appContextId: String, rootPath: String?, baseUrl: String?, paths: List<String>, filters: List<String>?): Boolean {
         val cacheEntry = cacheMap.getOrElse(appContextId) {
-            val cachePath = getCachePathForAppContextId(appContextId) + (targetUrls ?: "")
+            val cachePath = getCachePathForAppContextId(appContextId) + (rootPath ?: "")
             CacheEntry(cachePath).also {
                 cacheMap[appContextId] = it
             }
@@ -24,13 +23,13 @@ internal class ApplicationCache(
 
         var result = true
 
-        URLs.forEach { relativeFilePath ->
+        paths.forEach { relativeFilePath ->
             val file = File(cacheEntry.folder, relativeFilePath)
             if (!file.exists()) {
                 result = false
 
-                if (sourceUrl != null) {
-                    downloadManager.downloadFile(sourceUrl, file).also { job ->
+                if (baseUrl != null) {
+                    downloadManager.downloadFile(baseUrl, file).also { job ->
                         cacheEntry.jobList.add(job)
 
                         job.invokeOnCompletion {

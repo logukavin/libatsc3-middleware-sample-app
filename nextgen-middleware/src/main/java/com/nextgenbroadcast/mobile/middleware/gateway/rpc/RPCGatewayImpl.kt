@@ -47,6 +47,8 @@ internal class RPCGatewayImpl(
 
     private var currentAppData: AppData? = null
     private var mediaTimeUpdateJob: Job? = null
+    private val currentAppContextId: String?
+        get() = currentAppData?.appContextId
 
     init {
         viewController.appData.distinctUntilChanged().observeForever { appData ->
@@ -134,16 +136,16 @@ internal class RPCGatewayImpl(
         }
     }
 
-    override fun addFilesToCache(sourceURL: String?, targetURL: String?, URLs: List<String>, filters: List<String>?): Boolean {
-        val allFilesPreviouslyCached = currentAppData?.appContextId?.let { appContextId ->
-            applicationCache.requestFiles(appContextId, targetURL, sourceURL, URLs, filters )
+    override fun addFilesToCache(baseUrl: String?, rootPath: String?, paths: List<String>, filters: List<String>?): Boolean {
+        val requestFileCache = currentAppContextId?.let { appContextId ->
+            applicationCache.requestFiles(appContextId, rootPath, baseUrl, paths, filters )
         } ?: false
 
-        return allFilesPreviouslyCached
+        return requestFileCache
     }
 
     private fun onAppDataUpdated(appData: AppData?) {
-        currentAppData?.appContextId?. let { applicationCache.clearCache(it) }
+        currentAppContextId?.let { applicationCache.clearCache(it) }
 
         // Notify the user changes to another service also associated with the same Broadcaster Application
         appData?.let {
