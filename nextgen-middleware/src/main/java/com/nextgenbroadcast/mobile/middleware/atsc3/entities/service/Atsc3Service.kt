@@ -7,6 +7,7 @@ data class Atsc3Service(
         val bsid: Int,
         var serviceId: Int = 0,
         var globalServiceId: String? = null,
+        var sltSvcSeqNum: Int = 0,
         var majorChannelNo: Int = 0,
         var minorChannelNo: Int = 0,
         var serviceCategory: Int = 0,
