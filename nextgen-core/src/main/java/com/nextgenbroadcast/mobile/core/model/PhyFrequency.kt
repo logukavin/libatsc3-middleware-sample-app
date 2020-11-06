@@ -2,7 +2,7 @@ package com.nextgenbroadcast.mobile.core.model
 
 import android.os.Parcelable
 import kotlinx.android.parcel.Parcelize
-import kotlin.math.min
+import kotlin.math.max
 
 @Parcelize
 class PhyFrequency(
@@ -10,7 +10,7 @@ class PhyFrequency(
         val source: Source
 ) : Parcelable {
     val frequency: Int
-        get() = min(0, _frequency)
+        get() = max(0, _frequency)
     val useDefault: Boolean
         get() = _frequency == LAST_SAVED_FREQUENCY
 

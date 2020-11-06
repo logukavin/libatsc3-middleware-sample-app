@@ -91,7 +91,8 @@ internal class Atsc3Module(
     }
 
     fun tune(freqKhz: Int, retuneOnDemod: Boolean) {
-        if (atsc3NdkPHYClientFreqKhz == freqKhz || (!retuneOnDemod && phyDemodLock)) return
+        val demodLock = phyDemodLock
+        if (atsc3NdkPHYClientFreqKhz == freqKhz || (!retuneOnDemod && demodLock)) return
 
         atsc3NdkPHYClientInstance?.let { phy ->
             atsc3NdkPHYClientFreqKhz = freqKhz
@@ -406,7 +407,7 @@ internal class Atsc3Module(
         // ignore
     }
 
-//////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////
 
     private fun execIfMMTSourceIsActiveOrCancel(exec: (MMTDataConsumerType) -> Unit, cancel: () -> Unit = {}) {
         mmtSource?.let { source ->
