@@ -146,7 +146,9 @@ class FrequencyLocator : IFrequencyLocator {
             }
 
             if (!stations.isNullOrEmpty()) {
-                return stations.map { it.frequency }
+                return stations.map { station ->
+                    station.frequency * 1000
+                }
             }
         } catch (e: IOException) {
             e.printStackTrace()

@@ -13,4 +13,8 @@ interface IReceiverPresenter {
     fun createMMTSource(): Any
 
     fun tune(freqKhz: Int)
+
+    companion object {
+        const val LAST_SAVED_FREQUENCY = -2
+    }
 }
