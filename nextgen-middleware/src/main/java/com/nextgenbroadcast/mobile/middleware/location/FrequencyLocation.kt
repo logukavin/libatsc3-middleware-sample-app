@@ -7,5 +7,5 @@ class FrequencyLocation(
         val frequencyList: List<Int>
 ) {
     val firstFrequency: Int?
-        get() = frequencyList.firstOrNull()
+        get() = frequencyList.firstOrNull()?.takeIf { it > 0 }
 }
