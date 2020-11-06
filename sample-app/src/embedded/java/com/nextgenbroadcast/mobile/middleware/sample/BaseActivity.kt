@@ -9,7 +9,6 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
 import com.nextgenbroadcast.mobile.middleware.R
-import com.nextgenbroadcast.mobile.middleware.sample.view.ReceiverPlayerView
 import com.nextgenbroadcast.mobile.middleware.service.Atsc3ForegroundService
 import com.nextgenbroadcast.mobile.middleware.service.EmbeddedAtsc3Service
 
@@ -17,16 +16,16 @@ abstract class BaseActivity : AppCompatActivity() {
     var isBound: Boolean = false
         private set
 
-    override fun onStart() {
-        super.onStart()
+    fun bindService() {
+        if (isBound) return
 
         Intent(this, EmbeddedAtsc3Service::class.java).also { intent ->
-            bindService(intent, connection, Context.BIND_AUTO_CREATE)
+            bindService(intent, connection, BIND_AUTO_CREATE)
         }
     }
 
-    override fun onStop() {
-        super.onStop()
+    fun unbindService() {
+        if (!isBound) return
 
         unbindService(connection)
         isBound = false
