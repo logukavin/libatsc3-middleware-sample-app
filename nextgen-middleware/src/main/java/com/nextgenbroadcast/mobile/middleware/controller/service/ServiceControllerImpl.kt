@@ -85,9 +85,7 @@ internal class ServiceControllerImpl (
 
     override fun openRoute(device: UsbDevice): Boolean {
         if (atsc3Module.openUsbDevice(device)) {
-            settings.frequencyLocation?.firstFrequency?.let { freqKhz ->
-                atsc3Module.tune(freqKhz)
-            }
+            tune(IServiceController.LAST_SAVED_FREQUENCY)
             return true
         }
         return false
@@ -144,9 +142,25 @@ internal class ServiceControllerImpl (
     }
 
     override fun tune(freqKhz: Int) {
-        this.freqKhz.postValue(freqKhz)
-        settings.lastFrequency = freqKhz
-        atsc3Module.tune(freqKhz)
+        var tuneToFreqKhz = freqKhz
+
+        if (tuneToFreqKhz == IServiceController.LAST_SAVED_FREQUENCY) {
+            val lastFrequency = settings.lastFrequency
+            val frequencyLocation = settings.frequencyLocation
+            if (lastFrequency > 0) {
+                tuneToFreqKhz = lastFrequency
+            } else if (frequencyLocation != null) {
+                frequencyLocation.firstFrequency?.let { frequency ->
+                    tuneToFreqKhz = frequency
+                }
+            }
+        }
+
+        if (tuneToFreqKhz < 0) tuneToFreqKhz = 0
+
+        this.freqKhz.postValue(tuneToFreqKhz)
+        settings.lastFrequency = tuneToFreqKhz
+        atsc3Module.tune(tuneToFreqKhz)
     }
 
     private fun resetHeldWithDelay() {

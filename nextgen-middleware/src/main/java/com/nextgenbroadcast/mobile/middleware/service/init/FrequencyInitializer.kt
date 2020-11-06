@@ -3,7 +3,6 @@ package com.nextgenbroadcast.mobile.middleware.service.init
 import android.content.Context
 import android.util.Log
 import com.nextgenbroadcast.mobile.core.presentation.IReceiverPresenter
-import com.nextgenbroadcast.mobile.middleware.location.FrequencyLocation
 import com.nextgenbroadcast.mobile.middleware.location.IFrequencyLocator
 import com.nextgenbroadcast.mobile.middleware.settings.IReceiverSettings
 import kotlinx.coroutines.*
@@ -31,20 +30,15 @@ internal class FrequencyInitializer(
             var locationTaken = false
             var frequencyApplied = false
             val prevFrequencyLocation = settings.frequencyLocation
-            val lastFrequency = settings.lastFrequency
 
             val defaultTune = async {
-                    delay(FAST_TUNE_DELAY)
+                delay(FAST_TUNE_DELAY)
 
-                    if (!isActive) return@async
+                if (!isActive) return@async
 
-                    frequencyApplied = true
-                    if (prevFrequencyLocation != null) {
-                        applyFrequency(prevFrequencyLocation)
-                    } else if (lastFrequency > 0) {
-                        receiver.tune(lastFrequency)
-                    }
-                }
+                frequencyApplied = true
+                receiver.tune(IReceiverPresenter.LAST_SAVED_FREQUENCY)
+            }
 
             withTimeout(LOCATION_REQUEST_DELAY) {
                 locators.forEach { component ->
@@ -57,7 +51,9 @@ internal class FrequencyInitializer(
                             prevLocation == null || location.distanceTo(prevLocation) > IFrequencyLocator.RECEPTION_RADIUS
                         }?.let { frequencyLocation ->
                             settings.frequencyLocation = frequencyLocation
-                            applyFrequency(frequencyLocation)
+                            frequencyLocation.firstFrequency?.let { frequency ->
+                                receiver.tune(frequency)
+                            }
                             locationTaken = true
                         }
 
@@ -72,21 +68,11 @@ internal class FrequencyInitializer(
             }
 
             if (!locationTaken && !frequencyApplied) {
-                if(prevFrequencyLocation != null) {
-                    applyFrequency(prevFrequencyLocation)
-                } else if(lastFrequency > 0) {
-                    receiver.tune(lastFrequency)
-                }
+                receiver.tune(IReceiverPresenter.LAST_SAVED_FREQUENCY)
             }
         }
 
         return true
-    }
-
-    private fun applyFrequency(frequencyLocation: FrequencyLocation) {
-        frequencyLocation.firstFrequency?.let { frequency ->
-            receiver.tune(frequency)
-        }
     }
 
     override fun cancel() {
