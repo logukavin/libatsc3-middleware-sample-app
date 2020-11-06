@@ -93,9 +93,21 @@ class MainActivity : BaseActivity() {
                 .commit()
 
         buildShortcuts(sourceMap.filter { (_, _, isShortcut) -> isShortcut }.map { (name, _, _) -> name })
+    }
+
+    override fun onStart() {
+        super.onStart()
 
         //make sure we can read from device pcap files and get location
-        checkSelfPermission()
+        if (checkSelfPermission()) {
+            bindService()
+        }
+    }
+
+    override fun onStop() {
+        super.onStop()
+
+        unbindService()
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
@@ -129,6 +141,10 @@ class MainActivity : BaseActivity() {
                         || requiredPermissions.contains(Manifest.permission.ACCESS_FINE_LOCATION)) {
                     Toast.makeText(this, getString(R.string.warning_access_background_location_permission), Toast.LENGTH_SHORT).show()
                 }
+
+                requestPermissions(requiredPermissions)
+            } else {
+                bindService()
             }
         }
     }
@@ -139,7 +155,7 @@ class MainActivity : BaseActivity() {
         }
     }
 
-    private fun checkSelfPermission() {
+    private fun checkSelfPermission(): Boolean {
         val needsPermission = mutableListOf<String>()
 
         necessaryPermissions.forEach { permission ->
@@ -149,8 +165,15 @@ class MainActivity : BaseActivity() {
         }
 
         if (needsPermission.isNotEmpty()) {
-            ActivityCompat.requestPermissions(this, needsPermission.toTypedArray(), PERMISSION_REQUEST)
+            requestPermissions(needsPermission)
+            return false
         }
+
+        return true
+    }
+
+    private fun requestPermissions(needsPermission: List<String>) {
+        ActivityCompat.requestPermissions(this, needsPermission.toTypedArray(), PERMISSION_REQUEST)
     }
 
     private fun updateSystemUi(config: Configuration) {
