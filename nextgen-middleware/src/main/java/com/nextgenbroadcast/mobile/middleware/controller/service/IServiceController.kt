@@ -11,4 +11,8 @@ interface IServiceController : IReceiverPresenter, ISelectorPresenter {
 
     fun openRoute(device: UsbDevice): Boolean
     fun stopRoute()
+
+    companion object {
+        const val LAST_SAVED_FREQUENCY = IReceiverPresenter.LAST_SAVED_FREQUENCY
+    }
 }
