@@ -135,6 +135,7 @@ abstract class RPCGatewayAdapter : IRPCGateway {
     }
 
     override fun requestFileCache(baseUrl: String?, rootPath: String?, paths: List<String>, filters: List<String>?): Boolean {
-        TODO("Not yet implemented")
+        Assert.assertNotNull(paths)
+        return false
     }
 }
