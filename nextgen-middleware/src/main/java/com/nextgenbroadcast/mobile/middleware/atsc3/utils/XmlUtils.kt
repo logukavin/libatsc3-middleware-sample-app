@@ -34,13 +34,13 @@ object XmlUtils {
         return java.lang.Boolean.parseBoolean(value)
     }
 
-    fun strToInt(value: String): Int {
+    fun strToInt(value: String, default: Int = 0): Int {
         try {
             return value.toInt()
         } catch (e: NumberFormatException) {
             e.printStackTrace()
         }
-        return -1
+        return default
     }
 
     fun strToLong(value: String): Long {

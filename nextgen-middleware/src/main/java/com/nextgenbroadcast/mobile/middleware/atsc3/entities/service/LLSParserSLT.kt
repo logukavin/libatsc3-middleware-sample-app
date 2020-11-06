@@ -47,8 +47,10 @@ class LLSParserSLT {
             when (parser.getAttributeName(i)) {
                 "serviceId" -> currentService.serviceId = XmlUtils.strToInt(parser.getAttributeValue(i))
                 "globalServiceID" -> currentService.globalServiceId = parser.getAttributeValue(i)
+                "sltSvcSeqNum" -> currentService.sltSvcSeqNum = XmlUtils.strToInt(parser.getAttributeValue(i))
                 "majorChannelNo" -> currentService.majorChannelNo = XmlUtils.strToInt(parser.getAttributeValue(i))
                 "minorChannelNo" -> currentService.minorChannelNo = XmlUtils.strToInt(parser.getAttributeValue(i))
+                "serviceCategory" -> currentService.serviceCategory = XmlUtils.strToInt(parser.getAttributeValue(i))
                 "shortServiceName" -> currentService.shortServiceName = parser.getAttributeValue(i)
                 else -> {
                     // skip attribute
