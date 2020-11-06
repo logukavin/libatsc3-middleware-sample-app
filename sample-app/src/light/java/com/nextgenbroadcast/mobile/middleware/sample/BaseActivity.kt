@@ -11,20 +11,19 @@ import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
 import com.nextgenbroadcast.mobile.service.binder.InterprocessServiceBinder
 
 abstract class BaseActivity : AppCompatActivity() {
-
     var isBound: Boolean = false
         private set
 
-    override fun onStart() {
-        super.onStart()
+    fun bindService() {
+        if (isBound) return
 
         newServiceIntent().also { intent ->
-            bindService(intent, connection, Context.BIND_AUTO_CREATE)
+            bindService(intent, connection, BIND_AUTO_CREATE)
         }
     }
 
-    override fun onStop() {
-        super.onStop()
+    fun unbindService() {
+        if (!isBound) return
 
         unbindService(connection)
         isBound = false
