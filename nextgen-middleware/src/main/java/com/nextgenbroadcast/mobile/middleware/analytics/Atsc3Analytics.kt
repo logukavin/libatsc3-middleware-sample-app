@@ -11,6 +11,10 @@ class Atsc3Analytics : IAtsc3Analytics {
 
     private var activeSession: AVService? = null
 
+    override fun setReportServerUrl(serverUrl: String?) {
+        //TODO: send collected reports
+    }
+
     override fun startSession(bsid: Int, serviceId: Int, globalServiceId: String?, serviceType: Int) {
         finishSession()
         activeSession = AVService(BSID_REGISTRATION_COUNTRY, bsid, serviceId, globalServiceId, serviceType)
