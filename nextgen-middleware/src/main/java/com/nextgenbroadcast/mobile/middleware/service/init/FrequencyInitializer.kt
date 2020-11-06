@@ -2,6 +2,7 @@ package com.nextgenbroadcast.mobile.middleware.service.init
 
 import android.content.Context
 import android.util.Log
+import com.nextgenbroadcast.mobile.core.model.PhyFrequency
 import com.nextgenbroadcast.mobile.core.presentation.IReceiverPresenter
 import com.nextgenbroadcast.mobile.middleware.location.IFrequencyLocator
 import com.nextgenbroadcast.mobile.middleware.settings.IReceiverSettings
@@ -37,7 +38,7 @@ internal class FrequencyInitializer(
                 if (!isActive) return@async
 
                 frequencyApplied = true
-                receiver.tune(IReceiverPresenter.LAST_SAVED_FREQUENCY)
+                receiver.tune(PhyFrequency.default(PhyFrequency.Source.AUTO))
             }
 
             withTimeout(LOCATION_REQUEST_DELAY) {
@@ -52,7 +53,7 @@ internal class FrequencyInitializer(
                         }?.let { frequencyLocation ->
                             settings.frequencyLocation = frequencyLocation
                             frequencyLocation.firstFrequency?.let { frequency ->
-                                receiver.tune(frequency)
+                                receiver.tune(PhyFrequency.auto(frequency))
                             }
                             locationTaken = true
                         }
@@ -67,7 +68,7 @@ internal class FrequencyInitializer(
             }
 
             if (!locationTaken && !frequencyApplied) {
-                receiver.tune(IReceiverPresenter.LAST_SAVED_FREQUENCY)
+                receiver.tune(PhyFrequency.default(PhyFrequency.Source.AUTO))
             }
         }
 
