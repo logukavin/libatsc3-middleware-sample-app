@@ -1,6 +1,7 @@
 package com.nextgenbroadcast.mobile.core.presentation
 
 import androidx.lifecycle.LiveData
+import com.nextgenbroadcast.mobile.core.model.PhyFrequency
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 
 interface IReceiverPresenter {
@@ -12,9 +13,5 @@ interface IReceiverPresenter {
 
     fun createMMTSource(): Any
 
-    fun tune(freqKhz: Int)
-
-    companion object {
-        const val LAST_SAVED_FREQUENCY = -2
-    }
+    fun tune(frequency: PhyFrequency)
 }
