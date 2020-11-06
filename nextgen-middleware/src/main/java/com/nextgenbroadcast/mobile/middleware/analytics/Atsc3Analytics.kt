@@ -1,15 +1,46 @@
 package com.nextgenbroadcast.mobile.middleware.analytics
 
+import android.content.Context
+import android.location.Location
 import android.util.Log
-import java.text.SimpleDateFormat
+import com.google.gson.Gson
+import com.google.gson.GsonBuilder
+import com.nextgenbroadcast.mobile.middleware.analytics.serializer.DateSerializer
+import com.nextgenbroadcast.mobile.middleware.analytics.serializer.LocationSerializer
+import com.nextgenbroadcast.mobile.middleware.location.LocationGatherer
+import com.squareup.tape2.QueueFile
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
 import java.util.*
 
-class Atsc3Analytics : IAtsc3Analytics {
-    private val formatter = SimpleDateFormat.getTimeInstance()
+class Atsc3Analytics(
+        private val context: Context
+) : IAtsc3Analytics {
 
-    private var avServiceQueue: Queue<AVService> = LinkedList()
+    private val persistedStore = QueueFile.Builder(File(context.cacheDir, "analytics.dat")).build()
+
+    private val gson: Gson by lazy {
+        GsonBuilder()
+                .registerTypeAdapter(Date::class.java, DateSerializer())
+                .registerTypeAdapter(Location::class.java, LocationSerializer())
+                .create()
+    }
 
     private var activeSession: AVService? = null
+    private var deviceLocation: Location = Location("none")
+
+    init {
+        CoroutineScope(Dispatchers.IO).launch {
+            LocationGatherer().getLastLocation(context)?.let { lastLocation ->
+                withContext(Dispatchers.Main) {
+                    deviceLocation = lastLocation
+                }
+            }
+        }
+    }
 
     override fun startSession(bsid: Int, serviceId: Int, globalServiceId: String?, serviceType: Int) {
         finishSession()
@@ -18,7 +49,7 @@ class Atsc3Analytics : IAtsc3Analytics {
 
     override fun startDisplayMediaContent() {
         activeSession?.let { session ->
-            val currentTime = currentTimeSec()
+            val currentTime = Date()
             val reportInterval = getLastOrCreateReportInterval(session, currentTime)
 
             finishDisplayMediaContent(reportInterval, currentTime)
@@ -36,7 +67,7 @@ class Atsc3Analytics : IAtsc3Analytics {
         activeSession?.let { session ->
             getLastReportInterval(session)?.let { reportInterval ->
                 if (!reportInterval.isFinished) {
-                    finishDisplayMediaContent(reportInterval, currentTimeSec())
+                    finishDisplayMediaContent(reportInterval, Date())
                 }
             }
         }
@@ -44,7 +75,7 @@ class Atsc3Analytics : IAtsc3Analytics {
 
     override fun startApplicationSession() {
         activeSession?.let { session ->
-            val currentTime = currentTimeSec()
+            val currentTime = Date()
             val reportInterval = getLastOrCreateReportInterval(session, currentTime)
 
             finishApplicationSession(reportInterval, currentTime)
@@ -61,17 +92,19 @@ class Atsc3Analytics : IAtsc3Analytics {
     override fun finishApplicationSession() {
         getLastReportInterval(activeSession)?.let { reportInterval ->
             if (!reportInterval.isFinished) {
-                finishApplicationSession(reportInterval, currentTimeSec())
+                finishApplicationSession(reportInterval, Date())
             }
         }
     }
 
     override fun finishSession() {
         activeSession?.let { session ->
-            finishDisplayContent(session)
-            avServiceQueue.add(session)
-            dampCache()
             activeSession = null
+
+            finishDisplayContent(session)
+
+            dampCache(session)
+            //store(session)
         }
     }
 
@@ -79,7 +112,7 @@ class Atsc3Analytics : IAtsc3Analytics {
         session.reportIntervals.let { intervals ->
             intervals.lastOrNull()?.let { reportInterval ->
                 if (!reportInterval.isFinished) {
-                    val currentTime = currentTimeSec()
+                    val currentTime = Date()
                     if (isIntervalLess10sec(reportInterval.startTime, currentTime)) {
                         intervals.remove(reportInterval)
                     } else {
@@ -93,7 +126,7 @@ class Atsc3Analytics : IAtsc3Analytics {
         }
     }
 
-    private fun finishDisplayMediaContent(reportInterval: ReportInterval, currentTime: Long) {
+    private fun finishDisplayMediaContent(reportInterval: ReportInterval, currentTime: Date) {
         reportInterval.broadcastIntervals.let { intervals ->
             intervals.lastOrNull()?.let { broadcastInterval ->
                 if (isIntervalLess10sec(broadcastInterval.receiverStartTime, currentTime)) {
@@ -108,7 +141,7 @@ class Atsc3Analytics : IAtsc3Analytics {
         }
     }
 
-    private fun finishApplicationSession(interval: ReportInterval, currentTime: Long) {
+    private fun finishApplicationSession(interval: ReportInterval, currentTime: Date) {
         interval.appIntervals.let { intervals ->
             intervals.lastOrNull()?.let { appInterval ->
                 if (appInterval.endTime == null) {
@@ -122,7 +155,7 @@ class Atsc3Analytics : IAtsc3Analytics {
         }
     }
 
-    private fun getLastOrCreateReportInterval(session: AVService, currentTime: Long): ReportInterval {
+    private fun getLastOrCreateReportInterval(session: AVService, currentTime: Date): ReportInterval {
         return getLastReportInterval(session) ?: startSessionReportInterval(session, currentTime)
     }
 
@@ -130,7 +163,7 @@ class Atsc3Analytics : IAtsc3Analytics {
         return session?.reportIntervals?.lastOrNull()?.takeIf { !it.isFinished }
     }
 
-    private fun startSessionReportInterval(session: AVService, timestamp: Long): ReportInterval {
+    private fun startSessionReportInterval(session: AVService, timestamp: Date): ReportInterval {
         return ReportInterval(
                 startTime = timestamp,
                 endTime = null,
@@ -140,64 +173,45 @@ class Atsc3Analytics : IAtsc3Analytics {
         }
     }
 
-    private fun currentTimeSec() = System.currentTimeMillis() / 1000
+    private fun isIntervalLess10sec(startTime: Date, endTime: Date) = (endTime.time - startTime.time) < 10_000
 
-    private fun getDateStr(datetimeInSec: Long?): String {
-        return datetimeInSec?.let {
-            formatter.format(datetimeInSec * 1000)
-        } ?: "not set"
+    private fun isIntervalLess5sec(startTime: Date, endTime: Date) = (endTime.time - startTime.time) < 5_000
+
+    private fun addToStore(avService: AVService) {
+        val entry = CacheEntry(avService)
+        persistedStore.add(gson.toJson(entry).toByteArray())
     }
 
-    private fun isIntervalLess10sec(startTime: Long, endTime: Long) = (endTime - startTime) < 10
+//    private fun sendNext() {
+//        cdmQueue.peek()
+//
+//
+//        val cdm = CDMObject(
+//                DeviceInfo(
+//                        deviceLocation,
+//                        Settings.Global.getInt(context.contentResolver, Settings.Global.AUTO_TIME, 0)
+//                ),
+//                listOf()
+//        )
+//
+//        //TODO: send to Http
+//    }
 
-    private fun isIntervalLess5sec(startTime: Long, endTime: Long) = (endTime - startTime) < 5
-
-    private fun dampCache() {
+    private fun dampCache(avService: AVService) {
         if (!LOGGING) return
 
-        Log.d(TAG, StringBuffer().apply {
-            append("-\n")
-            activeSession?.let { session ->
-                append("--------------------------------- SESSION START -----------------------------------\n")
-                append("|bsid: ${session.bsid}\n")
-                append("|country: ${session.country}\n")
-                append("|serviceID: ${session.serviceID}\n")
-                append("|globalServiceID: ${session.globalServiceID}\n")
-                append("|serviceType: ${session.serviceType}\n")
-
-                session.reportIntervals.forEach { reportInterval ->
-                    append("|     -- INTERVAL START --------------------------------------------\n")
-                    append("|        startTime: ${getDateStr(reportInterval.startTime)}\n")
-                    append("|        endTime: ${getDateStr(reportInterval.endTime)}\n")
-                    append("|        destinationDeviceType: ${reportInterval.destinationDeviceType}\n")
-
-                    reportInterval.broadcastIntervals.forEach { broadcastInterval ->
-                        append("|          -- BROADCAST INTERVAL START -----\n")
-                        append("|             broadcastStartTime: ${getDateStr(broadcastInterval.broadcastStartTime)}\n")
-                        append("|             broadcastEndTime: ${getDateStr(broadcastInterval.broadcastEndTime)}\n")
-                        append("|             receiverStartTime: ${getDateStr(broadcastInterval.receiverStartTime)}\n")
-                        append("|          -- BROADCAST INTERVAL END -------\n")
-                    }
-
-                    reportInterval.appIntervals.forEach { appInterval ->
-                        append("|          -- APP INTERVAL START ----------------------------------------\n")
-                        append("|             startTime: ${getDateStr(appInterval.startTime)}\n")
-                        append("|             endTime: ${getDateStr(appInterval.endTime)}\n")
-                        append("|             lifeCycle: ${appInterval.lifeCycle}\n")
-                        append("|          -- APP INTERVAL END ------------------------------------------\n")
-                    }
-
-                    append("|     -- INTERVAL END ----------------------------------------------\n")
-                }
-
-                append("--------------------------------- SESSION END -------------------------------------\n")
-            }
-        }.toString())
+        Log.d(TAG, gson.toJson(avService))
     }
 
+    private class CacheEntry(
+            val avService: AVService,
+            val location: Location? = null
+    )
+
     companion object {
-        private const val LOGGING = true
         private val TAG: String = Atsc3Analytics::class.java.simpleName
+
+        private const val LOGGING = true
 
         private const val BSID_REGISTRATION_COUNTRY = "us"
         private const val DEVICE_TYPE_PRIMARY = 0 // Content is presented on a Primary Device

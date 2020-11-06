@@ -59,7 +59,6 @@ internal class FrequencyInitializer(
 
                         defaultTune.cancel()
                     } catch (e: TimeoutCancellationException) {
-                        initializer.cancel()
                         Log.w(TAG, "Location request timeout")
                     }
 

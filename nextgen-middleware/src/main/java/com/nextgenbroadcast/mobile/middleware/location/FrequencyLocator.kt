@@ -35,91 +35,18 @@ class FrequencyLocator : IFrequencyLocator {
         OkHttpClient()
     }
 
-    private var locationRequest: Pair<LocationManager, LocationListener>? = null
-
     @SuppressLint("MissingPermission")
     override suspend fun locateFrequency(context: Context, predicate: (Location) -> Boolean): FrequencyLocation? {
-        if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) return null
-
-        val location: Location? = suspendCancellableCoroutine { cont ->
-            val locationManager = (context.getSystemService(Context.LOCATION_SERVICE) as LocationManager)
-
-            getNewestLastKnownLocation(locationManager)?.let {
-                cont.resume(it)
-                return@suspendCancellableCoroutine
-            }
-
-            try {
-                locationManager.getBestProvider(Criteria(), true)?.let { provider ->
-                    val locationListener = object : LocationListener {
-                        override fun onLocationChanged(location: Location?) {
-                            locationManager.removeUpdates(this)
-                            cont.resume(location)
-                        }
-
-                        override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {
-                            // do nothing
-                        }
-
-                        override fun onProviderEnabled(provider: String?) {
-                            // do nothing
-                        }
-
-                        override fun onProviderDisabled(provider: String?) {
-                            cont.resume(null)
-                        }
-                    }.also { listener ->
-                        CoroutineScope(Dispatchers.Main).launch {
-                            locationManager.requestLocationUpdates(provider, 0, 0f, listener)
-                        }
-                    }
-
-                    locationRequest = Pair(locationManager, locationListener)
+        return LocationGatherer().getLastLocation(context)?.let { location ->
+            if (predicate.invoke(location)) {
+                val frequencyList = getFrequenciesByLocation(context, location.latitude, location.longitude)
+                if (frequencyList.isNotEmpty()) {
+                    return FrequencyLocation(location, frequencyList)
                 }
-            } catch (e: Exception) {
-                Log.w(FrequencyInitializer.TAG, "Error on location request ", e)
-                cancel()
-                cont.resume(null)
             }
+
+            return null
         }
-
-        if (location != null && predicate.invoke(location)) {
-            val frequencyList = getFrequenciesByLocation(context, location.latitude, location.longitude)
-            if (frequencyList.isNotEmpty()) {
-                return FrequencyLocation(location, frequencyList)
-            }
-        }
-
-        return null
-    }
-
-    override fun cancel() {
-        locationRequest?.let { (locationManager, locationListener) ->
-            locationManager.removeUpdates(locationListener)
-            locationRequest = null
-        }
-    }
-
-    @SuppressLint("MissingPermission")
-    private fun getNewestLastKnownLocation(locationManager: LocationManager): Location? {
-        var bestLocation: Location? = null
-        locationManager.getProviders(true).forEach { provider ->
-            try {
-                locationManager.getLastKnownLocation(provider)?.let { location ->
-                    bestLocation?.let { lastLocation ->
-                        if (location.elapsedRealtimeNanos < lastLocation.elapsedRealtimeNanos) {
-                            bestLocation = location
-                        }
-                    } ?: let {
-                        bestLocation = location
-                    }
-                }
-            } catch (e: Exception) {
-                Log.w(FrequencyInitializer.TAG, "Error on location request ", e)
-            }
-        }
-
-        return bestLocation
     }
 
     private suspend fun getFrequenciesByLocation(context: Context, latitude: Double, longitude: Double): List<Int> {
