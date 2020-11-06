@@ -6,6 +6,7 @@ import android.hardware.usb.UsbManager
 import android.util.Log
 import com.nextgenbroadcast.mobile.core.media.IMMTDataConsumer
 import com.nextgenbroadcast.mobile.core.media.IMMTDataProducer
+import com.nextgenbroadcast.mobile.middleware.atsc3.entities.SLTConstants
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3ApplicationFile
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3Held
@@ -45,7 +46,7 @@ internal class Atsc3Module(
 
     interface Listener {
         fun onStateChanged(state: State?)
-        fun onServicesLoaded(services: List<Atsc3Service?>)
+        fun onServiceListTableReceived(services: List<Atsc3Service?>, reportServerUrl: String?)
         fun onPackageReceived(appPackage: Atsc3Application)
         fun onCurrentServicePackageChanged(pkg: Atsc3HeldPackage?)
         fun onCurrentServiceDashPatched(mpdPath: String)
@@ -313,11 +314,13 @@ internal class Atsc3Module(
     override fun onSlsTablePresent(sls_payload_xml: String) {
         log("onSlsTablePresent, $sls_payload_xml");
 
-        val services = LLSParserSLT().parseXML(sls_payload_xml)
-
-        serviceMap.putAll(services.map { it.serviceId to it }.toMap())
-
-        listener?.onServicesLoaded(Collections.unmodifiableList(services))
+        LLSParserSLT().parseXML(sls_payload_xml).let { (services, urls) ->
+            serviceMap.putAll(services.map { it.serviceId to it }.toMap())
+            listener?.onServiceListTableReceived(
+                    Collections.unmodifiableList(services),
+                    urls[SLTConstants.URL_TYPE_REPORT_SERVER]
+            )
+        }
     }
 
     override fun onAeatTablePresent(aeatPayloadXML: String) {
