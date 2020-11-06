@@ -1,6 +1,7 @@
 package com.nextgenbroadcast.mobile.middleware.atsc3.entities.service
 
 import android.util.Log
+import android.util.SparseArray
 import com.nextgenbroadcast.mobile.middleware.atsc3.utils.XmlUtils
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserException
@@ -8,8 +9,9 @@ import java.io.IOException
 import java.util.*
 
 class LLSParserSLT {
-    fun parseXML(xmlPayload: String): ArrayList<Atsc3Service> {
+    fun parseXML(xmlPayload: String): Pair<List<Atsc3Service>, SparseArray<String>> {
         val services = ArrayList<Atsc3Service>()
+        val urls = SparseArray<String>()
         try {
             val parser = XmlUtils.newParser(xmlPayload)
             parser.nextTag()
@@ -23,11 +25,12 @@ class LLSParserSLT {
                 if (parser.eventType != XmlPullParser.START_TAG) {
                     continue
                 }
-                val name = parser.name
-                if (name == ENTRY_SERVICE) {
-                    services.add(readService(bsid, parser))
-                } else {
-                    XmlUtils.skip(parser)
+                when (parser.name) {
+                    "Service" -> services.add(readService(bsid, parser))
+                    "SLTInetUrl" -> readInetUrl(parser)?.let { (urlType, url) ->
+                        urls.put(urlType, url)
+                    }
+                    else -> XmlUtils.skip(parser)
                 }
             }
         } catch (e: XmlPullParserException) {
@@ -35,7 +38,26 @@ class LLSParserSLT {
         } catch (e: IOException) {
             Log.e("LLSParserSLT", "exception in parsing: $e")
         }
-        return services
+
+        return Pair(services, urls)
+    }
+
+    @Throws(IOException::class, XmlPullParserException::class)
+    private fun readInetUrl(parser: XmlPullParser): Pair<Int, String>? {
+        val urlType: Int? = parser.getAttributeValue(null, "urlType")?.let {
+            XmlUtils.strToInt(it, -1)
+        }
+
+        var url: String? = null
+        while (parser.next() != XmlPullParser.END_TAG) {
+            if (parser.eventType == XmlPullParser.TEXT) {
+                url = parser.text
+            } else {
+                XmlUtils.skip(parser)
+            }
+        }
+
+        return if (url != null && urlType != null && urlType >= 0) Pair(urlType, url) else null
     }
 
     @Throws(IOException::class, XmlPullParserException::class)
@@ -95,9 +117,5 @@ class LLSParserSLT {
         }
 
         return broadcastSvcSignaling
-    }
-
-    companion object {
-        private const val ENTRY_SERVICE = "Service"
     }
 }
