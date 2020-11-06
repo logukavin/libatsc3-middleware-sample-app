@@ -104,7 +104,9 @@ internal class StandaloneServiceHandler(
             }
 
             IServiceBinder.ACTION_TYNE_FREQUENCY -> {
-                receiverPresenter.tune(msg.data.getInt(IServiceBinder.PARAM_FREQUENCY_KHZ))
+                msg.data.getParcelable(PhyFrequency::class.java, IServiceBinder.PARAM_FREQUENCY)?.let {
+                    receiverPresenter.tune(it)
+                }
             }
 
             IServiceBinder.ACTION_BA_STATE_CHANGED -> {

@@ -3,6 +3,7 @@ package com.nextgenbroadcast.mobile.middleware.controller.service
 import android.hardware.usb.UsbDevice
 import android.util.Log
 import androidx.lifecycle.MutableLiveData
+import com.nextgenbroadcast.mobile.core.model.PhyFrequency
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.model.SLSService
 import com.nextgenbroadcast.mobile.middleware.analytics.IAtsc3Analytics
@@ -85,7 +86,7 @@ internal class ServiceControllerImpl (
 
     override fun openRoute(device: UsbDevice): Boolean {
         if (atsc3Module.openUsbDevice(device)) {
-            tune(IServiceController.LAST_SAVED_FREQUENCY)
+            tune(PhyFrequency.default(PhyFrequency.Source.AUTO))
             return true
         }
         return false
@@ -141,26 +142,27 @@ internal class ServiceControllerImpl (
         }
     }
 
-    override fun tune(freqKhz: Int) {
-        var tuneToFreqKhz = freqKhz
+    override fun tune(frequency: PhyFrequency) {
+        var freqKhz = frequency.frequency
 
-        if (tuneToFreqKhz == IServiceController.LAST_SAVED_FREQUENCY) {
+        if (frequency.useDefault) {
             val lastFrequency = settings.lastFrequency
             val frequencyLocation = settings.frequencyLocation
             if (lastFrequency > 0) {
-                tuneToFreqKhz = lastFrequency
+                freqKhz = lastFrequency
             } else if (frequencyLocation != null) {
-                frequencyLocation.firstFrequency?.let { frequency ->
-                    tuneToFreqKhz = frequency
+                frequencyLocation.firstFrequency?.let {
+                    freqKhz = it
                 }
             }
         }
 
-        if (tuneToFreqKhz < 0) tuneToFreqKhz = 0
-
-        this.freqKhz.postValue(tuneToFreqKhz)
-        settings.lastFrequency = tuneToFreqKhz
-        atsc3Module.tune(tuneToFreqKhz)
+        this.freqKhz.postValue(freqKhz)
+        settings.lastFrequency = freqKhz
+        atsc3Module.tune(
+                freqKhz = freqKhz,
+                retuneOnDemod = frequency.source == PhyFrequency.Source.USER
+        )
     }
 
     private fun resetHeldWithDelay() {

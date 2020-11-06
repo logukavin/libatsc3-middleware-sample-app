@@ -56,6 +56,7 @@ interface IServiceBinder {
         const val PARAM_URI_NEED_PERMISSION = "URI_NEED_PERMISSION"
         const val PARAM_PERMISSION_PACKAGE = "PARAM_PERMISSION_PACKAGE"
 
+        const val PARAM_FREQUENCY = "PARAM_FREQUENCY"
         const val PARAM_FREQUENCY_KHZ = "PARAM_FREQUENCY_KHZ"
 
         const val PARAM_APPSTATE = "PARAM_APPSTATE"
