@@ -1,6 +1,7 @@
 package com.nextgenbroadcast.mobile.middleware.cache
 
 import com.nextgenbroadcast.mobile.core.md5
+import com.nextgenbroadcast.mobile.middleware.cache.DownloadManager.Companion.LOADING_POSTFIX
 import kotlinx.coroutines.Job
 import java.io.File
 
@@ -25,15 +26,26 @@ internal class ApplicationCache(
 
         paths.forEach { relativeFilePath ->
             val file = File(cacheEntry.folder, relativeFilePath)
+
             if (!file.exists()) {
+
+                cacheEntry.folder.listFiles()?.forEach { containedFile ->
+                    val loadingFileName = file.name + LOADING_POSTFIX
+                    if ( loadingFileName == containedFile.name && !cacheEntry.loadingFileNameList.contains(loadingFileName)) {
+                        containedFile.delete()
+                    }
+                }
+
                 result = false
 
                 if (baseUrl != null) {
-                    downloadManager.downloadFile(baseUrl, file).also { job ->
+                    downloadManager.downloadFile(baseUrl + relativeFilePath, file).also { (job, fileName) ->
                         cacheEntry.jobList.add(job)
+                        cacheEntry.loadingFileNameList.add(fileName)
 
                         job.invokeOnCompletion {
                             cacheEntry.jobList.remove(job)
+                            cacheEntry.loadingFileNameList.remove(fileName)
                         }
                     }
                 }
@@ -68,4 +80,5 @@ private class CacheEntry(
 ) {
     val folder = File(cachePath)
     val jobList = ArrayList<Job>()
+    val loadingFileNameList = ArrayList<String>()
 }

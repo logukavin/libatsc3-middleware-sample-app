@@ -145,8 +145,6 @@ internal class RPCGatewayImpl(
     }
 
     private fun onAppDataUpdated(appData: AppData?) {
-        currentAppContextId?.let { applicationCache.clearCache(it) }
-
         // Notify the user changes to another service also associated with the same Broadcaster Application
         appData?.let {
             if (appData.isAppEquals(currentAppData)) {
