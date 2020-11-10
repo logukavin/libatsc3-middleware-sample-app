@@ -21,6 +21,7 @@ import androidx.lifecycle.ViewModelProvider
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.nextgenbroadcast.mobile.core.FileUtils
 import com.nextgenbroadcast.mobile.core.model.AppData
+import com.nextgenbroadcast.mobile.core.model.PhyFrequency
 import com.nextgenbroadcast.mobile.core.model.SLSService
 import com.nextgenbroadcast.mobile.core.presentation.ApplicationState
 import com.nextgenbroadcast.mobile.core.presentation.IReceiverPresenter
@@ -167,7 +168,8 @@ class MainFragment : BaseFragment() {
         }
 
         setFragmentResultListener(REQUEST_KEY_FREQUENCY) { _, bundle ->
-            receiverPresenter?.tune(bundle.getInt(SettingsDialog.PARAM_FREQUENCY, 0))
+            val freqKhz = bundle.getInt(SettingsDialog.PARAM_FREQUENCY, 0)
+            receiverPresenter?.tune(PhyFrequency.user(freqKhz))
         }
 
         settings_button.setOnClickListener {

@@ -1,7 +1,9 @@
 package com.nextgenbroadcast.mobile.middleware.analytics
 
+import java.util.*
+
 class BroadcastInterval(
-        var broadcastStartTime: Long? = null,
-        var broadcastEndTime: Long? = null,
-        var receiverStartTime: Long
+        var broadcastStartTime: Date? = null,
+        var broadcastEndTime: Date? = null,
+        var receiverStartTime: Date
 )

@@ -6,6 +6,7 @@ import android.hardware.usb.UsbManager
 import android.util.Log
 import com.nextgenbroadcast.mobile.core.media.IMMTDataConsumer
 import com.nextgenbroadcast.mobile.core.media.IMMTDataProducer
+import com.nextgenbroadcast.mobile.middleware.atsc3.entities.SLTConstants
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3ApplicationFile
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3Held
@@ -14,6 +15,7 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.HeldXmlParser
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.service.Atsc3Service
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.service.LLSParserSLT
 import org.ngbp.libatsc3.middleware.Atsc3NdkApplicationBridge
+import org.ngbp.libatsc3.middleware.Atsc3NdkPHYBridge
 import org.ngbp.libatsc3.middleware.android.ATSC3PlayerFlags
 import org.ngbp.libatsc3.middleware.android.a331.PackageExtractEnvelopeMetadataAndPayload
 import org.ngbp.libatsc3.middleware.android.application.interfaces.IAtsc3NdkApplicationBridgeCallbacks
@@ -21,6 +23,9 @@ import org.ngbp.libatsc3.middleware.android.application.sync.mmt.MfuByteBufferFr
 import org.ngbp.libatsc3.middleware.android.application.sync.mmt.MpuMetadata_HEVC_NAL_Payload
 import org.ngbp.libatsc3.middleware.android.phy.Atsc3NdkPHYClientBase
 import org.ngbp.libatsc3.middleware.android.phy.Atsc3UsbDevice
+import org.ngbp.libatsc3.middleware.android.phy.interfaces.IAtsc3NdkPHYBridgeCallbacks
+import org.ngbp.libatsc3.middleware.android.phy.models.BwPhyStatistics
+import org.ngbp.libatsc3.middleware.android.phy.models.RfPhyStatistics
 import org.ngbp.libatsc3.middleware.android.phy.virtual.PcapDemuxedVirtualPHYAndroid
 import org.ngbp.libatsc3.middleware.android.phy.virtual.PcapSTLTPVirtualPHYAndroid
 import org.ngbp.libatsc3.middleware.android.phy.virtual.srt.SRTRxSTLTPVirtualPHYAndroid
@@ -30,10 +35,10 @@ import java.util.concurrent.ConcurrentHashMap
 
 typealias MMTDataConsumerType = IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payload, MfuByteBufferFragment>
 
-//TODO: multithreading requests
 internal class Atsc3Module(
         private val context: Context
-) : IMMTDataProducer<MpuMetadata_HEVC_NAL_Payload, MfuByteBufferFragment>, IAtsc3NdkApplicationBridgeCallbacks {
+) : IMMTDataProducer<MpuMetadata_HEVC_NAL_Payload, MfuByteBufferFragment>,
+        IAtsc3NdkApplicationBridgeCallbacks, IAtsc3NdkPHYBridgeCallbacks {
 
     enum class State {
         OPENED, PAUSED, IDLE
@@ -45,13 +50,14 @@ internal class Atsc3Module(
 
     interface Listener {
         fun onStateChanged(state: State?)
-        fun onServicesLoaded(services: List<Atsc3Service?>)
+        fun onServiceListTableReceived(services: List<Atsc3Service?>, reportServerUrl: String?)
         fun onPackageReceived(appPackage: Atsc3Application)
         fun onCurrentServicePackageChanged(pkg: Atsc3HeldPackage?)
         fun onCurrentServiceDashPatched(mpdPath: String)
     }
 
     private val atsc3NdkApplicationBridge = Atsc3NdkApplicationBridge(this)
+    private val atsc3NdkPHYBridge = Atsc3NdkPHYBridge(this)
 
     private val usbManager by lazy { context.getSystemService(Context.USB_SERVICE) as UsbManager }
 
@@ -69,6 +75,9 @@ internal class Atsc3Module(
     private var selectedServiceHeldXml: String? = null //TODO: use TOI instead
 
     @Volatile
+    private var phyDemodLock: Boolean = false
+
+    @Volatile
     private var mmtSource: MMTDataConsumerType? = null
 
     val slsProtocol: Int
@@ -82,12 +91,9 @@ internal class Atsc3Module(
         this.listener = listener
     }
 
-    fun tune(freqKhz: Int) {
-        if (atsc3NdkPHYClientFreqKhz == freqKhz) return
-
-        //TODO: ignore if RfPhyStatistics.demod_lock_status != 0
-        // atsc3NdkPHYBridge = new Atsc3NdkPHYBridge(this);
-        // IAtsc3NdkPHYBridgeCallbacks.pushRfPhyStatisticsUpdate
+    fun tune(freqKhz: Int, retuneOnDemod: Boolean) {
+        val demodLock = phyDemodLock
+        if (atsc3NdkPHYClientFreqKhz == freqKhz || (!retuneOnDemod && demodLock)) return
 
         atsc3NdkPHYClientInstance?.let { phy ->
             atsc3NdkPHYClientFreqKhz = freqKhz
@@ -227,11 +233,11 @@ internal class Atsc3Module(
 
             client.atsc3UsbDevice?.let { device ->
                 log("closeUsbDevice -- before FindFromUsbDevice")
-                Atsc3UsbDevice.DumpAllAtsc3UsbDevices();
+                Atsc3UsbDevice.DumpAllAtsc3UsbDevices()
 
                 device.destroy()
 
-                Atsc3UsbDevice.DumpAllAtsc3UsbDevices();
+                Atsc3UsbDevice.DumpAllAtsc3UsbDevices()
             }
             atsc3NdkPHYClientInstance = null
         }
@@ -311,13 +317,15 @@ internal class Atsc3Module(
     override fun jni_getCacheDir(): File = context.cacheDir
 
     override fun onSlsTablePresent(sls_payload_xml: String) {
-        log("onSlsTablePresent, $sls_payload_xml");
+        log("onSlsTablePresent, $sls_payload_xml")
 
-        val services = LLSParserSLT().parseXML(sls_payload_xml)
-
-        serviceMap.putAll(services.map { it.serviceId to it }.toMap())
-
-        listener?.onServicesLoaded(Collections.unmodifiableList(services))
+        LLSParserSLT().parseXML(sls_payload_xml).let { (services, urls) ->
+            serviceMap.putAll(services.map { it.serviceId to it }.toMap())
+            listener?.onServiceListTableReceived(
+                    Collections.unmodifiableList(services),
+                    urls[SLTConstants.URL_TYPE_REPORT_SERVER]
+            )
+        }
     }
 
     override fun onAeatTablePresent(aeatPayloadXML: String) {
@@ -388,6 +396,18 @@ internal class Atsc3Module(
                 listener?.onCurrentServiceDashPatched(mpdPath)
             }
         }
+    }
+
+    //////////////////////////////////////////////////////////////
+    /// IAtsc3NdkPHYBridgeCallbacks
+    //////////////////////////////////////////////////////////////
+
+    override fun pushRfPhyStatisticsUpdate(rfPhyStatistics: RfPhyStatistics) {
+        phyDemodLock = rfPhyStatistics.demod_lock_status != 0
+    }
+
+    override fun pushBwPhyStatistics(bwPhyStatistics: BwPhyStatistics) {
+        // ignore
     }
 
     //////////////////////////////////////////////////////////////
