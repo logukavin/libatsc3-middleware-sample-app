@@ -3,6 +3,7 @@ package com.nextgenbroadcast.mobile.middleware.controller.service
 import android.hardware.usb.UsbDevice
 import android.util.Log
 import androidx.lifecycle.MutableLiveData
+import com.nextgenbroadcast.mobile.core.model.PhyFrequency
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.model.SLSService
 import com.nextgenbroadcast.mobile.middleware.analytics.IAtsc3Analytics
@@ -51,10 +52,13 @@ internal class ServiceControllerImpl (
         }
     }
 
-    override fun onServicesLoaded(services: List<Atsc3Service?>) {
-        val slsServices = services.filterNotNull()
-                .map { SLSService(it.bsid, it.serviceId, it.shortServiceName, it.globalServiceId, it.serviceCategory) }
+    override fun onServiceListTableReceived(services: List<Atsc3Service?>, reportServerUrl: String?) {
+        val slsServices = services.filterNotNull().map {
+            SLSService(it.bsid, it.serviceId, it.shortServiceName, it.globalServiceId, it.serviceCategory)
+        }
         repository.setServices(slsServices)
+
+        atsc3Analytics.setReportServerUrl(reportServerUrl)
     }
 
     override fun onPackageReceived(appPackage: Atsc3Application) {
@@ -85,9 +89,7 @@ internal class ServiceControllerImpl (
 
     override fun openRoute(device: UsbDevice): Boolean {
         if (atsc3Module.openUsbDevice(device)) {
-            settings.frequencyLocation?.firstFrequency?.let { freqKhz ->
-                atsc3Module.tune(freqKhz)
-            }
+            tune(PhyFrequency.default(PhyFrequency.Source.AUTO))
             return true
         }
         return false
@@ -143,10 +145,27 @@ internal class ServiceControllerImpl (
         }
     }
 
-    override fun tune(freqKhz: Int) {
+    override fun tune(frequency: PhyFrequency) {
+        var freqKhz = frequency.frequency
+
+        if (frequency.useDefault) {
+            val lastFrequency = settings.lastFrequency
+            val frequencyLocation = settings.frequencyLocation
+            if (lastFrequency > 0) {
+                freqKhz = lastFrequency
+            } else if (frequencyLocation != null) {
+                frequencyLocation.firstFrequency?.let {
+                    freqKhz = it
+                }
+            }
+        }
+
         this.freqKhz.postValue(freqKhz)
         settings.lastFrequency = freqKhz
-        atsc3Module.tune(freqKhz)
+        atsc3Module.tune(
+                freqKhz = freqKhz,
+                retuneOnDemod = frequency.source == PhyFrequency.Source.USER
+        )
     }
 
     private fun resetHeldWithDelay() {

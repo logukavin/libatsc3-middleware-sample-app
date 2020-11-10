@@ -53,9 +53,9 @@ class InterprocessServiceBinder(
             throw UnsupportedOperationException("MMT playback is not supported with standalone service")
         }
 
-        override fun tune(freqKhz: Int) {
+        override fun tune(frequency: PhyFrequency) {
             sendAction(IServiceBinder.ACTION_TYNE_FREQUENCY, bundleOf(
-                    IServiceBinder.PARAM_FREQUENCY_KHZ to freqKhz
+                    IServiceBinder.PARAM_FREQUENCY to frequency
             ))
         }
     }

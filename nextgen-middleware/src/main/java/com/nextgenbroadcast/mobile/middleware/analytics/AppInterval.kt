@@ -1,8 +1,10 @@
 package com.nextgenbroadcast.mobile.middleware.analytics
 
+import java.util.*
+
 class AppInterval(
-        var startTime: Long,
-        var endTime: Long?,
+        var startTime: Date,
+        var endTime: Date?,
         var lifeCycle: Int?,
 ) {
     companion object {

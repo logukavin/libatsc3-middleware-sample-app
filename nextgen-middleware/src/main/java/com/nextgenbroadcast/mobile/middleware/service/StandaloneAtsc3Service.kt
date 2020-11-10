@@ -2,6 +2,7 @@ package com.nextgenbroadcast.mobile.middleware.service
 
 import android.content.Intent
 import android.os.*
+import com.nextgenbroadcast.mobile.core.model.PhyFrequency
 import com.nextgenbroadcast.mobile.middleware.service.provider.StandaloneMediaFileProvider
 import com.nextgenbroadcast.mobile.middleware.service.handler.StandaloneServiceHandler
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
@@ -39,8 +40,8 @@ class StandaloneAtsc3Service : Atsc3ForegroundService() {
                         throw UnsupportedOperationException("MMT playback is not supported with standalone service")
                     }
 
-                    override fun tune(freqKhz: Int) {
-                        serviceController.tune(freqKhz)
+                    override fun tune(frequency: PhyFrequency) {
+                        serviceController.tune(frequency)
                     }
                 },
                 serviceController = serviceController,
