@@ -9,9 +9,9 @@ import java.lang.Exception
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
-suspend fun Call.await(): Response = await { it } as Response
+suspend fun Call.await(): Response = await { it }
 
-suspend fun <T> Call.await(action: (Response) -> T?): T? {
+suspend fun <T> Call.await(action: (Response) -> T): T {
     return suspendCancellableCoroutine { cont ->
         enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
