@@ -91,7 +91,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
             atsc3Module = it
         }
 
-        atsc3Analytics = Atsc3Analytics(applicationContext)
+        atsc3Analytics = Atsc3Analytics(applicationContext, settings)
 
         serviceController = ServiceControllerImpl(repo, settings, atsc3, atsc3Analytics)
 

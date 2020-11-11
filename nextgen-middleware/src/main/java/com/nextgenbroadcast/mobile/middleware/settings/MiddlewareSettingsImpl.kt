@@ -3,11 +3,14 @@ package com.nextgenbroadcast.mobile.middleware.settings
 import android.content.Context
 import android.location.Location
 import androidx.core.content.edit
+import com.nextgenbroadcast.mobile.core.DateUtils
 import com.nextgenbroadcast.mobile.middleware.BuildConfig
+import com.nextgenbroadcast.mobile.middleware.analytics.Atsc3Analytics
 import com.nextgenbroadcast.mobile.middleware.location.FrequencyLocation
 import com.nextgenbroadcast.mobile.middleware.server.ServerConstants
 import org.json.JSONArray
 import org.json.JSONObject
+import java.time.LocalDateTime
 import java.util.*
 
 internal class MiddlewareSettingsImpl(context: Context) : IMiddlewareSettings {
@@ -21,6 +24,16 @@ internal class MiddlewareSettingsImpl(context: Context) : IMiddlewareSettings {
     override val advertisingId: String
         get() = requireString(ADVERTISING_ID) {
             UUID.randomUUID().toString()
+        }
+
+    override var lastReportDate: LocalDateTime
+        get() = requireString(LAST_REPORT_DATE) {
+            DateUtils.format(expiredReportTime(), "")
+        }.let {
+            DateUtils.parse(it) ?: expiredReportTime()
+        }
+        set(value) {
+            saveString(LAST_REPORT_DATE, DateUtils.format(value, ""))
         }
 
     override var frequencyLocation: FrequencyLocation?
@@ -102,10 +115,14 @@ internal class MiddlewareSettingsImpl(context: Context) : IMiddlewareSettings {
         }
     }
 
+    private fun expiredReportTime() =
+            LocalDateTime.now().minusHours(Atsc3Analytics.MAX_HOURS_BEFORE_SEND_REPORT).minusSeconds(1)
+
     companion object {
         private const val REPOSITORY_PREFERENCE = "${BuildConfig.LIBRARY_PACKAGE_NAME}.preference"
         private const val DEVICE_ID = "device_id"
         private const val ADVERTISING_ID = "advertising_id"
+        private const val LAST_REPORT_DATE = "last_report_date"
         private const val FREQUENCY_LOCATION = "frequency_location"
         private const val LOCATION_PROVIDER = "location_provider"
         private const val LOCATION_LATITUDE = "location_latitude"
