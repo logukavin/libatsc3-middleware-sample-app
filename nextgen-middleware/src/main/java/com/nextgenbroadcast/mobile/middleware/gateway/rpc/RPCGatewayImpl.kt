@@ -47,6 +47,8 @@ internal class RPCGatewayImpl(
 
     private var currentAppData: AppData? = null
     private var mediaTimeUpdateJob: Job? = null
+    private val currentAppContextId: String?
+        get() = currentAppData?.appContextId
 
     init {
         viewController.appData.distinctUntilChanged().observeForever { appData ->
@@ -132,6 +134,14 @@ internal class RPCGatewayImpl(
                 socket.sendMessage(message)
             }
         }
+    }
+
+    override fun requestFileCache(baseUrl: String?, rootPath: String?, paths: List<String>, filters: List<String>?): Boolean {
+        val cached = currentAppContextId?.let { appContextId ->
+            applicationCache.requestFiles(appContextId, rootPath, baseUrl, paths, filters )
+        } ?: false
+
+        return cached
     }
 
     private fun onAppDataUpdated(appData: AppData?) {

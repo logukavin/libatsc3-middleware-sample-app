@@ -18,6 +18,8 @@ class DownloadManager {
     }
 
     fun downloadFile(sourceUrl: String, destFile: File): Job {
+        val loadingFile = File(destFile.parentFile, getLoadingName(destFile))
+
         return CoroutineScope(DOWNLOAD_IO).launch {
             val request = Request.Builder()
                     .url(sourceUrl)
@@ -37,12 +39,12 @@ class DownloadManager {
 
                         try {
                             response.body?.source()?.use { source ->
-                                if (!destFile.exists()) {
-                                    destFile.parentFile?.mkdirs()
+                                if (!loadingFile.exists()) {
+                                    loadingFile.parentFile?.mkdirs()
                                 }
 
                                 var finished = false
-                                destFile.sink().use { sink ->
+                                loadingFile.sink().use { sink ->
                                     val buffer = Buffer()
                                     var totalBytesWritten: Long = 0
                                     while (cont.isActive) {
@@ -65,7 +67,8 @@ class DownloadManager {
                                 }
 
                                 if (finished) {
-                                    cont.resume(destFile)
+                                    loadingFile.renameTo(destFile)
+                                    cont.resume(loadingFile)
                                 } else {
                                     cont.resumeWithException(IOException("Download cancelled"))
                                 }
@@ -81,7 +84,10 @@ class DownloadManager {
         }
     }
 
+    fun getLoadingName(file: File) = file.name + LOADING_POSTFIX
+
     companion object {
         private const val SEGMENT_SIZE = 8 * 1024L
+        const val LOADING_POSTFIX = "_loading"
     }
 }
