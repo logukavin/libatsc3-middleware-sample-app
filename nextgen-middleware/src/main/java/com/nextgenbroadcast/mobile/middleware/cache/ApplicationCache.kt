@@ -1,7 +1,6 @@
 package com.nextgenbroadcast.mobile.middleware.cache
 
 import com.nextgenbroadcast.mobile.core.md5
-import com.nextgenbroadcast.mobile.middleware.cache.DownloadManager.Companion.LOADING_POSTFIX
 import kotlinx.coroutines.Job
 import java.io.File
 
@@ -28,24 +27,22 @@ internal class ApplicationCache(
             val file = File(cacheEntry.folder, relativeFilePath)
 
             if (!file.exists()) {
-
-                cacheEntry.folder.listFiles()?.forEach { containedFile ->
-                    val loadingFileName = file.name + LOADING_POSTFIX
-                    if ( loadingFileName == containedFile.name && !cacheEntry.loadingFileNameList.contains(loadingFileName)) {
-                        containedFile.delete()
-                    }
-                }
-
                 result = false
 
-                if (baseUrl != null) {
-                    downloadManager.downloadFile(baseUrl + relativeFilePath, file).also { (job, fileName) ->
-                        cacheEntry.jobList.add(job)
-                        cacheEntry.loadingFileNameList.add(fileName)
+                val loadingFileName = downloadManager.getLoadingName(file)
+                if (!cacheEntry.jobMap.containsKey(loadingFileName)) {
+                    deleteFile(cacheEntry, loadingFileName)
 
-                        job.invokeOnCompletion {
-                            cacheEntry.jobList.remove(job)
-                            cacheEntry.loadingFileNameList.remove(fileName)
+                    if (baseUrl != null) {
+                        downloadManager.downloadFile(baseUrl + relativeFilePath, file).also { job ->
+                            cacheEntry.jobMap[loadingFileName] = job
+
+                            job.invokeOnCompletion { throwable ->
+                                cacheEntry.jobMap.remove(loadingFileName)
+                                if (throwable != null) {
+                                    deleteFile(cacheEntry, loadingFileName)
+                                }
+                            }
                         }
                     }
                 }
@@ -55,9 +52,15 @@ internal class ApplicationCache(
         return result
     }
 
+    private fun deleteFile(cacheEntry: CacheEntry, fileName: String) {
+        File(cacheEntry.folder, fileName).takeIf {
+            it.exists()
+        }?.delete()
+    }
+
     override fun clearCache(appContextId: String) {
         cacheMap[appContextId]?.let { cacheEntry ->
-            cacheEntry.jobList.forEach { job ->
+            cacheEntry.jobMap.values.forEach { job ->
                 job.cancel()
             }
 
@@ -79,6 +82,5 @@ private class CacheEntry(
         cachePath: String
 ) {
     val folder = File(cachePath)
-    val jobList = ArrayList<Job>()
-    val loadingFileNameList = ArrayList<String>()
+    val jobMap = HashMap<String, Job>()
 }
