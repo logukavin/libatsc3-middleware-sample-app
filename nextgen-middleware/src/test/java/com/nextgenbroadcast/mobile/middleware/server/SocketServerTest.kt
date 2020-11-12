@@ -133,4 +133,9 @@ abstract class RPCGatewayAdapter : IRPCGateway {
     override fun onSocketClosed(socket: MiddlewareWebSocket) {
         Assert.assertNotNull(socket)
     }
+
+    override fun requestFileCache(baseUrl: String?, rootPath: String?, paths: List<String>, filters: List<String>?): Boolean {
+        Assert.assertNotNull(paths)
+        return false
+    }
 }

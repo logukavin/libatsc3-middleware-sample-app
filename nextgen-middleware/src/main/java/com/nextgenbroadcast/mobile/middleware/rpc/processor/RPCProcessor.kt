@@ -54,7 +54,7 @@ internal class RPCProcessor(
 
     private fun filRequests(processor: Processor) {
         processor.process(FilterCodesImpl(), IFilterCodes::class.java)
-        processor.process(CacheRequestImpl(), ICacheRequest::class.java)
+        processor.process(CacheRequestImpl(gateway), ICacheRequest::class.java)
         processor.process(ContentRecoveryImpl(), IContentRecovery::class.java)
         processor.process(DRMImpl(), IDRM::class.java)
         processor.process(EventStreamImpl(), IEventStream::class.java)

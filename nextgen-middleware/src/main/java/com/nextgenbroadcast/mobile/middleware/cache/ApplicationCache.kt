@@ -10,31 +10,39 @@ internal class ApplicationCache(
 ) : IApplicationCache {
 
     private val cacheMap: HashMap<String, CacheEntry> by lazy {
-        HashMap()
+        hashMapOf()
     }
 
-    override fun requestFiles(appContextId: String, files: List<Pair<String, String?>>): List<Pair<String, Boolean>> {
+    override fun requestFiles(appContextId: String, rootPath: String?, baseUrl: String?, paths: List<String>, filters: List<String>?): Boolean {
         val cacheEntry = cacheMap.getOrElse(appContextId) {
-            CacheEntry(getCachePathForAppContextId(appContextId)).also {
+            val cachePath = getCachePathForAppContextId(appContextId) + (rootPath ?: "")
+            CacheEntry(cachePath).also {
                 cacheMap[appContextId] = it
             }
         }
 
-        val result = ArrayList<Pair<String, Boolean>>(files.size)
+        var result = true
 
-        files.forEach { (filePath, sourceUrl) ->
-            val file = File(cacheEntry.folder, filePath)
-            if (file.exists()) {
-                result.add(Pair(filePath, true))
-            } else {
-                result.add(Pair(filePath, false))
+        paths.forEach { relativeFilePath ->
+            val file = File(cacheEntry.folder, relativeFilePath)
 
-                if (sourceUrl != null) {
-                    downloadManager.downloadFile(sourceUrl, file).also { job ->
-                        cacheEntry.jobList.add(job)
+            if (!file.exists()) {
+                result = false
 
-                        job.invokeOnCompletion {
-                            cacheEntry.jobList.remove(job)
+                val loadingFileName = downloadManager.getLoadingName(file)
+                if (!cacheEntry.jobMap.containsKey(loadingFileName)) {
+                    deleteFile(cacheEntry, loadingFileName)
+
+                    if (baseUrl != null) {
+                        downloadManager.downloadFile(baseUrl + relativeFilePath, file).also { job ->
+                            cacheEntry.jobMap[loadingFileName] = job
+
+                            job.invokeOnCompletion { throwable ->
+                                cacheEntry.jobMap.remove(loadingFileName)
+                                if (throwable != null) {
+                                    deleteFile(cacheEntry, loadingFileName)
+                                }
+                            }
                         }
                     }
                 }
@@ -44,9 +52,15 @@ internal class ApplicationCache(
         return result
     }
 
+    private fun deleteFile(cacheEntry: CacheEntry, fileName: String) {
+        File(cacheEntry.folder, fileName).takeIf {
+            it.exists()
+        }?.delete()
+    }
+
     override fun clearCache(appContextId: String) {
         cacheMap[appContextId]?.let { cacheEntry ->
-            cacheEntry.jobList.forEach { job ->
+            cacheEntry.jobMap.values.forEach { job ->
                 job.cancel()
             }
 
@@ -60,7 +74,7 @@ internal class ApplicationCache(
     }
 
     private fun getCachePathForAppContextId(appContextId: String): String {
-        return cacheRoot.absolutePath + appContextId.md5()
+        return "${cacheRoot.absolutePath}/${appContextId.md5()}/"
     }
 }
 
@@ -68,5 +82,5 @@ private class CacheEntry(
         cachePath: String
 ) {
     val folder = File(cachePath)
-    val jobList = ArrayList<Job>()
+    val jobMap = HashMap<String, Job>()
 }
