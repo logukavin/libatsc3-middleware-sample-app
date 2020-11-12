@@ -17,10 +17,10 @@ class DownloadManager {
         OkHttpClient()
     }
 
-    fun downloadFile(sourceUrl: String, destFile: File): Pair<Job, String> {
-        val loadingFile = File(destFile.parentFile, destFile.name + LOADING_POSTFIX)
+    fun downloadFile(sourceUrl: String, destFile: File): Job {
+        val loadingFile = File(destFile.parentFile, getLoadingName(destFile))
 
-        val loadingJob = CoroutineScope(DOWNLOAD_IO).launch {
+        return CoroutineScope(DOWNLOAD_IO).launch {
             val request = Request.Builder()
                     .url(sourceUrl)
                     .build()
@@ -82,9 +82,9 @@ class DownloadManager {
                 })
             }
         }
-
-        return Pair(loadingJob, loadingFile.name)
     }
+
+    fun getLoadingName(file: File) = file.name + LOADING_POSTFIX
 
     companion object {
         private const val SEGMENT_SIZE = 8 * 1024L
