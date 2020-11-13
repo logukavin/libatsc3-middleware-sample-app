@@ -19,35 +19,38 @@ class StandaloneAtsc3Service : Atsc3ForegroundService() {
 
     private var serviceHandler: StandaloneServiceHandler? = null
 
-    override fun createServiceBinder(serviceController: IServiceController, viewController: IViewController): IBinder {
-        serviceHandler = StandaloneServiceHandler(
-                mediaFileProvider,
-                lifecycleOwner = this@StandaloneAtsc3Service,
-                receiverPresenter = object : IReceiverPresenter {
-                    override val receiverState = serviceController.receiverState
-                    override val freqKhz = serviceController.freqKhz
+    override fun createServiceBinder(serviceController: IServiceController): IBinder {
+        return Messenger(
+                StandaloneServiceHandler(
+                        mediaFileProvider,
+                        lifecycleOwner = this@StandaloneAtsc3Service,
+                        receiverPresenter = object : IReceiverPresenter {
+                            override val receiverState = serviceController.receiverState
+                            override val freqKhz = serviceController.freqKhz
 
-                    override fun openRoute(path: String): Boolean {
-                        openRoute(this@StandaloneAtsc3Service, path)
-                        return true
-                    }
+                            override fun openRoute(path: String): Boolean {
+                                openRoute(this@StandaloneAtsc3Service, path)
+                                return true
+                            }
 
-                    override fun closeRoute() {
-                        closeRoute(this@StandaloneAtsc3Service)
-                    }
+                            override fun closeRoute() {
+                                closeRoute(this@StandaloneAtsc3Service)
+                            }
 
-                    override fun createMMTSource(): MMTDataBuffer {
-                        throw UnsupportedOperationException("MMT playback is not supported with standalone service")
-                    }
+                            override fun createMMTSource(): MMTDataBuffer {
+                                throw UnsupportedOperationException("MMT playback is not supported with standalone service")
+                            }
 
-                    override fun tune(frequency: PhyFrequency) {
-                        serviceController.tune(frequency)
-                    }
-                },
-                serviceController = serviceController,
-                viewController = viewController
-        )
-        return Messenger(serviceHandler).binder
+                            override fun tune(frequency: PhyFrequency) {
+                                serviceController.tune(frequency)
+                            }
+                        },
+                        serviceController = serviceController,
+                        requireViewController = ::requireViewController
+                ).also {
+                    serviceHandler = it
+                }
+        ).binder
     }
 
     override fun onUnbind(intent: Intent?): Boolean {
