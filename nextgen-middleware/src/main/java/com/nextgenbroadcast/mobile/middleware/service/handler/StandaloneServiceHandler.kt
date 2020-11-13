@@ -20,16 +20,22 @@ internal class StandaloneServiceHandler(
         private val lifecycleOwner: LifecycleOwner,
         private val receiverPresenter: IReceiverPresenter,
         private val serviceController: IServiceController,
-        private val viewController: IViewController
+        private val requireViewController: () -> IViewController
 ) : Handler() {
 
     fun unSubscribeAll() {
-        serviceController.receiverState.removeObservers(lifecycleOwner)
-        serviceController.sltServices.removeObservers(lifecycleOwner)
-        serviceController.selectedService.removeObservers(lifecycleOwner)
-        viewController.appData.removeObservers(lifecycleOwner)
-        viewController.rmpLayoutParams.removeObservers(lifecycleOwner)
-        viewController.rmpMediaUri.removeObservers(lifecycleOwner)
+        with (serviceController) {
+            receiverState.removeObservers(lifecycleOwner)
+            sltServices.removeObservers(lifecycleOwner)
+            selectedService.removeObservers(lifecycleOwner)
+        }
+
+        with (requireViewController()) {
+            appData.removeObservers(lifecycleOwner)
+            rmpLayoutParams.removeObservers(lifecycleOwner)
+            rmpMediaUri.removeObservers(lifecycleOwner)
+        }
+
         fileProvider.revokeAllUriPermissions()
     }
 
@@ -66,30 +72,30 @@ internal class StandaloneServiceHandler(
                 }
             }
 
-            IServiceBinder.ACTION_RMP_LAYOUT_RESET -> viewController.rmpLayoutReset()
+            IServiceBinder.ACTION_RMP_LAYOUT_RESET -> requireViewController().rmpLayoutReset()
 
             IServiceBinder.ACTION_RMP_PLAYBACK_STATE_CHANGED -> {
                 msg.data.getParcelable(PlaybackState::class.java, IServiceBinder.PARAM_RMP_PLAYBACK_STATE)?.let {
-                    viewController.rmpPlaybackChanged(it)
+                    requireViewController().rmpPlaybackChanged(it)
                 }
             }
 
             IServiceBinder.ACTION_RMP_PLAYBACK_RATE_CHANGED -> {
                 val speed = msg.data.getFloat(IServiceBinder.PARAM_RMP_PLAYBACK_RATE)
-                viewController.rmpPlaybackRateChanged(speed)
+                requireViewController().rmpPlaybackRateChanged(speed)
             }
 
             IServiceBinder.ACTION_RMP_MEDIA_TIME_CHANGED -> {
                 val currentTime = msg.data.getLong(IServiceBinder.PARAM_RMP_MEDIA_TIME)
-                viewController.rmpMediaTimeChanged(currentTime)
+                requireViewController().rmpMediaTimeChanged(currentTime)
             }
 
             IServiceBinder.CALLBACK_ADD_PLAYER_STATE_CHANGE -> {
-                viewController.addOnPlayerSateChangedCallback(playerStateListener)
+                requireViewController().addOnPlayerSateChangedCallback(playerStateListener)
             }
 
             IServiceBinder.CALLBACK_REMOVE_PLAYER_STATE_CHANGE -> {
-                viewController.addOnPlayerSateChangedCallback(playerStateListener)
+                requireViewController().addOnPlayerSateChangedCallback(playerStateListener)
             }
 
             IServiceBinder.ACTION_NEED_URI_PERMISSION -> {
@@ -111,7 +117,7 @@ internal class StandaloneServiceHandler(
 
             IServiceBinder.ACTION_BA_STATE_CHANGED -> {
                 msg.data.getParcelable(ApplicationState::class.java, IServiceBinder.PARAM_APPSTATE)?.let {
-                    viewController.setApplicationState(it)
+                    requireViewController().setApplicationState(it)
                 }
             }
 
@@ -169,7 +175,7 @@ internal class StandaloneServiceHandler(
     }
 
     private fun observeAppData(sendToMessenger: Messenger) {
-        viewController.appData.observe(lifecycleOwner, { appData ->
+        requireViewController().appData.observe(lifecycleOwner, { appData ->
             sendToMessenger.send(buildMessage(
                     IServiceBinder.LIVEDATA_APPDATA,
                     bundleOf(
@@ -181,7 +187,7 @@ internal class StandaloneServiceHandler(
     }
 
     private fun observeRPMLayoutParams(sendToMessenger: Messenger) {
-        viewController.rmpLayoutParams.observe(lifecycleOwner, { rpmLayoutParams ->
+        requireViewController().rmpLayoutParams.observe(lifecycleOwner, { rpmLayoutParams ->
             sendToMessenger.send(buildMessage(
                     IServiceBinder.LIVEDATA_RMP_LAYOUT_PARAMS,
                     bundleOf(
@@ -193,7 +199,7 @@ internal class StandaloneServiceHandler(
     }
 
     private fun observeRPMMediaUrl(sendToMessenger: Messenger, clientPackage: String) {
-        viewController.rmpMediaUri.observe(lifecycleOwner, { rmpMediaUri ->
+        requireViewController().rmpMediaUri.observe(lifecycleOwner, { rmpMediaUri ->
             rmpMediaUri?.let { uri ->
                 fileProvider.grantUriPermission(clientPackage, uri, false)
                 sendToMessenger.send(buildMessage(

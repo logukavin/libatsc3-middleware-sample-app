@@ -60,6 +60,11 @@ open class BaseReceiverPlayerView : FrameLayout {
 
     fun bind(viewModel: RMPViewModel) {
         rmpViewModel = viewModel
+
+        with (receiver_media_player) {
+            viewModel.setCurrentPlayerState(playbackState)
+            viewModel.setCurrentPlaybackRate(playbackSpeed)
+        }
     }
 
     fun unbind() {
