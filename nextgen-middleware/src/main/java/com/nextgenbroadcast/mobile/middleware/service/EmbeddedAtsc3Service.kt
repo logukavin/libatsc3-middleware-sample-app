@@ -10,12 +10,11 @@ import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
 
 class EmbeddedAtsc3Service : Atsc3ForegroundService() {
 
-    override fun createServiceBinder(serviceController: IServiceController, viewController: IViewController): IBinder =
-            ServiceBinder(serviceController, viewController)
+    override fun createServiceBinder(serviceController: IServiceController): IBinder =
+            ServiceBinder(serviceController)
 
     inner class ServiceBinder(
-            serviceController: IServiceController,
-            viewController: IViewController
+            private val serviceController: IServiceController
     ) : Binder(), IServiceBinder {
         override val receiverPresenter: IReceiverPresenter = object : IReceiverPresenter {
             override val receiverState = serviceController.receiverState
@@ -35,9 +34,12 @@ class EmbeddedAtsc3Service : Atsc3ForegroundService() {
                 serviceController.tune(frequency)
             }
         }
-        override val selectorPresenter: ISelectorPresenter = serviceController
-        override val userAgentPresenter: IUserAgentPresenter = viewController
-        override val mediaPlayerPresenter: IMediaPlayerPresenter = viewController
+        override val selectorPresenter: ISelectorPresenter
+            get() = serviceController
+        override val userAgentPresenter: IUserAgentPresenter
+            get() = requireViewController()
+        override val mediaPlayerPresenter: IMediaPlayerPresenter
+            get() = requireViewController()
     }
 
     companion object {

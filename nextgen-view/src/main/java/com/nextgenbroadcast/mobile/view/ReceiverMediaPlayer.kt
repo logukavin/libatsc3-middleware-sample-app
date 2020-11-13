@@ -49,6 +49,14 @@ class ReceiverMediaPlayer @JvmOverloads constructor(
     val playbackPosition
         get() = player?.currentPosition ?: 0
 
+    val playbackState: PlaybackState
+        get() = player?.let {
+            playbackState(it.playbackState, it.playWhenReady)
+        } ?: PlaybackState.IDLE
+
+    val playbackSpeed: Float
+        get() = player?.playbackParameters?.speed ?: 0f
+
     var playWhenReady
         get() = player?.playWhenReady ?: false
         set(value) {
@@ -117,17 +125,9 @@ class ReceiverMediaPlayer @JvmOverloads constructor(
         return ExoPlayerFactory.newSimpleInstance(context, DefaultRenderersFactory(context), DefaultTrackSelector(), loadControl).apply {
             addListener(object : Player.EventListener {
                 override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
-                    val state = when (playbackState) {
-                        Player.STATE_BUFFERING, Player.STATE_READY -> {
-                            updateBufferingState(playbackState == Player.STATE_BUFFERING)
-                            if (playWhenReady) PlaybackState.PLAYING else PlaybackState.PAUSED
-                        }
-                        Player.STATE_IDLE, Player.STATE_ENDED -> {
-                            PlaybackState.IDLE
-                        }
-                        else -> return
-                    }
+                    updateBufferingState(playbackState == Player.STATE_BUFFERING)
 
+                    val state = playbackState(playbackState, playWhenReady) ?: return
                     if (rmpState != state) {
                         rmpState = state
                         listener?.onPlayerStateChanged(state)
@@ -148,6 +148,18 @@ class ReceiverMediaPlayer @JvmOverloads constructor(
                     listener?.onPlaybackSpeedChanged(playbackParameters.speed)
                 }
             })
+        }
+    }
+
+    private fun playbackState(playbackState: Int, playWhenReady: Boolean): PlaybackState? {
+        return when (playbackState) {
+            Player.STATE_BUFFERING, Player.STATE_READY -> {
+                if (playWhenReady) PlaybackState.PLAYING else PlaybackState.PAUSED
+            }
+            Player.STATE_IDLE, Player.STATE_ENDED -> {
+                PlaybackState.IDLE
+            }
+            else -> null
         }
     }
 
