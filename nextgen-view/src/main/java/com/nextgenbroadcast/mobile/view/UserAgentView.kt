@@ -90,11 +90,11 @@ class UserAgentView @JvmOverloads constructor(
     private fun onLoadingError(uri: Uri) {
         if (reloadJob != null) return
 
-        loadUrl("about:blank")
-
         if (loadingRetryCount < MAX_RETRY_COUNT) {
             appEntryPoint?.let { entryPoint ->
                 if (uri.toString() == entryPoint) {
+                    loadUrl("about:blank")
+
                     loadingRetryCount++
                     reloadJob = ioScope.launch {
                         delay(RETRY_DELAY * loadingRetryCount)
