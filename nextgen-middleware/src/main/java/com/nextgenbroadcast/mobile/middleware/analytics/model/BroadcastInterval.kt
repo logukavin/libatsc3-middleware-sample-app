@@ -1,4 +1,4 @@
-package com.nextgenbroadcast.mobile.middleware.analytics
+package com.nextgenbroadcast.mobile.middleware.analytics.model
 
 import java.util.*
 
