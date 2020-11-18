@@ -379,6 +379,11 @@ internal class Atsc3Module(
     override fun onPackageExtractCompleted(packageMetadata: PackageExtractEnvelopeMetadataAndPayload) {
         log("onPackageExtractCompleted packageName: ${packageMetadata.packageName}, appContextIdList: ${packageMetadata.appContextIdList}")
 
+        if (!packageMetadata.isValid()) {
+            log("onPackageExtractCompleted INVALID: $packageMetadata")
+            return
+        }
+
         val pkgUid = "${packageMetadata.packageExtractPath}/${packageMetadata.packageName}"
 
         val pkg = metadataToPackage(pkgUid, packageMetadata)
@@ -426,6 +431,12 @@ internal class Atsc3Module(
                 cancel.invoke()
             }
         } ?: cancel.invoke()
+    }
+
+    private fun PackageExtractEnvelopeMetadataAndPayload.isValid(): Boolean {
+        return !packageName.isNullOrEmpty()
+                && !appContextIdList.isNullOrEmpty()
+                && !packageExtractPath.isNullOrEmpty()
     }
 
     private fun metadataToPackage(uid: String, packageMetadata: PackageExtractEnvelopeMetadataAndPayload): Atsc3Application {
