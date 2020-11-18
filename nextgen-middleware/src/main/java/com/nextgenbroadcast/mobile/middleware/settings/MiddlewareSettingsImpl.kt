@@ -13,7 +13,9 @@ import org.json.JSONObject
 import java.time.LocalDateTime
 import java.util.*
 
-internal class MiddlewareSettingsImpl(context: Context) : IMiddlewareSettings {
+internal class MiddlewareSettingsImpl private constructor(
+        context: Context
+) : IMiddlewareSettings {
     private val preferences = context.getSharedPreferences(REPOSITORY_PREFERENCE, Context.MODE_PRIVATE)
 
     override val deviceId: String
@@ -129,5 +131,18 @@ internal class MiddlewareSettingsImpl(context: Context) : IMiddlewareSettings {
         private const val LOCATION_LONGITUDE = "location_longitude"
         private const val FREQUENCY_LIST = "frequency_list"
         private const val FREQUENCY_USER = "frequency_user"
+
+        @Volatile
+        private var INSTANCE: MiddlewareSettingsImpl? = null
+
+        fun getInstance(context: Context): MiddlewareSettingsImpl {
+            val instance = INSTANCE
+            return instance ?: synchronized(this) {
+                val instance2 = INSTANCE
+                instance2 ?: MiddlewareSettingsImpl(context).also {
+                    INSTANCE = it
+                }
+            }
+        }
     }
 }

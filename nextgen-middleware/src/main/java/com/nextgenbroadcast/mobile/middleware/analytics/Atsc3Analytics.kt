@@ -4,9 +4,14 @@ import android.content.Context
 import android.location.Location
 import android.provider.Settings
 import android.util.Log
+import androidx.work.*
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.nextgenbroadcast.mobile.core.DateUtils
+import com.nextgenbroadcast.mobile.middleware.analytics.model.AVService
+import com.nextgenbroadcast.mobile.middleware.analytics.model.AppInterval
+import com.nextgenbroadcast.mobile.middleware.analytics.model.BroadcastInterval
+import com.nextgenbroadcast.mobile.middleware.analytics.model.ReportInterval
 import com.nextgenbroadcast.mobile.middleware.analytics.serializer.DateSerializer
 import com.nextgenbroadcast.mobile.middleware.analytics.serializer.LocationSerializer
 import com.nextgenbroadcast.mobile.middleware.location.LocationGatherer
@@ -25,13 +30,14 @@ import java.io.IOException
 import java.time.LocalDateTime
 import java.util.*
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import kotlin.coroutines.resume
 
-class Atsc3Analytics(
-        context: Context,
+class Atsc3Analytics private constructor(
+        private val context: Context,
         private val settings: IMiddlewareSettings
 ) : IAtsc3Analytics {
-
+    private val workManager = WorkManager.getInstance(context)
     private val persistedStore = QueueFile.Builder(File(context.filesDir, CACHE_FILE_NAME)).build()
     private val deviceId = settings.deviceId
     private val clockSource = Settings.Global.getInt(context.contentResolver, Settings.Global.AUTO_TIME, 0)
@@ -69,9 +75,13 @@ class Atsc3Analytics(
     override fun setReportServerUrl(serverUrl: String?) {
         this.serverUrl = serverUrl
 
-        //TODO: sync with scheduled job
-        if (DateUtils.hoursTillNow(lastReportDate) >= MAX_HOURS_BEFORE_SEND_REPORT) {
-            sendReports()
+        if (serverUrl != null) {
+            // send a reports if it's time to, or schedule the next sending
+            if (DateUtils.hoursTillNow(lastReportDate) >= MAX_HOURS_BEFORE_SEND_REPORT) {
+                sendAllEventsAndReschedule(serverUrl)
+            } else {
+                scheduleWork(serverUrl, TimeUnit.HOURS.toSeconds(MAX_HOURS_BEFORE_SEND_REPORT))
+            }
         }
     }
 
@@ -229,7 +239,9 @@ class Atsc3Analytics(
             }
 
             if (persistedStore.size() >= CACHE_FULL_SIZE) {
-                //TODO: schedule sending start
+                serverUrl?.let {
+                    sendAllEventsAndReschedule(it)
+                }
             }
         }
     }
@@ -272,17 +284,15 @@ class Atsc3Analytics(
         }
     }
 
-    private fun sendReports() {
-        val url = serverUrl ?: return
-
-        CoroutineScope(SENDING_IO).launch {
-            while (!persistedStore.isEmpty) {
+    fun sendAllEvents(reportServerUrl: String): Job {
+        return CoroutineScope(SENDING_IO).launch {
+            while (isActive && !persistedStore.isEmpty) {
                 val events = peekFromStore(5)
                 if (events.isEmpty()) break
 
                 val cdmJson = createCDMJson(events)
                 val request = Request.Builder()
-                        .url(url)
+                        .url(reportServerUrl)
                         .addHeader("content-type", CONTENT_TYPE_JSON)
                         .post(cdmJson.toString().toRequestBody(MEDIA_TYPE_JSON))
                         .build()
@@ -292,7 +302,6 @@ class Atsc3Analytics(
                         persistedStore.remove(events.size)
                         return@await true
                     } else {
-                        //TODO: schedule next start
                         return@await false
                     }
                 }
@@ -300,10 +309,48 @@ class Atsc3Analytics(
                 if (succeed) {
                     lastReportDate = LocalDateTime.now()
                 } else {
+                    cancel()
                     break
                 }
             }
         }
+    }
+
+    private fun sendAllEventsAndReschedule(reportServerUrl: String) {
+        workManager.cancelUniqueWork(AnalyticsSendingWorker.NAME)
+
+        sendAllEvents(reportServerUrl).invokeOnCompletion { exception ->
+            val delay = if (exception != null) {
+                TimeUnit.MINUTES.toSeconds(MIN_MINUTES_BEFORE_RETRY_REPORT)
+            } else {
+                TimeUnit.HOURS.toSeconds(MAX_HOURS_BEFORE_SEND_REPORT)
+            }
+
+            scheduleWork(reportServerUrl, delay)
+        }
+    }
+
+    private fun scheduleWork(reportServerUrl: String, delaySec: Long, keepIfExists: Boolean = false): Boolean {
+        val constraints = Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build()
+
+        val uploadWorkRequest = OneTimeWorkRequestBuilder<AnalyticsSendingWorker>()
+                .setConstraints(constraints)
+                .setInitialDelay(delaySec, TimeUnit.SECONDS)
+                .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, RETRY_DELAY_MINUTES, TimeUnit.MINUTES)
+                .setInputData(workDataOf(
+                        AnalyticsSendingWorker.ARG_BASE_URL to reportServerUrl
+                ))
+                .build()
+
+        workManager.enqueueUniqueWork(
+                AnalyticsSendingWorker.NAME,
+                if (keepIfExists) ExistingWorkPolicy.KEEP else ExistingWorkPolicy.REPLACE,
+                uploadWorkRequest
+        )
+
+        return true
     }
 
     private fun damp(avService: AVService) {
@@ -334,8 +381,25 @@ class Atsc3Analytics(
         private const val CACHE_FULL_SIZE = MAX_CACHE_SIZE * 0.8
 
         const val MAX_HOURS_BEFORE_SEND_REPORT = 24L
+        const val MIN_MINUTES_BEFORE_RETRY_REPORT = 15L
+
+        const val RETRY_DELAY_MINUTES = 1L
+        const val MAX_RETRY_COUNT = 5
 
         const val CONTENT_TYPE_JSON = "application/json"
         val MEDIA_TYPE_JSON = "$CONTENT_TYPE_JSON; charset=utf-8".toMediaType()
+
+        @Volatile
+        private var INSTANCE: Atsc3Analytics? = null
+
+        fun getInstance(context: Context, settings: IMiddlewareSettings): Atsc3Analytics {
+            val instance = INSTANCE
+            return instance ?: synchronized(this) {
+                val instance2 = INSTANCE
+                instance2 ?: Atsc3Analytics(context, settings).also {
+                    INSTANCE = it
+                }
+            }
+        }
     }
 }

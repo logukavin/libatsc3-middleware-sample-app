@@ -82,7 +82,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
         wakeLock = (getSystemService(Context.POWER_SERVICE) as PowerManager).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Atsc3ForegroundService::lock")
 
-        settings = MiddlewareSettingsImpl(applicationContext)
+        settings = MiddlewareSettingsImpl.getInstance(applicationContext)
 
         val repo = RepositoryImpl().also {
             repository = it
@@ -91,7 +91,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
             atsc3Module = it
         }
 
-        atsc3Analytics = Atsc3Analytics(applicationContext, settings)
+        atsc3Analytics = Atsc3Analytics.getInstance(applicationContext, settings)
 
         serviceController = ServiceControllerImpl(repo, settings, atsc3, atsc3Analytics)
 
