@@ -31,14 +31,14 @@ android {
 
         resValue("string", "nextgenMediaFileProvider", "com.nextgenbroadcast.mobile.middleware.provider")
 
-        resValue("string", "Auth0TokenUrl", "https://int-sinclairplatform.auth0.com/oauth/token")
+        resValue("string", "Auth0TokenUrl", "https://sinclairplatform.auth0.com/oauth/token")
         resValue("string", "Auth0Username", "middleware-service@sinclairplatform.com")
-        resValue("string", "Auth0Password", "Qazwsx123")
-        resValue("string", "Auth0Audience", "https://api.int.sinclairplatform.com")
-        resValue("string", "Auth0ClientId", "NddpBjtN4TO4L5iB2mflkHUsFQ3kngJM")
-        resValue("string", "Auth0ClientSecret", "82cbuq_2qAillIHxR7pmuHaH-HULwzrbB-EQs0dwR09nGMtEWRVBLWDAmRw7OIlO")
+        resValue("string", "Auth0Password", "xD7R2Acu8E")
+        resValue("string", "Auth0Audience", "https://api.prod.sinclairplatform.com")
+        resValue("string", "Auth0ClientId", "vW7uQCHG3cF17W1D1uxBKFaP3jQHVf4i")
+        resValue("string", "Auth0ClientSecret", "rZYm-grsEEaQGSbJSgZIaLIrjAFs_oLVt5u0Wl1zfvVFKlA0VYrt8qwGm4AFKdsH")
 
-        resValue("string", "SinclairPlatformUrl", "https://int-property-gateway.sinclairplatform.com")
+        resValue("string", "SinclairPlatformUrl", "https://prod-property-gateway.sinclairplatform.com")
     }
 
     buildTypes {
