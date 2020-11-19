@@ -79,7 +79,7 @@ class IRPCControllerTest {
     private var scaleFactor: Double = 1.0
     private var xPos: Double = 11.0
     private var yPos: Double = 22.0
-    private val mockedSLSService: SLSService = SLSService(1,5003, "WZTV", "tag:sinclairplatform.com,2020:WZTV:2727", 0)
+    private val mockedSLSService: SLSService = SLSService(1,5003, "WZTV", "tag:sinclairplatform.com,2020:WZTV:2727", 22, 1, 0)
     private val mockedMediaUrl = "htttp://mockedurl.com"
     private val deviceId = UUID.randomUUID().toString()
     private val advertisingId = UUID.randomUUID().toString()

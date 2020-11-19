@@ -9,5 +9,7 @@ data class SLSService(
         val id: Int,
         val shortName: String?,
         val globalId: String?,
+        val majorChannelNo: Int,
+        val minorChannelNo: Int,
         val category: Int
 ) : Parcelable
