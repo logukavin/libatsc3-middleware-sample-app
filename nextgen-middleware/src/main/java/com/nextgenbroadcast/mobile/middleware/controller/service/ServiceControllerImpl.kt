@@ -54,7 +54,15 @@ internal class ServiceControllerImpl (
 
     override fun onServiceListTableReceived(services: List<Atsc3Service?>, reportServerUrl: String?) {
         val slsServices = services.filterNotNull().map {
-            SLSService(it.bsid, it.serviceId, it.shortServiceName, it.globalServiceId, it.serviceCategory)
+            SLSService(
+                    it.bsid,
+                    it.serviceId,
+                    it.shortServiceName,
+                    it.globalServiceId,
+                    it.majorChannelNo,
+                    it.minorChannelNo,
+                    it.serviceCategory
+            )
         }
         repository.setServices(slsServices)
 
