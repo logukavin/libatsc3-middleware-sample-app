@@ -1,7 +1,7 @@
 package com.nextgenbroadcast.mobile.middleware.repository
 
 import androidx.lifecycle.MutableLiveData
-import com.nextgenbroadcast.mobile.core.model.SLSService
+import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPackage
 import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.Urls
@@ -10,13 +10,13 @@ import java.util.concurrent.ConcurrentHashMap
 internal class RepositoryImpl : IRepository {
     private val _applications = ConcurrentHashMap<String, Atsc3Application>()
 
-    override val selectedService = MutableLiveData<SLSService>()
+    override val selectedService = MutableLiveData<AVService>()
     override val serviceGuideUrls = MutableLiveData<List<Urls>>()
 
     override val routeMediaUrl = MutableLiveData<String>()
 
     override val applications = MutableLiveData<List<Atsc3Application>?>()
-    override val services = MutableLiveData<List<SLSService>>()
+    override val services = MutableLiveData<List<AVService>>()
     override val heldPackage = MutableLiveData<Atsc3HeldPackage?>()
 
     override fun addOrUpdateApplication(application: Atsc3Application) {
@@ -30,11 +30,11 @@ internal class RepositoryImpl : IRepository {
         }
     }
 
-    override fun setServices(services: List<SLSService>) {
+    override fun setServices(services: List<AVService>) {
         this.services.postValue(services)
     }
 
-    override fun setSelectedService(service: SLSService?) {
+    override fun setSelectedService(service: AVService?) {
         selectedService.postValue(service)
     }
 

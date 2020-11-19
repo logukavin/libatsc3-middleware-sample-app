@@ -50,7 +50,7 @@ internal class Atsc3Module(
 
     interface Listener {
         fun onStateChanged(state: State?)
-        fun onServiceListTableReceived(services: List<Atsc3Service?>, reportServerUrl: String?)
+        fun onServiceListTableReceived(services: List<Atsc3Service>, reportServerUrl: String?)
         fun onPackageReceived(appPackage: Atsc3Application)
         fun onCurrentServicePackageChanged(pkg: Atsc3HeldPackage?)
         fun onCurrentServiceDashPatched(mpdPath: String)
@@ -224,13 +224,19 @@ internal class Atsc3Module(
             serviceMap.values.firstOrNull {
                 it.serviceCategory == SLTConstants.SERVICE_CATEGORY_ESG
             }?.let { service ->
-                atsc3NdkApplicationBridge.atsc3_slt_alc_select_additional_service(service.serviceId)
+                tmpAdditionalServiceOpened = atsc3NdkApplicationBridge.atsc3_slt_alc_select_additional_service(service.serviceId) > 0
             }
-
-            tmpAdditionalServiceOpened = true
         }
 
         return selectedServiceSLSProtocol > 0
+    }
+
+    @Deprecated("Do not work because additional service persistence not implemented in libatsc3")
+    fun selectAdditionalService(serviceId: Int): Boolean {
+//        //atsc3NdkApplicationBridge.atsc3_slt_alc_clear_additional_service_selections()
+//        val protocol = atsc3NdkApplicationBridge.atsc3_slt_alc_select_additional_service(serviceId)
+//        return protocol > 0
+        return false
     }
 
     fun stop() {
