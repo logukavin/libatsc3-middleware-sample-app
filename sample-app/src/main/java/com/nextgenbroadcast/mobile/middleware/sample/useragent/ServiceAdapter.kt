@@ -6,13 +6,13 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.TextView
-import com.nextgenbroadcast.mobile.core.model.SLSService
+import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.middleware.sample.R
 
-class ServiceAdapter(context: Context) : ArrayAdapter<SLSService>(context, 0) {
+class ServiceAdapter(context: Context) : ArrayAdapter<AVService>(context, 0) {
     private var inflater = LayoutInflater.from(context)
 
-    override fun getItem(position: Int): SLSService? {
+    override fun getItem(position: Int): AVService? {
         return if (isEmptyState()) null else super.getItem(position)
     }
 
@@ -46,7 +46,7 @@ class ServiceAdapter(context: Context) : ArrayAdapter<SLSService>(context, 0) {
         return view
     }
 
-    fun setServices(data: List<SLSService>) {
+    fun setServices(data: List<AVService>) {
         clear()
         addAll(data)
     }

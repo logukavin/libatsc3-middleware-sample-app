@@ -5,7 +5,7 @@ import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
-import com.nextgenbroadcast.mobile.core.model.SLSService
+import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.middleware.analytics.IAtsc3Analytics
 import com.nextgenbroadcast.mobile.middleware.service.provider.IMediaFileProvider
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
@@ -79,7 +79,7 @@ class IRPCControllerTest {
     private var scaleFactor: Double = 1.0
     private var xPos: Double = 11.0
     private var yPos: Double = 22.0
-    private val mockedSLSService: SLSService = SLSService(1,5003, "WZTV", "tag:sinclairplatform.com,2020:WZTV:2727", 22, 1, 0)
+    private val mockedSLSService: AVService = AVService(1,5003, "WZTV", "tag:sinclairplatform.com,2020:WZTV:2727", 22, 1, 0)
     private val mockedMediaUrl = "htttp://mockedurl.com"
     private val deviceId = UUID.randomUUID().toString()
     private val advertisingId = UUID.randomUUID().toString()
@@ -87,7 +87,7 @@ class IRPCControllerTest {
     val appData: LiveData<Atsc3HeldPackage?> = MutableLiveData()
     val applications = MutableLiveData<List<Atsc3Application>>()
     val serviceGuidUrls: LiveData<List<Urls>?> = MutableLiveData()
-    var selectedService: MutableLiveData<SLSService?> = MutableLiveData()
+    var selectedService: MutableLiveData<AVService?> = MutableLiveData()
     val routeMediaUrl: LiveData<String?> = MutableLiveData(mockedMediaUrl)
 
     @ExperimentalCoroutinesApi

@@ -6,7 +6,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
-import com.nextgenbroadcast.mobile.core.model.SLSService
+import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPackage
 import com.nextgenbroadcast.mobile.middleware.cache.IApplicationCache
@@ -83,7 +83,7 @@ class RPCGatewayTest {
     private var scaleFactor: Double = 1.0
     private var xPos: Double = 11.0
     private var yPos: Double = 22.0
-    private val mockedSLSService: SLSService = SLSService(1, 5003, "WZTV", "tag:sinclairplatform.com,2020:WZTV:2727", 22, 1, 0)
+    private val mockedSLSService: AVService = AVService(1, 5003, "WZTV", "tag:sinclairplatform.com,2020:WZTV:2727", 22, 1, 0)
     private val mockedMediaUrl: String = "htttp://mockedurl.com"
     private val deviceId = UUID.randomUUID().toString()
     private val advertisingId = UUID.randomUUID().toString()
@@ -91,7 +91,7 @@ class RPCGatewayTest {
     private val heldPackage: LiveData<Atsc3HeldPackage?> = MutableLiveData()
     private val applications: LiveData<List<Atsc3Application>?> = MutableLiveData()
     private val serviceGuidUrls: MutableLiveData<List<Urls>?> = MutableLiveData()
-    private var selectedService: MutableLiveData<SLSService?> = MutableLiveData()
+    private var selectedService: MutableLiveData<AVService?> = MutableLiveData()
     private val rmpState: LiveData<PlaybackState> = MutableLiveData()
 
     @ExperimentalCoroutinesApi

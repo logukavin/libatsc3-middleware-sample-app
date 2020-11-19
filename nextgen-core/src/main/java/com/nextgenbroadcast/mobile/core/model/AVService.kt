@@ -4,7 +4,7 @@ import android.os.Parcelable
 import kotlinx.android.parcel.Parcelize
 
 @Parcelize
-data class SLSService(
+data class AVService(
         val bsid: Int,
         val id: Int,
         val shortName: String?,

@@ -6,7 +6,7 @@ import android.os.IBinder
 import androidx.lifecycle.LifecycleService
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
-import com.nextgenbroadcast.mobile.core.model.SLSService
+import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.middleware.R
 import com.nextgenbroadcast.mobile.middleware.notification.NotificationHelper
 import kotlinx.coroutines.*
@@ -92,7 +92,7 @@ abstract class BindableForegroundService : LifecycleService() {
         isForeground = false
     }
 
-    protected fun createNotification(state: ReceiverState? = null, service: SLSService? = null, playbackState: PlaybackState? = null): Notification {
+    protected fun createNotification(state: ReceiverState? = null, service: AVService? = null, playbackState: PlaybackState? = null): Notification {
         val title = if (state == null || state == ReceiverState.IDLE) {
             getString(R.string.atsc3_source_is_not_initialized)
         } else {
