@@ -54,6 +54,7 @@ internal class Atsc3Module(
         fun onPackageReceived(appPackage: Atsc3Application)
         fun onCurrentServicePackageChanged(pkg: Atsc3HeldPackage?)
         fun onCurrentServiceDashPatched(mpdPath: String)
+        fun onServiceGuideUnitReceived(filePath: String)
     }
 
     private val atsc3NdkApplicationBridge = Atsc3NdkApplicationBridge(this)
@@ -325,6 +326,25 @@ internal class Atsc3Module(
                     Collections.unmodifiableList(services),
                     urls[SLTConstants.URL_TYPE_REPORT_SERVER]
             )
+
+            //TODO: temporary test solution
+            __simulateServiceGuideData()
+        }
+    }
+
+    private fun __simulateServiceGuideData() {
+        val files = listOf(
+                "sgdu_service_schedule_4495",
+                "sgdu_long_2444",
+                "sgdu_long_2445",
+                "sgdu_long_2446",
+                "sgdu_long_2448",
+                //"sgdu_service_schedule_4496",
+                "sgdu_short_3447"
+        )
+
+        files.forEach { fileName ->
+            listener?.onServiceGuideUnitReceived("/storage/emulated/0/Download/sg/$fileName")
         }
     }
 
