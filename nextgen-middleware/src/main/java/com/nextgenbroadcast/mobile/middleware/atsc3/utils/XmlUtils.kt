@@ -10,6 +10,62 @@ import java.time.format.DateTimeParseException
 
 object XmlUtils {
 
+    fun XmlPullParser.iterateDocument(action: (name: String) -> Unit) = iterateTags(action, XmlPullParser.END_DOCUMENT)
+
+    fun XmlPullParser.iterateSubTags(action: (name: String) -> Unit) = iterateTags(action, XmlPullParser.END_TAG)
+
+    fun XmlPullParser.iterateTags(action: (name: String) -> Unit, endTag: Int): XmlPullParser {
+        while (next() != endTag) {
+            if (eventType != XmlPullParser.START_TAG) {
+                continue
+            }
+
+            action(name)
+        }
+
+        return this
+    }
+
+    fun XmlPullParser.iterateSubText(action: (name: String, text: String) -> Unit): XmlPullParser {
+        while (next() != XmlPullParser.END_TAG) {
+            if (eventType != XmlPullParser.TEXT) {
+                skip(this)
+                continue
+            }
+
+            action(name, text)
+        }
+
+        return this
+    }
+
+    fun XmlPullParser.readTextTag(): String? {
+        var result: String? = null
+        while (next() != XmlPullParser.END_TAG) {
+            if (eventType == XmlPullParser.TEXT) {
+                result = text
+            } else {
+                skip(this)
+            }
+        }
+
+        return result
+    }
+
+    fun XmlPullParser.iterateAttrs(action: (name: String, value: String) -> Unit): XmlPullParser {
+        for (i in 0 until attributeCount) {
+            action(getAttributeName(i), getAttributeValue(i))
+        }
+
+        return this
+    }
+
+    fun XmlPullParser.skipSubTags() = iterateSubTags { skip(this) }
+
+    fun XmlPullParser.skipTag() {
+        skip(this)
+    }
+
     @Throws(XmlPullParserException::class)
     fun newParser(cmlPayload: String): XmlPullParser {
         return Xml.newPullParser().apply {
@@ -43,13 +99,22 @@ object XmlUtils {
         return default
     }
 
-    fun strToLong(value: String): Long {
+    fun hexToLong(value: String): Long {
         try {
             return value.toLong(16)
         } catch (e: NumberFormatException) {
             e.printStackTrace()
         }
         return -1
+    }
+
+    fun strToLong(value: String, default: Long = 0): Long {
+        try {
+            return value.toLong(10)
+        } catch (e: NumberFormatException) {
+            e.printStackTrace()
+        }
+        return default
     }
 
     fun strToListOfInt(value: String): List<Int> {
