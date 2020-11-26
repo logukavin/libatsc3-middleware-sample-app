@@ -1,11 +1,11 @@
-package com.nextgenbroadcast.mobile.core
+package com.nextgenbroadcast.mobile.middleware.atsc3.utils
 
 import kotlin.math.roundToLong
 
 /**
  * based on https://github.com/Free-Software-for-Android/NTPSync/blob/master/NTPSync/src/main/java/org/apache/commons/net/ntp/TimeStamp.java
  * */
-object TimeUtils {
+internal object TimeUtils {
 
     /**
      * baseline NTP time if bit-0=0 -> 7-Feb-2036 @ 06:28:16 UTC
