@@ -47,7 +47,12 @@ class ServiceGuideStore {
                         } ?: emptyList()
                     }?.flatMap { scheduleContent ->
                         scheduleContent.presentationList?.map { presentation ->
-                            SGProgram(presentation.startTime, presentation.endTime, presentation.duration, scheduleContent.content)
+                            SGProgram(
+                                    presentation.startTime,
+                                    presentation.endTime,
+                                    presentation.duration,
+                                    scheduleContent.content
+                            )
                         } ?: emptyList()
                     } ?: emptyList())
         }
