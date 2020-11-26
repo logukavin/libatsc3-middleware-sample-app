@@ -8,7 +8,7 @@ import java.io.IOException
 import java.time.ZonedDateTime
 import java.time.format.DateTimeParseException
 
-object XmlUtils {
+internal object XmlUtils {
 
     fun XmlPullParser.iterateDocument(action: (name: String) -> Unit) = iterateTags(action, XmlPullParser.END_DOCUMENT)
 

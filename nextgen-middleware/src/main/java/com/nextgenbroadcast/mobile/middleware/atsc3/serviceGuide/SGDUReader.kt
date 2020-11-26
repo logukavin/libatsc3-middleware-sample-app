@@ -1,7 +1,7 @@
 package com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide
 
 import android.util.Log
-import com.nextgenbroadcast.mobile.core.TimeUtils
+import com.nextgenbroadcast.mobile.middleware.atsc3.utils.TimeUtils
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.unit.SGContentImpl
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.unit.*
 import com.nextgenbroadcast.mobile.middleware.atsc3.utils.XmlUtils
