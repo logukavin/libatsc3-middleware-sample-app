@@ -10,6 +10,7 @@ import com.nextgenbroadcast.mobile.core.presentation.*
 import com.nextgenbroadcast.mobile.core.presentation.media.IObservablePlayer
 import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
 import com.nextgenbroadcast.mobile.core.presentation.IReceiverPresenter
+import com.nextgenbroadcast.mobile.core.serviceGuide.SGScheduleMap
 import com.nextgenbroadcast.mobile.service.handler.StandaloneClientHandler
 import com.nextgenbroadcast.mobile.service.handler.OnIncomingPlayerStateListener
 import com.nextgenbroadcast.mobile.permission.IUriPermissionRequester
@@ -26,6 +27,8 @@ class InterprocessServiceBinder(
     inner class SelectorPresenter : ISelectorPresenter {
         override val sltServices = MutableLiveData<List<SLSService>>()
         override val selectedService = MutableLiveData<SLSService?>()
+        //TODO: should we process this feild?
+        override val schedule = MutableLiveData<SGScheduleMap>()
 
         override fun selectService(service: SLSService) {
             sendAction(IServiceBinder.ACTION_SELECT_SERVICE, bundleOf(
