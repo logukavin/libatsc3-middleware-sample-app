@@ -11,6 +11,7 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3Module
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPackage
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.service.Atsc3Service
+import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.ServiceGuideStore
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
 import com.nextgenbroadcast.mobile.middleware.settings.IReceiverSettings
 import com.nextgenbroadcast.mobile.mmt.atsc3.media.MMTDataBuffer
@@ -25,6 +26,7 @@ internal class ServiceControllerImpl (
 ) : IServiceController, Atsc3Module.Listener {
 
     private val ioScope = CoroutineScope(Dispatchers.IO)
+    private val serviceGuideStore = ServiceGuideStore()
 
     private var heldResetJob: Job? = null
     private var mediaUrlAssignmentJob: Job? = null
@@ -37,6 +39,8 @@ internal class ServiceControllerImpl (
     override val sltServices = repository.services
 
     override val freqKhz = MutableLiveData(0)
+
+    override val schedule = serviceGuideStore.schedule
 
     init {
         atsc3Module.setListener(this)
@@ -83,6 +87,10 @@ internal class ServiceControllerImpl (
 
     override fun onCurrentServiceDashPatched(mpdPath: String) {
         setMediaUrlWithDelay(mpdPath)
+    }
+
+    override fun onServiceGuideUnitReceived(filePath: String) {
+        serviceGuideStore.readDeliveryUnit(filePath)
     }
 
     override fun openRoute(path: String): Boolean {

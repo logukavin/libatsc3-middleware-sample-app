@@ -48,7 +48,7 @@ class HeldXmlParser {
             val value = parser.getAttributeValue(i)
             when (parser.getAttributeName(i)) {
                 "appContextId" -> pkg.appContextId = value
-                "requiredCapabilities" -> pkg.requiredCapabilities = XmlUtils.strToLong(value)
+                "requiredCapabilities" -> pkg.requiredCapabilities = XmlUtils.hexToLong(value)
                 "appRendering" -> pkg.appRendering = XmlUtils.strToBool(value)
                 "clearAppContextCacheDate" -> pkg.clearAppContextCacheDate = XmlUtils.strToDate(value)
                 "bcastEntryPackageUrl" -> pkg.bcastEntryPackageUrl = value
