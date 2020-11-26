@@ -248,8 +248,8 @@ internal class SGDUReader {
                                     }
                                 }.skipSubTags()
 
-                                if (startTime > 0) TimeUtils.ntpSecondsToUtc(startTime)
-                                if (endTime > 0) TimeUtils.ntpSecondsToUtc(endTime)
+                                if (startTime > 0) startTime = TimeUtils.ntpSecondsToUtc(startTime)
+                                if (endTime > 0) endTime = TimeUtils.ntpSecondsToUtc(endTime)
 
                                 addPresentation(startTime, endTime, duration)
                             } else {
