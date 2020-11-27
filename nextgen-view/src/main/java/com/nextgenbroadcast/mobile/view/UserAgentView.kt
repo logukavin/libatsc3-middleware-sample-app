@@ -2,13 +2,19 @@ package com.nextgenbroadcast.mobile.view
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.graphics.Color
 import android.net.Uri
 import android.net.http.SslError
 import android.util.AttributeSet
 import android.view.KeyCharacterMap
 import android.view.KeyEvent
+import android.view.View
 import android.webkit.*
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.distinctUntilChanged
 import com.nextgenbroadcast.mobile.core.cert.CertificateUtils
 import kotlinx.coroutines.*
 
@@ -26,6 +32,15 @@ class UserAgentView @JvmOverloads constructor(
     private var appEntryPoint: String? = null
     private var loadingRetryCount: Int = 0
     private var reloadJob: Job? = null
+
+    // content visibility hack
+    private var _isContentVisible = MutableLiveData<Boolean>()
+    private var layerBitmap: Bitmap? = null
+    private var emptyBitmap: Bitmap? = null
+    private var layerCanvas: Canvas? = null
+
+    var captureContentVisibility = false
+    var isContentVisible: LiveData<Boolean> = _isContentVisible.distinctUntilChanged()
 
     interface IListener {
         fun onOpen()
@@ -55,6 +70,66 @@ class UserAgentView @JvmOverloads constructor(
         }
         clearSslPreferences()
         webViewClient = createWebViewClient()
+    }
+
+    fun checkContentVisible(): Boolean {
+        if (visibility != View.VISIBLE || width == 0 || height == 0 || alpha == 0f) return false
+
+        draw(getCaptureCanvas())
+
+        return !isCaptureEmpty()
+    }
+
+    private fun isCaptureEmpty(): Boolean {
+        return layerBitmap?.let { layerBmp ->
+            emptyBitmap?.let { emptyBmp ->
+                layerBmp.sameAs(emptyBmp)
+            }
+        } ?: false
+    }
+
+    private fun getCaptureCanvas(): Canvas {
+        val captureWidth = width / 2
+        val captureHeight = height
+
+        val layerBmp = layerBitmap?.let { bmp ->
+            if (bmp.width != captureWidth || bmp.height != captureHeight) {
+                createLayerBitmap(captureWidth, captureHeight)
+            } else bmp.also {
+                it.eraseColor(Color.TRANSPARENT)
+            }
+        } ?: createLayerBitmap(captureWidth, captureHeight)
+
+        emptyBitmap?.let { bmp ->
+            if (bmp.width != captureWidth || bmp.height != captureHeight) {
+                createEmptyBitmap(captureWidth, captureHeight)
+            } else bmp
+        } ?: createEmptyBitmap(captureWidth, captureHeight)
+
+        return layerCanvas ?: Canvas(layerBmp).also {
+            layerCanvas = it
+        }
+    }
+
+    private fun createBitmap(w: Int, h: Int) = Bitmap.createBitmap(w, h, Bitmap.Config.ALPHA_8)
+
+    private fun createLayerBitmap(w: Int, h: Int) = createBitmap(w, h).also { bmp ->
+        layerBitmap = bmp
+        layerCanvas = null
+    }
+
+    private fun createEmptyBitmap(w: Int, h: Int) = createBitmap(w, h).also { bmp ->
+        emptyBitmap = bmp
+    }
+
+    override fun onDraw(canvas: Canvas) {
+        super.onDraw(canvas)
+
+        if (captureContentVisibility) {
+            super.onDraw(getCaptureCanvas())
+
+            _isContentVisible.value = !isCaptureEmpty()
+        }
     }
 
     private fun createWebViewClient() = object : WebViewClient() {
