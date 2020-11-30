@@ -208,6 +208,8 @@ internal class Atsc3Module(
         return false
     }
 
+    private var tmpAdditionalServiceOpened = false
+
     fun selectService(serviceId: Int): Boolean {
         if (selectedServiceId == serviceId) return false
 
@@ -216,6 +218,17 @@ internal class Atsc3Module(
 
         selectedServiceId = serviceId
         selectedServiceSLSProtocol = atsc3NdkApplicationBridge.atsc3_slt_selectService(serviceId)
+
+        //TODO: temporary test solution
+        if (!tmpAdditionalServiceOpened) {
+            serviceMap.values.firstOrNull {
+                it.serviceCategory == SLTConstants.SERVICE_CATEGORY_ESG
+            }?.let { service ->
+                atsc3NdkApplicationBridge.atsc3_slt_alc_select_additional_service(service.serviceId)
+            }
+
+            tmpAdditionalServiceOpened = true
+        }
 
         return selectedServiceSLSProtocol > 0
     }
@@ -276,7 +289,7 @@ internal class Atsc3Module(
     private fun getSelectedServiceMediaUri(): String? {
         var mediaUri: String? = null
         if (selectedServiceSLSProtocol == SLS_PROTOCOL_DASH) {
-            val routeMPDFileName = atsc3NdkApplicationBridge.atsc3_slt_alc_get_sls_metadata_fragments_content_locations_from_monitor_service_id(selectedServiceId, DASH_CONTENT_TYPE)
+            val routeMPDFileName = atsc3NdkApplicationBridge.atsc3_slt_alc_get_sls_metadata_fragments_content_locations_from_monitor_service_id(selectedServiceId, CONTENT_TYPE_DASH)
             if (routeMPDFileName.isNotEmpty()) {
                 mediaUri = String.format("%s/%s", jni_getCacheDir(), routeMPDFileName[0])
             } else {
@@ -296,6 +309,12 @@ internal class Atsc3Module(
         clearService()
         serviceMap.clear()
         setMMTSource(null)
+
+        //TODO: temporary test solution
+        if (tmpAdditionalServiceOpened) {
+            atsc3NdkApplicationBridge.atsc3_slt_alc_clear_additional_service_selections()
+            tmpAdditionalServiceOpened = false
+        }
     }
 
     private fun clearService() {
@@ -326,25 +345,6 @@ internal class Atsc3Module(
                     Collections.unmodifiableList(services),
                     urls[SLTConstants.URL_TYPE_REPORT_SERVER]
             )
-
-            //TODO: temporary test solution
-            __simulateServiceGuideData()
-        }
-    }
-
-    private fun __simulateServiceGuideData() {
-        val files = listOf(
-                "sgdu_service_schedule_4495",
-                "sgdu_long_2444",
-                "sgdu_long_2445",
-                "sgdu_long_2446",
-                "sgdu_long_2448",
-                //"sgdu_service_schedule_4496",
-                "sgdu_short_3447"
-        )
-
-        files.forEach { fileName ->
-            listener?.onServiceGuideUnitReceived("/storage/emulated/0/Download/sg/$fileName")
         }
     }
 
@@ -394,6 +394,20 @@ internal class Atsc3Module(
 
     override fun onAlcObjectStatusMessage(alc_object_status_message: String) {
         //TODO: notify value changed
+    }
+
+    override fun onAlcObjectClosed(service_id: Int, tsi: Int, toi: Int, s_tsid_content_location: String?, s_tsid_content_type: String?, cache_file_path: String?) {
+        when (s_tsid_content_type) {
+            CONTENT_TYPE_SGDD -> {
+                // skip
+            }
+
+            CONTENT_TYPE_SGDU -> {
+                cache_file_path?.let {
+                    listener?.onServiceGuideUnitReceived(getFullPath(cache_file_path))
+                }
+            }
+        }
     }
 
     override fun onPackageExtractCompleted(packageMetadata: PackageExtractEnvelopeMetadataAndPayload) {
@@ -468,10 +482,12 @@ internal class Atsc3Module(
                 uid,
                 packageMetadata.packageName,
                 packageMetadata.appContextIdList.split(" "),
-                String.format("%s/%s", jni_getCacheDir(), packageMetadata.packageExtractPath),
+                getFullPath(packageMetadata.packageExtractPath),
                 files
         )
     }
+
+    private fun getFullPath(cachePath: String) = String.format("%s/%s", jni_getCacheDir(), cachePath)
 
     private fun setState(newState: State) {
         state = newState
@@ -491,7 +507,10 @@ internal class Atsc3Module(
     companion object {
         val TAG: String = Atsc3Module::class.java.simpleName
 
-        private const val DASH_CONTENT_TYPE = "application/dash+xml"
+        private const val CONTENT_TYPE_DASH = "application/dash+xml"
+        private const val CONTENT_TYPE_SGDD = "application/vnd.oma.bcast.sgdd+xml"
+        private const val CONTENT_TYPE_SGDU = "application/vnd.oma.bcast.sgdu"
+
         private const val RES_OK = 0
 
         const val SLS_PROTOCOL_DASH = 1
