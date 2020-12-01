@@ -8,63 +8,7 @@ import java.io.IOException
 import java.time.ZonedDateTime
 import java.time.format.DateTimeParseException
 
-internal object XmlUtils {
-
-    fun XmlPullParser.iterateDocument(action: (name: String) -> Unit) = iterateTags(action, XmlPullParser.END_DOCUMENT)
-
-    fun XmlPullParser.iterateSubTags(action: (name: String) -> Unit) = iterateTags(action, XmlPullParser.END_TAG)
-
-    fun XmlPullParser.iterateTags(action: (name: String) -> Unit, endTag: Int): XmlPullParser {
-        while (next() != endTag) {
-            if (eventType != XmlPullParser.START_TAG) {
-                continue
-            }
-
-            action(name)
-        }
-
-        return this
-    }
-
-    fun XmlPullParser.iterateSubText(action: (name: String, text: String) -> Unit): XmlPullParser {
-        while (next() != XmlPullParser.END_TAG) {
-            if (eventType != XmlPullParser.TEXT) {
-                skip(this)
-                continue
-            }
-
-            action(name, text)
-        }
-
-        return this
-    }
-
-    fun XmlPullParser.readTextTag(): String? {
-        var result: String? = null
-        while (next() != XmlPullParser.END_TAG) {
-            if (eventType == XmlPullParser.TEXT) {
-                result = text
-            } else {
-                skip(this)
-            }
-        }
-
-        return result
-    }
-
-    fun XmlPullParser.iterateAttrs(action: (name: String, value: String) -> Unit): XmlPullParser {
-        for (i in 0 until attributeCount) {
-            action(getAttributeName(i), getAttributeValue(i))
-        }
-
-        return this
-    }
-
-    fun XmlPullParser.skipSubTags() = iterateSubTags { skip(this) }
-
-    fun XmlPullParser.skipTag() {
-        skip(this)
-    }
+object XmlUtils {
 
     @Throws(XmlPullParserException::class)
     fun newParser(cmlPayload: String): XmlPullParser {
@@ -128,4 +72,60 @@ internal object XmlUtils {
             null
         }
     }
+}
+
+inline fun XmlPullParser.iterateDocument(action: (name: String) -> Unit) = iterateTags(action, XmlPullParser.END_DOCUMENT)
+
+inline fun XmlPullParser.iterateSubTags(action: (name: String) -> Unit) = iterateTags(action, XmlPullParser.END_TAG)
+
+inline fun XmlPullParser.iterateTags(action: (name: String) -> Unit, endTag: Int): XmlPullParser {
+    while (next() != endTag) {
+        if (eventType != XmlPullParser.START_TAG) {
+            continue
+        }
+
+        action(name)
+    }
+
+    return this
+}
+
+inline fun XmlPullParser.iterateSubText(action: (name: String, text: String) -> Unit): XmlPullParser {
+    while (next() != XmlPullParser.END_TAG) {
+        if (eventType != XmlPullParser.TEXT) {
+            XmlUtils.skip(this)
+            continue
+        }
+
+        action(name, text)
+    }
+
+    return this
+}
+
+inline fun XmlPullParser.iterateAttrs(action: (name: String, value: String) -> Unit): XmlPullParser {
+    for (i in 0 until attributeCount) {
+        action(getAttributeName(i), getAttributeValue(i))
+    }
+
+    return this
+}
+
+fun XmlPullParser.readTextTag(): String? {
+    var result: String? = null
+    while (next() != XmlPullParser.END_TAG) {
+        if (eventType == XmlPullParser.TEXT) {
+            result = text
+        } else {
+            XmlUtils.skip(this)
+        }
+    }
+
+    return result
+}
+
+fun XmlPullParser.skipSubTags() = iterateSubTags { XmlUtils.skip(this) }
+
+fun XmlPullParser.skipTag() {
+    XmlUtils.skip(this)
 }
