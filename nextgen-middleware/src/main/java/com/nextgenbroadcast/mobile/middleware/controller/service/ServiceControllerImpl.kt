@@ -94,6 +94,8 @@ internal class ServiceControllerImpl (
     }
 
     override fun openRoute(path: String): Boolean {
+        closeRoute()
+
         return if (path.startsWith("srt://")) {
             atsc3Module.openSRTStream(path)
         } else {
@@ -104,6 +106,8 @@ internal class ServiceControllerImpl (
     }
 
     override fun openRoute(device: UsbDevice): Boolean {
+        closeRoute()
+
         if (atsc3Module.openUsbDevice(device)) {
             tune(PhyFrequency.default(PhyFrequency.Source.AUTO))
             return true
@@ -120,6 +124,9 @@ internal class ServiceControllerImpl (
 
         cancelMediaUrlAssignment()
         atsc3Module.close()
+
+        serviceGuideStore.clearAll()
+        repository.reset()
     }
 
     override fun selectService(service: SLSService) {

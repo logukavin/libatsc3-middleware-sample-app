@@ -1,16 +1,11 @@
 package com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide
 
 import android.util.Log
-import com.nextgenbroadcast.mobile.middleware.atsc3.utils.TimeUtils
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.unit.SGContentImpl
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.unit.*
+import com.nextgenbroadcast.mobile.middleware.atsc3.utils.*
+import com.nextgenbroadcast.mobile.middleware.atsc3.utils.TimeUtils
 import com.nextgenbroadcast.mobile.middleware.atsc3.utils.XmlUtils
-import com.nextgenbroadcast.mobile.middleware.atsc3.utils.XmlUtils.iterateAttrs
-import com.nextgenbroadcast.mobile.middleware.atsc3.utils.XmlUtils.iterateDocument
-import com.nextgenbroadcast.mobile.middleware.atsc3.utils.XmlUtils.iterateSubTags
-import com.nextgenbroadcast.mobile.middleware.atsc3.utils.XmlUtils.readTextTag
-import com.nextgenbroadcast.mobile.middleware.atsc3.utils.XmlUtils.skipSubTags
-import com.nextgenbroadcast.mobile.middleware.atsc3.utils.XmlUtils.skipTag
 import okio.ByteString.Companion.readByteString
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserException
@@ -43,7 +38,7 @@ internal class SGDUReader {
         return readBuffer[0].toUByte()
     }
 
-    fun readFromFile(file: File, services: MutableMap<Int, SGService>, contents: MutableMap<String, SGContentImpl>) {
+    fun readFromFile(file: File, services: MutableMap<Int, SGService>, contents: MutableMap<String, SGContentImpl>, isActive: () -> Boolean) {
         DataInputStream(file.inputStream()).use { reader ->
             // Unit_Header
             val extensionOffset = reader.readUInt32()
@@ -68,6 +63,8 @@ internal class SGDUReader {
             }
 
             for (i in 0 until fragmentsCount) {
+                if (!isActive()) return
+
                 when (reader.readUByte8().toInt()) {
                     SGFragmentEncoding.XML_OMA -> {
                         readOMAXml(reader, getSize(i), services, contents)
@@ -213,21 +210,17 @@ internal class SGDUReader {
 
             if (scheduleId == null) return null
 
-            val getOrCreateSchedule = { serviceId: Int ->
-                getService(serviceId).let { service ->
-                    service.scheduleMap?.get(scheduleId)
-                            ?: SGSchedule(scheduleId, serviceId, scheduleVersion).also {
-                                service.addSchedule(it)
-                            }
-                }
-            }
-
             var schedule: SGSchedule? = null
 
             parser.iterateDocument { tagName ->
                 when (tagName) {
-                    "ServiceReference" -> readIdRefTag(parser) {
-                        schedule = getOrCreateSchedule(it)
+                    "ServiceReference" -> readIdRefTag(parser) { serviceId ->
+                        schedule = getService(serviceId).let { service ->
+                            service.scheduleMap?.get(scheduleId)
+                                    ?: SGSchedule(scheduleId, serviceId, scheduleVersion).also {
+                                        service.addSchedule(it)
+                                    }
+                        }
                     }
 
                     "ContentReference" -> SGScheduleContent().apply {
