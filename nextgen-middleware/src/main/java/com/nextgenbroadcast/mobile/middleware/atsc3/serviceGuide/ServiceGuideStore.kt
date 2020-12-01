@@ -13,23 +13,41 @@ import java.io.File
 import java.util.concurrent.Executors
 
 class ServiceGuideStore {
-    private val READER_IO = Executors.newSingleThreadExecutor().asCoroutineDispatcher()
+    @Volatile
+    private var READER_IO: CoroutineDispatcher? = null
 
     private val services = mutableMapOf<Int, SGService>()
     private val contents = mutableMapOf<String, SGContentImpl>()
-    private val reader = SGDUReader()
 
     private val scheduleData = MutableLiveData<SGScheduleMap>()
 
     val schedule: LiveData<SGScheduleMap> = scheduleData
 
+    @Synchronized
+    fun clearAll() {
+        READER_IO?.cancel()
+        READER_IO = null
+
+        services.clear()
+        contents.clear()
+
+        scheduleData.postValue(emptyMap())
+    }
+
+    @Synchronized
     fun readDeliveryUnit(filePath: String) {
         val file = File(filePath)
 
         if (file.exists() && file.isFile) {
-            CoroutineScope(READER_IO).launch {
+            val context = READER_IO ?: let {
+                Executors.newSingleThreadExecutor().asCoroutineDispatcher().also {
+                    READER_IO = it
+                }
+            }
+
+            CoroutineScope(context).launch {
                 try {
-                    reader.readFromFile(file, services, contents)
+                    SGDUReader().readFromFile(file, services, contents, this::isActive)
                 } catch (e: Exception) {
                     e.printStackTrace()
                 }

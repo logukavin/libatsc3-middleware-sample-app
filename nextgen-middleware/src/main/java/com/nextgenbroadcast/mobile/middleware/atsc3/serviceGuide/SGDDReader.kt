@@ -4,12 +4,7 @@ import android.util.Log
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.descriptor.SGDeliveryUnit
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.descriptor.SGDescriptorEntry
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.descriptor.SGFragment
-import com.nextgenbroadcast.mobile.middleware.atsc3.utils.XmlUtils
-import com.nextgenbroadcast.mobile.middleware.atsc3.utils.XmlUtils.iterateAttrs
-import com.nextgenbroadcast.mobile.middleware.atsc3.utils.XmlUtils.iterateDocument
-import com.nextgenbroadcast.mobile.middleware.atsc3.utils.XmlUtils.iterateSubTags
-import com.nextgenbroadcast.mobile.middleware.atsc3.utils.XmlUtils.skipSubTags
-import com.nextgenbroadcast.mobile.middleware.atsc3.utils.XmlUtils.skipTag
+import com.nextgenbroadcast.mobile.middleware.atsc3.utils.*
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserException
 import java.io.File
