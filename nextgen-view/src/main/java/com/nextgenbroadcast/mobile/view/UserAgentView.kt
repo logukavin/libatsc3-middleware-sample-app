@@ -64,6 +64,7 @@ class UserAgentView @JvmOverloads constructor(
         settings?.apply {
             javaScriptEnabled = true
             domStorageEnabled = true
+            mediaPlaybackRequiresUserGesture = false
         }
         if (BuildConfig.DEBUG) {
             setWebContentsDebuggingEnabled(true)
