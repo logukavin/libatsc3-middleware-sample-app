@@ -2,7 +2,7 @@ package com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide
 
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import com.nextgenbroadcast.mobile.core.model.SLSService
+import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.serviceGuide.SGProgram
 import com.nextgenbroadcast.mobile.core.serviceGuide.SGScheduleMap
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.unit.SGContentImpl
@@ -60,9 +60,8 @@ class ServiceGuideStore {
         return services.entries.associate { (_, service) ->
             service.toSLSService() to
                     (service.scheduleMap?.values?.flatMap { schedule ->
-                        schedule.contentMap?.values?.apply {
-                            forEach { it.content = contents[it.contentId] }
-                        } ?: emptyList()
+                        schedule.contentMap?.values?.onEach { it.content = contents[it.contentId] }
+                                ?: emptyList()
                     }?.flatMap { scheduleContent ->
                         scheduleContent.presentationList?.map { presentation ->
                             SGProgram(
@@ -76,7 +75,7 @@ class ServiceGuideStore {
         }
     }
 
-    private fun SGService.toSLSService() = SLSService(
+    private fun SGService.toSLSService() = AVService(
             0, serviceId, shortServiceName, globalServiceId, majorChannelNo, minorChannelNo, SLTConstants.SERVICE_CATEGORY_AV
     )
 }

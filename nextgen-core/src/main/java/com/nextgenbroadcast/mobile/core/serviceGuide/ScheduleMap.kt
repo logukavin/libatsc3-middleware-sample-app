@@ -1,5 +1,5 @@
 package com.nextgenbroadcast.mobile.core.serviceGuide
 
-import com.nextgenbroadcast.mobile.core.model.SLSService
+import com.nextgenbroadcast.mobile.core.model.AVService
 
-typealias SGScheduleMap = Map<SLSService, List<SGProgram>>
+typealias SGScheduleMap = Map<AVService, List<SGProgram>>
