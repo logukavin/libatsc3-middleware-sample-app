@@ -3,7 +3,6 @@ package com.nextgenbroadcast.mobile.service.handler
 import android.net.Uri
 import android.os.Handler
 import android.os.Message
-import com.nextgenbroadcast.mobile.permission.UriPermissionProvider
 import com.nextgenbroadcast.mobile.core.getParcelable
 import com.nextgenbroadcast.mobile.core.getParcelableArrayList
 import com.nextgenbroadcast.mobile.core.model.*
@@ -28,13 +27,13 @@ internal class StandaloneClientHandler(
             }
 
             IServiceBinder.LIVEDATA_SERVICE_LIST -> {
-                msg.data.getParcelableArrayList(SLSService::class.java, IServiceBinder.PARAM_SERVICE_LIST)?.let {
+                msg.data.getParcelableArrayList(AVService::class.java, IServiceBinder.PARAM_SERVICE_LIST)?.let {
                     selectorPresenter.sltServices.postValue(it)
                 }
             }
 
             IServiceBinder.LIVEDATA_SERVICE_SELECTED -> {
-                val selectedService = msg.data.getParcelable(SLSService::class.java, IServiceBinder.PARAM_SERVICE_SELECTED)
+                val selectedService = msg.data.getParcelable(AVService::class.java, IServiceBinder.PARAM_SERVICE_SELECTED)
                 selectorPresenter.selectedService.postValue(selectedService)
             }
 

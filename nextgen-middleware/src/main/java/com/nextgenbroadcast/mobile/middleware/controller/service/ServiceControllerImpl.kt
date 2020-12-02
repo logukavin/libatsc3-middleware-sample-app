@@ -5,9 +5,10 @@ import android.util.Log
 import androidx.lifecycle.MutableLiveData
 import com.nextgenbroadcast.mobile.core.model.PhyFrequency
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
-import com.nextgenbroadcast.mobile.core.model.SLSService
+import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.middleware.analytics.IAtsc3Analytics
 import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3Module
+import com.nextgenbroadcast.mobile.middleware.atsc3.entities.SLTConstants
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPackage
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.service.Atsc3Service
@@ -56,9 +57,15 @@ internal class ServiceControllerImpl (
         }
     }
 
-    override fun onServiceListTableReceived(services: List<Atsc3Service?>, reportServerUrl: String?) {
-        val slsServices = services.filterNotNull().map {
-            SLSService(
+    override fun onServiceListTableReceived(services: List<Atsc3Service>, reportServerUrl: String?) {
+        atsc3Analytics.setReportServerUrl(reportServerUrl)
+
+        // store A/V services
+        val avServices = services.filter { service ->
+            service.serviceCategory == SLTConstants.SERVICE_CATEGORY_AV
+                    || service.serviceCategory == SLTConstants.SERVICE_CATEGORY_AO
+        }.map {
+            AVService(
                     it.bsid,
                     it.serviceId,
                     it.shortServiceName,
@@ -68,9 +75,14 @@ internal class ServiceControllerImpl (
                     it.serviceCategory
             )
         }
-        repository.setServices(slsServices)
+        repository.setServices(avServices)
 
-        atsc3Analytics.setReportServerUrl(reportServerUrl)
+        // select ESG service
+        services.firstOrNull { service ->
+            service.serviceCategory == SLTConstants.SERVICE_CATEGORY_ESG
+        }?.let { service ->
+            atsc3Module.selectAdditionalService(service.serviceId)
+        }
     }
 
     override fun onPackageReceived(appPackage: Atsc3Application) {
@@ -129,7 +141,7 @@ internal class ServiceControllerImpl (
         repository.reset()
     }
 
-    override fun selectService(service: SLSService) {
+    override fun selectService(service: AVService) {
         // Reset current media. New media url will be received after service selection.
         cancelMediaUrlAssignment()
         repository.setMediaUrl(null)

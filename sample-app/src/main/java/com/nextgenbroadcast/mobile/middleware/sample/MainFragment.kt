@@ -22,7 +22,7 @@ import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.nextgenbroadcast.mobile.core.FileUtils
 import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.model.PhyFrequency
-import com.nextgenbroadcast.mobile.core.model.SLSService
+import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.presentation.ApplicationState
 import com.nextgenbroadcast.mobile.core.presentation.IReceiverPresenter
 import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
@@ -52,7 +52,7 @@ class MainFragment : BaseFragment() {
 
     private var receiverPresenter: IReceiverPresenter? = null
 
-    private var servicesList: List<SLSService>? = null
+    private var servicesList: List<AVService>? = null
     private var currentAppData: AppData? = null
     private var previewMode = false
     private var previewName: String? = null

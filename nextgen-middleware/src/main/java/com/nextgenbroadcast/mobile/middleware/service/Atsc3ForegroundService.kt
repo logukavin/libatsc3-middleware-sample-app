@@ -15,7 +15,7 @@ import androidx.lifecycle.Observer
 import com.nextgenbroadcast.mobile.core.cert.UserAgentSSLContext
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
-import com.nextgenbroadcast.mobile.core.model.SLSService
+import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.presentation.ApplicationState
 import com.nextgenbroadcast.mobile.middleware.BuildConfig
 import com.nextgenbroadcast.mobile.middleware.analytics.Atsc3Analytics
@@ -55,7 +55,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     private lateinit var atsc3Module: Atsc3Module
     private lateinit var serviceController: IServiceController
     private lateinit var appCache: IApplicationCache
-    private lateinit var state: MediatorLiveData<Triple<ReceiverState?, SLSService?, PlaybackState?>>
+    private lateinit var state: MediatorLiveData<Triple<ReceiverState?, AVService?, PlaybackState?>>
     private lateinit var atsc3Analytics: IAtsc3Analytics
 
     private var viewController: IViewController? = null
@@ -97,7 +97,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
         appCache = ApplicationCache(atsc3.jni_getCacheDir(), DownloadManager())
 
-        state = MediatorLiveData<Triple<ReceiverState?, SLSService?, PlaybackState?>>().apply {
+        state = MediatorLiveData<Triple<ReceiverState?, AVService?, PlaybackState?>>().apply {
             addSource(serviceController.receiverState) { receiverState ->
                 value = newState(receiverState = receiverState)
             }
@@ -354,7 +354,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         return viewController ?: throw InitializationException()
     }
 
-    private fun newState(receiverState: ReceiverState? = null, selectedService: SLSService? = null, playbackState: PlaybackState? = null) = Triple(
+    private fun newState(receiverState: ReceiverState? = null, selectedService: AVService? = null, playbackState: PlaybackState? = null) = Triple(
             receiverState ?: serviceController.receiverState.value,
             selectedService ?: serviceController.selectedService.value,
             playbackState ?: viewController?.rmpState?.value

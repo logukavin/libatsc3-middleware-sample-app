@@ -67,7 +67,7 @@ internal class StandaloneServiceHandler(
             IServiceBinder.ACTION_CLOSE_ROUTE -> receiverPresenter.closeRoute()
 
             IServiceBinder.ACTION_SELECT_SERVICE -> {
-                msg.data.getParcelable(SLSService::class.java, IServiceBinder.PARAM_SELECT_SERVICE)?.let {
+                msg.data.getParcelable(AVService::class.java, IServiceBinder.PARAM_SELECT_SERVICE)?.let {
                     serviceController.selectService(it)
                 }
             }
@@ -155,9 +155,9 @@ internal class StandaloneServiceHandler(
             sendToMessenger.send(buildMessage(
                     IServiceBinder.LIVEDATA_SERVICE_LIST,
                     bundleOf(
-                            IServiceBinder.PARAM_SERVICE_LIST to ArrayList<SLSService>(services)
+                            IServiceBinder.PARAM_SERVICE_LIST to ArrayList<AVService>(services)
                     ),
-                    SLSService::class.java.classLoader
+                    AVService::class.java.classLoader
             ))
         })
     }
@@ -169,7 +169,7 @@ internal class StandaloneServiceHandler(
                     bundleOf(
                             IServiceBinder.PARAM_SERVICE_SELECTED to selectedService
                     ),
-                    SLSService::class.java.classLoader
+                    AVService::class.java.classLoader
             ))
         })
     }
@@ -219,7 +219,7 @@ internal class StandaloneServiceHandler(
                     bundleOf(
                             IServiceBinder.PARAM_FREQUENCY_KHZ to freqKhz
                     ),
-                    SLSService::class.java.classLoader
+                    AVService::class.java.classLoader
             ))
         })
     }
