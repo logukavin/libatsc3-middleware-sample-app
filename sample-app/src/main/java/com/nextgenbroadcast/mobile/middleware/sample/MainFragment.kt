@@ -73,8 +73,8 @@ class MainFragment : BaseFragment() {
 
         val callback = object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                if (user_agent_web_view.isBAMenuOpened) {
-                    user_agent_web_view.closeMenu()
+                if (user_agent_web_view.checkContentVisible()) {
+                    user_agent_web_view.actionExit()
                 } else {
                     if (isEnabled) {
                         isEnabled = false
@@ -86,8 +86,7 @@ class MainFragment : BaseFragment() {
         requireActivity().onBackPressedDispatcher.addCallback(this, callback)
     }
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         arguments?.let { args ->
             previewName = args.getString(PARAM_PREVIEW_NAME)
             previewMode = args.getBoolean(PARAM_PREVIEW_MODE)
@@ -115,11 +114,11 @@ class MainFragment : BaseFragment() {
 
         val swipeGD = GestureDetector(requireContext(), object : SwipeGestureDetector() {
             override fun onClose() {
-                user_agent_web_view.closeMenu()
+                user_agent_web_view.actionExit()
             }
 
             override fun onOpen() {
-                user_agent_web_view.openMenu()
+                user_agent_web_view.actionEnter()
             }
         })
 
@@ -181,7 +180,7 @@ class MainFragment : BaseFragment() {
 
     override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean) {
         val visibility = if (isInPictureInPictureMode) {
-            user_agent_web_view.closeMenu()
+            user_agent_web_view.actionExit()
             setBAAvailability(false)
             View.INVISIBLE
         } else {
