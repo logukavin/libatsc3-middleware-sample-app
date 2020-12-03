@@ -37,7 +37,7 @@ class UserAgentView @JvmOverloads constructor(
     private var layerCanvas: Canvas? = null
     private var lastCaptureTime: Long = 0
 
-    var captureContentVisibility = true
+    var captureContentVisibility = false
     var isContentVisible: LiveData<Boolean> = _isContentVisible.distinctUntilChanged()
 
     interface IListener {
