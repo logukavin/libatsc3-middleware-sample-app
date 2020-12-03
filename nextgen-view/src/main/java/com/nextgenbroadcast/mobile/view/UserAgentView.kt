@@ -24,9 +24,6 @@ class UserAgentView @JvmOverloads constructor(
 
     private val ioScope = CoroutineScope(Dispatchers.IO)
 
-    var isBAMenuOpened = false
-        private set
-
     private var listener: IListener? = null
 
     private var appEntryPoint: String? = null
@@ -38,8 +35,9 @@ class UserAgentView @JvmOverloads constructor(
     private var layerBitmap: Bitmap? = null
     private var emptyBitmap: Bitmap? = null
     private var layerCanvas: Canvas? = null
+    private var lastCaptureTime: Long = 0
 
-    var captureContentVisibility = false
+    var captureContentVisibility = true
     var isContentVisible: LiveData<Boolean> = _isContentVisible.distinctUntilChanged()
 
     interface IListener {
@@ -76,7 +74,10 @@ class UserAgentView @JvmOverloads constructor(
     fun checkContentVisible(): Boolean {
         if (visibility != View.VISIBLE || width == 0 || height == 0 || alpha == 0f) return false
 
+        val captureContent = captureContentVisibility
+        captureContentVisibility = false
         draw(getCaptureCanvas())
+        captureContentVisibility = captureContent
 
         return !isCaptureEmpty()
     }
@@ -123,13 +124,25 @@ class UserAgentView @JvmOverloads constructor(
         emptyBitmap = bmp
     }
 
+    private val captureContentTask = Runnable {
+        _isContentVisible.value = checkContentVisible()
+    }
+
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
         if (captureContentVisibility) {
-            super.onDraw(getCaptureCanvas())
+            val currentTime = System.currentTimeMillis()
+            if (currentTime - lastCaptureTime > CAPTURE_PERIOD_MILS) {
+                lastCaptureTime = currentTime
 
-            _isContentVisible.value = !isCaptureEmpty()
+                super.onDraw(getCaptureCanvas())
+
+                _isContentVisible.value = !isCaptureEmpty()
+
+                removeCallbacks(captureContentTask)
+                postDelayed(captureContentTask, CAPTURE_DELAY_MILS)
+            }
         }
     }
 
@@ -173,7 +186,7 @@ class UserAgentView @JvmOverloads constructor(
 
                     loadingRetryCount++
                     reloadJob = ioScope.launch {
-                        delay(RETRY_DELAY * loadingRetryCount)
+                        delay(RETRY_DELAY_MILS * loadingRetryCount)
                         withContext(Dispatchers.Main) {
                             reloadJob = null
                             loadUrl(entryPoint)
@@ -197,20 +210,18 @@ class UserAgentView @JvmOverloads constructor(
         loadUrl("about:blank")
     }
 
-    fun closeMenu() {
+    fun actionExit() {
         BANavController.navigateExit(this) { success ->
             if (!success) sendKeyPress(KeyEvent.KEYCODE_DPAD_LEFT, 105)
         }
-        isBAMenuOpened = false
 
         listener?.onClose()
     }
 
-    fun openMenu() {
+    fun actionEnter() {
         BANavController.navigateNext(this) { success ->
             if (!success) sendKeyPress(KeyEvent.KEYCODE_DPAD_RIGHT, 106)
         }
-        isBAMenuOpened = true
 
         listener?.onOpen()
     }
@@ -219,7 +230,6 @@ class UserAgentView @JvmOverloads constructor(
         reloadJob?.cancel()
         loadingRetryCount = 0
         appEntryPoint = null
-        isBAMenuOpened = false
     }
 
     private fun sendKeyPress(keyCode: Int, scanCode: Int) {
@@ -238,7 +248,9 @@ class UserAgentView @JvmOverloads constructor(
             scanCode)
 
     companion object {
-        private const val RETRY_DELAY = 500L
+        private const val RETRY_DELAY_MILS = 500L
         private const val MAX_RETRY_COUNT = 4
+        private const val CAPTURE_PERIOD_MILS = 200L
+        private const val CAPTURE_DELAY_MILS = CAPTURE_PERIOD_MILS + 100L
     }
 }
