@@ -1,7 +1,12 @@
 package com.nextgenbroadcast.mobile.middleware.controller.view
 
 import androidx.core.net.toUri
-import androidx.lifecycle.*
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.distinctUntilChanged
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.switchMap
+import androidx.lifecycle.map
 import com.nextgenbroadcast.mobile.core.mapWith
 import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
@@ -57,7 +62,7 @@ internal class ViewControllerImpl(
     }
 
     override val rmpLayoutParams = MutableLiveData(RPMParams())
-    override val rmpMediaUri = Transformations.switchMap(playbackSource) { source ->
+    override val rmpMediaUri = playbackSource.switchMap { source ->
         if (source == PlaybackSource.BROADCAST) {
             repository.routeMediaUrl.map { input ->
                 input?.let {
@@ -77,11 +82,11 @@ internal class ViewControllerImpl(
     override val rmpMediaTime = MutableLiveData<Long>()
     override val rmpPlaybackRate = MutableLiveData<Float>()
 
-    init {
-        repository.selectedService.distinctUntilChanged().observeForever {
+    fun start(lifecycleOwner: LifecycleOwner) {
+        repository.selectedService.distinctUntilChanged().observe(lifecycleOwner) {
             rmpLayoutReset()
         }
-        repository.heldPackage.distinctUntilChanged().observeForever {
+        repository.heldPackage.distinctUntilChanged().observe(lifecycleOwner) {
             rmpLayoutReset()
             if (rmpState.value == PlaybackState.PAUSED) {
                 rmpResume()
