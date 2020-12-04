@@ -113,7 +113,7 @@ class IRPCControllerTest {
         Mockito.`when`(repository.routeMediaUrl).thenReturn(routeMediaUrl)
 
         mediaPlayerController = ViewControllerImpl(repository, prefs, mediaFileProvider, atsc3Analytics)
-        coordinator = RPCGatewayImpl(serviceController, mediaPlayerController, applicationCache, prefs, testDispatcher, testDispatcher)
+        coordinator = RPCGatewayImpl(mediaPlayerController, repository, applicationCache, prefs, testDispatcher, testDispatcher)
         iRPCGateway = coordinator
         Dispatchers.setMain(testDispatcher)
     }

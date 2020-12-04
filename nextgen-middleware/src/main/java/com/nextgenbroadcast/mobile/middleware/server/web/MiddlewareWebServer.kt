@@ -108,7 +108,7 @@ class MiddlewareWebServer constructor(
             app.appContextIdList.map { contextId ->
                 AppResource(contextId, app.cachePath)
             }
-        }
+        }.distinct()
 
         val oldResources = availResources.subtract(resources)
         removeResources(handler, oldResources)
