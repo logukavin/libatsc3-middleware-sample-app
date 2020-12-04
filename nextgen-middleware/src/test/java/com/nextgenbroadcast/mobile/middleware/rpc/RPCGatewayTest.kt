@@ -112,7 +112,7 @@ class RPCGatewayTest {
         `when`(repository.applications).thenReturn(applications)
         `when`(serviceController.serviceGuidUrls).thenReturn(serviceGuidUrls)
         `when`(serviceController.selectedService).thenReturn(selectedService)
-        `when`(serviceController.serviceGuidUrls).thenReturn(serviceGuidUrls)
+        `when`(repository.serviceGuideUrls).thenReturn(serviceGuidUrls)
         `when`(repository.selectedService).thenReturn(selectedService)
         `when`(repository.selectedService).thenReturn(selectedService)
         `when`(viewController.rmpMediaUri).thenReturn(MutableLiveData(mockedMediaUri))
@@ -122,7 +122,7 @@ class RPCGatewayTest {
 
         `when`(mockedMediaUri.toString()).thenReturn(mockedMediaUrl)
 
-        iRPCGateway = RPCGatewayImpl(serviceController, viewController, applicationCache, prefs, testDispatcher, testDispatcher)
+        iRPCGateway = RPCGatewayImpl(viewController, repository, applicationCache, prefs, testDispatcher, testDispatcher)
         middlewareWebSocket = PowerMockito.spy(MiddlewareWebSocket(iRPCGateway))
         iRPCGateway.onSocketOpened(middlewareWebSocket)
 

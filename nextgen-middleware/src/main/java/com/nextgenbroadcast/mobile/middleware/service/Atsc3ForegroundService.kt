@@ -10,12 +10,14 @@ import android.os.IBinder
 import android.os.PowerManager
 import android.os.PowerManager.WakeLock
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.LifecycleRegistry
 import androidx.lifecycle.MediatorLiveData
-import androidx.lifecycle.Observer
 import com.nextgenbroadcast.mobile.core.cert.UserAgentSSLContext
+import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
-import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.presentation.ApplicationState
 import com.nextgenbroadcast.mobile.middleware.BuildConfig
 import com.nextgenbroadcast.mobile.middleware.analytics.Atsc3Analytics
@@ -36,11 +38,7 @@ import com.nextgenbroadcast.mobile.middleware.phy.Atsc3DeviceReceiver
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
 import com.nextgenbroadcast.mobile.middleware.repository.RepositoryImpl
 import com.nextgenbroadcast.mobile.middleware.server.web.MiddlewareWebServer
-import com.nextgenbroadcast.mobile.middleware.service.init.UsbPhyInitializer
-import com.nextgenbroadcast.mobile.middleware.service.init.OnboardPhyInitializer
-import com.nextgenbroadcast.mobile.middleware.service.init.IServiceInitializer
-import com.nextgenbroadcast.mobile.middleware.service.init.FrequencyInitializer
-import com.nextgenbroadcast.mobile.middleware.service.init.MetadataReader
+import com.nextgenbroadcast.mobile.middleware.service.init.*
 import com.nextgenbroadcast.mobile.middleware.service.provider.IMediaFileProvider
 import com.nextgenbroadcast.mobile.middleware.service.provider.MediaFileProvider
 import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
@@ -58,6 +56,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     private lateinit var state: MediatorLiveData<Triple<ReceiverState?, AVService?, PlaybackState?>>
     private lateinit var atsc3Analytics: IAtsc3Analytics
 
+    private var viewPresentationLifecycle: ViewPresentationLifecycleOwner? = null
     private var viewController: IViewController? = null
     private var webGateway: IWebGateway? = null
     private var rpcGateway: IRPCGateway? = null
@@ -105,7 +104,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
                 value = newState(selectedService = service)
             }
         }.also {
-            it.observe(this, Observer { (receiverState, selectedService, playbackState) ->
+            it.observe(this, { (receiverState, selectedService, playbackState) ->
                 if (isForeground) {
                     pushNotification(createNotification(receiverState, selectedService, playbackState))
                 }
@@ -115,6 +114,8 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
     override fun onDestroy() {
         super.onDestroy()
+
+        destroyViewPresentationAndStopService()
 
         initializer.forEach { ref ->
             ref.get()?.cancel()
@@ -295,6 +296,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
                 }
             }
         }
+        webServer = null
     }
 
     override fun getReceiverState() = serviceController.receiverState.value ?: ReceiverState.IDLE
@@ -303,13 +305,24 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         // we release it only when destroy presentation layer
         if (wakeLock.isHeld) return
 
-        val view = ViewControllerImpl(repository, settings, mediaFileProvider, atsc3Analytics).also {
+        viewPresentationLifecycle?.stopAndDestroy()
+        val viewLifecycle = ViewPresentationLifecycleOwner().apply {
+            start()
+        }.also {
+            viewPresentationLifecycle = it
+        }
+
+        val view = ViewControllerImpl(repository, settings, mediaFileProvider, atsc3Analytics).apply {
+            start(viewLifecycle)
+        }.also {
             viewController = it
         }
         val web = WebGatewayImpl(serviceController, repository, settings).also {
             webGateway = it
         }
-        val rpc = RPCGatewayImpl(serviceController, view, appCache, settings, Dispatchers.Main, Dispatchers.IO).also {
+        val rpc = RPCGatewayImpl(view, repository, appCache, settings, Dispatchers.Main, Dispatchers.IO).apply {
+            start(viewLifecycle)
+        }.also {
             rpcGateway = it
         }
 
@@ -317,13 +330,16 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
             state.value = newState(playbackState = playbackState)
         }
 
-        viewController?.appState?.observe(this, { appState ->
+        view.appState.observe(viewLifecycle) { appState ->
             when (appState) {
                 ApplicationState.OPENED -> atsc3Analytics.startApplicationSession()
                 ApplicationState.LOADED,
                 ApplicationState.UNAVAILABLE -> atsc3Analytics.finishApplicationSession()
+                else -> {
+                    // ignore
+                }
             }
-        })
+        }
 
         startWebServer(rpc, web)
 
@@ -332,6 +348,9 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     }
 
     override fun destroyViewPresentationAndStopService() {
+        viewPresentationLifecycle?.stopAndDestroy()
+        viewPresentationLifecycle = null
+
         viewController?.let { view ->
             state.removeSource(view.rmpState)
         }
@@ -359,6 +378,22 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
             selectedService ?: serviceController.selectedService.value,
             playbackState ?: viewController?.rmpState?.value
     )
+
+    private class ViewPresentationLifecycleOwner : LifecycleOwner {
+        private val registry = LifecycleRegistry(this)
+
+        fun start() {
+            registry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
+            registry.handleLifecycleEvent(Lifecycle.Event.ON_START)
+        }
+
+        fun stopAndDestroy() {
+            registry.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
+            registry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
+        }
+
+        override fun getLifecycle() = registry
+    }
 
     class InitializationException : RuntimeException()
 

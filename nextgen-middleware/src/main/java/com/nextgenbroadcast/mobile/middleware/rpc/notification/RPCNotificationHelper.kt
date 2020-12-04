@@ -2,15 +2,20 @@ package com.nextgenbroadcast.mobile.middleware.rpc.notification
 
 import com.github.nmuzhichin.jsonrpc.model.request.Notification
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
-import com.nextgenbroadcast.mobile.middleware.gateway.rpc.IRPCGateway
 import com.nextgenbroadcast.mobile.middleware.rpc.notification.model.*
 import com.nextgenbroadcast.mobile.middleware.rpc.processor.RPCObjectMapper
 import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.Urls
 
-class RPCNotifier (private val gateway: IRPCGateway) {
+class RPCNotificationHelper(
+        private val sendNotification: (message: String) -> Unit
+) {
 
     fun notifyServiceChange(serviceId: String) {
         sendNotification(ServiceChangeNotification(serviceId))
+    }
+
+    fun notifyContentChange(files: List<String>) {
+        sendNotification(ContentChangeNotification(files))
     }
 
     fun notifyServiceGuideChange(urlList: List<Urls>) {
@@ -42,7 +47,7 @@ class RPCNotifier (private val gateway: IRPCGateway) {
         val notification = Notification(NOTIFICATION_METHOD_NAME, params)
         val message = rpcObjectMapper.objectToJson(notification)
 
-        gateway.sendNotification(message)
+        sendNotification(message)
     }
 
     companion object {
