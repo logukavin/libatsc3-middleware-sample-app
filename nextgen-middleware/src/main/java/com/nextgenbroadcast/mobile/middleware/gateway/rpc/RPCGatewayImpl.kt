@@ -1,14 +1,19 @@
 package com.nextgenbroadcast.mobile.middleware.gateway.rpc
 
+import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.distinctUntilChanged
+import com.nextgenbroadcast.mobile.core.mapWith
+import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
+import com.nextgenbroadcast.mobile.core.unite
+import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3ApplicationFile
 import com.nextgenbroadcast.mobile.middleware.cache.IApplicationCache
-import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
 import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
+import com.nextgenbroadcast.mobile.middleware.repository.IRepository
 import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
 import com.nextgenbroadcast.mobile.middleware.rpc.notification.NotificationType
-import com.nextgenbroadcast.mobile.middleware.rpc.notification.RPCNotifier
+import com.nextgenbroadcast.mobile.middleware.rpc.notification.RPCNotificationHelper
 import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.Urls
 import com.nextgenbroadcast.mobile.middleware.server.ws.MiddlewareWebSocket
 import kotlinx.coroutines.*
@@ -16,8 +21,8 @@ import java.util.*
 import java.util.concurrent.CopyOnWriteArrayList
 
 internal class RPCGatewayImpl(
-        private val serviceController: IServiceController,
         private val viewController: IViewController,
+        private val repository: IRepository,
         private val applicationCache: IApplicationCache,
         settings: IMiddlewareSettings,
         mainDispatcher: CoroutineDispatcher,
@@ -25,54 +30,77 @@ internal class RPCGatewayImpl(
 ) : IRPCGateway {
     private val mainScope = CoroutineScope(mainDispatcher)
     private val ioScope = CoroutineScope(ioDispatcher)
-
     private val sessions = CopyOnWriteArrayList<MiddlewareWebSocket>()
-    private val subscribedNotifications = mutableSetOf<NotificationType>()
-    private val rpcNotifier = RPCNotifier(this)
+    private val rpcNotifier = RPCNotificationHelper(this::sendNotification)
 
     override val deviceId = settings.deviceId
     override val advertisingId = settings.advertisingId
     override val language: String = Locale.getDefault().language
     override val queryServiceId: String?
-        get() = serviceController.selectedService.value?.globalId
-    override val mediaUrl: String?
+        get() = repository.selectedService.value?.globalId
+    override val mediaUrl: String
         get() = viewController.rmpMediaUri.value.toString()
     override val playbackState: PlaybackState
         get() = viewController.rmpState.value ?: PlaybackState.IDLE
     override val serviceGuideUrls: List<Urls>
-        get() = serviceController.serviceGuidUrls.value ?: emptyList()
-
+        get() = repository.serviceGuideUrls.value ?: emptyList()
     private val rmpPlaybackTime: Long
         get() = viewController.rmpMediaTime.value ?: 0
 
-    private var currentAppData: AppData? = null
+    private var currentAppContextId: String? = null
+    private var currentServiceId: String? = null
     private var mediaTimeUpdateJob: Job? = null
-    private val currentAppContextId: String?
-        get() = currentAppData?.appContextId
 
-    init {
-        viewController.appData.distinctUntilChanged().observeForever { appData ->
-            onAppDataUpdated(appData)
+    private val appFiles = mutableListOf<Atsc3ApplicationFile>()
+    private val subscribedNotifications = mutableSetOf<NotificationType>()
+
+    fun start(lifecycleOwner: LifecycleOwner) {
+        viewController.appData.distinctUntilChanged().unite(repository.selectedService).observe(lifecycleOwner) { (appData, service) ->
+            if (appData != null && service != null) {
+                onAppDataUpdated(appData, service)
+            }
         }
 
-        serviceController.serviceGuidUrls.observeForever { urls ->
+        repository.serviceGuideUrls.observe(lifecycleOwner) { urls ->
             onServiceGuidUrls(urls)
         }
 
-        viewController.rmpMediaUri.distinctUntilChanged().observeForever {
+        viewController.appData.mapWith(repository.applications) { (appData, applications) ->
+            if (appData != null && applications != null) {
+                applications.filter { app ->
+                    app.cachePath == appData.cachePath
+                }.flatMap { it.files.values }
+            } else {
+                emptyList()
+            }
+        }.observe(lifecycleOwner) { applicationFiles ->
+            onApplicationContentChanged(applicationFiles)
+        }
+
+        viewController.rmpMediaUri.distinctUntilChanged().observe(lifecycleOwner) {
             onMediaUrlUpdated()
         }
 
-        viewController.rmpState.distinctUntilChanged().observeForever { playbackState ->
+        viewController.rmpState.distinctUntilChanged().observe(lifecycleOwner) { playbackState ->
             onRMPPlaybackStateChanged(playbackState)
         }
 
-        viewController.rmpPlaybackRate.distinctUntilChanged().observeForever { playbackRate ->
+        viewController.rmpPlaybackRate.distinctUntilChanged().observe(lifecycleOwner) { playbackRate ->
             onRMPPlaybackRateChanged(playbackRate)
         }
     }
 
+    private fun closeAllSessionsAndUnsubscribeNotifications() {
+        sessions.onEach {
+            it.disconnect(ioScope)
+        }.clear()
+
+        unsubscribeNotifications(subscribedNotifications)
+    }
+
     override fun onSocketOpened(socket: MiddlewareWebSocket) {
+        closeAllSessionsAndUnsubscribeNotifications()
+
         sessions.add(socket)
     }
 
@@ -137,27 +165,46 @@ internal class RPCGatewayImpl(
     }
 
     override fun requestFileCache(baseUrl: String?, rootPath: String?, paths: List<String>, filters: List<String>?): Boolean {
-        val cached = currentAppContextId?.let { appContextId ->
-            applicationCache.requestFiles(appContextId, rootPath, baseUrl, paths, filters )
+        return currentAppContextId?.let { appContextId ->
+            applicationCache.requestFiles(appContextId, rootPath, baseUrl, paths, filters)
         } ?: false
-
-        return cached
     }
 
-    private fun onAppDataUpdated(appData: AppData?) {
-        // Notify the user changes to another service also associated with the same Broadcaster Application
-        appData?.let {
-            if (appData.isAppEquals(currentAppData)) {
-                onApplicationServiceChanged(appData.appContextId)
+    /**
+    Shall be issued by the Receiver to the currently executing
+    Broadcaster Application if the user changes to another service also associated with the same
+    Broadcaster Application
+     */
+    private fun onAppDataUpdated(appData: AppData, service: AVService) {
+        currentAppContextId = appData.appContextId
+        currentServiceId = service.globalId?.also { globalServiceId ->
+            if (currentServiceId != null && currentServiceId != globalServiceId) {
+                if (appData.compatibleServiceIds.contains(service.id)) {
+                    onApplicationServiceChanged(globalServiceId)
+                }
             }
         }
-        currentAppData = appData
     }
 
     private fun onApplicationServiceChanged(serviceId: String) {
         if (subscribedNotifications.contains(NotificationType.SERVICE_CHANGE)) {
             rpcNotifier.notifyServiceChange(serviceId)
         }
+    }
+
+    private fun onApplicationContentChanged(files: Collection<Atsc3ApplicationFile>) {
+        if (subscribedNotifications.contains(NotificationType.CONTENT_CHANGE)) {
+            val changedFiles = files.subtract(appFiles).map {
+                it.contentLocation
+            }
+
+            if (changedFiles.isNotEmpty()) {
+                rpcNotifier.notifyContentChange(changedFiles)
+            }
+        }
+
+        appFiles.clear()
+        appFiles.addAll(files)
     }
 
     private fun onServiceGuidUrls(urls: List<Urls>?) {
@@ -225,7 +272,8 @@ internal class RPCGatewayImpl(
                 NotificationType.MPD_CHANGE,
                 NotificationType.RMP_PLAYBACK_STATE_CHANGE,
                 NotificationType.RMP_PLAYBACK_RATE_CHANGE,
-                NotificationType.RMP_MEDIA_TIME_CHANGE
+                NotificationType.RMP_MEDIA_TIME_CHANGE,
+                NotificationType.CONTENT_CHANGE
         )
 
         private const val MEDIA_TIME_UPDATE_DELAY = 500L

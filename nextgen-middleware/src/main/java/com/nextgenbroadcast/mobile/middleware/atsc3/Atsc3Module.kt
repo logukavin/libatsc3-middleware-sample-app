@@ -417,7 +417,7 @@ internal class Atsc3Module(
     }
 
     override fun onPackageExtractCompleted(packageMetadata: PackageExtractEnvelopeMetadataAndPayload) {
-        log("onPackageExtractCompleted packageName: ${packageMetadata.packageName}, appContextIdList: ${packageMetadata.appContextIdList}")
+        log("onPackageExtractCompleted packageExtractPath: ${packageMetadata.packageExtractPath} packageName: ${packageMetadata.packageName}, appContextIdList: ${packageMetadata.appContextIdList}, files: [${packageMetadata.multipartRelatedPayloadList.map { it.contentLocation }}]")
 
         if (!packageMetadata.isValid()) {
             log("onPackageExtractCompleted INVALID: $packageMetadata")
