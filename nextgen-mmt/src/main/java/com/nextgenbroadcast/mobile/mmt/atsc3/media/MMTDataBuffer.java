@@ -5,14 +5,12 @@ import android.util.Log;
 import com.nextgenbroadcast.mobile.core.media.IMMTDataConsumer;
 
 import org.ngbp.libatsc3.middleware.android.DebuggingFlags;
-import org.ngbp.libatsc3.middleware.android.application.sync.mmt.MfuByteBufferFragment;
-import org.ngbp.libatsc3.middleware.android.application.sync.mmt.MmtPacketIdContext;
-import org.ngbp.libatsc3.middleware.android.application.sync.mmt.MpuMetadata_HEVC_NAL_Payload;
+import org.ngbp.libatsc3.middleware.android.mmt.MfuByteBufferFragment;
+import org.ngbp.libatsc3.middleware.android.mmt.MmtPacketIdContext;
+import org.ngbp.libatsc3.middleware.android.mmt.MpuMetadata_HEVC_NAL_Payload;
 
 import java.nio.ByteBuffer;
 import java.util.ConcurrentModificationException;
-import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 

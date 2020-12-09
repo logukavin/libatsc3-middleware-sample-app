@@ -15,12 +15,14 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.HeldXmlParser
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.service.Atsc3Service
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.service.LLSParserSLT
 import org.ngbp.libatsc3.middleware.Atsc3NdkApplicationBridge
+import org.ngbp.libatsc3.middleware.Atsc3NdkMediaMMTBridge
 import org.ngbp.libatsc3.middleware.Atsc3NdkPHYBridge
 import org.ngbp.libatsc3.middleware.android.ATSC3PlayerFlags
 import org.ngbp.libatsc3.middleware.android.a331.PackageExtractEnvelopeMetadataAndPayload
 import org.ngbp.libatsc3.middleware.android.application.interfaces.IAtsc3NdkApplicationBridgeCallbacks
-import org.ngbp.libatsc3.middleware.android.application.sync.mmt.MfuByteBufferFragment
-import org.ngbp.libatsc3.middleware.android.application.sync.mmt.MpuMetadata_HEVC_NAL_Payload
+import org.ngbp.libatsc3.middleware.android.application.interfaces.IAtsc3NdkMediaMMTBridgeCallbacks
+import org.ngbp.libatsc3.middleware.android.mmt.MfuByteBufferFragment
+import org.ngbp.libatsc3.middleware.android.mmt.MpuMetadata_HEVC_NAL_Payload
 import org.ngbp.libatsc3.middleware.android.phy.Atsc3NdkPHYClientBase
 import org.ngbp.libatsc3.middleware.android.phy.Atsc3UsbDevice
 import org.ngbp.libatsc3.middleware.android.phy.interfaces.IAtsc3NdkPHYBridgeCallbacks
@@ -38,7 +40,7 @@ typealias MMTDataConsumerType = IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payload, M
 internal class Atsc3Module(
         private val context: Context
 ) : IMMTDataProducer<MpuMetadata_HEVC_NAL_Payload, MfuByteBufferFragment>,
-        IAtsc3NdkApplicationBridgeCallbacks, IAtsc3NdkPHYBridgeCallbacks {
+        IAtsc3NdkApplicationBridgeCallbacks, IAtsc3NdkPHYBridgeCallbacks, IAtsc3NdkMediaMMTBridgeCallbacks {
 
     enum class State {
         OPENED, PAUSED, IDLE
@@ -59,6 +61,7 @@ internal class Atsc3Module(
 
     private val atsc3NdkApplicationBridge = Atsc3NdkApplicationBridge(this)
     private val atsc3NdkPHYBridge = Atsc3NdkPHYBridge(this)
+    private val atsc3NdkMediaMMTBridge = Atsc3NdkMediaMMTBridge(this)
 
     private val usbManager by lazy { context.getSystemService(Context.USB_SERVICE) as UsbManager }
 
@@ -382,22 +385,6 @@ internal class Atsc3Module(
         }
     }
 
-    override fun pushMfuByteBufferFragment(mfuByteBufferFragment: MfuByteBufferFragment) {
-        execIfMMTSourceIsActiveOrCancel({ source ->
-            source.PushMfuByteBufferFragment(mfuByteBufferFragment)
-        }, {
-            mfuByteBufferFragment.unreferenceByteBuffer()
-        })
-    }
-
-    override fun pushMpuMetadata_HEVC_NAL_Payload(mpuMetadata_hevc_nal_payload: MpuMetadata_HEVC_NAL_Payload) {
-        execIfMMTSourceIsActiveOrCancel({ source ->
-            source.InitMpuMetadata_HEVC_NAL_Payload(mpuMetadata_hevc_nal_payload)
-        }, {
-            mpuMetadata_hevc_nal_payload.releaseByteBuffer()
-        })
-    }
-
     override fun onAlcObjectStatusMessage(alc_object_status_message: String) {
         //TODO: notify value changed
     }
@@ -453,6 +440,26 @@ internal class Atsc3Module(
 
     override fun pushBwPhyStatistics(bwPhyStatistics: BwPhyStatistics) {
         // ignore
+    }
+
+    //////////////////////////////////////////////////////////////
+    /// IAtsc3NdkMediaMMTBridgeCallbacks
+    //////////////////////////////////////////////////////////////
+
+    override fun pushMfuByteBufferFragment(mfuByteBufferFragment: MfuByteBufferFragment) {
+        execIfMMTSourceIsActiveOrCancel({ source ->
+            source.PushMfuByteBufferFragment(mfuByteBufferFragment)
+        }, {
+            mfuByteBufferFragment.unreferenceByteBuffer()
+        })
+    }
+
+    override fun pushMpuMetadata_HEVC_NAL_Payload(mpuMetadata_hevc_nal_payload: MpuMetadata_HEVC_NAL_Payload) {
+        execIfMMTSourceIsActiveOrCancel({ source ->
+            source.InitMpuMetadata_HEVC_NAL_Payload(mpuMetadata_hevc_nal_payload)
+        }, {
+            mpuMetadata_hevc_nal_payload.releaseByteBuffer()
+        })
     }
 
     //////////////////////////////////////////////////////////////
