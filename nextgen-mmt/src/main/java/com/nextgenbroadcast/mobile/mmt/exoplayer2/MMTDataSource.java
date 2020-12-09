@@ -9,7 +9,7 @@ import com.google.android.exoplayer2.upstream.BaseDataSource;
 import com.google.android.exoplayer2.upstream.DataSpec;
 import com.nextgenbroadcast.mobile.mmt.atsc3.media.MMTDataBuffer;
 
-import org.ngbp.libatsc3.middleware.android.application.sync.mmt.MfuByteBufferFragment;
+import org.ngbp.libatsc3.middleware.android.mmt.MfuByteBufferFragment;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
