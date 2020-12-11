@@ -44,6 +44,7 @@ dependencies {
 
     implementation "org.ngbp.libatsc3:atsc3_core:$libatsc3Version"
     implementation "org.ngbp.libatsc3:atsc3_bridge:$libatsc3Version"
+    implementation "org.ngbp.libatsc3:atsc3_bridge_media_mmt:$libatsc3Version"
 
     implementation project(":nextgen-core")
 

@@ -5,7 +5,7 @@ import android.content.Context;
 import androidx.annotation.NonNull;
 import androidx.startup.Initializer;
 
-import org.ngbp.libatsc3.middleware.android.application.sync.mmt.MmtPacketIdContext;
+import org.ngbp.libatsc3.middleware.android.mmt.MmtPacketIdContext;
 
 import java.util.Collections;
 import java.util.List;
