@@ -42,5 +42,10 @@
                 android:resource="@xml/file_provider_path" />
         </provider>
 
+        <provider
+            android:authorities="com.nextgenbroadcast.mobile.middleware.service.provider.esgProvider.ESGProvider"
+            android:name="com.nextgenbroadcast.mobile.middleware.service.provider.esgProvider.ESGProvider"
+            android:exported="true"/>
+
     </application>
 </manifest>
