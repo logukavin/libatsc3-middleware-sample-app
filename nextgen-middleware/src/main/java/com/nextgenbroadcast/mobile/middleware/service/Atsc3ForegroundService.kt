@@ -41,6 +41,7 @@ import com.nextgenbroadcast.mobile.middleware.server.web.MiddlewareWebServer
 import com.nextgenbroadcast.mobile.middleware.service.init.*
 import com.nextgenbroadcast.mobile.middleware.service.provider.IMediaFileProvider
 import com.nextgenbroadcast.mobile.middleware.service.provider.MediaFileProvider
+import com.nextgenbroadcast.mobile.middleware.service.provider.esgProvider.ESGProvider.Companion.ACTION_BIND_FROM_PROVIDER
 import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
 import com.nextgenbroadcast.mobile.middleware.settings.MiddlewareSettingsImpl
 import kotlinx.coroutines.*
@@ -74,7 +75,8 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         MediaFileProvider(applicationContext)
     }
 
-    abstract fun createServiceBinder(serviceController: IServiceController): IBinder
+    abstract fun createActivityServiceBinder(serviceController: IServiceController): IBinder
+    abstract fun createProviderServiceBinder(serviceController: IServiceController): IBinder?
 
     override fun onCreate() {
         super.onCreate()
@@ -129,7 +131,10 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
         maybeInitialize()
 
-        return createServiceBinder(serviceController)
+        return if (intent.action == ACTION_BIND_FROM_PROVIDER)
+            createProviderServiceBinder(serviceController)
+        else
+            createActivityServiceBinder(serviceController)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
