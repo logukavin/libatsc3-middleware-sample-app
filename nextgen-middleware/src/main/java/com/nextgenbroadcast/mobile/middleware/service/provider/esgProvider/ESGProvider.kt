@@ -39,6 +39,7 @@ import com.nextgenbroadcast.mobile.middleware.service.provider.esgProvider.Contr
 import com.nextgenbroadcast.mobile.middleware.service.provider.esgProvider.Contract.Companion.URI_SERVICE_BY_ID
 import com.nextgenbroadcast.mobile.middleware.service.EmbeddedAtsc3Service
 import java.lang.Integer.parseInt
+import java.lang.NullPointerException
 import java.util.*
 import java.util.concurrent.TimeUnit
 
@@ -159,31 +160,33 @@ class ESGProvider: ContentProvider(), LifecycleOwner {
 
                     filteredData = when(columnName) {
                         SERVICE_COLUMN_ID -> {
-                            data.filterKeys { it.id == selectionArg?.toInt() } as MutableMap<AVService, List<SGProgram>>
+                            selectionArg ?: throw IllegalArgumentException("You missed add service_id arg")
+
+                            data.filterKeys { it.id == selectionArg.toInt() } as MutableMap<AVService, List<SGProgram>>
                         }
                         PROGRAM_COLUMN_START_TIME -> {
+                            selectionArg ?: throw IllegalArgumentException("You missed add start_time arg")
+
                             val tempFilteredData = mutableMapOf<AVService, List<SGProgram>>()
 
-                            if (selectionArg != null) {
-
-                                filteredData.forEach { (key, list) ->
-                                    tempFilteredData[key] = list.filter {
-                                        (it.startTime <= selectionArg.toLong() && it.endTime > selectionArg.toLong())
-                                                || it.startTime >= selectionArg.toLong()
-                                    }
+                            filteredData.forEach { (key, list) ->
+                                tempFilteredData[key] = list.filter {
+                                    (it.startTime <= selectionArg.toLong() && it.endTime > selectionArg.toLong())
+                                            || it.startTime >= selectionArg.toLong()
                                 }
                             }
                             tempFilteredData
                         }
                         else -> data
+//                        Todo: add implementation for other columns
                     }
-                }
 
-                filteredData.values.forEach { list ->
-                    list.forEach { program ->
-                        fillProgramRow(cursor, program)
+                    filteredData.values.forEach { list ->
+                        list.forEach { program ->
+                            fillProgramRow(cursor, program)
+                        }
                     }
-                }
+                } ?: throw IllegalArgumentException("You missed add some column name")
             }
             URI_PROGRAM_BY_ID -> {
 //                Todo: add implementation
