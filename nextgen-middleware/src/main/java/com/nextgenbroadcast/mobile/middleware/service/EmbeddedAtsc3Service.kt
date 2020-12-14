@@ -9,7 +9,7 @@ import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceControl
 
 class EmbeddedAtsc3Service : Atsc3ForegroundService() {
 
-    override fun createActivityServiceBinder(serviceController: IServiceController): IBinder =
+    override fun createServiceBinder(serviceController: IServiceController): IBinder =
             ActivityServiceBinder(serviceController)
 
     override fun createProviderServiceBinder(serviceController: IServiceController): IBinder =

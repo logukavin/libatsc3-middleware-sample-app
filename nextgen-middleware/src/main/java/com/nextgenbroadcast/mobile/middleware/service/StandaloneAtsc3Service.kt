@@ -21,7 +21,7 @@ class StandaloneAtsc3Service : Atsc3ForegroundService() {
 
     override fun createProviderServiceBinder(serviceController: IServiceController): IBinder? = null
 
-    override fun createActivityServiceBinder(serviceController: IServiceController): IBinder {
+    override fun createServiceBinder(serviceController: IServiceController): IBinder {
         return Messenger(
                 StandaloneServiceHandler(
                         mediaFileProvider,

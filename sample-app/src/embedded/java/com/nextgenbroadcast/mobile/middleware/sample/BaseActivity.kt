@@ -20,7 +20,6 @@ abstract class BaseActivity : AppCompatActivity() {
         if (isBound) return
 
         Intent(this, EmbeddedAtsc3Service::class.java).also { intent ->
-            intent.action = ACTION_BIND_FROM_ACTIVITY
             bindService(intent, connection, BIND_AUTO_CREATE)
         }
     }
@@ -50,10 +49,6 @@ abstract class BaseActivity : AppCompatActivity() {
         override fun onServiceDisconnected(arg0: ComponentName) {
             isBound = false
         }
-    }
-
-    companion object {
-        const val ACTION_BIND_FROM_ACTIVITY = "activity"
     }
 }
 
