@@ -81,6 +81,7 @@ class ESGProvider: ContentProvider(), LifecycleOwner {
     }
 
     override fun onCreate(): Boolean {
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_START)
 
         initializeUriMatching()
@@ -190,12 +191,6 @@ class ESGProvider: ContentProvider(), LifecycleOwner {
             }
             URI_PROGRAM_BY_ID -> {
 //                Todo: add implementation
-//                cursor = MatrixCursor(PROGRAMS_PROJECTION)
-//                cursor = MatrixCursor(arrayOf(CONTENT_ID, CONTENT_TEXT, CONTENT_INNER_TEXT))
-//
-//                var id = -1
-//                uri.lastPathSegment?.let { parseInt(it) }?.let { id = it }
-//                fillServiceRow(cursor, mockData.keys.toTypedArray()[id])
             }
             else -> throw IllegalArgumentException("Wrong URI: $uri")
         }
@@ -229,18 +224,19 @@ class ESGProvider: ContentProvider(), LifecycleOwner {
     }
 
     override fun insert(uri: Uri, values: ContentValues?): Uri? {
-        return null
+        throw UnsupportedOperationException()
     }
 
     override fun update(p0: Uri, p1: ContentValues?, p2: String?, p3: Array<out String>?): Int {
-        return 0
+        throw UnsupportedOperationException()
     }
 
     override fun delete(p0: Uri, p1: String?, p2: Array<out String>?): Int {
-        return 0
+        throw UnsupportedOperationException()
     }
 
     override fun shutdown() {
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
         super.shutdown()
         unbindService()

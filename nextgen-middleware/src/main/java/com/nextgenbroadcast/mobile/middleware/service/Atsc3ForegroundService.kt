@@ -75,7 +75,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         MediaFileProvider(applicationContext)
     }
 
-    abstract fun createActivityServiceBinder(serviceController: IServiceController): IBinder
+    abstract fun createServiceBinder(serviceController: IServiceController): IBinder
     abstract fun createProviderServiceBinder(serviceController: IServiceController): IBinder?
 
     override fun onCreate() {
@@ -134,7 +134,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         return if (intent.action == ACTION_BIND_FROM_PROVIDER)
             createProviderServiceBinder(serviceController)
         else
-            createActivityServiceBinder(serviceController)
+            createServiceBinder(serviceController)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {

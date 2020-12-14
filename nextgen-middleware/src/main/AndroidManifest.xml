@@ -43,8 +43,8 @@
         </provider>
 
         <provider
-            android:authorities="com.nextgenbroadcast.mobile.middleware.service.provider.esgProvider.ESGProvider"
-            android:name="com.nextgenbroadcast.mobile.middleware.service.provider.esgProvider.ESGProvider"
+            android:authorities="${packageName}.service.provider.esgProvider.ESGProvider"
+            android:name=".service.provider.esgProvider.ESGProvider"
             android:exported="true"/>
 
     </application>
