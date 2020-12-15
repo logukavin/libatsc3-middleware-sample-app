@@ -37,6 +37,11 @@ android {
 
     flavorDimensions "service_type"
     productFlavors {
+        def addConstantTo = {target, constantName, constantValue ->
+            target.manifestPlaceholders += [ (constantName):constantValue]
+            target.buildConfigField "String", "${constantName}", "\"${constantValue}\""
+        }
+
         embedded {
             dimension "service_type"
             resValue "string", "app_name", "Atsc3 Sample App"
@@ -46,7 +51,7 @@ android {
             dimension "service_type"
             applicationIdSuffix ".standalone"
             resValue "string", "app_name", "Atsc3 Standalone Sample App"
-            resValue "string", "nextgenMediaFileProvider", "com.nextgenbroadcast.mobile.middleware.standalone.provider"
+            addConstantTo(owner,"nextgenProviderAuthority", "com.nextgenbroadcast.mobile.middleware.standalone.provider")
         }
 
         light {
