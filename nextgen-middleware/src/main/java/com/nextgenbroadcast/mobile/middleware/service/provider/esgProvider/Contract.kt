@@ -6,7 +6,7 @@ import com.nextgenbroadcast.mobile.middleware.BuildConfig
 open class Contract {
 
     companion object {
-        const val AUTHORITY = "${BuildConfig.LIBRARY_PACKAGE_NAME}.service.provider.esgProvider.ESGProvider"
+        const val AUTHORITY = "${BuildConfig.nextgenProviderAuthority}.esgProvider.ESGProvider"
 
         const val SERVICE_CONTENT_PATH = "services_data"
         const val PROGRAM_CONTENT_PATH = "programs_data"

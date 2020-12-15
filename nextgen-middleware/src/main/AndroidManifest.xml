@@ -34,7 +34,7 @@
 
         <provider
             android:name="androidx.core.content.FileProvider"
-            android:authorities="@string/nextgenMediaFileProvider"
+            android:authorities="${nextgenProviderAuthority}.MediaFileProvider"
             android:exported="false"
             android:grantUriPermissions="true">
             <meta-data
@@ -43,7 +43,7 @@
         </provider>
 
         <provider
-            android:authorities="${packageName}.service.provider.esgProvider.ESGProvider"
+            android:authorities="${nextgenProviderAuthority}.esgProvider.ESGProvider"
             android:name=".service.provider.esgProvider.ESGProvider"
             android:exported="true"/>
 

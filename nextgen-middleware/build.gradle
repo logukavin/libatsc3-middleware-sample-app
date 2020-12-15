@@ -29,7 +29,11 @@ android {
             abiFilters 'arm64-v8a', 'x86', 'x86_64'
         }
 
-        resValue("string", "nextgenMediaFileProvider", "com.nextgenbroadcast.mobile.middleware.provider")
+        def addConstant = {constantName, constantValue ->
+            manifestPlaceholders += [ (constantName):constantValue]
+            buildConfigField "String", "${constantName}", "\"${constantValue}\""
+        }
+        addConstant("nextgenProviderAuthority", "com.nextgenbroadcast.mobile.middleware.service.provider")
 
         resValue("string", "Auth0TokenUrl", "https://sinclairplatform.auth0.com/oauth/token")
         resValue("string", "Auth0Username", "middleware-service@sinclairplatform.com")

@@ -9,7 +9,6 @@ import android.os.IBinder
 import androidx.lifecycle.*
 import com.nextgenbroadcast.mobile.core.mapWith
 import com.nextgenbroadcast.mobile.core.model.AVService
-import com.nextgenbroadcast.mobile.core.serviceGuide.ISGContent
 import com.nextgenbroadcast.mobile.core.serviceGuide.SGProgram
 import com.nextgenbroadcast.mobile.middleware.service.provider.esgProvider.Contract.Companion.PROGRAMS_CONTENT_TYPE
 import com.nextgenbroadcast.mobile.middleware.service.provider.esgProvider.Contract.Companion.PROGRAM_COLUMN_CONTENT_DESCRIPTION
@@ -219,8 +218,8 @@ class ESGProvider: ContentProvider(), LifecycleOwner {
             .add(PROGRAM_COLUMN_CONTENT_ID, program.content?.id)
             .add(PROGRAM_COLUMN_CONTENT_VERSION, program.content?.version)
             .add(PROGRAM_COLUMN_CONTENT_ICON, program.content?.icon)
-            .add(PROGRAM_COLUMN_CONTENT_NAME, program.content?.getName(Locale.US))
-            .add(PROGRAM_COLUMN_CONTENT_DESCRIPTION, program.content?.getDescription(Locale.US))
+            .add(PROGRAM_COLUMN_CONTENT_NAME, program.content?.getName(Locale.ENGLISH))
+            .add(PROGRAM_COLUMN_CONTENT_DESCRIPTION, program.content?.getDescription(Locale.ENGLISH))
     }
 
     override fun insert(uri: Uri, values: ContentValues?): Uri? {
