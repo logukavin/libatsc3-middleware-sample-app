@@ -6,7 +6,6 @@ import android.util.AttributeSet
 import android.util.Log
 import androidx.core.net.toUri
 import com.google.android.exoplayer2.*
-import com.google.android.exoplayer2.source.ProgressiveMediaSource
 import com.google.android.exoplayer2.source.dash.DashMediaSource
 import com.google.android.exoplayer2.source.dash.DefaultDashChunkSource
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
@@ -18,8 +17,8 @@ import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.permission.AlterDataSourceFactory
 import com.nextgenbroadcast.mobile.permission.UriPermissionProvider
 import com.nextgenbroadcast.mobile.mmt.atsc3.media.MMTDataBuffer
-import com.nextgenbroadcast.mobile.mmt.exoplayer2.MMTDataSource
-import com.nextgenbroadcast.mobile.mmt.exoplayer2.MMTExtractor
+import com.nextgenbroadcast.mobile.mmt.exoplayer2.Atsc3MMTDataSource
+import com.nextgenbroadcast.mobile.mmt.exoplayer2.Atsc3MMTExtractor
 import com.nextgenbroadcast.mobile.mmt.exoplayer2.MMTMediaSource
 import com.nextgenbroadcast.mobile.mmt.exoplayer2.MMTLoadControl
 import com.nextgenbroadcast.mobile.exoplayer2.RouteDASHLoadControl
@@ -87,9 +86,9 @@ class ReceiverMediaPlayer @JvmOverloads constructor(
         isMMTPlayback = true
 
         val mediaSource = MMTMediaSource.Factory({
-            MMTDataSource(mmtBuffer)
+            Atsc3MMTDataSource(mmtBuffer)
         }, {
-            arrayOf(MMTExtractor())
+            arrayOf(Atsc3MMTExtractor())
         }).apply {
             setLoadErrorHandlingPolicy(createDefaultLoadErrorHandlingPolicy())
         }.createMediaSource("mmt".toUri())

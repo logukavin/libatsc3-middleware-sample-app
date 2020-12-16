@@ -15,7 +15,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ConcurrentModificationException;
 
-public class MMTDataSource extends BaseDataSource {
+public class Atsc3MMTDataSource extends BaseDataSource {
 
     public static class MMTDataSourceException extends IOException {
 
@@ -37,7 +37,7 @@ public class MMTDataSource extends BaseDataSource {
     private boolean readSampleHeader = false;
     private MfuByteBufferFragment currentSample = null;
 
-    public MMTDataSource(MMTDataBuffer dataSource) {
+    public Atsc3MMTDataSource(MMTDataBuffer dataSource) {
         super(/* isNetwork= */ false);
         inputSource = dataSource;
     }
