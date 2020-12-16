@@ -10,40 +10,21 @@ import androidx.lifecycle.*
 import com.nextgenbroadcast.mobile.core.mapWith
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.serviceGuide.SGProgram
-import com.nextgenbroadcast.mobile.middleware.service.provider.esgProvider.Contract.Companion.PROGRAMS_CONTENT_TYPE
-import com.nextgenbroadcast.mobile.middleware.service.provider.esgProvider.Contract.Companion.PROGRAM_COLUMN_CONTENT_DESCRIPTION
-import com.nextgenbroadcast.mobile.middleware.service.provider.esgProvider.Contract.Companion.PROGRAM_COLUMN_CONTENT_ICON
-import com.nextgenbroadcast.mobile.middleware.service.provider.esgProvider.Contract.Companion.PROGRAM_COLUMN_CONTENT_ID
-import com.nextgenbroadcast.mobile.middleware.service.provider.esgProvider.Contract.Companion.PROGRAM_COLUMN_CONTENT_NAME
-import com.nextgenbroadcast.mobile.middleware.service.provider.esgProvider.Contract.Companion.PROGRAM_COLUMN_CONTENT_VERSION
-import com.nextgenbroadcast.mobile.middleware.service.provider.esgProvider.Contract.Companion.PROGRAM_COLUMN_DURATION
-import com.nextgenbroadcast.mobile.middleware.service.provider.esgProvider.Contract.Companion.PROGRAM_COLUMN_END_TIME
-import com.nextgenbroadcast.mobile.middleware.service.provider.esgProvider.Contract.Companion.PROGRAM_COLUMN_START_TIME
-import com.nextgenbroadcast.mobile.middleware.service.provider.esgProvider.Contract.Companion.PROGRAM_CONTENT_ITEM_TYPE
-import com.nextgenbroadcast.mobile.middleware.service.provider.esgProvider.Contract.Companion.PROGRAM_CONTENT_PATH
-import com.nextgenbroadcast.mobile.middleware.service.provider.esgProvider.Contract.Companion.SERVICES_CONTENT_TYPE
-import com.nextgenbroadcast.mobile.middleware.service.provider.esgProvider.Contract.Companion.SERVICE_COLUMN_BSID
-import com.nextgenbroadcast.mobile.middleware.service.provider.esgProvider.Contract.Companion.SERVICE_COLUMN_CATEGORY
-import com.nextgenbroadcast.mobile.middleware.service.provider.esgProvider.Contract.Companion.SERVICE_COLUMN_GLOBAL_ID
-import com.nextgenbroadcast.mobile.middleware.service.provider.esgProvider.Contract.Companion.SERVICE_COLUMN_ID
-import com.nextgenbroadcast.mobile.middleware.service.provider.esgProvider.Contract.Companion.SERVICE_COLUMN_MAJOR_CHANNEL_NO
-import com.nextgenbroadcast.mobile.middleware.service.provider.esgProvider.Contract.Companion.SERVICE_COLUMN_MINOR_CHANNEL_NO
-import com.nextgenbroadcast.mobile.middleware.service.provider.esgProvider.Contract.Companion.SERVICE_COLUMN_SHORT_NAME
-import com.nextgenbroadcast.mobile.middleware.service.provider.esgProvider.Contract.Companion.SERVICE_CONTENT_ITEM_TYPE
-import com.nextgenbroadcast.mobile.middleware.service.provider.esgProvider.Contract.Companion.SERVICE_CONTENT_PATH
-import com.nextgenbroadcast.mobile.middleware.service.provider.esgProvider.Contract.Companion.SERVICE_CONTENT_URI
-import com.nextgenbroadcast.mobile.middleware.service.provider.esgProvider.Contract.Companion.URI_ALL_PROGRAMS
-import com.nextgenbroadcast.mobile.middleware.service.provider.esgProvider.Contract.Companion.URI_ALL_SERVICES
-import com.nextgenbroadcast.mobile.middleware.service.provider.esgProvider.Contract.Companion.URI_PROGRAM_BY_ID
-import com.nextgenbroadcast.mobile.middleware.service.provider.esgProvider.Contract.Companion.URI_SERVICE_BY_ID
+import com.nextgenbroadcast.mobile.middleware.R
 import com.nextgenbroadcast.mobile.middleware.service.EmbeddedAtsc3Service
 import java.lang.Integer.parseInt
-import java.lang.NullPointerException
 import java.util.*
-import java.util.concurrent.TimeUnit
 
 
-class ESGProvider: ContentProvider(), LifecycleOwner {
+class ESGContentProvider: ContentProvider(), LifecycleOwner {
+
+    private lateinit var AUTHORITY: String
+    private lateinit var SERVICE_CONTENT_URI: Uri
+    private lateinit var PROGRAM_CONTENT_URI: Uri
+    private lateinit var SERVICES_CONTENT_TYPE: String
+    private lateinit var SERVICE_CONTENT_ITEM_TYPE: String
+    private lateinit var PROGRAMS_CONTENT_TYPE: String
+    private lateinit var PROGRAM_CONTENT_ITEM_TYPE: String
 
     private var data: MutableMap<AVService, List<SGProgram>> = mutableMapOf()
     private val lifecycleRegistry = LifecycleRegistry(this)
@@ -68,11 +49,11 @@ class ESGProvider: ContentProvider(), LifecycleOwner {
     }
 
     private fun initializeUriMatching() {
-        uriMatcher.addURI(Contract.AUTHORITY, "$SERVICE_CONTENT_PATH/#", URI_SERVICE_BY_ID)
-        uriMatcher.addURI(Contract.AUTHORITY, SERVICE_CONTENT_PATH, URI_ALL_SERVICES)
+        uriMatcher.addURI(AUTHORITY, "$SERVICE_CONTENT_PATH/#", URI_SERVICE_BY_ID)
+        uriMatcher.addURI(AUTHORITY, SERVICE_CONTENT_PATH, URI_ALL_SERVICES)
 
-        uriMatcher.addURI(Contract.AUTHORITY, "$PROGRAM_CONTENT_PATH/#", URI_PROGRAM_BY_ID)
-        uriMatcher.addURI(Contract.AUTHORITY, PROGRAM_CONTENT_PATH, URI_ALL_PROGRAMS)
+        uriMatcher.addURI(AUTHORITY, "$PROGRAM_CONTENT_PATH/#", URI_PROGRAM_BY_ID)
+        uriMatcher.addURI(AUTHORITY, PROGRAM_CONTENT_PATH, URI_ALL_PROGRAMS)
     }
 
     override fun getLifecycle(): Lifecycle {
@@ -80,6 +61,16 @@ class ESGProvider: ContentProvider(), LifecycleOwner {
     }
 
     override fun onCreate(): Boolean {
+        AUTHORITY = context?.getString(R.string.nextgenProviderAuthority).toString()
+        SERVICE_CONTENT_URI = Uri.parse("content://$AUTHORITY/$SERVICE_CONTENT_PATH")
+        PROGRAM_CONTENT_URI = Uri.parse("content://$AUTHORITY/$PROGRAM_CONTENT_PATH")
+
+        SERVICES_CONTENT_TYPE = ("vnd.android.cursor.dir/vnd.$AUTHORITY.$SERVICE_CONTENT_PATH")
+        SERVICE_CONTENT_ITEM_TYPE = ("vnd.android.cursor.item/vnd.$AUTHORITY.$SERVICE_CONTENT_PATH")
+
+        PROGRAMS_CONTENT_TYPE = ("vnd.android.cursor.dir/vnd.$AUTHORITY.$PROGRAM_CONTENT_PATH")
+        PROGRAM_CONTENT_ITEM_TYPE = ("vnd.android.cursor.item/vnd.$AUTHORITY.$PROGRAM_CONTENT_PATH")
+
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_START)
 
@@ -242,6 +233,33 @@ class ESGProvider: ContentProvider(), LifecycleOwner {
     }
 
     companion object {
+
+        const val SERVICE_CONTENT_PATH = "services_data"
+        const val PROGRAM_CONTENT_PATH = "programs_data"
+
+        const val SERVICE_COLUMN_BSID = "bsid"
+        const val SERVICE_COLUMN_ID = "id"
+        const val SERVICE_COLUMN_SHORT_NAME = "shortName"
+        const val SERVICE_COLUMN_GLOBAL_ID = "globalId"
+        const val SERVICE_COLUMN_MAJOR_CHANNEL_NO = "majorChannelNo"
+        const val SERVICE_COLUMN_MINOR_CHANNEL_NO = "minorChannelNo"
+        const val SERVICE_COLUMN_CATEGORY = "category"
+
+        const val PROGRAM_COLUMN_START_TIME = "startTime"
+        const val PROGRAM_COLUMN_END_TIME = "endTime"
+        const val PROGRAM_COLUMN_DURATION = "duration"
+
+        const val PROGRAM_COLUMN_CONTENT_ID = "id"
+        const val PROGRAM_COLUMN_CONTENT_VERSION = "version"
+        const val PROGRAM_COLUMN_CONTENT_ICON = "icon"
+        const val PROGRAM_COLUMN_CONTENT_NAME = "name"
+        const val PROGRAM_COLUMN_CONTENT_DESCRIPTION = "description"
+
+        const val URI_ALL_SERVICES = 1
+        const val URI_SERVICE_BY_ID = 2
+        const val URI_ALL_PROGRAMS = 3
+        const val URI_PROGRAM_BY_ID = 4
+
         const val ACTION_BIND_FROM_PROVIDER = "provider"
     }
 }
