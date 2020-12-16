@@ -4,7 +4,6 @@ import android.util.Log;
 import android.util.SparseArray;
 
 import com.google.android.exoplayer2.C;
-import com.google.android.exoplayer2.Format;
 import com.google.android.exoplayer2.ParserException;
 import com.google.android.exoplayer2.extractor.Extractor;
 import com.google.android.exoplayer2.extractor.ExtractorInput;
@@ -12,12 +11,10 @@ import com.google.android.exoplayer2.extractor.ExtractorOutput;
 import com.google.android.exoplayer2.extractor.PositionHolder;
 import com.google.android.exoplayer2.extractor.SeekMap;
 import com.google.android.exoplayer2.extractor.TrackOutput;
-import com.google.android.exoplayer2.util.MimeTypes;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
-import java.util.Collections;
 
 public class Atsc3MMTExtractor implements Extractor {
     private ExtractorOutput extractorOutput;
@@ -147,9 +144,9 @@ public class Atsc3MMTExtractor implements Extractor {
 
             buffer.rewind();
 
-            int videoType = buffer.get();
-            int audioType = buffer.get();
-            int textType = buffer.get();
+            int videoType = buffer.getInt();
+            int audioType = buffer.getInt();
+            int textType = buffer.getInt();
 
             int videoWidth = buffer.getInt();
             int videoHeight = buffer.getInt();
@@ -164,56 +161,19 @@ public class Atsc3MMTExtractor implements Extractor {
             byte[] data = new byte[initialDataSize];
             input.readFully(data, /* offset= */ 0, /* length= */ initialDataSize);
 
-            if (videoType == MMTDef.TRACK_VIDEO_HEVC) {
-                TrackOutput trackOutput = extractorOutput.track(/* id= */ 1, C.TRACK_TYPE_VIDEO);
-                tracks.put(C.TRACK_TYPE_VIDEO, new MmtTrack(trackOutput, defaultSampleDurationUs));
-
-                trackOutput.format(
-                        Format.createVideoSampleFormat(
-                                null,
-                                MimeTypes.VIDEO_H265,
-                                null,
-                                Format.NO_VALUE,
-                                Format.NO_VALUE,
-                                videoWidth,
-                                videoHeight,
-                                videoFrameRate,
-                                Collections.singletonList(data),
-                                null)
-                );
+            TrackOutput videoOutput = MediaTrackUtils.createVideoOutput(extractorOutput, /* id */1, videoType, videoWidth, videoHeight, videoFrameRate, data);
+            if (videoOutput != null) {
+                tracks.put(C.TRACK_TYPE_VIDEO, new MmtTrack(videoOutput, defaultSampleDurationUs));
             }
 
-            if (audioType == MMTDef.TRACK_AUDIO_AC4) {
-                TrackOutput trackOutput = extractorOutput.track(/* id= */ 2, C.TRACK_TYPE_AUDIO);
-                tracks.put(C.TRACK_TYPE_AUDIO, new MmtTrack(trackOutput, defaultSampleDurationUs));
-
-                trackOutput.format(
-                        Format.createAudioSampleFormat(
-                                null,
-                                MimeTypes.AUDIO_AC4,
-                                null,
-                                Format.NO_VALUE,
-                                Format.NO_VALUE,
-                                audioChannelCount,
-                                audioSampleRate,
-                                null,
-                                null,
-                                Format.NO_VALUE,
-                                null)
-                );
+            TrackOutput audioOutput = MediaTrackUtils.createAudioOutput(extractorOutput, /* id */2, audioType, audioChannelCount, audioSampleRate);
+            if (audioOutput != null) {
+                tracks.put(C.TRACK_TYPE_AUDIO, new MmtTrack(audioOutput, defaultSampleDurationUs));
             }
 
-            if (textType == MMTDef.TRACK_TEXT_TTML) {
-                TrackOutput trackOutput = extractorOutput.track(/* id= */ 3, C.TRACK_TYPE_TEXT);
-                tracks.put(C.TRACK_TYPE_TEXT, new MmtTrack(trackOutput, 0));
-
-                trackOutput.format(
-                        Format.createTextSampleFormat(
-                                null,
-                                MimeTypes.APPLICATION_TTML,
-                                0,
-                                null)
-                );
+            TrackOutput textOutput = MediaTrackUtils.createTextOutput(extractorOutput, /* id */3, textType);
+            if (textOutput != null) {
+                tracks.put(C.TRACK_TYPE_TEXT, new MmtTrack(textOutput, 0));
             }
 
             extractorOutput.endTracks();

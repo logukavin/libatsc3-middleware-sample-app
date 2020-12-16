@@ -4,7 +4,6 @@ import android.util.Log;
 import android.util.SparseArray;
 
 import com.google.android.exoplayer2.C;
-import com.google.android.exoplayer2.Format;
 import com.google.android.exoplayer2.ParserException;
 import com.google.android.exoplayer2.extractor.Extractor;
 import com.google.android.exoplayer2.extractor.ExtractorInput;
@@ -12,7 +11,6 @@ import com.google.android.exoplayer2.extractor.ExtractorOutput;
 import com.google.android.exoplayer2.extractor.PositionHolder;
 import com.google.android.exoplayer2.extractor.SeekMap;
 import com.google.android.exoplayer2.extractor.TrackOutput;
-import com.google.android.exoplayer2.util.MimeTypes;
 import com.google.android.exoplayer2.util.ParsableByteArray;
 import com.google.android.exoplayer2.util.Util;
 
@@ -26,7 +24,6 @@ import org.ngbp.libatsc3.middleware.android.mmt.MpuMetadata_HEVC_NAL_Payload;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.Collections;
 import java.util.concurrent.LinkedBlockingDeque;
 
 public class MMTExtractor implements Extractor, IAtsc3NdkMediaMMTBridgeCallbacks {
@@ -99,14 +96,17 @@ public class MMTExtractor implements Extractor, IAtsc3NdkMediaMMTBridgeCallbacks
 
     @Override
     public void pushMfuByteBufferFragment(MfuByteBufferFragment mfuByteBufferFragment) {
+        //jjustman-2020-11-19 - remove this hack workaround, as we may be losing audio sync due to incorrect frame calculation without analyzing trun box
         //jjustman-2020-08-19 - hack-ish workaround for ac-4 and mmt_atsc3_message signalling information w/ sample duration (or avoiding parsing the trun box)
-        if (MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us != 0 || MmtPacketIdContext.audio_packet_statistics.extracted_sample_duration_us == 0) {
-            if (MmtPacketIdContext.audio_packet_id == mfuByteBufferFragment.packet_id && isKeySample(mfuByteBufferFragment)) {
-                Log.d("PushMfuByteBufferFragment:INFO", String.format(" packet_id: %d, mpu_sequence_number: %d, setting audio_packet_statistics.extracted_sample_duration_us to follow video: %d * 2",
-                        mfuByteBufferFragment.packet_id, mfuByteBufferFragment.mpu_sequence_number, MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us));
-            }
-            MmtPacketIdContext.audio_packet_statistics.extracted_sample_duration_us = MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us * 2;
-        } else if (MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us == 0 || MmtPacketIdContext.audio_packet_statistics.extracted_sample_duration_us == 0) {
+//        if (MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us != 0 || MmtPacketIdContext.audio_packet_statistics.extracted_sample_duration_us == 0) {
+//            if (MmtPacketIdContext.audio_packet_id == mfuByteBufferFragment.packet_id && isKeySample(mfuByteBufferFragment)) {
+//                Log.d("PushMfuByteBufferFragment:INFO", String.format(" packet_id: %d, mpu_sequence_number: %d, setting audio_packet_statistics.extracted_sample_duration_us to follow video: %d * 2",
+//                        mfuByteBufferFragment.packet_id, mfuByteBufferFragment.mpu_sequence_number, MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us));
+//            }
+//            MmtPacketIdContext.audio_packet_statistics.extracted_sample_duration_us = MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us * 2;
+//        } else
+//
+        if (MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us == 0 || MmtPacketIdContext.audio_packet_statistics.extracted_sample_duration_us == 0) {
             Log.d("PushMfuByteBufferFragment:WARN", String.format(" packet_id: %d, mpu_sequence_number: %d, video.duration_us: %d, audio.duration_us: %d, missing extracted_sample_duration",
                     mfuByteBufferFragment.packet_id, mfuByteBufferFragment.mpu_sequence_number,
                     MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us,
@@ -296,66 +296,32 @@ public class MMTExtractor implements Extractor, IAtsc3NdkMediaMMTBridgeCallbacks
             hasOutputFormat = true;
 
             //TODO: get actual track format !!!
-            if (true/*videoType*/) {
-                int videoWidth = MmtPacketIdContext.video_packet_statistics.width > 0 ? MmtPacketIdContext.video_packet_statistics.width : MmtPacketIdContext.MmtMfuStatistics.FALLBACK_WIDTH;
-                int videoHeight = MmtPacketIdContext.video_packet_statistics.height > 0 ? MmtPacketIdContext.video_packet_statistics.height : MmtPacketIdContext.MmtMfuStatistics.FALLBACK_HEIGHT;
-                float videoFrameRate = (float) 1000000.0 / MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us;
+            int videoType = Util.getIntegerCodeForString("hev1");
+            int audioType = Util.getIntegerCodeForString("ac-4");
+            int textType = Util.getIntegerCodeForString("stpp");
 
-                TrackOutput trackOutput = extractorOutput.track(/* id= */ 1, C.TRACK_TYPE_VIDEO);
-                tracks.put(C.TRACK_TYPE_VIDEO, new MmtTrack(trackOutput, PTS_OFFSET_US));
+            int videoWidth = MmtPacketIdContext.video_packet_statistics.width > 0 ? MmtPacketIdContext.video_packet_statistics.width : MmtPacketIdContext.MmtMfuStatistics.FALLBACK_WIDTH;
+            int videoHeight = MmtPacketIdContext.video_packet_statistics.height > 0 ? MmtPacketIdContext.video_packet_statistics.height : MmtPacketIdContext.MmtMfuStatistics.FALLBACK_HEIGHT;
+            float videoFrameRate = (float) 1000000.0 / MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us;
 
-                //TODO: copy it?
-                ByteBuffer initBuffer = initMpuMetadata_HEVC_NAL_Payload.myByteBuffer;
+            int audioChannelCount = 2;
+            int audioSampleRate = 48000;
 
-                trackOutput.format(
-                        Format.createVideoSampleFormat(
-                                null,
-                                MimeTypes.VIDEO_H265,
-                                null,
-                                Format.NO_VALUE,
-                                Format.NO_VALUE,
-                                videoWidth,
-                                videoHeight,
-                                videoFrameRate,
-                                Collections.singletonList(initBuffer.array()),
-                                null)
-                );
+            //TODO: copy it?
+            ByteBuffer initBuffer = initMpuMetadata_HEVC_NAL_Payload.myByteBuffer;
+            TrackOutput videoOutput = MediaTrackUtils.createVideoOutput(extractorOutput, /* id */1, videoType, videoWidth, videoHeight, videoFrameRate, initBuffer.array());
+            if (videoOutput != null) {
+                tracks.put(C.TRACK_TYPE_VIDEO, new MmtTrack(videoOutput, PTS_OFFSET_US));
             }
 
-            if (true/*audioType*/) {
-                int audioChannelCount = 2;
-                int audioSampleRate = 48000;
-
-                TrackOutput trackOutput = extractorOutput.track(/* id= */ 2, C.TRACK_TYPE_AUDIO);
-                tracks.put(C.TRACK_TYPE_AUDIO, new MmtTrack(trackOutput, PTS_OFFSET_US));
-
-                trackOutput.format(
-                        Format.createAudioSampleFormat(
-                                null,
-                                MimeTypes.AUDIO_AC4,
-                                null,
-                                Format.NO_VALUE,
-                                Format.NO_VALUE,
-                                audioChannelCount,
-                                audioSampleRate,
-                                null,
-                                null,
-                                Format.NO_VALUE,
-                                null)
-                );
+            TrackOutput audioOutput = MediaTrackUtils.createAudioOutput(extractorOutput, /* id */2, audioType, audioChannelCount, audioSampleRate);
+            if (audioOutput != null) {
+                tracks.put(C.TRACK_TYPE_AUDIO, new MmtTrack(audioOutput, PTS_OFFSET_US));
             }
 
-            if (true/*textType*/) {
-                TrackOutput trackOutput = extractorOutput.track(/* id= */ 3, C.TRACK_TYPE_TEXT);
-                tracks.put(C.TRACK_TYPE_TEXT, new MmtTrack(trackOutput, 0));
-
-                trackOutput.format(
-                        Format.createTextSampleFormat(
-                                null,
-                                MimeTypes.APPLICATION_TTML,
-                                0,
-                                null)
-                );
+            TrackOutput textOutput = MediaTrackUtils.createTextOutput(extractorOutput, /* id */3, textType);
+            if (textOutput != null) {
+                tracks.put(C.TRACK_TYPE_TEXT, new MmtTrack(textOutput, 0));
             }
 
             extractorOutput.endTracks();

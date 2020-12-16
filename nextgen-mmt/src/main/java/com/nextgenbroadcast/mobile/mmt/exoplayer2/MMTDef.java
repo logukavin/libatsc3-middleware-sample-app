@@ -10,9 +10,9 @@ public final class MMTDef {
             + Byte.BYTES;       /* is key frame */
 
     static final int SIZE_HEADER =
-            Byte.BYTES          /* video type */
-            + Byte.BYTES        /* audio type */
-            + Byte.BYTES        /* text type */
+            Integer.BYTES       /* video type - see Atom.java*/
+            + Integer.BYTES     /* audio type - see Atom.java - Util.getIntegerCodeForString("ac-4");*/
+            + Integer.BYTES     /* text type - see Atom.java - Util.getIntegerCodeForString("ac-4"); */
             + Integer.BYTES     /* video width */
             + Integer.BYTES     /* video height */
             + Float.BYTES       /* video frame rate */
@@ -23,7 +23,6 @@ public final class MMTDef {
 
     static final byte TRACK_UNDEFINED = 0;
     static final byte TRACK_VIDEO_HEVC = 1;
-    static final byte TRACK_AUDIO_AC4 = 1;
     static final byte TRACK_TEXT_TTML = 1;
 
     static final byte[] mmtSignature = Util.getUtf8Bytes("#!MMT\n");
