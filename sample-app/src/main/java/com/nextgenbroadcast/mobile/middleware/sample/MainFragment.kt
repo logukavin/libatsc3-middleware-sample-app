@@ -18,6 +18,7 @@ import androidx.core.os.bundleOf
 import androidx.databinding.DataBindingUtil
 import androidx.fragment.app.setFragmentResultListener
 import androidx.lifecycle.ViewModelProvider
+import com.google.android.exoplayer2.DefaultRenderersFactory
 import com.google.android.exoplayer2.ExoPlayerFactory
 import com.google.android.exoplayer2.trackselection.AdaptiveTrackSelection
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
@@ -41,6 +42,7 @@ import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.UserAgentViewMode
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.factory.UserAgentViewModelFactory
 import com.nextgenbroadcast.mobile.middleware.sample.useragent.ServiceAdapter
 import com.nextgenbroadcast.mobile.mmt.exoplayer2.MMTExtractor
+import com.nextgenbroadcast.mobile.mmt.exoplayer2.MMTLoadControl
 import com.nextgenbroadcast.mobile.mmt.exoplayer2.MMTMediaSource
 import com.nextgenbroadcast.mobile.mmt.exoplayer2.PcapUdpDataSource
 import com.nextgenbroadcast.mobile.view.UserAgentView
@@ -81,10 +83,10 @@ class MainFragment : BaseFragment() {
         view?.findViewById<View>(R.id.progress_bar)!!.visibility = View.GONE
 
         val trackSelector = DefaultTrackSelector(AdaptiveTrackSelection.Factory())
-        val player = ExoPlayerFactory.newSimpleInstance(requireContext(), trackSelector)
+        val player = ExoPlayerFactory.newSimpleInstance(requireContext(), DefaultRenderersFactory(context), trackSelector, MMTLoadControl())
 
         val playerView = view?.findViewById<PlayerView>(R.id.receiver_media_player)!!
-        playerView.setPlayer(player)
+        playerView.player = player
         playerView.requestFocus()
 
         val mediaSource = MMTMediaSource.Factory({
