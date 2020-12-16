@@ -1,12 +1,14 @@
 package com.nextgenbroadcast.mobile.mmt.exoplayer2;
 
 import android.net.Uri;
+import android.util.Log;
 
 import androidx.annotation.Nullable;
 
 import com.google.android.exoplayer2.C;
 import com.google.android.exoplayer2.upstream.BaseDataSource;
 import com.google.android.exoplayer2.upstream.DataSpec;
+import com.google.android.exoplayer2.util.Util;
 import com.nextgenbroadcast.mobile.mmt.atsc3.media.MMTDataBuffer;
 
 import org.ngbp.libatsc3.middleware.android.mmt.MfuByteBufferFragment;
@@ -36,6 +38,8 @@ public class Atsc3MMTDataSource extends BaseDataSource {
     private boolean readHeader = true;
     private boolean readSampleHeader = false;
     private MfuByteBufferFragment currentSample = null;
+
+    public static int DEBUG_COUNTER = 0;
 
     public Atsc3MMTDataSource(MMTDataBuffer dataSource) {
         super(/* isNetwork= */ false);
@@ -122,9 +126,17 @@ public class Atsc3MMTDataSource extends BaseDataSource {
             if (offset == 0 && readLength == MMTDef.SIZE_HEADER) {
                 // write stream Header data
                 ByteBuffer bb = ByteBuffer.allocate(MMTDef.SIZE_HEADER);
-                bb.put(MMTDef.TRACK_VIDEO_HEVC)
-                        .put(MMTDef.TRACK_AUDIO_AC4)
-                        .put(MMTDef.TRACK_TEXT_TTML)
+
+                Integer videoFormat = Util.getIntegerCodeForString("hev1");
+                Integer audioFormat = Util.getIntegerCodeForString("ac-4");
+//                if(true) {
+//                    audioFormat = Util.getIntegerCodeForString("mp4a");
+//                    /* jjustman-2020-11-30 - needs special audio codec specific metadata */
+//                }
+                Integer ttmlFormat = Util.getIntegerCodeForString("stpp");
+                bb.putInt(videoFormat)
+                        .putInt(audioFormat)
+                        .putInt(ttmlFormat)
                         .putInt(inputSource.getVideoWidth())
                         .putInt(inputSource.getVideoHeight())
                         .putFloat(inputSource.getVideoFrameRate())
@@ -171,6 +183,15 @@ public class Atsc3MMTDataSource extends BaseDataSource {
             }
 
             long computedPresentationTimestampUs = inputSource.getPresentationTimestampUs(currentSample);
+
+            if((DEBUG_COUNTER++) % 100 == 0) {
+                Log.d("MMTDataSource", String.format(">>> packet_id: %d, computedPresentationTimestampUs: %d, mpu_sequence number: %d, sample number: %d, debug_counter: %d",
+                        currentSample.packet_id,
+                        computedPresentationTimestampUs,
+                        currentSample.mpu_sequence_number,
+                        currentSample.sample_number,
+                        DEBUG_COUNTER));
+            }
 
 //            Log.d("!!!", ">>> sample TimeUs: " + computedPresentationTimestampUs
 //                    + ",  sample size: " + toProcessMfuByteBufferFragment.bytebuffer_length
