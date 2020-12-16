@@ -18,6 +18,10 @@ import androidx.core.os.bundleOf
 import androidx.databinding.DataBindingUtil
 import androidx.fragment.app.setFragmentResultListener
 import androidx.lifecycle.ViewModelProvider
+import com.google.android.exoplayer2.ExoPlayerFactory
+import com.google.android.exoplayer2.trackselection.AdaptiveTrackSelection
+import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
+import com.google.android.exoplayer2.ui.PlayerView
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.nextgenbroadcast.mobile.core.FileUtils
 import com.nextgenbroadcast.mobile.core.model.AppData
@@ -36,6 +40,9 @@ import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.SelectorViewModel
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.UserAgentViewModel
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.factory.UserAgentViewModelFactory
 import com.nextgenbroadcast.mobile.middleware.sample.useragent.ServiceAdapter
+import com.nextgenbroadcast.mobile.mmt.exoplayer2.MMTExtractor
+import com.nextgenbroadcast.mobile.mmt.exoplayer2.MMTMediaSource
+import com.nextgenbroadcast.mobile.mmt.exoplayer2.PcapUdpDataSource
 import com.nextgenbroadcast.mobile.view.UserAgentView
 import kotlinx.android.synthetic.main.fragment_main.*
 import java.util.*
@@ -66,6 +73,30 @@ class MainFragment : BaseFragment() {
     private val getContent = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         val path = uri?.let { FileUtils.getPath(requireContext(), uri) }
         path?.let { openRoute(requireContext(), path) }
+    }
+
+    fun udpMmtTest(path: String) {
+        val videoUri = Uri.parse(path)
+
+        view?.findViewById<View>(R.id.progress_bar)!!.visibility = View.GONE
+
+        val trackSelector = DefaultTrackSelector(AdaptiveTrackSelection.Factory())
+        val player = ExoPlayerFactory.newSimpleInstance(requireContext(), trackSelector)
+
+        val playerView = view?.findViewById<PlayerView>(R.id.receiver_media_player)!!
+        playerView.setPlayer(player)
+        playerView.requestFocus()
+
+        val mediaSource = MMTMediaSource.Factory({
+            PcapUdpDataSource()
+        }, {
+            arrayOf(MMTExtractor())
+        }).apply {
+            //setLoadErrorHandlingPolicy(createDefaultLoadErrorHandlingPolicy())
+        }.createMediaSource(videoUri)
+
+        player.prepare(mediaSource)
+        player.playWhenReady = true
     }
 
     override fun onAttach(context: Context) {
