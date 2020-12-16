@@ -19,7 +19,7 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collections;
 
-public class MMTExtractor implements Extractor {
+public class Atsc3MMTExtractor implements Extractor {
     private ExtractorOutput extractorOutput;
 
     private int currentSampleBytesRemaining;
