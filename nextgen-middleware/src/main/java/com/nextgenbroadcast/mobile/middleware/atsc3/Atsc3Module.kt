@@ -23,6 +23,7 @@ import org.ngbp.libatsc3.middleware.android.application.interfaces.IAtsc3NdkAppl
 import org.ngbp.libatsc3.middleware.android.application.interfaces.IAtsc3NdkMediaMMTBridgeCallbacks
 import org.ngbp.libatsc3.middleware.android.mmt.MfuByteBufferFragment
 import org.ngbp.libatsc3.middleware.android.mmt.MpuMetadata_HEVC_NAL_Payload
+import org.ngbp.libatsc3.middleware.android.mmt.models.MMTAudioDecoderConfigurationRecord
 import org.ngbp.libatsc3.middleware.android.phy.Atsc3NdkPHYClientBase
 import org.ngbp.libatsc3.middleware.android.phy.Atsc3UsbDevice
 import org.ngbp.libatsc3.middleware.android.phy.interfaces.IAtsc3NdkPHYBridgeCallbacks
@@ -460,6 +461,10 @@ internal class Atsc3Module(
         }, {
             mpuMetadata_hevc_nal_payload.releaseByteBuffer()
         })
+    }
+
+    override fun pushAudioDecoderConfigurationRecord(mmtAudioDecoderConfigurationRecord: MMTAudioDecoderConfigurationRecord?) {
+        // ignore
     }
 
     //////////////////////////////////////////////////////////////

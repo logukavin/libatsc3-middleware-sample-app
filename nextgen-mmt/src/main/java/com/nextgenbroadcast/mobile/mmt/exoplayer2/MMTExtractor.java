@@ -1,5 +1,6 @@
 package com.nextgenbroadcast.mobile.mmt.exoplayer2;
 
+import android.util.ArrayMap;
 import android.util.Log;
 import android.util.SparseArray;
 
@@ -21,9 +22,11 @@ import org.ngbp.libatsc3.middleware.android.application.interfaces.IAtsc3NdkMedi
 import org.ngbp.libatsc3.middleware.android.mmt.MfuByteBufferFragment;
 import org.ngbp.libatsc3.middleware.android.mmt.MmtPacketIdContext;
 import org.ngbp.libatsc3.middleware.android.mmt.MpuMetadata_HEVC_NAL_Payload;
+import org.ngbp.libatsc3.middleware.android.mmt.models.MMTAudioDecoderConfigurationRecord;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Map;
 import java.util.concurrent.LinkedBlockingDeque;
 
 public class MMTExtractor implements Extractor, IAtsc3NdkMediaMMTBridgeCallbacks {
@@ -49,6 +52,7 @@ public class MMTExtractor implements Extractor, IAtsc3NdkMediaMMTBridgeCallbacks
     private final SparseArray<MmtTrack> tracks = new SparseArray<>();
 
     private final LinkedBlockingDeque<MfuByteBufferFragment> mfuBufferQueue = new LinkedBlockingDeque<>();
+    private final ArrayMap<MMTAudioDecoderConfigurationRecord, Boolean> audioConfigurationMap = new ArrayMap<>();
     private MpuMetadata_HEVC_NAL_Payload initMpuMetadata_HEVC_NAL_Payload = null;
     private boolean firstMfuBufferVideoKeyframeSent = false;
     private long videoMfuPresentationTimestampUs;
@@ -120,12 +124,14 @@ public class MMTExtractor implements Extractor, IAtsc3NdkMediaMMTBridgeCallbacks
 //            return;
 //        }
 
-        if (MmtPacketIdContext.video_packet_id == mfuByteBufferFragment.packet_id) {
+        if (isVideoSample(mfuByteBufferFragment)) {
             addVideoFragment(mfuByteBufferFragment);
-        } else if (MmtPacketIdContext.audio_packet_id == mfuByteBufferFragment.packet_id) {
+        } else if (isAudioSample(mfuByteBufferFragment)) {
             addAudioFragment(mfuByteBufferFragment);
-        } else if (MmtPacketIdContext.stpp_packet_id == mfuByteBufferFragment.packet_id) {
+        } else if (isTextSample(mfuByteBufferFragment)) {
             addSubtitleFragment(mfuByteBufferFragment);
+        } else {
+            mfuByteBufferFragment.unreferenceByteBuffer();
         }
     }
 
@@ -137,6 +143,14 @@ public class MMTExtractor implements Extractor, IAtsc3NdkMediaMMTBridgeCallbacks
             initMpuMetadata_HEVC_NAL_Payload = payload;
         } else {
             payload.releaseByteBuffer();
+        }
+    }
+
+    @Override
+    public void pushAudioDecoderConfigurationRecord(MMTAudioDecoderConfigurationRecord mmtAudioDecoderConfigurationRecord) {
+        //TODO: remove audioConfigurationMap.isEmpty()
+        if (audioConfigurationMap.isEmpty()) {
+            audioConfigurationMap.put(mmtAudioDecoderConfigurationRecord, false);
         }
     }
 
@@ -297,15 +311,11 @@ public class MMTExtractor implements Extractor, IAtsc3NdkMediaMMTBridgeCallbacks
 
             //TODO: get actual track format !!!
             int videoType = Util.getIntegerCodeForString("hev1");
-            int audioType = Util.getIntegerCodeForString("ac-4");
             int textType = Util.getIntegerCodeForString("stpp");
 
             int videoWidth = MmtPacketIdContext.video_packet_statistics.width > 0 ? MmtPacketIdContext.video_packet_statistics.width : MmtPacketIdContext.MmtMfuStatistics.FALLBACK_WIDTH;
             int videoHeight = MmtPacketIdContext.video_packet_statistics.height > 0 ? MmtPacketIdContext.video_packet_statistics.height : MmtPacketIdContext.MmtMfuStatistics.FALLBACK_HEIGHT;
             float videoFrameRate = (float) 1000000.0 / MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us;
-
-            int audioChannelCount = 2;
-            int audioSampleRate = 48000;
 
             //TODO: copy it?
             ByteBuffer initBuffer = initMpuMetadata_HEVC_NAL_Payload.myByteBuffer;
@@ -314,9 +324,19 @@ public class MMTExtractor implements Extractor, IAtsc3NdkMediaMMTBridgeCallbacks
                 tracks.put(C.TRACK_TYPE_VIDEO, new MmtTrack(videoOutput, PTS_OFFSET_US));
             }
 
-            TrackOutput audioOutput = MediaTrackUtils.createAudioOutput(extractorOutput, /* id */2, audioType, audioChannelCount, audioSampleRate);
-            if (audioOutput != null) {
-                tracks.put(C.TRACK_TYPE_AUDIO, new MmtTrack(audioOutput, PTS_OFFSET_US));
+            if (!audioConfigurationMap.isEmpty()) {
+                audioConfigurationMap.entrySet().forEach(entry -> {
+                    if (!entry.getValue()) {
+                        MMTAudioDecoderConfigurationRecord record = entry.getKey();
+                        if (record.audioAC4SampleEntryBox != null) {
+                            TrackOutput audioOutput = MediaTrackUtils.createAudioOutput(extractorOutput, record.packet_id, record.audioAC4SampleEntryBox.type, record.channel_count, record.sample_rate);
+                            if (audioOutput != null) {
+                                entry.setValue(true);
+                                tracks.put(C.TRACK_TYPE_AUDIO, new MmtTrack(audioOutput, PTS_OFFSET_US));
+                            }
+                        }
+                    }
+                });
             }
 
             TrackOutput textOutput = MediaTrackUtils.createTextOutput(extractorOutput, /* id */3, textType);
@@ -513,7 +533,15 @@ public class MMTExtractor implements Extractor, IAtsc3NdkMediaMMTBridgeCallbacks
     }
 
     public boolean isAudioSample(MfuByteBufferFragment sample) {
-        return MmtPacketIdContext.audio_packet_id == sample.packet_id;
+        if (!audioConfigurationMap.isEmpty()) {
+            for (Map.Entry<MMTAudioDecoderConfigurationRecord, Boolean> entry : audioConfigurationMap.entrySet()) {
+                if (entry.getValue() && entry.getKey().packet_id == sample.packet_id) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     private boolean isTextSample(MfuByteBufferFragment sample) {
