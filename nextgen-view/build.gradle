@@ -43,10 +43,17 @@ dependencies {
     implementation project(':nextgen-core')
     compileOnly project(":nextgen-mmt")
 
-    api "com.google.android.exoplayer:exoplayer-daa:$exoplayerVersion"
-    api "com.google.android.exoplayer:exoplayer-dash:$exoplayerVersion"
-    api "com.google.android.exoplayer:exoplayer-core:$exoplayerVersion"
-    api "com.google.android.exoplayer:exoplayer-ui:$exoplayerVersion"
+    if (project.hasProperty('org.gradle.project.exoPlayerFolder')) {
+        api project(':exoplayer-library-core')
+        api project(':exoplayer-library-dash')
+        api project(':exoplayer-library-ui')
+        api project(':exoplayer-extension-daa')
+    } else {
+        api "com.google.android.exoplayer:exoplayer-daa:$exoplayerVersion"
+        api "com.google.android.exoplayer:exoplayer-dash:$exoplayerVersion"
+        api "com.google.android.exoplayer:exoplayer-core:$exoplayerVersion"
+        api "com.google.android.exoplayer:exoplayer-ui:$exoplayerVersion"
+    }
 
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
     implementation "androidx.core:core-ktx:$coreKtxVersion"
