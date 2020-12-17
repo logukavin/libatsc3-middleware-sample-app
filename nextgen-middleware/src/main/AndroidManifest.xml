@@ -43,7 +43,7 @@
         </provider>
 
         <provider
-            android:authorities="@string/nextgenProviderAuthority"
+            android:authorities="@string/nextgenServicesGuideProvider"
             android:name=".service.provider.esgProvider.ESGContentProvider"
             android:exported="true"/>
 
