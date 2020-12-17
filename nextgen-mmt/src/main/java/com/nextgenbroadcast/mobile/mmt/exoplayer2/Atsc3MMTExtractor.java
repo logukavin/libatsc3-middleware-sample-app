@@ -11,6 +11,7 @@ import com.google.android.exoplayer2.extractor.ExtractorOutput;
 import com.google.android.exoplayer2.extractor.PositionHolder;
 import com.google.android.exoplayer2.extractor.SeekMap;
 import com.google.android.exoplayer2.extractor.TrackOutput;
+import com.nextgenbroadcast.mmt.exoplayer2.ext.MediaTrackUtils;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;

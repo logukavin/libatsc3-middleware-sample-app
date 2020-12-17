@@ -12,6 +12,8 @@ import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
 import com.google.android.exoplayer2.ui.PlayerView
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
 import com.google.android.exoplayer2.upstream.DefaultLoadErrorHandlingPolicy
+import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTLoadControl
+import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTMediaSource
 import com.nextgenbroadcast.mobile.core.AppUtils
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.permission.AlterDataSourceFactory
@@ -19,8 +21,7 @@ import com.nextgenbroadcast.mobile.permission.UriPermissionProvider
 import com.nextgenbroadcast.mobile.mmt.atsc3.media.MMTDataBuffer
 import com.nextgenbroadcast.mobile.mmt.exoplayer2.Atsc3MMTDataSource
 import com.nextgenbroadcast.mobile.mmt.exoplayer2.Atsc3MMTExtractor
-import com.nextgenbroadcast.mobile.mmt.exoplayer2.MMTMediaSource
-import com.nextgenbroadcast.mobile.mmt.exoplayer2.MMTLoadControl
+
 import com.nextgenbroadcast.mobile.exoplayer2.RouteDASHLoadControl
 import java.io.IOException
 
