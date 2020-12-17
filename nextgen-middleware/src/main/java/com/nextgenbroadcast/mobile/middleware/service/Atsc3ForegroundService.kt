@@ -131,10 +131,11 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
         maybeInitialize()
 
-        return if (intent.action == ESGContentProvider.ACTION_BIND_FROM_PROVIDER)
+        return if (intent.action == ESGContentProvider.ACTION_BIND_FROM_PROVIDER) {
             createProviderServiceBinder(serviceController)
-        else
+        } else {
             createServiceBinder(serviceController)
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {

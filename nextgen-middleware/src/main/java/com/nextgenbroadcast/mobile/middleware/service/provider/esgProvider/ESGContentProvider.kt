@@ -61,7 +61,7 @@ class ESGContentProvider: ContentProvider(), LifecycleOwner {
     }
 
     override fun onCreate(): Boolean {
-        AUTHORITY = context?.getString(R.string.nextgenProviderAuthority).toString()
+        AUTHORITY = context?.getString(R.string.nextgenServicesGuideProvider).toString()
         SERVICE_CONTENT_URI = Uri.parse("content://$AUTHORITY/$SERVICE_CONTENT_PATH")
         PROGRAM_CONTENT_URI = Uri.parse("content://$AUTHORITY/$PROGRAM_CONTENT_PATH")
 
@@ -137,8 +137,13 @@ class ESGContentProvider: ContentProvider(), LifecycleOwner {
             }
             URI_SERVICE_BY_ID -> {
                 var id = -1
-                uri.lastPathSegment?.let { parseInt(it) }?.let { id = it }
-                fillServiceRow(cursor, data.keys.toTypedArray()[id])
+                uri.lastPathSegment?.let {
+                    id = parseInt(it)
+                }
+
+                data.keys.find {it.id == id}?.let {
+                    fillServiceRow(cursor, it)
+                }
             }
             URI_ALL_PROGRAMS -> {
 
@@ -158,18 +163,17 @@ class ESGContentProvider: ContentProvider(), LifecycleOwner {
                         PROGRAM_COLUMN_START_TIME -> {
                             selectionArg ?: throw IllegalArgumentException("You missed add start_time arg")
 
-                            val tempFilteredData = mutableMapOf<AVService, List<SGProgram>>()
-
-                            filteredData.forEach { (key, list) ->
-                                tempFilteredData[key] = list.filter {
-                                    (it.startTime <= selectionArg.toLong() && it.endTime > selectionArg.toLong())
-                                            || it.startTime >= selectionArg.toLong()
+                            mutableMapOf<AVService, List<SGProgram>>().apply {
+                                filteredData.forEach { (key, list) ->
+                                    put(key, list.filter {
+                                        (it.startTime <= selectionArg.toLong() && it.endTime > selectionArg.toLong())
+                                                || it.startTime >= selectionArg.toLong()
+                                    })
                                 }
                             }
-                            tempFilteredData
                         }
                         else -> data
-//                        Todo: add implementation for other columns
+                        //TODO: add implementation for other columns
                     }
 
                     filteredData.values.forEach { list ->
@@ -180,7 +184,7 @@ class ESGContentProvider: ContentProvider(), LifecycleOwner {
                 } ?: throw IllegalArgumentException("You missed add some column name")
             }
             URI_PROGRAM_BY_ID -> {
-//                Todo: add implementation
+                //TODO: add implementation
             }
             else -> throw IllegalArgumentException("Wrong URI: $uri")
         }
