@@ -1,5 +1,6 @@
 package com.nextgenbroadcast.mobile.middleware.server.web
 
+import android.util.Log
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
@@ -79,7 +80,10 @@ class MiddlewareWebServer constructor(
                 }
             }
 
-            server.start()
+            retry(RETRY_COUNT, "Can't start web server") {
+                server.start()
+            }
+
             withContext(Dispatchers.Main) {
                 setSelectedPorts(server.connectors.asList())
             }
@@ -89,13 +93,31 @@ class MiddlewareWebServer constructor(
     @Throws(Exception::class)
     fun stop() {
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
-        server.stop()
+
+        globalScope.launch {
+            retry(RETRY_COUNT, "Can't stop web server") {
+                server.stop()
+            }
+        }
     }
 
     @Throws(Exception::class)
     override fun close() {
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
         stop()
+    }
+
+    private fun retry(count: Int, errorMessage: String, action: () -> Unit) {
+        var attempts = count
+        while (attempts >= 0) {
+            try {
+                action()
+            } catch (e: Exception) {
+                Log.d(TAG, "$errorMessage, attempt: ${count - attempts}", e)
+            }
+
+            attempts--
+        }
     }
 
     override fun getLifecycle() = lifecycleRegistry
@@ -195,6 +217,12 @@ class MiddlewareWebServer constructor(
                 }
             }
         }
+    }
+
+    companion object {
+        val TAG: String = MiddlewareWebServer::class.java.simpleName
+
+        private const val RETRY_COUNT = 1
     }
 }
 
