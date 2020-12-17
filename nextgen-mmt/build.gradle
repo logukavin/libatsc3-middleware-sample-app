@@ -42,6 +42,14 @@ def startupRuntime = rootProject.ext.startupRuntime
 dependencies {
     implementation fileTree(dir: "libs", include: ["*.jar"])
 
+//jjustman-2020-12-16 - for local development deps
+//    implementation project(":atsc3_core")
+//    implementation project(":atsc3_bridge")
+//    api project(":atsc3_bridge_media_mmt")
+//    implementation project(":nextgen-core")
+//    implementation project(':exoplayer-library-core')
+//    implementation project(':exoplayer-extension-mmt')
+
     implementation "org.ngbp.libatsc3:atsc3_core:$libatsc3Version"
     implementation "org.ngbp.libatsc3:atsc3_bridge:$libatsc3Version"
     implementation "org.ngbp.libatsc3:atsc3_bridge_media_mmt:$libatsc3Version"
@@ -49,6 +57,7 @@ dependencies {
     implementation project(":nextgen-core")
 
     compileOnly "com.google.android.exoplayer:exoplayer-core:$exoplayerVersion"
+    compileOnly "com.google.android.exoplayer:exoplayer-extension-mmt:$exoplayerVersion"
 
     compileOnly 'org.checkerframework:checker-compat-qual:2.5.0'
 
