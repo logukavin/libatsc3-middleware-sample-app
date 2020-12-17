@@ -97,12 +97,21 @@ def startupRuntime = rootProject.ext.startupRuntime
 dependencies {
     implementation fileTree(dir: "libs", include: ["*.jar"])
 
-    implementation "org.ngbp.libatsc3:atsc3_core:$libatsc3Version"
-    implementation "org.ngbp.libatsc3:atsc3_bridge:$libatsc3Version"
-    implementation "org.ngbp.libatsc3:atsc3_phy_virtual:$libatsc3Version"
-    implementation "org.ngbp.libatsc3:atsc3_phy_lowasis:$libatsc3Version"
-    implementation "org.ngbp.libatsc3:atsc3_phy_saankhya:$libatsc3Version"
-    compileOnly "org.ngbp.libatsc3:atsc3_bridge_media_mmt:$libatsc3Version"
+    if (project.hasProperty('org.gradle.project.atsc3Folder')) {
+        implementation project(":atsc3_core")
+        implementation project(":atsc3_bridge")
+        implementation project(":atsc3_phy_virtual")
+        //implementation project(":atsc3_phy_lowasis")
+        //implementation project(":atsc3_phy_saankhya")
+        compileOnly project(":atsc3_bridge_media_mmt")
+    } else {
+        implementation "org.ngbp.libatsc3:atsc3_core:$libatsc3Version"
+        implementation "org.ngbp.libatsc3:atsc3_bridge:$libatsc3Version"
+        implementation "org.ngbp.libatsc3:atsc3_phy_virtual:$libatsc3Version"
+        implementation "org.ngbp.libatsc3:atsc3_phy_lowasis:$libatsc3Version"
+        implementation "org.ngbp.libatsc3:atsc3_phy_saankhya:$libatsc3Version"
+        compileOnly "org.ngbp.libatsc3:atsc3_bridge_media_mmt:$libatsc3Version"
+    }
 
     implementation project(":nextgen-core")
     compileOnly project(":nextgen-mmt")

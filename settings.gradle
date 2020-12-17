@@ -1,2 +1,32 @@
 rootProject.name='Android ATSC 3.0 Sample App (A344 and PHY support)'
 include ':sample-app', ':nextgen-core', ':nextgen-middleware', ':nextgen-view', ':nextgen-mmt'
+
+if (hasProperty('org.gradle.project.atsc3Folder')) {
+    String rootFolder = getProperty('org.gradle.project.atsc3Folder')
+
+    include ':atsc3_core'
+    project(':atsc3_core').projectDir = new File(rootProject.projectDir, rootFolder + 'libatsc3/android/atsc3_core')
+
+    include ':atsc3_bridge'
+    project(':atsc3_bridge').projectDir = new File(rootProject.projectDir, rootFolder + 'libatsc3/android/atsc3_bridge')
+
+    include ':atsc3_bridge_media_mmt'
+    project(':atsc3_bridge_media_mmt').projectDir = new File(rootProject.projectDir, rootFolder + 'libatsc3/android/atsc3_bridge_media_mmt')
+
+    include ':atsc3_phy_virtual'
+    project(':atsc3_phy_virtual').projectDir = new File(rootProject.projectDir, rootFolder + 'libatsc3/android/atsc3_phy_virtual')
+
+    //include ':atsc3_phy_saankhya'
+    //project(':atsc3_phy_saankhya').projectDir = new File(rootProject.projectDir, rootFolder + 'libatsc3-mmt/android/atsc3_phy_saankhya')
+
+    //include ':atsc3_phy_lowasis'
+    //project(':atsc3_phy_lowasis').projectDir = new File(rootProject.projectDir, rootFolder + 'libatsc3-mmt/android/atsc3_phy_lowasis')
+}
+
+if (hasProperty('org.gradle.project.exoPlayerFolder')) {
+    String rootFolder = getProperty('org.gradle.project.exoPlayerFolder')
+
+    gradle.ext.exoplayerRoot = rootFolder + 'ExoPlayer'
+    gradle.ext.exoplayerModulePrefix = 'exoplayer-'
+    apply from: new File(gradle.ext.exoplayerRoot, 'core_settings.gradle')
+}
