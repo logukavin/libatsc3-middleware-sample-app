@@ -49,6 +49,7 @@ public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payl
         return MmtPacketIdContext.video_packet_id == sample.packet_id;
     }
 
+    //jjustman-2020-12-09 - TODO - wire this up from ndk callback
     public int getAudioChannelCount() {
         return 2;
     }
@@ -161,24 +162,55 @@ public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payl
         }
 
 //        if (IsSoftFlushingFromAVPtsDiscontinuity.get()
-//                || MediaCodecInputBufferMfuByteBufferFragmentWorker.IsHardCodecFlushingFromAVPtsDiscontinuity
+//                || MediaCodecInputBufferMfuBys_defauteBufferFragmentWorker.IsHardCodecFlushingFromAVPtsDiscontinuity
 //                || MediaCodecInputBufferMfuByteBufferFragmentWorker.IsResettingCodecFromDiscontinuity) {
 //            mfuByteBufferFragment.unreferenceByteBuffer();
 //            return;
 //        }
 
+//jjustman-2020-12-02 - TODO: fix me
         if (MmtPacketIdContext.video_packet_id == mfuByteBufferFragment.packet_id) {
             addVideoFragment(mfuByteBufferFragment);
+            if(mfuByteBufferFragment.sample_number == 1) {
+                Log.d("PushMfuByteBufferFragment", String.format("V: packet_id: %d, mpu_sequence_number: %d, duration_us: %d,   safe_mfu_presentation_time_us_computed: %d, mfuBufferQueue size: %d",
+                        mfuByteBufferFragment.packet_id, mfuByteBufferFragment.mpu_sequence_number,
+                        MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us,
+                        mfuByteBufferFragment.get_safe_mfu_presentation_time_uS_computed(),
+                        mfuBufferQueue.size()));
+            }
         } else if (MmtPacketIdContext.audio_packet_id == mfuByteBufferFragment.packet_id) {
             addAudioFragment(mfuByteBufferFragment);
+            if(mfuByteBufferFragment.sample_number == 1) {
+                Log.d("PushMfuByteBufferFragment", String.format("A: packet_id: %d, mpu_sequence_number: %d, duration_us: %d,   safe_mfu_presentation_time_us_computed: %d, mfuBufferQueue size: %d",
+                        mfuByteBufferFragment.packet_id, mfuByteBufferFragment.mpu_sequence_number,
+                        MmtPacketIdContext.audio_packet_statistics.extracted_sample_duration_us,
+                        mfuByteBufferFragment.get_safe_mfu_presentation_time_uS_computed(),
+                        mfuBufferQueue.size()));
+            }
         } else if (MmtPacketIdContext.stpp_packet_id == mfuByteBufferFragment.packet_id) {
             addSubtitleFragment(mfuByteBufferFragment);
+            if(mfuByteBufferFragment.sample_number == 1) {
+
+                Log.d("PushMfuByteBufferFragment", String.format("S: packet_id: %d, mpu_sequence_number: %d, duration_us: %d,   safe_mfu_presentation_time_us_computed: %d, mfuBufferQueue size: %d",
+                        mfuByteBufferFragment.packet_id, mfuByteBufferFragment.mpu_sequence_number,
+                        MmtPacketIdContext.stpp_packet_statistics.extracted_sample_duration_us,
+                        mfuByteBufferFragment.get_safe_mfu_presentation_time_uS_computed(),
+                        mfuBufferQueue.size()));
+            }
         }
     }
 
     private void addVideoFragment(MfuByteBufferFragment mfuByteBufferFragment) {
         // if(mfuByteBufferFragment.sample_number == 1 || firstMfuBufferVideoKeyframeSent) {
         //normal flow...
+
+        //jjustman-2020-12-09 - hacks to make sure we don't fall too far behind wall-clock
+        if(mfuBufferQueue.size() > 120) {
+            Log.w("addVideoFragment", String.format("V: clearing queue, length: %d",
+                    mfuBufferQueue.size()));
+            mfuBufferQueue.clear();
+        }
+
         mfuBufferQueue.add(mfuByteBufferFragment);
 
         if (isKeySample(mfuByteBufferFragment)) {
@@ -246,6 +278,12 @@ public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payl
 //                //discard
 //                return;
 //            }
+        //jjustman-2020-12-09 - hacks to make sure we don't fall too far behind wall-clock
+        if(mfuBufferQueue.size() > 120) {
+            Log.w("addAudioFragment", String.format("A: clearing queue, length: %d",
+                    mfuBufferQueue.size()));
+            mfuBufferQueue.clear();
+        }
 
         mfuBufferQueue.add(mfuByteBufferFragment);
 
@@ -290,6 +328,12 @@ public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payl
         if (!FirstMfuBufferVideoKeyframeSent) {
             return;
         }
+        if(mfuBufferQueue.size() > 5) {
+            Log.w("addSubtitleFragment", String.format("S: clearing queue, length: %d",
+                    mfuBufferQueue.size()));
+            mfuBufferQueue.clear();
+        }
+
 
         mfuBufferQueue.add(mfuByteBufferFragment);
         MmtPacketIdContext.stpp_packet_statistics.total_mfu_samples_count++;

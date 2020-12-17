@@ -127,6 +127,7 @@ public class Atsc3MMTDataSource extends BaseDataSource {
                 // write stream Header data
                 ByteBuffer bb = ByteBuffer.allocate(MMTDef.SIZE_HEADER);
 
+                //jjustman-2020-12-02 - TODO - pass-thru fourcc from
                 Integer videoFormat = Util.getIntegerCodeForString("hev1");
                 Integer audioFormat = Util.getIntegerCodeForString("ac-4");
 //                if(true) {
