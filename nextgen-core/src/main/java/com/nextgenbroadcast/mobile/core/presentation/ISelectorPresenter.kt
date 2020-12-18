@@ -8,7 +8,5 @@ interface ISelectorPresenter {
     val sltServices: LiveData<List<AVService>>
     val selectedService: LiveData<AVService?>
 
-    val schedule: LiveData<SGScheduleMap>
-
     fun selectService(service: AVService)
 }
