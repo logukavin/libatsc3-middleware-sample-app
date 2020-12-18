@@ -1,5 +1,5 @@
 package com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model
 
-data class MPDUrl(
+data class MPDUrlRpcResponse(
         val MPDUrl: String? = null
 )

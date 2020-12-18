@@ -14,20 +14,20 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPacka
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.service.Atsc3Service
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.ServiceGuideStore
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
-import com.nextgenbroadcast.mobile.middleware.settings.IReceiverSettings
+import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
 import com.nextgenbroadcast.mobile.mmt.atsc3.media.MMTDataBuffer
 import kotlinx.coroutines.*
 
 
 internal class ServiceControllerImpl (
         private val repository: IRepository,
-        private val settings: IReceiverSettings,
+        private val settings: IMiddlewareSettings,
         private val atsc3Module: Atsc3Module,
         private val atsc3Analytics: IAtsc3Analytics
 ) : IServiceController, Atsc3Module.Listener {
 
     private val ioScope = CoroutineScope(Dispatchers.IO)
-    private val serviceGuideStore = ServiceGuideStore()
+    private val serviceGuideStore = ServiceGuideStore(repository, settings)
 
     private var heldResetJob: Job? = null
     private var mediaUrlAssignmentJob: Job? = null
@@ -41,7 +41,7 @@ internal class ServiceControllerImpl (
 
     override val freqKhz = MutableLiveData(0)
 
-    override val schedule = serviceGuideStore.schedule
+    override val schedule = repository.serviceSchedule
 
     init {
         atsc3Module.setListener(this)

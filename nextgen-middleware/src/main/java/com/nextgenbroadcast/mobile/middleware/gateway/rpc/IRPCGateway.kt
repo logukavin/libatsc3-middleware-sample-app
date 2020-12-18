@@ -2,7 +2,7 @@ package com.nextgenbroadcast.mobile.middleware.gateway.rpc
 
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.middleware.rpc.notification.NotificationType
-import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.Urls
+import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.ServiceGuideUrlsRpcResponse
 import com.nextgenbroadcast.mobile.middleware.server.ws.MiddlewareWebSocket
 
 interface IRPCGateway {
@@ -12,7 +12,7 @@ interface IRPCGateway {
     val queryServiceId: String?
     val mediaUrl: String?
     val playbackState: PlaybackState
-    val serviceGuideUrls: List<Urls>
+    val serviceGuideUrls: List<ServiceGuideUrlsRpcResponse.Url>
 
     fun onSocketOpened(socket: MiddlewareWebSocket)
     fun onSocketClosed(socket: MiddlewareWebSocket)

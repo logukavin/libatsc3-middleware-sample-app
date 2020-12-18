@@ -38,6 +38,8 @@ internal class MiddlewareSettingsImpl private constructor(
             saveString(LAST_REPORT_DATE, DateUtils.format(value, ""))
         }
 
+    override var locale: Locale = Locale.getDefault()
+
     override var frequencyLocation: FrequencyLocation?
         get() = loadString(FREQUENCY_LOCATION)?.let {
             stringToFrequencyLocation(it)
