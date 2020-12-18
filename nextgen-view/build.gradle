@@ -48,11 +48,13 @@ dependencies {
         api project(':exoplayer-library-dash')
         api project(':exoplayer-library-ui')
         api project(':exoplayer-extension-daa')
+        api project(':exoplayer-extension-mmt')
     } else {
-        api "com.google.android.exoplayer:exoplayer-daa:$exoplayerVersion"
-        api "com.google.android.exoplayer:exoplayer-dash:$exoplayerVersion"
         api "com.google.android.exoplayer:exoplayer-core:$exoplayerVersion"
+        api "com.google.android.exoplayer:exoplayer-dash:$exoplayerVersion"
         api "com.google.android.exoplayer:exoplayer-ui:$exoplayerVersion"
+        api "com.google.android.exoplayer:exoplayer-daa:$exoplayerVersion"
+        //api "com.google.android.exoplayer:exoplayer-mmt:$exoplayerVersion"
     }
 
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
