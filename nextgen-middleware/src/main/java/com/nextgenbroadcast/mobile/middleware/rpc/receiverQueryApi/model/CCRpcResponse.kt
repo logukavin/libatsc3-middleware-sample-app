@@ -2,8 +2,6 @@ package com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model
 
 import com.nextgenbroadcast.mobile.middleware.rpc.RpcResponse
 
-data class RatingLevel(
-        var rating: String? = null,
-        var contentRating: String? = null,
-        var blocked: Boolean = false
+data class CCRpcResponse(
+        var ccEnabled: Boolean = false
 ) : RpcResponse()

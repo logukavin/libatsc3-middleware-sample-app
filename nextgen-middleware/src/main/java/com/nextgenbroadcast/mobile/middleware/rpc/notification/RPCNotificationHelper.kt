@@ -4,7 +4,7 @@ import com.github.nmuzhichin.jsonrpc.model.request.Notification
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.middleware.rpc.notification.model.*
 import com.nextgenbroadcast.mobile.middleware.rpc.processor.RPCObjectMapper
-import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.Urls
+import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.ServiceGuideUrlsRpcResponse
 
 class RPCNotificationHelper(
         private val sendNotification: (message: String) -> Unit
@@ -18,7 +18,7 @@ class RPCNotificationHelper(
         sendNotification(ContentChangeNotification(files))
     }
 
-    fun notifyServiceGuideChange(urlList: List<Urls>) {
+    fun notifyServiceGuideChange(urlList: List<ServiceGuideUrlsRpcResponse.Url>) {
         sendNotification(ServiceGuideChangeNotification(urlList))
     }
 

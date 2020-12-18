@@ -1,7 +1,7 @@
 package com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide
 
 import android.util.Log
-import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.unit.SGContentImpl
+import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.unit.SGContent
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.unit.*
 import com.nextgenbroadcast.mobile.middleware.atsc3.utils.*
 import com.nextgenbroadcast.mobile.middleware.atsc3.utils.TimeUtils
@@ -14,7 +14,10 @@ import java.io.File
 import java.io.IOException
 
 @ExperimentalUnsignedTypes
-internal class SGDUReader {
+internal class SGDUReader(
+        private val services: MutableMap<Int, SGService>,
+        private val contents: MutableMap<String, SGContent>
+) {
 
     private val readBuffer = ByteArray(8)
 
@@ -38,7 +41,9 @@ internal class SGDUReader {
         return readBuffer[0].toUByte()
     }
 
-    fun readFromFile(file: File, services: MutableMap<Int, SGService>, contents: MutableMap<String, SGContentImpl>, isActive: () -> Boolean) {
+    //TODO: rewrite to use SGDUFile
+    fun readFromFile(file: File, isActive: () -> Boolean) {
+        val fileName = file.name
         DataInputStream(file.inputStream()).use { reader ->
             // Unit_Header
             val extensionOffset = reader.readUInt32()
@@ -67,7 +72,7 @@ internal class SGDUReader {
 
                 when (reader.readUByte8().toInt()) {
                     SGFragmentEncoding.XML_OMA -> {
-                        readOMAXml(reader, getSize(i), services, contents)
+                        readOMAXml(reader, getSize(i), fileName, i)
                     }
 
                     else -> {
@@ -78,24 +83,34 @@ internal class SGDUReader {
         }
     }
 
-    private fun readOMAXml(reader: DataInputStream, size: Int, services: MutableMap<Int, SGService>, contents: MutableMap<String, SGContentImpl>) {
+    private fun getOrCreateService(serviceId: Int): SGService {
+        return services[serviceId] ?: SGService(serviceId).also {
+            services[serviceId] = it
+        }
+    }
+
+    private fun readOMAXml(reader: DataInputStream, size: Int, fileName: String, index: Int) {
         val readString = { offset: Int ->
             reader.readByteString(size - offset).utf8()
         }
 
-        val getOrCreateService = { serviceId: Int ->
-            services[serviceId] ?: SGService(serviceId).also {
-                services[serviceId] = it
-            }
-        }
-
+        //TODO: return non nullable, maybe put from here?
         when (reader.readUByte8().toInt()) {
-            SGFragmentType.SERVICE -> parseServiceXML(readString(OMA_XML_OFFSET), getOrCreateService)
+            SGFragmentType.SERVICE -> parseServiceXML(readString(OMA_XML_OFFSET))?.let { service ->
+                service.duFileName = fileName
+                service.duIndex = index
+            }
 
-            SGFragmentType.SCHEDULE -> parseScheduleXML(readString(OMA_XML_OFFSET), getOrCreateService)
+            SGFragmentType.SCHEDULE -> parseScheduleXML(readString(OMA_XML_OFFSET))?.let { schedule ->
+                schedule.duFileName = fileName
+                schedule.duIndex = index
+            }
 
             SGFragmentType.CONTENT -> {
-                val content = parseContentXML(readString(OMA_XML_OFFSET))
+                val content = parseContentXML(readString(OMA_XML_OFFSET)).apply {
+                    duFileName = fileName
+                    duIndex = index
+                }
                 val contentId = content.id
                 if (contentId != null) {
                     contents[contentId] = content
@@ -123,7 +138,7 @@ internal class SGDUReader {
         }
     }
 
-    private fun parseServiceXML(xmlPayload: String, getService: (Int) -> SGService): SGService? {
+    private fun parseServiceXML(xmlPayload: String): SGService? {
         try {
             val parser = XmlUtils.newParser(xmlPayload)
 
@@ -142,7 +157,7 @@ internal class SGDUReader {
                 }
             }
 
-            val service = getService(serviceId)
+            val service = getOrCreateService(serviceId)
 
             if (service.version > version) {
                 return service
@@ -191,7 +206,7 @@ internal class SGDUReader {
         return null
     }
 
-    private fun parseScheduleXML(xmlPayload: String, getService: (Int) -> SGService): SGSchedule? {
+    private fun parseScheduleXML(xmlPayload: String): SGSchedule? {
         try {
             val parser = XmlUtils.newParser(xmlPayload)
 
@@ -215,7 +230,7 @@ internal class SGDUReader {
             parser.iterateDocument { tagName ->
                 when (tagName) {
                     "ServiceReference" -> readIdRefTag(parser) { serviceId ->
-                        schedule = getService(serviceId).let { service ->
+                        schedule = getOrCreateService(serviceId).let { service ->
                             service.scheduleMap?.get(scheduleId)
                                     ?: SGSchedule(scheduleId, serviceId, scheduleVersion).also {
                                         service.addSchedule(it)
@@ -265,8 +280,8 @@ internal class SGDUReader {
         return null
     }
 
-    private fun parseContentXML(xmlPayload: String): SGContentImpl {
-        return SGContentImpl().apply {
+    private fun parseContentXML(xmlPayload: String): SGContent {
+        return SGContent().apply {
             try {
                 val parser = XmlUtils.newParser(xmlPayload)
 
@@ -347,7 +362,7 @@ internal class SGDUReader {
     }
 
     companion object {
-        private val GENERAL_OFFSET = UByte.SIZE_BYTES /* fragmentEncoding */
-        private val OMA_XML_OFFSET = GENERAL_OFFSET + UByte.SIZE_BYTES  /* fragmentEncoding + fragmentType */
+        public val GENERAL_OFFSET = UByte.SIZE_BYTES /* fragmentEncoding */
+        public val OMA_XML_OFFSET = GENERAL_OFFSET + UByte.SIZE_BYTES  /* fragmentEncoding + fragmentType */
     }
 }

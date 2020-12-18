@@ -1,5 +1,6 @@
 package com.nextgenbroadcast.mobile.middleware.gateway.rpc
 
+import android.util.Log
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.distinctUntilChanged
 import com.nextgenbroadcast.mobile.core.mapWith
@@ -8,23 +9,24 @@ import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.unite
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3ApplicationFile
+import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.SGUrl
 import com.nextgenbroadcast.mobile.middleware.cache.IApplicationCache
 import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
 import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
 import com.nextgenbroadcast.mobile.middleware.rpc.notification.NotificationType
 import com.nextgenbroadcast.mobile.middleware.rpc.notification.RPCNotificationHelper
-import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.Urls
+import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.ServiceGuideUrlsRpcResponse
+import com.nextgenbroadcast.mobile.middleware.server.ServerUtils
 import com.nextgenbroadcast.mobile.middleware.server.ws.MiddlewareWebSocket
 import kotlinx.coroutines.*
-import java.util.*
 import java.util.concurrent.CopyOnWriteArrayList
 
 internal class RPCGatewayImpl(
         private val viewController: IViewController,
         private val repository: IRepository,
         private val applicationCache: IApplicationCache,
-        settings: IMiddlewareSettings,
+        private val settings: IMiddlewareSettings,
         mainDispatcher: CoroutineDispatcher,
         ioDispatcher: CoroutineDispatcher
 ) : IRPCGateway {
@@ -35,15 +37,17 @@ internal class RPCGatewayImpl(
 
     override val deviceId = settings.deviceId
     override val advertisingId = settings.advertisingId
-    override val language: String = Locale.getDefault().language
+    override val language: String = settings.locale.language
     override val queryServiceId: String?
         get() = repository.selectedService.value?.globalId
     override val mediaUrl: String
         get() = viewController.rmpMediaUri.value.toString()
     override val playbackState: PlaybackState
         get() = viewController.rmpState.value ?: PlaybackState.IDLE
-    override val serviceGuideUrls: List<Urls>
-        get() = repository.serviceGuideUrls.value ?: emptyList()
+    override val serviceGuideUrls: List<ServiceGuideUrlsRpcResponse.Url>
+        get() = repository.serviceGuideUrls.value?.let {
+            mapServiceGuideUrls(it)
+        } ?: emptyList()
     private val rmpPlaybackTime: Long
         get() = viewController.rmpMediaTime.value ?: 0
 
@@ -62,7 +66,7 @@ internal class RPCGatewayImpl(
         }
 
         repository.serviceGuideUrls.observe(lifecycleOwner) { urls ->
-            onServiceGuidUrls(urls)
+            onServiceGuidUrls(urls?.let { mapServiceGuideUrls(urls) } ?: emptyList())
         }
 
         viewController.appData.mapWith(repository.applications) { (appData, applications) ->
@@ -207,9 +211,10 @@ internal class RPCGatewayImpl(
         appFiles.addAll(files)
     }
 
-    private fun onServiceGuidUrls(urls: List<Urls>?) {
+    private fun onServiceGuidUrls(urls: List<ServiceGuideUrlsRpcResponse.Url>) {
+        //TODO: should send diff only
         if (subscribedNotifications.contains(NotificationType.SERVICE_GUIDE_CHANGE)) {
-            urls?.let { it -> rpcNotifier.notifyServiceGuideChange(it) }
+            rpcNotifier.notifyServiceGuideChange(urls)
         }
     }
 
@@ -262,6 +267,17 @@ internal class RPCGatewayImpl(
         mediaTimeUpdateJob?.let {
             it.cancel()
             mediaTimeUpdateJob = null
+        }
+    }
+
+    private fun mapServiceGuideUrls(sgUrls: List<SGUrl>): List<ServiceGuideUrlsRpcResponse.Url> {
+        return sgUrls.map { sgUrl ->
+            ServiceGuideUrlsRpcResponse.Url(
+                    sgUrl.sgType.toString(),
+                    ServerUtils.createUrl(sgUrl.sgPath, settings),
+                    sgUrl.service,
+                    sgUrl.content
+            )
         }
     }
 
