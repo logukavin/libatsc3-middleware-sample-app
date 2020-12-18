@@ -4,9 +4,11 @@ import android.hardware.usb.UsbDevice
 import androidx.lifecycle.LiveData
 import com.nextgenbroadcast.mobile.core.presentation.ISelectorPresenter
 import com.nextgenbroadcast.mobile.core.presentation.IReceiverPresenter
+import com.nextgenbroadcast.mobile.core.serviceGuide.SGScheduleMap
 import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.Urls
 
 interface IServiceController : IReceiverPresenter, ISelectorPresenter {
+    val schedule: LiveData<SGScheduleMap>
     val serviceGuidUrls: LiveData<List<Urls>?>
 
     fun openRoute(device: UsbDevice): Boolean

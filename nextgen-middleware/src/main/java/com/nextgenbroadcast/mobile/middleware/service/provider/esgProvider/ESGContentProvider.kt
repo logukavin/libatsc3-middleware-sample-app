@@ -6,8 +6,10 @@ import android.database.Cursor
 import android.database.MatrixCursor
 import android.net.Uri
 import android.os.IBinder
-import androidx.lifecycle.*
-import com.nextgenbroadcast.mobile.core.mapWith
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.LifecycleRegistry
+import androidx.lifecycle.distinctUntilChanged
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.serviceGuide.SGProgram
 import com.nextgenbroadcast.mobile.middleware.R
@@ -29,6 +31,7 @@ class ESGContentProvider: ContentProvider(), LifecycleOwner {
     private var data: MutableMap<AVService, List<SGProgram>> = mutableMapOf()
     private val lifecycleRegistry = LifecycleRegistry(this)
     private val uriMatcher = UriMatcher(UriMatcher.NO_MATCH)
+
     var isBound: Boolean = false
         private set
 
@@ -91,22 +94,10 @@ class ESGContentProvider: ContentProvider(), LifecycleOwner {
     }
 
     private fun onBind(binder: EmbeddedAtsc3Service.ProviderServiceBinder) {
-        Transformations.distinctUntilChanged(binder.selectorPresenter.sltServices)
-                .mapWith(binder.selectorPresenter.schedule) { (services, schedule) ->
-                    schedule?.toMutableMap()?.also { map ->
-                        val serviceIds = map.keys.map { it.id }
-                        services?.forEach { service ->
-                            if (!serviceIds.contains(service.id)) {
-                                map[service] = emptyList()
-                            }
-                        }
-                    } ?: services?.associate {
-                        it to emptyList()
-                    } ?: emptyMap()
-                }.observe(this, { schedule ->
-                    data = schedule.toMutableMap()
-                    context?.contentResolver?.notifyChange(SERVICE_CONTENT_URI, null)
-                })
+        binder.serviceController.schedule.distinctUntilChanged().observe(this, { schedule ->
+            data = schedule.toMutableMap()
+            context?.contentResolver?.notifyChange(SERVICE_CONTENT_URI, null)
+        })
     }
 
     private fun unbindService() {
@@ -116,7 +107,7 @@ class ESGContentProvider: ContentProvider(), LifecycleOwner {
         isBound = false
     }
 
-    override fun getType(uri: Uri): String? {
+    override fun getType(uri: Uri): String {
         return when (uriMatcher.match(uri)) {
             URI_ALL_SERVICES -> SERVICES_CONTENT_TYPE
             URI_SERVICE_BY_ID -> SERVICE_CONTENT_ITEM_TYPE
@@ -126,8 +117,10 @@ class ESGContentProvider: ContentProvider(), LifecycleOwner {
         }
     }
 
-    override fun query(uri: Uri, projection: Array<String>?, selection: String?, selectionArgs: Array<String>?, sortOrder: String?): Cursor? {
+    override fun query(uri: Uri, projection: Array<String>?, selection: String?, selectionArgs: Array<String>?, sortOrder: String?): Cursor {
         val cursor = MatrixCursor(projection)
+
+        val contentResolver = context?.contentResolver ?: return cursor
 
         when (uriMatcher.match(uri)) {
             URI_ALL_SERVICES -> {
@@ -135,18 +128,21 @@ class ESGContentProvider: ContentProvider(), LifecycleOwner {
                     fillServiceRow(cursor, avService)
                 }
             }
+
             URI_SERVICE_BY_ID -> {
                 var id = -1
                 uri.lastPathSegment?.let {
                     id = parseInt(it)
                 }
 
-                data.keys.find {it.id == id}?.let {
-                    fillServiceRow(cursor, it)
+                if (id >= 0) {
+                    data.keys.find { it.id == id }?.let {
+                        fillServiceRow(cursor, it)
+                    }
                 }
             }
-            URI_ALL_PROGRAMS -> {
 
+            URI_ALL_PROGRAMS -> {
                 val selectionColumns = selection?.split(" AND ")
                 var filteredData = mutableMapOf<AVService, List<SGProgram>>()
 
@@ -160,6 +156,7 @@ class ESGContentProvider: ContentProvider(), LifecycleOwner {
 
                             data.filterKeys { it.id == selectionArg.toInt() } as MutableMap<AVService, List<SGProgram>>
                         }
+
                         PROGRAM_COLUMN_START_TIME -> {
                             selectionArg ?: throw IllegalArgumentException("You missed add start_time arg")
 
@@ -172,6 +169,7 @@ class ESGContentProvider: ContentProvider(), LifecycleOwner {
                                 }
                             }
                         }
+
                         else -> data
                         //TODO: add implementation for other columns
                     }
@@ -183,13 +181,15 @@ class ESGContentProvider: ContentProvider(), LifecycleOwner {
                     }
                 } ?: throw IllegalArgumentException("You missed add some column name")
             }
+
             URI_PROGRAM_BY_ID -> {
                 //TODO: add implementation
             }
+
             else -> throw IllegalArgumentException("Wrong URI: $uri")
         }
 
-        cursor.setNotificationUri(context?.contentResolver, SERVICE_CONTENT_URI)
+        cursor.setNotificationUri(contentResolver, SERVICE_CONTENT_URI)
 
         return cursor
     }
@@ -232,12 +232,13 @@ class ESGContentProvider: ContentProvider(), LifecycleOwner {
     override fun shutdown() {
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
+
         super.shutdown()
+
         unbindService()
     }
 
     companion object {
-
         const val SERVICE_CONTENT_PATH = "services_data"
         const val PROGRAM_CONTENT_PATH = "programs_data"
 
