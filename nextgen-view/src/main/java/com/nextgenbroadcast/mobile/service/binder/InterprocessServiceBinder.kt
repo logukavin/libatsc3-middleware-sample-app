@@ -27,8 +27,6 @@ class InterprocessServiceBinder(
     inner class SelectorPresenter : ISelectorPresenter {
         override val sltServices = MutableLiveData<List<AVService>>()
         override val selectedService = MutableLiveData<AVService?>()
-        //TODO: should we process this feild?
-        override val schedule = MutableLiveData<SGScheduleMap>()
 
         override fun selectService(service: AVService) {
             sendAction(IServiceBinder.ACTION_SELECT_SERVICE, bundleOf(
