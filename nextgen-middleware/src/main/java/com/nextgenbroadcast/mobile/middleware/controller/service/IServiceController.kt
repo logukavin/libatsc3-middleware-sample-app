@@ -8,7 +8,7 @@ import com.nextgenbroadcast.mobile.core.serviceGuide.SGScheduleMap
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.SGUrl
 
 interface IServiceController : IReceiverPresenter, ISelectorPresenter {
-    val schedule: LiveData<SGScheduleMap>
+    val schedule: LiveData<SGScheduleMap?>
     val serviceGuidUrls: LiveData<List<SGUrl>?>
 
     fun openRoute(device: UsbDevice): Boolean
