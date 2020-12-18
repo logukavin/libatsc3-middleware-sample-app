@@ -23,6 +23,7 @@ import org.ngbp.libatsc3.middleware.android.application.interfaces.IAtsc3NdkAppl
 import org.ngbp.libatsc3.middleware.android.application.interfaces.IAtsc3NdkMediaMMTBridgeCallbacks
 import org.ngbp.libatsc3.middleware.android.mmt.MfuByteBufferFragment
 import org.ngbp.libatsc3.middleware.android.mmt.MpuMetadata_HEVC_NAL_Payload
+import org.ngbp.libatsc3.middleware.android.mmt.models.MMTAudioDecoderConfigurationRecord
 import org.ngbp.libatsc3.middleware.android.phy.Atsc3NdkPHYClientBase
 import org.ngbp.libatsc3.middleware.android.phy.Atsc3UsbDevice
 import org.ngbp.libatsc3.middleware.android.phy.interfaces.IAtsc3NdkPHYBridgeCallbacks
@@ -61,7 +62,7 @@ internal class Atsc3Module(
 
     private val atsc3NdkApplicationBridge = Atsc3NdkApplicationBridge(this)
     private val atsc3NdkPHYBridge = Atsc3NdkPHYBridge(this)
-    private val atsc3NdkMediaMMTBridge = Atsc3NdkMediaMMTBridge(this)
+    private final val atsc3NdkMediaMMTBridge = Atsc3NdkMediaMMTBridge(this)
 
     private val usbManager by lazy { context.getSystemService(Context.USB_SERVICE) as UsbManager }
 
@@ -91,6 +92,8 @@ internal class Atsc3Module(
     private var listener: Listener? = null
 
     fun setListener(listener: Listener?) {
+        Log.i("Atsc3Module","setListener, and atsc3NdkMediaMMTBridge is: "+atsc3NdkMediaMMTBridge);
+
         if (this.listener != null) throw IllegalStateException("Atsc3Module listener already initialized")
         this.listener = listener
     }
@@ -362,7 +365,7 @@ internal class Atsc3Module(
     }
 
     override fun onSlsHeldEmissionPresent(serviceId: Int, heldPayloadXML: String) {
-        log("onSlsHeldEmissionPresent, $serviceId, selectedServiceID: $selectedServiceId, HELD: $heldPayloadXML")
+        //log("onSlsHeldEmissionPresent, $serviceId, selectedServiceID: $selectedServiceId, HELD: $heldPayloadXML")
 
         if (serviceId == selectedServiceId) {
             if (heldPayloadXML != selectedServiceHeldXml) {
@@ -460,6 +463,10 @@ internal class Atsc3Module(
         }, {
             mpuMetadata_hevc_nal_payload.releaseByteBuffer()
         })
+    }
+
+    override fun pushAudioDecoderConfigurationRecord(mmtAudioDecoderConfigurationRecord: MMTAudioDecoderConfigurationRecord?) {
+        //TODO("Not yet implemented")
     }
 
     //////////////////////////////////////////////////////////////
