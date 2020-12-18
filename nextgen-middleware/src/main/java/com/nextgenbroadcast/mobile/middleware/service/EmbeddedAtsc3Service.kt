@@ -10,12 +10,12 @@ import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceControl
 class EmbeddedAtsc3Service : Atsc3ForegroundService() {
 
     override fun createServiceBinder(serviceController: IServiceController): IBinder =
-            ActivityServiceBinder(serviceController)
+            ServiceBinder(serviceController)
 
     override fun createProviderServiceBinder(serviceController: IServiceController): IBinder =
             ProviderServiceBinder(serviceController)
 
-    inner class ActivityServiceBinder(
+    inner class ServiceBinder(
             private val serviceController: IServiceController
     ) : Binder(), IServiceBinder {
         override val receiverPresenter: IReceiverPresenter = object : IReceiverPresenter {
@@ -44,12 +44,9 @@ class EmbeddedAtsc3Service : Atsc3ForegroundService() {
             get() = requireViewController()
     }
 
-    inner class ProviderServiceBinder (
-            private val serviceController: IServiceController
-    ) : Binder() {
-        val selectorPresenter: ISelectorPresenter
-            get() = serviceController
-    }
+    internal inner class ProviderServiceBinder (
+            val serviceController: IServiceController
+    ) : Binder()
 
     companion object {
         fun init() {
