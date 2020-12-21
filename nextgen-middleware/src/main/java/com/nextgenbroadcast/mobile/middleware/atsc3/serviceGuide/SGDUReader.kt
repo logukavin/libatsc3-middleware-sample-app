@@ -6,79 +6,51 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.unit.*
 import com.nextgenbroadcast.mobile.middleware.atsc3.utils.*
 import com.nextgenbroadcast.mobile.middleware.atsc3.utils.TimeUtils
 import com.nextgenbroadcast.mobile.middleware.atsc3.utils.XmlUtils
-import okio.ByteString.Companion.readByteString
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserException
-import java.io.DataInputStream
 import java.io.File
 import java.io.IOException
 
-@ExperimentalUnsignedTypes
 internal class SGDUReader(
         private val services: MutableMap<Int, SGService>,
         private val contents: MutableMap<String, SGContent>
 ) {
 
-    private val readBuffer = ByteArray(8)
-
-    private fun DataInputStream.readUInt32(): UInt {
-        readFully(readBuffer, 0, 4)
-        return ((readBuffer[0].toUInt() and 0xFFu) shl 24) or
-                ((readBuffer[1].toUInt() and 0xFFu) shl 16) or
-                ((readBuffer[2].toUInt() and 0xFFu) shl 8) or
-                (readBuffer[3].toUInt() and 0xFFu)
-    }
-
-    private fun DataInputStream.readUInt24(): UInt {
-        readFully(readBuffer, 0, 3)
-        return ((readBuffer[0].toUInt() and 0xFFu) shl 16) or
-                ((readBuffer[1].toUInt() and 0xFFu) shl 8) or
-                (readBuffer[2].toUInt() and 0xFFu)
-    }
-
-    private fun DataInputStream.readUByte8(): UByte {
-        readFully(readBuffer, 0, 1)
-        return readBuffer[0].toUByte()
-    }
-
-    //TODO: rewrite to use SGDUFile
     fun readFromFile(file: File, isActive: () -> Boolean) {
         val fileName = file.name
-        DataInputStream(file.inputStream()).use { reader ->
-            // Unit_Header
-            val extensionOffset = reader.readUInt32()
-            reader.skipBytes(2) // reserved
-            val fragmentsCount = reader.readUInt24().toInt()
-            val offsets = UIntArray(fragmentsCount)
-            for (i in 0 until fragmentsCount) {
-                // skip fragmentTransportID[i] + fragmentVersion[i]
-                reader.skipBytes(UInt.SIZE_BYTES + UInt.SIZE_BYTES)
-                offsets[i] = reader.readUInt32()
-            }
 
-            // Unit_Payload
-            val getSize = { i: Int ->
-                (offsets.getOrNull(i + 1)?.let { prevOffset ->
-                    prevOffset - offsets[i]
-                } ?: if (extensionOffset > 0uL) {
-                    extensionOffset - offsets[i]
-                } else {
-                    reader.available().toUInt()
-                }).toInt()
-            }
+        SGDUFile.open(file).use { reader ->
+            var index = 0;
+            while (isActive() && reader.hasNext()) {
+                reader.next()?.let { (fragmentType, xml) ->
+                    when (fragmentType) {
+                        SGFragmentType.SERVICE -> parseServiceXML(xml)?.let { service ->
+                            service.duFileName = fileName
+                            service.duIndex = index
+                        }
 
-            for (i in 0 until fragmentsCount) {
-                if (!isActive()) return
+                        SGFragmentType.SCHEDULE -> parseScheduleXML(xml)?.let { schedule ->
+                            schedule.duFileName = fileName
+                            schedule.duIndex = index
+                        }
 
-                when (reader.readUByte8().toInt()) {
-                    SGFragmentEncoding.XML_OMA -> {
-                        readOMAXml(reader, getSize(i), fileName, i)
-                    }
+                        SGFragmentType.CONTENT -> {
+                            val content = parseContentXML(xml).apply {
+                                duFileName = fileName
+                                duIndex = index
+                            }
+                            content.id?.let { contentId ->
+                                contents[contentId] = content
+                            }
+                        }
 
-                    else -> {
-                        reader.skipBytes(getSize(i) - GENERAL_OFFSET)
+                        else -> {
+                            // ignore
+                        }
                     }
                 }
+
+                index++
             }
         }
     }
@@ -86,55 +58,6 @@ internal class SGDUReader(
     private fun getOrCreateService(serviceId: Int): SGService {
         return services[serviceId] ?: SGService(serviceId).also {
             services[serviceId] = it
-        }
-    }
-
-    private fun readOMAXml(reader: DataInputStream, size: Int, fileName: String, index: Int) {
-        val readString = { offset: Int ->
-            reader.readByteString(size - offset).utf8()
-        }
-
-        //TODO: return non nullable, maybe put from here?
-        when (reader.readUByte8().toInt()) {
-            SGFragmentType.SERVICE -> parseServiceXML(readString(OMA_XML_OFFSET))?.let { service ->
-                service.duFileName = fileName
-                service.duIndex = index
-            }
-
-            SGFragmentType.SCHEDULE -> parseScheduleXML(readString(OMA_XML_OFFSET))?.let { schedule ->
-                schedule.duFileName = fileName
-                schedule.duIndex = index
-            }
-
-            SGFragmentType.CONTENT -> {
-                val content = parseContentXML(readString(OMA_XML_OFFSET)).apply {
-                    duFileName = fileName
-                    duIndex = index
-                }
-                val contentId = content.id
-                if (contentId != null) {
-                    contents[contentId] = content
-                }
-//                val contentId = content.id
-//                if (contentId != null) {
-//                    content.serviceIdList?.forEach { serviceId ->
-//                        val service = getOrCreateService(serviceId)
-//                        val scheduleContent = service.scheduleMap?.let {
-//                            it[contentId]
-//                        } ?: SGScheduleContent(null, serviceId, 0, contentId).also {
-//                            if (service.scheduleMap != null) {
-//                                service.scheduleMap?.put(contentId, it)
-//                            } else {
-//                                service.scheduleMap = mutableMapOf(Pair(contentId, it))
-//                            }
-//                        }
-//
-//                        scheduleContent.content = content
-//                    }
-//                }
-            }
-
-            else -> reader.skipBytes(size - OMA_XML_OFFSET)
         }
     }
 
@@ -359,10 +282,5 @@ internal class SGDUReader(
                 action(XmlUtils.strToInt(value))
             }
         }.skipSubTags()
-    }
-
-    companion object {
-        public val GENERAL_OFFSET = UByte.SIZE_BYTES /* fragmentEncoding */
-        public val OMA_XML_OFFSET = GENERAL_OFFSET + UByte.SIZE_BYTES  /* fragmentEncoding + fragmentType */
     }
 }
