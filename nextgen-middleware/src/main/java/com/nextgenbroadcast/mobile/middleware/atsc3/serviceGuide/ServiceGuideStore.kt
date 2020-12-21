@@ -63,7 +63,13 @@ internal class ServiceGuideStore(
 
     fun readXml(filePath: String, index: Int): String? {
         try {
-            return SGDUFile().readXml(File(filePath), index)
+            SGDUFile.open(File(filePath)).use { file ->
+                if (file.seekTo(index)) {
+                    return file.next()?.let { (_, xml) ->
+                        xml
+                    }
+                }
+            }
         } catch (e: Exception) {
             Log.d(TAG, "Error on reading SGDU part, file: $filePath, index: $index ", e)
         }
