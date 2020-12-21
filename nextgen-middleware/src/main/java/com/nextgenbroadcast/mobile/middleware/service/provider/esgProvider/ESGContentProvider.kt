@@ -28,7 +28,7 @@ class ESGContentProvider: ContentProvider(), LifecycleOwner {
     private lateinit var PROGRAMS_CONTENT_TYPE: String
     private lateinit var PROGRAM_CONTENT_ITEM_TYPE: String
 
-    private var data: MutableMap<AVService, List<SGProgram>> = mutableMapOf()
+    private var data: Map<AVService, List<SGProgram>> = mutableMapOf()
     private val lifecycleRegistry = LifecycleRegistry(this)
     private val uriMatcher = UriMatcher(UriMatcher.NO_MATCH)
 
@@ -95,7 +95,7 @@ class ESGContentProvider: ContentProvider(), LifecycleOwner {
 
     private fun onBind(binder: EmbeddedAtsc3Service.ProviderServiceBinder) {
         binder.serviceController.schedule.distinctUntilChanged().observe(this, { schedule ->
-            data = schedule.toMutableMap()
+            data = schedule?.toMutableMap() ?: emptyMap()
             context?.contentResolver?.notifyChange(SERVICE_CONTENT_URI, null)
         })
     }
@@ -144,7 +144,7 @@ class ESGContentProvider: ContentProvider(), LifecycleOwner {
 
             URI_ALL_PROGRAMS -> {
                 val selectionColumns = selection?.split(" AND ")
-                var filteredData = mutableMapOf<AVService, List<SGProgram>>()
+                var filteredData = emptyMap<AVService, List<SGProgram>>()
 
                 selectionColumns?.forEachIndexed { index, columnName ->
 
@@ -213,8 +213,8 @@ class ESGContentProvider: ContentProvider(), LifecycleOwner {
             .add(PROGRAM_COLUMN_CONTENT_ID, program.content?.id)
             .add(PROGRAM_COLUMN_CONTENT_VERSION, program.content?.version)
             .add(PROGRAM_COLUMN_CONTENT_ICON, program.content?.icon)
-            .add(PROGRAM_COLUMN_CONTENT_NAME, program.content?.getName(Locale.ENGLISH))
-            .add(PROGRAM_COLUMN_CONTENT_DESCRIPTION, program.content?.getDescription(Locale.ENGLISH))
+            .add(PROGRAM_COLUMN_CONTENT_NAME, program.content?.name)
+            .add(PROGRAM_COLUMN_CONTENT_DESCRIPTION, program.content?.description)
     }
 
     override fun insert(uri: Uri, values: ContentValues?): Uri? {

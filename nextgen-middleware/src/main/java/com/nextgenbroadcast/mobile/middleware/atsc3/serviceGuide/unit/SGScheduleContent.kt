@@ -62,7 +62,7 @@ internal class SGScheduleContent(
         // non required
         var presentationList: MutableList<SGPresentation>? = null,
         // links
-        var content: SGContentImpl? = null
+        var content: SGContent? = null
 ) {
     fun addPresentation(startTime: Long, endTime: Long, duration: Int) {
         (presentationList ?: mutableListOf<SGPresentation>().also { presentationList = it }).add(

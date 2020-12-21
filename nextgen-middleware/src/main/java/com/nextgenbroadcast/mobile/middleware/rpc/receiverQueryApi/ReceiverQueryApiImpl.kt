@@ -7,22 +7,22 @@ class ReceiverQueryApiImpl(
         private val gateway: IRPCGateway
 ) : IReceiverQueryApi {
 
-    override fun queryContentAdvisoryRating(): RatingLevel {
-        return RatingLevel()
+    override fun queryContentAdvisoryRating(): RatingLevelRpcResponse {
+        return RatingLevelRpcResponse()
     }
 
-    override fun queryClosedCaptionsStatus(): CC {
-        return CC()
+    override fun queryClosedCaptionsStatus(): CCRpcResponse {
+        return CCRpcResponse()
     }
 
-    override fun queryServiceID(): Service {
-        return Service().apply {
+    override fun queryServiceID(): ServiceRpcResponse {
+        return ServiceRpcResponse().apply {
             this.service = gateway.queryServiceId
         }
     }
 
-    override fun queryLanguagePreferences(): Languages {
-        return Languages().apply {
+    override fun queryLanguagePreferences(): LanguagesRpcResponse {
+        return LanguagesRpcResponse().apply {
             gateway.language.let { language ->
                 preferredAudioLang = language
                 preferredCaptionSubtitleLang = language
@@ -31,27 +31,27 @@ class ReceiverQueryApiImpl(
         }
     }
 
-    override fun queryCaptionDisplayPreferences(): CaptionDisplay {
-        return CaptionDisplay()
+    override fun queryCaptionDisplayPreferences(): CaptionDisplayRpcResponse {
+        return CaptionDisplayRpcResponse()
     }
 
-    override fun queryAudioAccessibilityPreferences(): AudioAccessibilityPref {
-        return AudioAccessibilityPref()
+    override fun queryAudioAccessibilityPreferences(): AudioAccessibilityPrefRpcResponse {
+        return AudioAccessibilityPrefRpcResponse()
     }
 
-    override fun queryMPDUrl(): MPDUrl {
-        return MPDUrl(gateway.mediaUrl)
+    override fun queryMPDUrl(): MPDUrlRpcResponse {
+        return MPDUrlRpcResponse(gateway.mediaUrl)
     }
 
-    override fun queryReceiverWebServerURI(): BaseURI {
-        return BaseURI()
+    override fun queryReceiverWebServerURI(): BaseURIRpcResponse {
+        return BaseURIRpcResponse()
     }
 
-    override fun queryAlertingSignaling(): Alerting {
-        return Alerting()
+    override fun queryAlertingSignaling(): AlertingRpcResponse {
+        return AlertingRpcResponse()
     }
 
-    override fun queryServiceGuideURLs(): ServiceGuideUrls {
-        return ServiceGuideUrls(gateway.serviceGuideUrls)
+    override fun queryServiceGuideURLs(service: String?): ServiceGuideUrlsRpcResponse {
+        return ServiceGuideUrlsRpcResponse(gateway.serviceGuideUrls)
     }
 }

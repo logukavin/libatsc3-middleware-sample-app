@@ -1,38 +1,39 @@
 package com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi
 
 import com.github.nmuzhichin.jsonrpc.annotation.JsonRpcMethod
+import com.github.nmuzhichin.jsonrpc.annotation.JsonRpcParam
 import com.github.nmuzhichin.jsonrpc.annotation.JsonRpcType
 import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.*
 
 @JsonRpcType
 interface IReceiverQueryApi {
     @JsonRpcMethod("org.atsc.query.ratingLevel")
-    fun queryContentAdvisoryRating(): RatingLevel
+    fun queryContentAdvisoryRating(): RatingLevelRpcResponse
 
     @JsonRpcMethod("org.atsc.query.cc")
-    fun queryClosedCaptionsStatus(): CC
+    fun queryClosedCaptionsStatus(): CCRpcResponse
 
     @JsonRpcMethod("org.atsc.query.service")
-    fun queryServiceID(): Service
+    fun queryServiceID(): ServiceRpcResponse
 
     @JsonRpcMethod("org.atsc.query.languages")
-    fun queryLanguagePreferences(): Languages
+    fun queryLanguagePreferences(): LanguagesRpcResponse
 
     @JsonRpcMethod("org.atsc.query.captionDisplay")
-    fun queryCaptionDisplayPreferences(): CaptionDisplay
+    fun queryCaptionDisplayPreferences(): CaptionDisplayRpcResponse
 
     @JsonRpcMethod("org.atsc.query.audioAccessibilityPref")
-    fun queryAudioAccessibilityPreferences(): AudioAccessibilityPref
+    fun queryAudioAccessibilityPreferences(): AudioAccessibilityPrefRpcResponse
 
     @JsonRpcMethod("org.atsc.query.MPDUrl")
-    fun queryMPDUrl(): MPDUrl
+    fun queryMPDUrl(): MPDUrlRpcResponse
 
     @JsonRpcMethod("org.atsc.query.baseURI")
-    fun queryReceiverWebServerURI(): BaseURI
+    fun queryReceiverWebServerURI(): BaseURIRpcResponse
 
     @JsonRpcMethod("org.atsc.query.alerting")
-    fun queryAlertingSignaling(): Alerting
+    fun queryAlertingSignaling(): AlertingRpcResponse
 
     @JsonRpcMethod("org.atsc.query.serviceGuideUrls")
-    fun queryServiceGuideURLs(): ServiceGuideUrls
+    fun queryServiceGuideURLs(@JsonRpcParam("service", nullable = true) service: String?): ServiceGuideUrlsRpcResponse
 }

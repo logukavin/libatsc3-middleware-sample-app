@@ -1,6 +1,5 @@
 package com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.unit
 
-import com.nextgenbroadcast.mobile.core.serviceGuide.ISGContent
 import java.util.*
 
 /*
@@ -58,24 +57,24 @@ import java.util.*
 </xs:complexType>
  */
 
-class SGContentImpl(
+internal class SGContent(
         // required
-        override var id: String? = null,
-        override var version: Long = 0,
+        var id: String? = null,
+        var version: Long = 0,
         // non required
         var nameMap: MutableMap<Locale, String>? = null,
         var descriptionMap: MutableMap<Locale, String>? = null,
-        override var icon: String? = null,
+        var icon: String? = null,
         // links
         var serviceIdList: MutableList<Int>? = null
-) : ISGContent {
-    override fun getName(local: Locale): String? {
+) : SGData() {
+    fun getName(local: Locale): String? {
         return nameMap?.let {
             it[local]
         }
     }
 
-    override fun getDescription(local: Locale): String? {
+    fun getDescription(local: Locale): String? {
         return descriptionMap?.let {
             it[local]
         }

@@ -6,6 +6,13 @@ import com.nextgenbroadcast.mobile.middleware.settings.IClientSettings
 
 object ServerUtils {
 
+    fun createUrl(entryPageUrl: String, settings: IClientSettings) = Uri.Builder()
+            .scheme("https")
+            .encodedAuthority("${settings.hostName}:${settings.httpsPort}")
+            .appendEncodedPath(entryPageUrl)
+            .build()
+            .toString()
+
     fun createEntryPoint(entryPageUrl: String, appContextId: String, settings: IClientSettings) = Uri.Builder()
             .scheme("https")
             .encodedAuthority("${settings.hostName}:${settings.httpsPort}")
