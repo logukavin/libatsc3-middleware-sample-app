@@ -136,6 +136,18 @@ class MainFragment : BaseFragment() {
                 onBALoadingError()
             }
         })
+        user_agent_web_view.captureContentVisibility = true
+        user_agent_web_view.isContentVisible.observe(viewLifecycleOwner) { isBAContentVisible ->
+            if (isBAContentVisible) {
+                bottom_sheet_title.alpha = 0.2f
+                bottom_sheet_title.isClickable = false
+                atsc3_data_log.alpha = 0.2f
+            } else {
+                bottom_sheet_title.alpha = 1f
+                bottom_sheet_title.isClickable = true
+                atsc3_data_log.alpha = 1f
+            }
+        }
 
         bottomSheetBehavior = BottomSheetBehavior.from<View>(bottom_sheet).apply {
             isHideable = false
