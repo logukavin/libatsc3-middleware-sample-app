@@ -371,7 +371,7 @@ internal class SGService(
         var shortServiceName: String? = null,
         // links
         var scheduleMap: MutableMap<String, SGSchedule>? = null
-) {
+) : SGData() {
     fun addSchedule(schedule: SGSchedule) {
         val scheduleId = schedule.id ?: return
         (scheduleMap ?: mutableMapOf<String, SGSchedule>().also { scheduleMap = it })[scheduleId] = schedule

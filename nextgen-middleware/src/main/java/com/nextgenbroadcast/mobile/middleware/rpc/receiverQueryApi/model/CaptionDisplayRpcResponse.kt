@@ -2,7 +2,7 @@ package com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model
 
 import com.nextgenbroadcast.mobile.middleware.rpc.RpcResponse
 
-data class CaptionDisplay(
+data class CaptionDisplayRpcResponse(
         var msgType: String? = null,
         var cta708: cta708? = null,
         var imsc1: imsc1? = null
