@@ -178,6 +178,19 @@ class MainFragment : BaseFragment() {
         }
     }
 
+    override fun onStart() {
+        super.onStart()
+
+        // reload BA to prevent desynchronization between BA and RMP playback state
+        user_agent_web_view.reload()
+    }
+
+    override fun onStop() {
+        super.onStop()
+
+        receiver_player.stopPlayback()
+    }
+
     override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean) {
         val visibility = if (isInPictureInPictureMode) {
             user_agent_web_view.actionExit()
@@ -383,12 +396,6 @@ class MainFragment : BaseFragment() {
     private fun unloadBroadcasterApplication() {
         user_agent_web_view.unloadBAContent()
         userAgentViewModel?.setApplicationState(ApplicationState.UNAVAILABLE)
-    }
-
-    override fun onStop() {
-        super.onStop()
-
-        receiver_player.stopPlayback()
     }
 
     companion object {
