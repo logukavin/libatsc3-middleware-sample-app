@@ -60,10 +60,10 @@ internal class SGSchedule (
         // required
         var id: String? = null,
         var serviceId: Int = -1,
-        var version: Long = 0,
+        override var version: Long = 0,
         // links
         var contentMap: MutableMap<String, SGScheduleContent>? = null
-) : SGData() {
+) : SGUnit() {
     fun addContent(scheduleContent: SGScheduleContent) {
         val contentId = scheduleContent.contentId ?: return
         (contentMap ?: mutableMapOf<String, SGScheduleContent>().also { contentMap = it })[contentId] = scheduleContent
