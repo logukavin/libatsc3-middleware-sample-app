@@ -363,7 +363,7 @@ package com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.unit
 internal class SGService(
         // required
         var serviceId: Int = 0,
-        var version: Long = 0,
+        override var version: Long = 0,
         // non required
         var globalServiceId: String? = null,
         var majorChannelNo: Int = 0,
@@ -371,7 +371,7 @@ internal class SGService(
         var shortServiceName: String? = null,
         // links
         var scheduleMap: MutableMap<String, SGSchedule>? = null
-) : SGData() {
+) : SGUnit() {
     fun addSchedule(schedule: SGSchedule) {
         val scheduleId = schedule.id ?: return
         (scheduleMap ?: mutableMapOf<String, SGSchedule>().also { scheduleMap = it })[scheduleId] = schedule
