@@ -28,4 +28,6 @@ object ServerUtils {
             .build()
             .toString()
 
+
+    fun multipartFilePath(fileName: String, index: Int) = "$fileName?index=$index"
 }

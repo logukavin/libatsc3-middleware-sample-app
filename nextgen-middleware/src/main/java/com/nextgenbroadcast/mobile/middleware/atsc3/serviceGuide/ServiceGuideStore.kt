@@ -7,12 +7,12 @@ import com.nextgenbroadcast.mobile.core.serviceGuide.SGProgramContent
 import com.nextgenbroadcast.mobile.core.serviceGuide.SGScheduleMap
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.unit.SGContent
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.SLTConstants
-import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.unit.SGData
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.unit.SGService
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
 import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
 import kotlinx.coroutines.*
 import java.io.File
+import java.util.*
 import java.util.concurrent.Executors
 
 internal class ServiceGuideStore(
@@ -54,9 +54,9 @@ internal class ServiceGuideStore(
                     Log.d(TAG, "Error when reading SGDU file: $filePath", e)
                 }
 
-                repository.setServiceSchedule(updateSchedule())
-                val list = updateGuideUrls(fileServices, fileContents)
-                repository.setServiceGuideUrls(list)
+                //TODO: add store cleanup - remove an old data from maps
+                repository.setServiceSchedule(updateSchedule(serviceMap, contentMap, settings.locale))
+                repository.setServiceGuideUrls(updateGuideUrls(fileServices, contentMap))
             }
         }
     }
@@ -84,12 +84,13 @@ internal class ServiceGuideStore(
         }
     }
 
-    private fun updateSchedule(): SGScheduleMap {
-        val local = settings.locale
-        return serviceMap.entries.associate { (_, service) ->
-            service.toSLSService() to
-                    (service.scheduleMap?.values?.flatMap { schedule ->
-                        schedule.contentMap?.values?.onEach { it.content = contentMap[it.contentId] }
+    private fun updateSchedule(services: Map<Int, SGService>, contents: Map<String, SGContent>, local: Locale): SGScheduleMap {
+        return services.entries.associate { (_, service) ->
+            AVService(
+                    0, service.serviceId, service.shortServiceName, service.globalServiceId, service.majorChannelNo, service.minorChannelNo, SLTConstants.SERVICE_CATEGORY_AV
+            ) to (
+                    service.scheduleMap?.values?.flatMap { schedule ->
+                        schedule.contentMap?.values?.onEach { it.content = contents[it.contentId] }
                                 ?: emptyList()
                     }?.flatMap { scheduleContent ->
                         scheduleContent.presentationList?.map { presentation ->
@@ -103,45 +104,37 @@ internal class ServiceGuideStore(
 
                             )
                         } ?: emptyList()
-                    } ?: emptyList())
+                    } ?: emptyList()
+            )
         }
     }
 
-    private fun SGService.toSLSService() = AVService(
-            0, serviceId, shortServiceName, globalServiceId, majorChannelNo, minorChannelNo, SLTConstants.SERVICE_CATEGORY_AV
-    )
-
+    @Synchronized
     private fun updateGuideUrls(services: Map<Int, SGService>, contents: Map<String, SGContent>): List<SGUrl> {
-        val paths = mutableListOf<SGUrl>()
+        services.values.forEach { service ->
+            SGUrl.service(service)?.let { sgUrl ->
+                guideUrlsMap[sgUrl.sgPath] = sgUrl
+            }
 
-        paths.addAll(
-                services.values.map { service ->
-                    SGUrl.service(service.toUrl())
+            service.scheduleMap?.values?.forEach { schedule ->
+                SGUrl.schedule(schedule, service.globalServiceId)?.let { sgUrl ->
+                    guideUrlsMap[sgUrl.sgPath] = sgUrl
                 }
-        )
 
-        paths.addAll(
-                services.values.flatMap { service ->
-                    service.scheduleMap?.values?.map { schedule ->
-                        SGUrl.schedule(schedule.toUrl())
-                    } ?: emptyList()
+                schedule.contentMap?.values?.forEach { scheduleContent ->
+                    scheduleContent.contentId?.let { contentId ->
+                        contents[contentId]?.let { content ->
+                            SGUrl.content(content, service.globalServiceId)?.let { sgUrl ->
+                                guideUrlsMap[sgUrl.sgPath] = sgUrl
+                            }
+                        }
+                    }
                 }
-        )
-
-        paths.addAll(
-                contents.values.map { content ->
-                    SGUrl.content(content.toUrl(), content.id ?: "")
-                }
-        )
-
-        paths.forEach { sgUrl ->
-            guideUrlsMap[sgUrl.sgPath] = sgUrl
+            }
         }
 
         return guideUrlsMap.values.toList()
     }
-
-    private fun SGData.toUrl() = "$duFileName?index=$duIndex"
 
     companion object {
         val TAG: String = ServiceGuideStore::class.java.simpleName

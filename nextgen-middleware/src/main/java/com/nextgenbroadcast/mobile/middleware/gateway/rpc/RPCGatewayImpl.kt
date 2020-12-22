@@ -1,6 +1,5 @@
 package com.nextgenbroadcast.mobile.middleware.gateway.rpc
 
-import android.util.Log
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.distinctUntilChanged
 import com.nextgenbroadcast.mobile.core.mapWith
@@ -34,6 +33,7 @@ internal class RPCGatewayImpl(
     private val ioScope = CoroutineScope(ioDispatcher)
     private val sessions = CopyOnWriteArrayList<MiddlewareWebSocket>()
     private val rpcNotifier = RPCNotificationHelper(this::sendNotification)
+    private val serviceGuideUrls = HashSet<SGUrl>()
 
     override val deviceId = settings.deviceId
     override val advertisingId = settings.advertisingId
@@ -44,10 +44,6 @@ internal class RPCGatewayImpl(
         get() = viewController.rmpMediaUri.value.toString()
     override val playbackState: PlaybackState
         get() = viewController.rmpState.value ?: PlaybackState.IDLE
-    override val serviceGuideUrls: List<ServiceGuideUrlsRpcResponse.Url>
-        get() = repository.serviceGuideUrls.value?.let {
-            mapServiceGuideUrls(it)
-        } ?: emptyList()
     private val rmpPlaybackTime: Long
         get() = viewController.rmpMediaTime.value ?: 0
 
@@ -66,7 +62,10 @@ internal class RPCGatewayImpl(
         }
 
         repository.serviceGuideUrls.observe(lifecycleOwner) { urls ->
-            onServiceGuidUrls(urls?.let { mapServiceGuideUrls(urls) } ?: emptyList())
+            if(!urls.isNullOrEmpty()) {
+                onServiceGuidUrls(urls)
+                serviceGuideUrls.addAll(urls)
+            }
         }
 
         viewController.appData.mapWith(repository.applications) { (appData, applications) ->
@@ -174,6 +173,15 @@ internal class RPCGatewayImpl(
         } ?: false
     }
 
+    override fun getServiceGuideUrls(service: String?): List<ServiceGuideUrlsRpcResponse.Url> {
+        val urls: Collection<SGUrl> = if (service != null) {
+            serviceGuideUrls.filter { url -> url.service == service }
+        } else {
+            serviceGuideUrls
+        }
+        return mapServiceGuideUrls(urls, false)
+    }
+
     /**
     Shall be issued by the Receiver to the currently executing
     Broadcaster Application if the user changes to another service also associated with the same
@@ -211,10 +219,12 @@ internal class RPCGatewayImpl(
         appFiles.addAll(files)
     }
 
-    private fun onServiceGuidUrls(urls: List<ServiceGuideUrlsRpcResponse.Url>) {
-        //TODO: should send diff only
+    private fun onServiceGuidUrls(urls: List<SGUrl>) {
         if (subscribedNotifications.contains(NotificationType.SERVICE_GUIDE_CHANGE)) {
-            rpcNotifier.notifyServiceGuideChange(urls)
+            val diff = urls.subtract(serviceGuideUrls)
+            if (diff.isNotEmpty()) {
+                rpcNotifier.notifyServiceGuideChange(mapServiceGuideUrls(diff, true))
+            }
         }
     }
 
@@ -270,13 +280,13 @@ internal class RPCGatewayImpl(
         }
     }
 
-    private fun mapServiceGuideUrls(sgUrls: List<SGUrl>): List<ServiceGuideUrlsRpcResponse.Url> {
+    private fun mapServiceGuideUrls(sgUrls: Collection<SGUrl>, skipContent: Boolean): List<ServiceGuideUrlsRpcResponse.Url> {
         return sgUrls.map { sgUrl ->
             ServiceGuideUrlsRpcResponse.Url(
                     sgUrl.sgType.toString(),
                     ServerUtils.createUrl(sgUrl.sgPath, settings),
-                    sgUrl.service,
-                    sgUrl.content
+                    if (skipContent) null else sgUrl.service,
+                    if (skipContent) null else sgUrl.content
             )
         }
     }
