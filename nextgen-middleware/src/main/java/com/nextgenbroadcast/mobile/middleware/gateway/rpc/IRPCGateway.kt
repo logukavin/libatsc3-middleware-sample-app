@@ -12,7 +12,6 @@ interface IRPCGateway {
     val queryServiceId: String?
     val mediaUrl: String?
     val playbackState: PlaybackState
-    val serviceGuideUrls: List<ServiceGuideUrlsRpcResponse.Url>
 
     fun onSocketOpened(socket: MiddlewareWebSocket)
     fun onSocketClosed(socket: MiddlewareWebSocket)
@@ -28,4 +27,6 @@ interface IRPCGateway {
     fun sendNotification(message: String)
 
     fun requestFileCache(baseUrl: String?, rootPath: String?, paths: List<String>, filters: List<String>?): Boolean
+
+    fun getServiceGuideUrls(service: String?): List<ServiceGuideUrlsRpcResponse.Url>
 }

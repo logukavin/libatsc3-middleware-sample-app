@@ -60,14 +60,14 @@ import java.util.*
 internal class SGContent(
         // required
         var id: String? = null,
-        var version: Long = 0,
+        override var version: Long = 0,
         // non required
         var nameMap: MutableMap<Locale, String>? = null,
         var descriptionMap: MutableMap<Locale, String>? = null,
         var icon: String? = null,
         // links
         var serviceIdList: MutableList<Int>? = null
-) : SGData() {
+) : SGUnit() {
     fun getName(local: Locale): String? {
         return nameMap?.let {
             it[local]
