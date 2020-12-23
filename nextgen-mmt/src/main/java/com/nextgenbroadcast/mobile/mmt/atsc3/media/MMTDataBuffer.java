@@ -367,7 +367,8 @@ public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payl
     }
 
     public long ptsOffsetUs() {
-        return 66000L;
+        //jjustman-2020-12-23 - give the a/v/s decoder some time to decode frames, otherwise we will stall at startup
+        return 266000L;
     }
 
     //jjustman-2020-12-22 - TODO: handle when mfu_presentation_time_uS_computed - push last value?
