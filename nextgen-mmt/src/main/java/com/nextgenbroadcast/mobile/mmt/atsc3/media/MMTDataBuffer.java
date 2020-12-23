@@ -17,14 +17,18 @@ import java.util.concurrent.TimeUnit;
 public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payload, MfuByteBufferFragment> {
     private final LinkedBlockingDeque<MfuByteBufferFragment> mfuBufferQueue = new LinkedBlockingDeque<>();
 
-    private long videoMfuPresentationTimestampUs;
-    private long audioMfuPresentationTimestampUs;
+    private long videoMfuPresentationTimestampUs = Long.MAX_VALUE;
+    private long audioMfuPresentationTimestampUs = Long.MAX_VALUE;
+    private long stppMfuPresentationTimestampUs = Long.MAX_VALUE;
+
 
     private MpuMetadata_HEVC_NAL_Payload InitMpuMetadata_HEVC_NAL_Payload = null;
 
     private boolean FirstMfuBufferVideoKeyframeSent = false;
     private volatile boolean isActive = false;
     private volatile boolean isReleased = false;
+    public int audioChannelCount;
+    public int audioSampleRate;
 
     public MMTDataBuffer() {
     }
@@ -51,11 +55,16 @@ public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payl
 
     //jjustman-2020-12-09 - TODO - wire this up from ndk callback
     public int getAudioChannelCount() {
-        return 2;
+        return audioChannelCount;
     }
 
     public int getAudioSampleRate() {
-        return 48000;
+        return audioSampleRate;
+    }
+
+    public void setAudioConfiguration(int audioSampleRate, int audioChannelCount) {
+        this.audioSampleRate = audioSampleRate;
+        this.audioChannelCount = audioChannelCount;
     }
 
     public boolean isAudioSample(MfuByteBufferFragment sample) {
@@ -107,11 +116,6 @@ public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payl
     public synchronized void close() {
         isActive = false;
 
-        mfuBufferQueue.clear();
-
-        videoMfuPresentationTimestampUs = 0;
-        audioMfuPresentationTimestampUs = 0;
-
         notify();
     }
 
@@ -119,6 +123,11 @@ public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payl
     public void release() {
         isReleased = true;
 
+        Log.w("MMTDataBuffer","JJ: release invoked!, resetting video/audio/stpp MfuPresentationTimestamps to 0!");
+        videoMfuPresentationTimestampUs = Long.MAX_VALUE;
+        audioMfuPresentationTimestampUs = Long.MAX_VALUE;
+        stppMfuPresentationTimestampUs = Long.MAX_VALUE;
+        mfuBufferQueue.clear();
         close();
     }
 
@@ -361,6 +370,7 @@ public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payl
         return 66000L;
     }
 
+    //jjustman-2020-12-22 - TODO: handle when mfu_presentation_time_uS_computed - push last value?
     public long getPresentationTimestampUs(MfuByteBufferFragment toProcessMfuByteBufferFragment) {
         if (toProcessMfuByteBufferFragment.mfu_presentation_time_uS_computed != null && toProcessMfuByteBufferFragment.mfu_presentation_time_uS_computed > 0) {
             //default values here as fallback
@@ -368,21 +378,47 @@ public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payl
 
             //todo: expand size as needed, every ~ mfu_presentation_time_uS_computed 1000000uS
             if (toProcessMfuByteBufferFragment.packet_id == MmtPacketIdContext.video_packet_id) {
-                if (videoMfuPresentationTimestampUs == 0) {
+                if (videoMfuPresentationTimestampUs == Long.MAX_VALUE) {
                     videoMfuPresentationTimestampUs = toProcessMfuByteBufferFragment.mfu_presentation_time_uS_computed;
                 }
-                anchorMfuPresentationTimestampUs = videoMfuPresentationTimestampUs;
             } else if (toProcessMfuByteBufferFragment.packet_id == MmtPacketIdContext.audio_packet_id) {
-                if (audioMfuPresentationTimestampUs == 0) {
+                if (audioMfuPresentationTimestampUs == Long.MAX_VALUE) {
                     audioMfuPresentationTimestampUs = toProcessMfuByteBufferFragment.mfu_presentation_time_uS_computed;
                 }
-                anchorMfuPresentationTimestampUs = audioMfuPresentationTimestampUs;
+            } else if (toProcessMfuByteBufferFragment.packet_id == MmtPacketIdContext.stpp_packet_id) {
+                if (stppMfuPresentationTimestampUs == Long.MAX_VALUE) {
+                    stppMfuPresentationTimestampUs = toProcessMfuByteBufferFragment.mfu_presentation_time_uS_computed;
+                }
             }
+            anchorMfuPresentationTimestampUs = getMinNonZeroMfuPresentationTimestampForAnchor();
 
             long mpuPresentationTimestampDeltaUs = toProcessMfuByteBufferFragment.mfu_presentation_time_uS_computed - anchorMfuPresentationTimestampUs;
             return mpuPresentationTimestampDeltaUs + ptsOffsetUs();
         }
 
         return 0;
+    }
+
+    public long getMinNonZeroMfuPresentationTimestampForAnchor() {
+        long minNonZeroMfuPresentationTimestampForAnchor = Long.MAX_VALUE;
+
+        if(videoMfuPresentationTimestampUs != Long.MAX_VALUE) {
+            minNonZeroMfuPresentationTimestampForAnchor = videoMfuPresentationTimestampUs;
+           if(audioMfuPresentationTimestampUs != Long.MAX_VALUE) {
+                minNonZeroMfuPresentationTimestampForAnchor = Math.min(minNonZeroMfuPresentationTimestampForAnchor, audioMfuPresentationTimestampUs);
+                if(stppMfuPresentationTimestampUs != Long.MAX_VALUE) {
+                    minNonZeroMfuPresentationTimestampForAnchor = Math.min(minNonZeroMfuPresentationTimestampForAnchor, stppMfuPresentationTimestampUs);
+                }
+            }
+        } else if(audioMfuPresentationTimestampUs != Long.MAX_VALUE) {
+            minNonZeroMfuPresentationTimestampForAnchor = audioMfuPresentationTimestampUs;
+            if(stppMfuPresentationTimestampUs != Long.MAX_VALUE) {
+                minNonZeroMfuPresentationTimestampForAnchor = Math.min(minNonZeroMfuPresentationTimestampForAnchor, stppMfuPresentationTimestampUs);
+            }
+        } else if(stppMfuPresentationTimestampUs != Long.MAX_VALUE) {
+            minNonZeroMfuPresentationTimestampForAnchor = stppMfuPresentationTimestampUs;
+        }
+
+        return minNonZeroMfuPresentationTimestampForAnchor;
     }
 }
