@@ -40,10 +40,7 @@ def coroutinesVersion = rootProject.ext.coroutinesVersion
 dependencies {
     implementation fileTree(dir: "libs", include: ["*.jar"])
 
-    implementation project(':nextgen-core')
-    compileOnly project(":nextgen-mmt")
-
-    if (project.hasProperty('org.gradle.project.exoPlayerFolder')) {
+    if (project.hasProperty('org.gradle.project.use_local_src_exoplayer_folder') && project.property('org.gradle.project.use_local_src_exoplayer_folder').toString().toBoolean()) {
         api project(':exoplayer-library-core')
         api project(':exoplayer-library-dash')
         api project(':exoplayer-library-ui')
@@ -54,8 +51,12 @@ dependencies {
         api "com.google.android.exoplayer:exoplayer-dash:$exoplayerVersion"
         api "com.google.android.exoplayer:exoplayer-ui:$exoplayerVersion"
         api "com.google.android.exoplayer:exoplayer-daa:$exoplayerVersion"
-        //api "com.google.android.exoplayer:exoplayer-mmt:$exoplayerVersion"
+        api "com.google.android.exoplayer:exoplayer-mmt:$exoplayerVersion"
     }
+
+    compileOnly project(":nextgen-mmt")
+
+    implementation project(':nextgen-core')
 
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
     implementation "androidx.core:core-ktx:$coreKtxVersion"

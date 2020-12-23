@@ -56,18 +56,35 @@ android {
         }
     }
 
+    sourceSets {
+        main {
+            if (project.hasProperty('org.gradle.project.debugging_asan_enabled') && project.property('org.gradle.project.debugging_asan_enabled').toString().toBoolean()) {
+                jniLibs.srcDirs = ["libs", "libs_asan"]
+                resources.srcDirs = ["src/main/resources_asan"]
+            } else if (project.hasProperty('org.gradle.project.debugging_hwasan_enabled') && project.property('org.gradle.project.debugging_hwasan_enabled').toString().toBoolean()) {
+                jniLibs.srcDirs = ["libs", "libs_hwasan"]
+                resources.srcDirs = ["src/main/resources_hwasan"]
+            } else {
+                jniLibs.srcDirs = ["libs"]
+            }
+
+        }
+    }
     buildFeatures {
         dataBinding = true
     }
 
     packagingOptions {
         doNotStrip '**.so'
-        pickFirst 'lib/arm64-v8a/libc++_shared.so'
-        pickFirst 'lib/armeabi-v7a/libc++_shared.so'
+
         pickFirst 'lib/arm64-v8a/libcrypto.so'
-        pickFirst 'lib/armeabi-v7a/libcrypto.so'
         pickFirst 'lib/arm64-v8a/libssl.so'
+        pickFirst 'lib/arm64-v8a/libc++_shared.so'
+
+        pickFirst 'lib/armeabi-v7a/libcrypto.so'
         pickFirst 'lib/armeabi-v7a/libssl.so'
+        pickFirst 'lib/armeabi-v7a/libc++_shared.so'
+
     }
 }
 

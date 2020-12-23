@@ -8,6 +8,8 @@ interface IMMTDataConsumer<P, F> {
     fun close()
     fun release()
 
+    fun setAudioConfiguration(audioSampleRate: Int, audioChannelCount: Int)
+
     fun isActive(): Boolean
 
     fun InitMpuMetadata_HEVC_NAL_Payload(payload: P)

@@ -111,7 +111,7 @@ public class Atsc3MMTExtractor implements Extractor {
         }
 
         long correctSampleTime = track.correctSampleTime(currentSampleTimeUs);
-
+        Log.d("Atsc3MMTExtractor",String.format("JJ: readSample: sample_type: %d, correctSampleTime: %d", currentSampleType, correctSampleTime));
         trackOutput.sampleMetadata(
                 correctSampleTime,
                 sampleFlags,
