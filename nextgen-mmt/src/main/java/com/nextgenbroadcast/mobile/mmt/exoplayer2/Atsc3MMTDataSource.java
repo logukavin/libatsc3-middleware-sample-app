@@ -40,6 +40,7 @@ public class Atsc3MMTDataSource extends BaseDataSource {
     private MfuByteBufferFragment currentSample = null;
 
     public static int DEBUG_COUNTER = 0;
+    private long lastComputedPresentationTimestampUs = 0;
 
     public Atsc3MMTDataSource(MMTDataBuffer dataSource) {
         super(/* isNetwork= */ false);
@@ -185,10 +186,16 @@ public class Atsc3MMTDataSource extends BaseDataSource {
 
             long computedPresentationTimestampUs = inputSource.getPresentationTimestampUs(currentSample);
 
-            if((DEBUG_COUNTER++) % 100 == 0) {
-                Log.d("MMTDataSource", String.format(">>> packet_id: %d, computedPresentationTimestampUs: %d, mpu_sequence number: %d, sample number: %d, debug_counter: %d",
+            if(lastComputedPresentationTimestampUs - computedPresentationTimestampUs > 10000000) {
+                Log.w("MMTDataSource", "JJ: >>> packetId had timestamp wraparound!");
+            }
+            lastComputedPresentationTimestampUs = computedPresentationTimestampUs;
+
+            if((DEBUG_COUNTER++) % 10 == 0) {
+                Log.d("MMTDataSource", String.format("JJ: >>> packet_id: %d, computedPresentationTimestampUs: %d (%d) mpu_sequence number: %d, sample number: %d, debug_counter: %d",
                         currentSample.packet_id,
                         computedPresentationTimestampUs,
+                        currentSample.get_safe_mfu_presentation_time_uS_computed(),
                         currentSample.mpu_sequence_number,
                         currentSample.sample_number,
                         DEBUG_COUNTER));

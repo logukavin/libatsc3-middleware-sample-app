@@ -85,6 +85,9 @@ internal class Atsc3Module(
     @Volatile
     private var mmtSource: MMTDataConsumerType? = null
 
+    private val audioConfigurationMap = HashMap<MMTAudioDecoderConfigurationRecord, Boolean>()
+
+
     val slsProtocol: Int
         get() = selectedServiceSLSProtocol
 
@@ -92,7 +95,7 @@ internal class Atsc3Module(
     private var listener: Listener? = null
 
     fun setListener(listener: Listener?) {
-        Log.i("Atsc3Module","setListener, and atsc3NdkMediaMMTBridge is: "+atsc3NdkMediaMMTBridge);
+        Log.i("Atsc3Module", "setListener, and atsc3NdkMediaMMTBridge is: " + atsc3NdkMediaMMTBridge);
 
         if (this.listener != null) throw IllegalStateException("Atsc3Module listener already initialized")
         this.listener = listener
@@ -465,8 +468,16 @@ internal class Atsc3Module(
         })
     }
 
-    override fun pushAudioDecoderConfigurationRecord(mmtAudioDecoderConfigurationRecord: MMTAudioDecoderConfigurationRecord?) {
-        //TODO("Not yet implemented")
+    override fun pushAudioDecoderConfigurationRecord(mmtAudioDecoderConfigurationRecord: MMTAudioDecoderConfigurationRecord) {
+
+        //TODO: remove audioConfigurationMap.isEmpty()
+        if (audioConfigurationMap.isEmpty()) {
+            audioConfigurationMap.put(mmtAudioDecoderConfigurationRecord, false)
+        }
+
+        mmtSource.let { source->
+            source?.setAudioConfiguration(mmtAudioDecoderConfigurationRecord.sample_rate, mmtAudioDecoderConfigurationRecord.channel_count)
+        }
     }
 
     //////////////////////////////////////////////////////////////

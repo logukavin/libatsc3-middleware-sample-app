@@ -11,7 +11,7 @@ import com.google.android.exoplayer2.extractor.ExtractorOutput;
 import com.google.android.exoplayer2.extractor.PositionHolder;
 import com.google.android.exoplayer2.extractor.SeekMap;
 import com.google.android.exoplayer2.extractor.TrackOutput;
-import com.nextgenbroadcast.mmt.exoplayer2.ext.MediaTrackUtils;
+import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTMediaTrackUtils;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -111,7 +111,7 @@ public class Atsc3MMTExtractor implements Extractor {
         }
 
         long correctSampleTime = track.correctSampleTime(currentSampleTimeUs);
-
+        Log.d("Atsc3MMTExtractor",String.format("JJ: readSample: sample_type: %d, correctSampleTime: %d", currentSampleType, correctSampleTime));
         trackOutput.sampleMetadata(
                 correctSampleTime,
                 sampleFlags,
@@ -162,17 +162,17 @@ public class Atsc3MMTExtractor implements Extractor {
             byte[] data = new byte[initialDataSize];
             input.readFully(data, /* offset= */ 0, /* length= */ initialDataSize);
 
-            TrackOutput videoOutput = MediaTrackUtils.createVideoOutput(extractorOutput, /* id */1, videoType, videoWidth, videoHeight, videoFrameRate, data);
+            TrackOutput videoOutput = MMTMediaTrackUtils.createVideoOutput(extractorOutput, /* id */1, videoType, videoWidth, videoHeight, videoFrameRate, data);
             if (videoOutput != null) {
                 tracks.put(C.TRACK_TYPE_VIDEO, new MmtTrack(videoOutput, defaultSampleDurationUs));
             }
 
-            TrackOutput audioOutput = MediaTrackUtils.createAudioOutput(extractorOutput, /* id */2, audioType, audioChannelCount, audioSampleRate);
+            TrackOutput audioOutput = MMTMediaTrackUtils.createAudioOutput(extractorOutput, /* id */2, audioType, audioChannelCount, audioSampleRate);
             if (audioOutput != null) {
                 tracks.put(C.TRACK_TYPE_AUDIO, new MmtTrack(audioOutput, defaultSampleDurationUs));
             }
 
-            TrackOutput textOutput = MediaTrackUtils.createTextOutput(extractorOutput, /* id */3, textType);
+            TrackOutput textOutput = MMTMediaTrackUtils.createTextOutput(extractorOutput, /* id */3, textType);
             if (textOutput != null) {
                 tracks.put(C.TRACK_TYPE_TEXT, new MmtTrack(textOutput, 0));
             }
