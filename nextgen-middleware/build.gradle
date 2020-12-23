@@ -26,7 +26,21 @@ android {
         consumerProguardFiles "consumer-rules.pro"
 
         ndk {
-            abiFilters 'arm64-v8a', 'x86', 'x86_64'
+            if (project.hasProperty('org.gradle.project.debugging_hwasan_enabled') && project.property('org.gradle.project.debugging_hwasan_enabled').toString().toBoolean()) {
+                abiFilters 'arm64-v8a'
+            } else {
+                abiFilters 'arm64-v8a', 'armeabi-v7a' //, 'armeabi-v7a' //, 'arm64-v8a' //'', 'x86_64',
+            }
+        }
+
+        externalNativeBuild {
+            ndkBuild {
+                if (project.hasProperty('org.gradle.project.debugging_asan_enabled') && project.property('org.gradle.project.debugging_asan_enabled').toString().toBoolean()) {
+                    arguments "debugging_asan_enabled=true"
+                } else if (project.hasProperty('org.gradle.project.debugging_hwasan_enabled') && project.property('org.gradle.project.debugging_hwasan_enabled').toString().toBoolean()) {
+                    arguments "debugging_hwasan_enabled=true"
+                }
+            }
         }
 
         resValue("string", "nextgenMediaFileProvider", "com.nextgenbroadcast.mobile.middleware.provider")
@@ -97,20 +111,36 @@ def startupRuntime = rootProject.ext.startupRuntime
 dependencies {
     implementation fileTree(dir: "libs", include: ["*.jar"])
 
-    if (project.hasProperty('org.gradle.project.atsc3Folder')) {
+    if (project.hasProperty('org.gradle.project.use_local_src_libatsc3_folder') && project.property('org.gradle.project.use_local_src_libatsc3_folder').toString().toBoolean()) {
         implementation project(":atsc3_core")
         implementation project(":atsc3_bridge")
+        implementation project(":atsc3_bridge_media_mmt")
         implementation project(":atsc3_phy_virtual")
-        //implementation project(":atsc3_phy_lowasis")
-        //implementation project(":atsc3_phy_saankhya")
-        compileOnly project(":atsc3_bridge_media_mmt")
+
+        if (project.hasProperty('org.gradle.project.phy_saankhya_enabled') && project.property('org.gradle.project.phy_saankhya_enabled').toString().toBoolean()) {
+            implementation project(":atsc3_phy_saankhya")
+        }
+        if (project.hasProperty('org.gradle.project.phy_lowasis_enabled') && project.property('org.gradle.project.phy_lowasis_enabled').toString().toBoolean()) {
+            implementation project(":atsc3_phy_lowasis")
+        }
+        if (project.hasProperty('org.gradle.project.phy_airwavz_enabled') && project.property('org.gradle.project.phy_airwavz_enabled').toString().toBoolean()) {
+            implementation project(":atsc3_phy_airwavz")
+        }
     } else {
         implementation "org.ngbp.libatsc3:atsc3_core:$libatsc3Version"
         implementation "org.ngbp.libatsc3:atsc3_bridge:$libatsc3Version"
-        implementation "org.ngbp.libatsc3:atsc3_phy_virtual:$libatsc3Version"
-        implementation "org.ngbp.libatsc3:atsc3_phy_lowasis:$libatsc3Version"
-        implementation "org.ngbp.libatsc3:atsc3_phy_saankhya:$libatsc3Version"
         compileOnly "org.ngbp.libatsc3:atsc3_bridge_media_mmt:$libatsc3Version"
+        implementation "org.ngbp.libatsc3:atsc3_phy_virtual:$libatsc3Version"
+
+        if (project.hasProperty('org.gradle.project.phy_saankhya_enabled') && project.property('org.gradle.project.phy_saankhya_enabled').toString().toBoolean()) {
+            implementation "org.ngbp.libatsc3:atsc3_phy_saankhya:$libatsc3Version"
+        }
+        if (project.hasProperty('org.gradle.project.phy_lowasis_enabled') && project.property('org.gradle.project.phy_lowasis_enabled').toString().toBoolean()) {
+            implementation "org.ngbp.libatsc3:atsc3_phy_lowasis:$libatsc3Version"
+        }
+        if (project.hasProperty('org.gradle.project.phy_airwavz_enabled') && project.property('org.gradle.project.phy_airwavz_enabled').toString().toBoolean()) {
+            implementation "org.ngbp.libatsc3:atsc3_phy_airwavz:$libatsc3Version"
+        }
     }
 
     implementation project(":nextgen-core")
@@ -148,7 +178,7 @@ dependencies {
 
     implementation "androidx.work:work-runtime-ktx:2.4.0"
 
-    testImplementation project(":nextgen-mmt")
+    //testImplementation project(":nextgen-mmt")
     testImplementation 'junit:junit:4.13.1'
     androidTestImplementation 'androidx.test.ext:junit:1.1.2'
     testImplementation 'androidx.test:core:1.3.0'

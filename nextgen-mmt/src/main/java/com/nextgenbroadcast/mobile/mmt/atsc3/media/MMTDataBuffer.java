@@ -17,14 +17,18 @@ import java.util.concurrent.TimeUnit;
 public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payload, MfuByteBufferFragment> {
     private final LinkedBlockingDeque<MfuByteBufferFragment> mfuBufferQueue = new LinkedBlockingDeque<>();
 
-    private long videoMfuPresentationTimestampUs;
-    private long audioMfuPresentationTimestampUs;
+    private long videoMfuPresentationTimestampUs = Long.MAX_VALUE;
+    private long audioMfuPresentationTimestampUs = Long.MAX_VALUE;
+    private long stppMfuPresentationTimestampUs = Long.MAX_VALUE;
+
 
     private MpuMetadata_HEVC_NAL_Payload InitMpuMetadata_HEVC_NAL_Payload = null;
 
     private boolean FirstMfuBufferVideoKeyframeSent = false;
     private volatile boolean isActive = false;
     private volatile boolean isReleased = false;
+    public int audioChannelCount;
+    public int audioSampleRate;
 
     public MMTDataBuffer() {
     }
@@ -49,12 +53,18 @@ public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payl
         return MmtPacketIdContext.video_packet_id == sample.packet_id;
     }
 
+    //jjustman-2020-12-09 - TODO - wire this up from ndk callback
     public int getAudioChannelCount() {
-        return 2;
+        return audioChannelCount;
     }
 
     public int getAudioSampleRate() {
-        return 48000;
+        return audioSampleRate;
+    }
+
+    public void setAudioConfiguration(int audioSampleRate, int audioChannelCount) {
+        this.audioSampleRate = audioSampleRate;
+        this.audioChannelCount = audioChannelCount;
     }
 
     public boolean isAudioSample(MfuByteBufferFragment sample) {
@@ -106,11 +116,6 @@ public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payl
     public synchronized void close() {
         isActive = false;
 
-        mfuBufferQueue.clear();
-
-        videoMfuPresentationTimestampUs = 0;
-        audioMfuPresentationTimestampUs = 0;
-
         notify();
     }
 
@@ -118,6 +123,11 @@ public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payl
     public void release() {
         isReleased = true;
 
+        Log.w("MMTDataBuffer","JJ: release invoked!, resetting video/audio/stpp MfuPresentationTimestamps to 0!");
+        videoMfuPresentationTimestampUs = Long.MAX_VALUE;
+        audioMfuPresentationTimestampUs = Long.MAX_VALUE;
+        stppMfuPresentationTimestampUs = Long.MAX_VALUE;
+        mfuBufferQueue.clear();
         close();
     }
 
@@ -161,24 +171,55 @@ public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payl
         }
 
 //        if (IsSoftFlushingFromAVPtsDiscontinuity.get()
-//                || MediaCodecInputBufferMfuByteBufferFragmentWorker.IsHardCodecFlushingFromAVPtsDiscontinuity
+//                || MediaCodecInputBufferMfuBys_defauteBufferFragmentWorker.IsHardCodecFlushingFromAVPtsDiscontinuity
 //                || MediaCodecInputBufferMfuByteBufferFragmentWorker.IsResettingCodecFromDiscontinuity) {
 //            mfuByteBufferFragment.unreferenceByteBuffer();
 //            return;
 //        }
 
+//jjustman-2020-12-02 - TODO: fix me
         if (MmtPacketIdContext.video_packet_id == mfuByteBufferFragment.packet_id) {
             addVideoFragment(mfuByteBufferFragment);
+            if(mfuByteBufferFragment.sample_number == 1) {
+                Log.d("PushMfuByteBufferFragment", String.format("V: packet_id: %d, mpu_sequence_number: %d, duration_us: %d,   safe_mfu_presentation_time_us_computed: %d, mfuBufferQueue size: %d",
+                        mfuByteBufferFragment.packet_id, mfuByteBufferFragment.mpu_sequence_number,
+                        MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us,
+                        mfuByteBufferFragment.get_safe_mfu_presentation_time_uS_computed(),
+                        mfuBufferQueue.size()));
+            }
         } else if (MmtPacketIdContext.audio_packet_id == mfuByteBufferFragment.packet_id) {
             addAudioFragment(mfuByteBufferFragment);
+            if(mfuByteBufferFragment.sample_number == 1) {
+                Log.d("PushMfuByteBufferFragment", String.format("A: packet_id: %d, mpu_sequence_number: %d, duration_us: %d,   safe_mfu_presentation_time_us_computed: %d, mfuBufferQueue size: %d",
+                        mfuByteBufferFragment.packet_id, mfuByteBufferFragment.mpu_sequence_number,
+                        MmtPacketIdContext.audio_packet_statistics.extracted_sample_duration_us,
+                        mfuByteBufferFragment.get_safe_mfu_presentation_time_uS_computed(),
+                        mfuBufferQueue.size()));
+            }
         } else if (MmtPacketIdContext.stpp_packet_id == mfuByteBufferFragment.packet_id) {
             addSubtitleFragment(mfuByteBufferFragment);
+            if(mfuByteBufferFragment.sample_number == 1) {
+
+                Log.d("PushMfuByteBufferFragment", String.format("S: packet_id: %d, mpu_sequence_number: %d, duration_us: %d,   safe_mfu_presentation_time_us_computed: %d, mfuBufferQueue size: %d",
+                        mfuByteBufferFragment.packet_id, mfuByteBufferFragment.mpu_sequence_number,
+                        MmtPacketIdContext.stpp_packet_statistics.extracted_sample_duration_us,
+                        mfuByteBufferFragment.get_safe_mfu_presentation_time_uS_computed(),
+                        mfuBufferQueue.size()));
+            }
         }
     }
 
     private void addVideoFragment(MfuByteBufferFragment mfuByteBufferFragment) {
         // if(mfuByteBufferFragment.sample_number == 1 || firstMfuBufferVideoKeyframeSent) {
         //normal flow...
+
+        //jjustman-2020-12-09 - hacks to make sure we don't fall too far behind wall-clock
+        if(mfuBufferQueue.size() > 120) {
+            Log.w("addVideoFragment", String.format("V: clearing queue, length: %d",
+                    mfuBufferQueue.size()));
+            mfuBufferQueue.clear();
+        }
+
         mfuBufferQueue.add(mfuByteBufferFragment);
 
         if (isKeySample(mfuByteBufferFragment)) {
@@ -246,6 +287,12 @@ public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payl
 //                //discard
 //                return;
 //            }
+        //jjustman-2020-12-09 - hacks to make sure we don't fall too far behind wall-clock
+        if(mfuBufferQueue.size() > 120) {
+            Log.w("addAudioFragment", String.format("A: clearing queue, length: %d",
+                    mfuBufferQueue.size()));
+            mfuBufferQueue.clear();
+        }
 
         mfuBufferQueue.add(mfuByteBufferFragment);
 
@@ -290,6 +337,12 @@ public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payl
         if (!FirstMfuBufferVideoKeyframeSent) {
             return;
         }
+        if(mfuBufferQueue.size() > 5) {
+            Log.w("addSubtitleFragment", String.format("S: clearing queue, length: %d",
+                    mfuBufferQueue.size()));
+            mfuBufferQueue.clear();
+        }
+
 
         mfuBufferQueue.add(mfuByteBufferFragment);
         MmtPacketIdContext.stpp_packet_statistics.total_mfu_samples_count++;
@@ -314,9 +367,11 @@ public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payl
     }
 
     public long ptsOffsetUs() {
-        return 66000L;
+        //jjustman-2020-12-23 - give the a/v/s decoder some time to decode frames, otherwise we will stall at startup
+        return 266000L;
     }
 
+    //jjustman-2020-12-22 - TODO: handle when mfu_presentation_time_uS_computed - push last value?
     public long getPresentationTimestampUs(MfuByteBufferFragment toProcessMfuByteBufferFragment) {
         if (toProcessMfuByteBufferFragment.mfu_presentation_time_uS_computed != null && toProcessMfuByteBufferFragment.mfu_presentation_time_uS_computed > 0) {
             //default values here as fallback
@@ -324,21 +379,47 @@ public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payl
 
             //todo: expand size as needed, every ~ mfu_presentation_time_uS_computed 1000000uS
             if (toProcessMfuByteBufferFragment.packet_id == MmtPacketIdContext.video_packet_id) {
-                if (videoMfuPresentationTimestampUs == 0) {
+                if (videoMfuPresentationTimestampUs == Long.MAX_VALUE) {
                     videoMfuPresentationTimestampUs = toProcessMfuByteBufferFragment.mfu_presentation_time_uS_computed;
                 }
-                anchorMfuPresentationTimestampUs = videoMfuPresentationTimestampUs;
             } else if (toProcessMfuByteBufferFragment.packet_id == MmtPacketIdContext.audio_packet_id) {
-                if (audioMfuPresentationTimestampUs == 0) {
+                if (audioMfuPresentationTimestampUs == Long.MAX_VALUE) {
                     audioMfuPresentationTimestampUs = toProcessMfuByteBufferFragment.mfu_presentation_time_uS_computed;
                 }
-                anchorMfuPresentationTimestampUs = audioMfuPresentationTimestampUs;
+            } else if (toProcessMfuByteBufferFragment.packet_id == MmtPacketIdContext.stpp_packet_id) {
+                if (stppMfuPresentationTimestampUs == Long.MAX_VALUE) {
+                    stppMfuPresentationTimestampUs = toProcessMfuByteBufferFragment.mfu_presentation_time_uS_computed;
+                }
             }
+            anchorMfuPresentationTimestampUs = getMinNonZeroMfuPresentationTimestampForAnchor();
 
             long mpuPresentationTimestampDeltaUs = toProcessMfuByteBufferFragment.mfu_presentation_time_uS_computed - anchorMfuPresentationTimestampUs;
             return mpuPresentationTimestampDeltaUs + ptsOffsetUs();
         }
 
         return 0;
+    }
+
+    public long getMinNonZeroMfuPresentationTimestampForAnchor() {
+        long minNonZeroMfuPresentationTimestampForAnchor = Long.MAX_VALUE;
+
+        if(videoMfuPresentationTimestampUs != Long.MAX_VALUE) {
+            minNonZeroMfuPresentationTimestampForAnchor = videoMfuPresentationTimestampUs;
+           if(audioMfuPresentationTimestampUs != Long.MAX_VALUE) {
+                minNonZeroMfuPresentationTimestampForAnchor = Math.min(minNonZeroMfuPresentationTimestampForAnchor, audioMfuPresentationTimestampUs);
+                if(stppMfuPresentationTimestampUs != Long.MAX_VALUE) {
+                    minNonZeroMfuPresentationTimestampForAnchor = Math.min(minNonZeroMfuPresentationTimestampForAnchor, stppMfuPresentationTimestampUs);
+                }
+            }
+        } else if(audioMfuPresentationTimestampUs != Long.MAX_VALUE) {
+            minNonZeroMfuPresentationTimestampForAnchor = audioMfuPresentationTimestampUs;
+            if(stppMfuPresentationTimestampUs != Long.MAX_VALUE) {
+                minNonZeroMfuPresentationTimestampForAnchor = Math.min(minNonZeroMfuPresentationTimestampForAnchor, stppMfuPresentationTimestampUs);
+            }
+        } else if(stppMfuPresentationTimestampUs != Long.MAX_VALUE) {
+            minNonZeroMfuPresentationTimestampForAnchor = stppMfuPresentationTimestampUs;
+        }
+
+        return minNonZeroMfuPresentationTimestampForAnchor;
     }
 }

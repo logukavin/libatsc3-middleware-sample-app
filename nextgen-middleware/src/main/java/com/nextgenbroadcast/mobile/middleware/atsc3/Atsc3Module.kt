@@ -62,7 +62,7 @@ internal class Atsc3Module(
 
     private val atsc3NdkApplicationBridge = Atsc3NdkApplicationBridge(this)
     private val atsc3NdkPHYBridge = Atsc3NdkPHYBridge(this)
-    private val atsc3NdkMediaMMTBridge = Atsc3NdkMediaMMTBridge(this)
+    private final val atsc3NdkMediaMMTBridge = Atsc3NdkMediaMMTBridge(this)
 
     private val usbManager by lazy { context.getSystemService(Context.USB_SERVICE) as UsbManager }
 
@@ -85,6 +85,9 @@ internal class Atsc3Module(
     @Volatile
     private var mmtSource: MMTDataConsumerType? = null
 
+    private val audioConfigurationMap = HashMap<MMTAudioDecoderConfigurationRecord, Boolean>()
+
+
     val slsProtocol: Int
         get() = selectedServiceSLSProtocol
 
@@ -92,6 +95,8 @@ internal class Atsc3Module(
     private var listener: Listener? = null
 
     fun setListener(listener: Listener?) {
+        Log.i("Atsc3Module", "setListener, and atsc3NdkMediaMMTBridge is: " + atsc3NdkMediaMMTBridge);
+
         if (this.listener != null) throw IllegalStateException("Atsc3Module listener already initialized")
         this.listener = listener
     }
@@ -363,7 +368,7 @@ internal class Atsc3Module(
     }
 
     override fun onSlsHeldEmissionPresent(serviceId: Int, heldPayloadXML: String) {
-        log("onSlsHeldEmissionPresent, $serviceId, selectedServiceID: $selectedServiceId, HELD: $heldPayloadXML")
+        //log("onSlsHeldEmissionPresent, $serviceId, selectedServiceID: $selectedServiceId, HELD: $heldPayloadXML")
 
         if (serviceId == selectedServiceId) {
             if (heldPayloadXML != selectedServiceHeldXml) {
@@ -463,8 +468,16 @@ internal class Atsc3Module(
         })
     }
 
-    override fun pushAudioDecoderConfigurationRecord(mmtAudioDecoderConfigurationRecord: MMTAudioDecoderConfigurationRecord?) {
-        // ignore
+    override fun pushAudioDecoderConfigurationRecord(mmtAudioDecoderConfigurationRecord: MMTAudioDecoderConfigurationRecord) {
+
+        //TODO: remove audioConfigurationMap.isEmpty()
+        if (audioConfigurationMap.isEmpty()) {
+            audioConfigurationMap.put(mmtAudioDecoderConfigurationRecord, false)
+        }
+
+        mmtSource.let { source->
+            source?.setAudioConfiguration(mmtAudioDecoderConfigurationRecord.sample_rate, mmtAudioDecoderConfigurationRecord.channel_count)
+        }
     }
 
     //////////////////////////////////////////////////////////////

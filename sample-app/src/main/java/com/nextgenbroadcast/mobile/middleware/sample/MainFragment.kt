@@ -23,7 +23,11 @@ import com.google.android.exoplayer2.ExoPlayerFactory
 import com.google.android.exoplayer2.trackselection.AdaptiveTrackSelection
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
 import com.google.android.exoplayer2.ui.PlayerView
+import com.google.android.exoplayer2.upstream.UdpDataSource
 import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTExtractor
+import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTLoadControl
+import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTMediaSource
 import com.nextgenbroadcast.mobile.core.FileUtils
 import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.model.PhyFrequency
@@ -41,10 +45,6 @@ import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.SelectorViewModel
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.UserAgentViewModel
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.factory.UserAgentViewModelFactory
 import com.nextgenbroadcast.mobile.middleware.sample.useragent.ServiceAdapter
-import com.nextgenbroadcast.mobile.mmt.exoplayer2.MMTExtractor
-import com.nextgenbroadcast.mobile.mmt.exoplayer2.MMTLoadControl
-import com.nextgenbroadcast.mobile.mmt.exoplayer2.MMTMediaSource
-import com.nextgenbroadcast.mobile.mmt.exoplayer2.PcapUdpDataSource
 import com.nextgenbroadcast.mobile.view.UserAgentView
 import kotlinx.android.synthetic.main.fragment_main.*
 import java.util.*
@@ -89,8 +89,9 @@ class MainFragment : BaseFragment() {
         playerView.player = player
         playerView.requestFocus()
 
+        //PcapUdpDataSource()
         val mediaSource = MMTMediaSource.Factory({
-            PcapUdpDataSource()
+            UdpDataSource()
         }, {
             arrayOf(MMTExtractor())
         }).apply {
