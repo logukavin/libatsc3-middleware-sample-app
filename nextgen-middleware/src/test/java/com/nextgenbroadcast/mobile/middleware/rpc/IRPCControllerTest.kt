@@ -10,6 +10,7 @@ import com.nextgenbroadcast.mobile.middleware.analytics.IAtsc3Analytics
 import com.nextgenbroadcast.mobile.middleware.service.provider.IMediaFileProvider
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPackage
+import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.SGUrl
 import com.nextgenbroadcast.mobile.middleware.cache.IApplicationCache
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
 import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
@@ -17,7 +18,6 @@ import com.nextgenbroadcast.mobile.middleware.controller.view.ViewControllerImpl
 import com.nextgenbroadcast.mobile.middleware.gateway.rpc.IRPCGateway
 import com.nextgenbroadcast.mobile.middleware.gateway.rpc.RPCGatewayImpl
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
-import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.Urls
 import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
 import junit.framework.TestCase
 import kotlinx.coroutines.Dispatchers
@@ -83,10 +83,11 @@ class IRPCControllerTest {
     private val mockedMediaUrl = "htttp://mockedurl.com"
     private val deviceId = UUID.randomUUID().toString()
     private val advertisingId = UUID.randomUUID().toString()
+    private val locale = Locale.getDefault()
 
     val appData: LiveData<Atsc3HeldPackage?> = MutableLiveData()
     val applications = MutableLiveData<List<Atsc3Application>>()
-    val serviceGuidUrls: LiveData<List<Urls>?> = MutableLiveData()
+    val serviceGuidUrls: LiveData<List<SGUrl>?> = MutableLiveData()
     var selectedService: MutableLiveData<AVService?> = MutableLiveData()
     val routeMediaUrl: LiveData<String?> = MutableLiveData(mockedMediaUrl)
 
@@ -99,6 +100,7 @@ class IRPCControllerTest {
         selectedService.value = mockedSLSService
         Mockito.`when`(prefs.deviceId).thenReturn(deviceId)
         Mockito.`when`(prefs.advertisingId).thenReturn(advertisingId)
+        Mockito.`when`(prefs.locale).thenReturn(locale)
         Mockito.`when`(prefs.hostName).thenReturn("localhost")
         Mockito.`when`(prefs.httpsPort).thenReturn(8443)
         Mockito.`when`(prefs.wssPort).thenReturn(9999)

@@ -10,7 +10,7 @@ import com.nextgenbroadcast.mobile.middleware.gateway.rpc.IRPCGateway
 import com.nextgenbroadcast.mobile.middleware.rpc.notification.NotificationType
 import com.nextgenbroadcast.mobile.middleware.rpc.processor.IRPCProcessor
 import com.nextgenbroadcast.mobile.middleware.rpc.processor.RPCProcessor
-import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.Urls
+import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.ServiceGuideUrlsRpcResponse
 import com.nextgenbroadcast.mobile.middleware.server.ws.MiddlewareWebSocket
 import org.junit.Assert.*
 import org.junit.Before
@@ -35,14 +35,12 @@ class RPCProcessorTest {
                 get() = ""
             override val language: String
                 get() = "test"
-            override val queryServiceId: String?
+            override val queryServiceId: String
                 get() = "test"
-            override val mediaUrl: String?
+            override val mediaUrl: String
                 get() = "test"
             override val playbackState: PlaybackState
                 get() = PlaybackState.IDLE
-            override val serviceGuideUrls: List<Urls>
-                get() = listOf()
 
             override fun updateRMPPosition(scaleFactor: Double, xPos: Double, yPos: Double) {
 
@@ -78,6 +76,10 @@ class RPCProcessorTest {
 
             override fun requestFileCache(baseUrl: String?, rootPath: String?, paths: List<String>, filters: List<String>?): Boolean {
                 return false
+            }
+
+            override fun getServiceGuideUrls(service: String?): List<ServiceGuideUrlsRpcResponse.Url> {
+                return emptyList()
             }
         })
     }
