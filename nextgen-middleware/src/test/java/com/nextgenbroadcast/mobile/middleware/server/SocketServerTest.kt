@@ -4,7 +4,7 @@ import com.nextgenbroadcast.mobile.core.cert.UserAgentSSLContext
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.middleware.gateway.rpc.IRPCGateway
 import com.nextgenbroadcast.mobile.middleware.rpc.notification.NotificationType
-import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.Urls
+import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.ServiceGuideUrlsRpcResponse
 import com.nextgenbroadcast.mobile.middleware.server.web.MiddlewareWebServer
 import com.nextgenbroadcast.mobile.middleware.server.web.configureSSLFactory
 import com.nextgenbroadcast.mobile.middleware.server.ws.MiddlewareWebSocket
@@ -44,14 +44,16 @@ class SocketServerTest : ServerTest() {
                 get() = "2d48ed24-fa78-4aeb-bd9b-0e1aade2b575"
             override val language: String
                 get() = "test"
-            override val queryServiceId: String?
+            override val queryServiceId: String
                 get() = "test"
-            override val mediaUrl: String?
+            override val mediaUrl: String
                 get() = "test"
             override val playbackState: PlaybackState
                 get() = PlaybackState.IDLE
-            override val serviceGuideUrls: List<Urls>
-                get() = emptyList()
+
+            override fun getServiceGuideUrls(service: String?): List<ServiceGuideUrlsRpcResponse.Url> {
+                return emptyList()
+            }
         }
 
         server.handler = object : WebSocketHandler() {
