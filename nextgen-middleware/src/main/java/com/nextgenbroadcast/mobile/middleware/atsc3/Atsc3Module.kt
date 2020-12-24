@@ -442,7 +442,7 @@ internal class Atsc3Module(
     //////////////////////////////////////////////////////////////
 
     override fun pushRfPhyStatisticsUpdate(rfPhyStatistics: RfPhyStatistics) {
-        phyDemodLock = rfPhyStatistics.demod_lock_status != 0
+        phyDemodLock = rfPhyStatistics.demod_lock != 0
         Log.i("Atsc3Module",String.format("PHY:RFStatisticsUpdate: %s", rfPhyStatistics.toString()))
         Atsc3DeviceReceiver.Companion.PHYRfStatistics = String.format("PHY:RFStatisticsUpdate: %s", rfPhyStatistics.toString())
 
