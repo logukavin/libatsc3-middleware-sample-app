@@ -10,6 +10,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.ListAdapter
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
@@ -35,6 +36,7 @@ import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.presentation.ApplicationState
 import com.nextgenbroadcast.mobile.core.presentation.IReceiverPresenter
 import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
+import com.nextgenbroadcast.mobile.middleware.phy.Atsc3DeviceReceiver
 import com.nextgenbroadcast.mobile.middleware.sample.MainActivity.Companion.sourceMap
 import com.nextgenbroadcast.mobile.middleware.sample.SettingsDialog.Companion.REQUEST_KEY_FREQUENCY
 import com.nextgenbroadcast.mobile.middleware.sample.core.SwipeGestureDetector
@@ -47,7 +49,12 @@ import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.factory.UserAgent
 import com.nextgenbroadcast.mobile.middleware.sample.useragent.ServiceAdapter
 import com.nextgenbroadcast.mobile.view.UserAgentView
 import kotlinx.android.synthetic.main.fragment_main.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.*
+import kotlin.concurrent.thread
 
 
 class MainFragment : BaseFragment() {
@@ -208,6 +215,15 @@ class MainFragment : BaseFragment() {
         settings_button.setOnClickListener {
             receiverPresenter?.let {
                 openSettings(it.freqKhz.value)
+            }
+        }
+
+        GlobalScope.launch {
+            while(true) {
+                withContext(Dispatchers.Main) {
+                    atsc3_phy_data_log.text = Atsc3DeviceReceiver.PHYRfStatistics + "\n" + Atsc3DeviceReceiver.PHYBWStatistics
+                }
+                Thread.sleep(1000)
             }
         }
     }

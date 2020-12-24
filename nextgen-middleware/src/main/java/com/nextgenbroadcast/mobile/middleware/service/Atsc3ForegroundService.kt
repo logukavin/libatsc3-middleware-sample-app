@@ -4,11 +4,14 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.hardware.usb.UsbConfiguration
 import android.hardware.usb.UsbDevice
+import android.hardware.usb.UsbInterface
 import android.hardware.usb.UsbManager
 import android.os.IBinder
 import android.os.PowerManager
 import android.os.PowerManager.WakeLock
+import android.util.Log
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
@@ -45,6 +48,9 @@ import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
 import com.nextgenbroadcast.mobile.middleware.settings.MiddlewareSettingsImpl
 import kotlinx.coroutines.*
 import java.lang.ref.WeakReference
+import java.util.*
+import kotlin.collections.ArrayList
+import kotlin.collections.forEach
 
 abstract class Atsc3ForegroundService : BindableForegroundService() {
     private lateinit var wakeLock: WakeLock
@@ -110,7 +116,11 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
                 }
             })
         }
+
+
     }
+
+
 
     override fun onDestroy() {
         super.onDestroy()
@@ -187,6 +197,30 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
                 initializer.add(WeakReference(it))
             }.initialize(applicationContext, components)
         }
+
+        //jjustman-2020-12-24 - iterate over our UsbManager.getDeviceList to see if we have any candidate phys when launching
+        scanForUsbPhyLayerDevices()
+    }
+
+    //jjustman-2020-12-24 - todo: move this somewhere else?
+    protected fun scanForUsbPhyLayerDevices() {
+        var deviceList: HashMap<String, UsbDevice> = usbManager.getDeviceList()
+        deviceList.forEach { k, v ->
+            dumpUsbDevices(v, "usbPHYLayerDeviceScan")
+            atsc3Module.openUsbDevice(v)
+        }
+    }
+
+    private fun dumpUsbDevices(usbDevice: UsbDevice, fromAction: String) {
+        var usbConfiguration: UsbConfiguration = usbDevice.getConfiguration(0);
+        var usbInterface: UsbInterface = usbConfiguration.getInterface(0);
+        var numEndpoints: Int = usbInterface.getEndpointCount();
+        Log.i("Atsc3ForegroundService", String.format("dumpUsbDevices: %s, device: vid: %s, pid: %s, numEndpoints: %d, name: %s",
+                fromAction,
+                usbDevice.getVendorId(),
+                usbDevice.getProductId(),
+                numEndpoints,
+                usbDevice.getDeviceName()))
     }
 
     private fun openRoute(filePath: String?) {
@@ -282,7 +316,11 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
                 .rpcGateway(rpc)
                 .webGateway(web)
                 .build().also {
-                    it.start(UserAgentSSLContext(applicationContext))
+                    try {
+                        it.start(UserAgentSSLContext(applicationContext))
+                    } catch (e: Exception) {
+                        Log.e("Atsc3ForegroundService", "startWebServer threw exception $e");
+                    }
                 }
     }
 

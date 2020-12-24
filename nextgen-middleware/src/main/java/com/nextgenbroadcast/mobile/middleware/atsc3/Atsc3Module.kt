@@ -14,6 +14,7 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPacka
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.HeldXmlParser
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.service.Atsc3Service
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.service.LLSParserSLT
+import com.nextgenbroadcast.mobile.middleware.phy.Atsc3DeviceReceiver
 import org.ngbp.libatsc3.middleware.Atsc3NdkApplicationBridge
 import org.ngbp.libatsc3.middleware.Atsc3NdkMediaMMTBridge
 import org.ngbp.libatsc3.middleware.Atsc3NdkPHYBridge
@@ -442,10 +443,14 @@ internal class Atsc3Module(
 
     override fun pushRfPhyStatisticsUpdate(rfPhyStatistics: RfPhyStatistics) {
         phyDemodLock = rfPhyStatistics.demod_lock_status != 0
+        Log.i("Atsc3Module",String.format("PHY:RFStatisticsUpdate: %s", rfPhyStatistics.toString()))
+        Atsc3DeviceReceiver.Companion.PHYRfStatistics = String.format("PHY:RFStatisticsUpdate: %s", rfPhyStatistics.toString())
+
     }
 
     override fun pushBwPhyStatistics(bwPhyStatistics: BwPhyStatistics) {
-        // ignore
+        Log.i("Atsc3Module",String.format("PHY:BWStatisticsUpdate: %s", bwPhyStatistics.toString()));
+        Atsc3DeviceReceiver.Companion.PHYBWStatistics = String.format("PHY:BWStatisticsUpdate: %s", bwPhyStatistics.toString())
     }
 
     //////////////////////////////////////////////////////////////
@@ -546,5 +551,6 @@ internal class Atsc3Module(
 
         const val SLS_PROTOCOL_DASH = 1
         const val SLS_PROTOCOL_MMT = 2
+
     }
 }
