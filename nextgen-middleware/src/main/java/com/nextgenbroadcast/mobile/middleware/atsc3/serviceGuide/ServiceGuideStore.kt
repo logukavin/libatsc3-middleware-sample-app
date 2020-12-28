@@ -42,21 +42,27 @@ internal class ServiceGuideStore(
 
         if (file.exists() && file.isFile) {
             CoroutineScope(getContext()).launch {
-                val fileServices = mutableMapOf<Int, SGService>()
-                val fileContents = mutableMapOf<String, SGContent>()
-
                 try {
-                    SGDUReader(fileServices, fileContents).readFromFile(file, this::isActive)
-
-                    serviceMap.putAll(fileServices)
-                    contentMap.putAll(fileContents)
+                    SGDUReader(serviceMap, contentMap).readFromFile(file, this::isActive)
                 } catch (e: Exception) {
                     Log.d(TAG, "Error when reading SGDU file: $filePath", e)
                 }
 
                 //TODO: add store cleanup - remove an old data from maps
                 repository.setServiceSchedule(updateSchedule(serviceMap, contentMap, settings.locale))
-                repository.setServiceGuideUrls(updateGuideUrls(fileServices, contentMap))
+                repository.setServiceGuideUrls(updateGuideUrls(serviceMap, contentMap))
+
+                /*
+                Log.d("!!!", "serviceMap.size: ${serviceMap.size}, contentMap.size: ${contentMap.size}")
+                Log.d("!!!", "_________________________________________")
+                schedule.entries.forEach {
+                    val startTime = it.value.minByOrNull { it.startTime }?.startTime
+                    val endTime = it.value.maxByOrNull { it.startTime }?.startTime
+
+                    Log.d("!!!", "service: ${it.key.id}, size: ${it.value.size}, startTime: $startTime, endTime: $endTime")
+                }
+                Log.d("!!!", "------------------------------------")
+                 */
             }
         }
     }
