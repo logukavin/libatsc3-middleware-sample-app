@@ -62,26 +62,26 @@ internal class SGContent(
         var id: String? = null,
         override var version: Long = 0,
         // non required
-        var nameMap: MutableMap<Locale, String>? = null,
+        var nameMap: MutableMap<String, String>? = null,
         var descriptionMap: MutableMap<Locale, String>? = null,
         var icon: String? = null,
         // links
         var serviceIdList: MutableList<Int>? = null
 ) : SGUnit() {
     fun getName(local: Locale): String? {
-        return nameMap?.let {
-            it[local]
+        return nameMap?.let { map ->
+            map[local.language] ?: map.values.firstOrNull()
         }
     }
 
     fun getDescription(local: Locale): String? {
-        return descriptionMap?.let {
-            it[local]
+        return descriptionMap?.let { map ->
+            map[local] ?: map.values.firstOrNull()
         }
     }
 
     fun addName(name: String, lang: String) {
-        (nameMap ?: mutableMapOf<Locale, String>().also { nameMap = it })[Locale(lang)] = name
+        (nameMap ?: mutableMapOf<String, String>().also { nameMap = it })[lang] = name
     }
 
     fun addDescription(description: String, lang: String) {

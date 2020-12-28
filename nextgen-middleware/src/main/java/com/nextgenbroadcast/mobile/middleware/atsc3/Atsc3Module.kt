@@ -318,12 +318,6 @@ internal class Atsc3Module(
         clearService()
         serviceMap.clear()
         setMMTSource(null)
-
-        //TODO: temporary test solution
-        if (tmpAdditionalServiceOpened) {
-            atsc3NdkApplicationBridge.atsc3_slt_alc_clear_additional_service_selections()
-            tmpAdditionalServiceOpened = false
-        }
     }
 
     private fun clearService() {
@@ -335,6 +329,12 @@ internal class Atsc3Module(
         selectedServiceHeld = null
         selectedServicePackage = null
         selectedServiceHeldXml = null
+
+        //TODO: temporary test solution
+        if (tmpAdditionalServiceOpened) {
+            atsc3NdkApplicationBridge.atsc3_slt_alc_clear_additional_service_selections()
+            tmpAdditionalServiceOpened = false
+        }
     }
 
     //////////////////////////////////////////////////////////////

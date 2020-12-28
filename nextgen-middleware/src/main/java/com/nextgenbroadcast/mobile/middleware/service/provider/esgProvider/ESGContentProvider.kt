@@ -15,10 +15,9 @@ import com.nextgenbroadcast.mobile.core.serviceGuide.SGProgram
 import com.nextgenbroadcast.mobile.middleware.R
 import com.nextgenbroadcast.mobile.middleware.service.EmbeddedAtsc3Service
 import java.lang.Integer.parseInt
-import java.util.*
 
 
-class ESGContentProvider: ContentProvider(), LifecycleOwner {
+class ESGContentProvider : ContentProvider(), LifecycleOwner {
 
     private lateinit var AUTHORITY: String
     private lateinit var SERVICE_CONTENT_URI: Uri
@@ -28,7 +27,7 @@ class ESGContentProvider: ContentProvider(), LifecycleOwner {
     private lateinit var PROGRAMS_CONTENT_TYPE: String
     private lateinit var PROGRAM_CONTENT_ITEM_TYPE: String
 
-    private var data: Map<AVService, List<SGProgram>> = mutableMapOf()
+    private var data: Map<AVService, List<SGProgram>> = emptyMap()
     private val lifecycleRegistry = LifecycleRegistry(this)
     private val uriMatcher = UriMatcher(UriMatcher.NO_MATCH)
 
@@ -143,43 +142,43 @@ class ESGContentProvider: ContentProvider(), LifecycleOwner {
             }
 
             URI_ALL_PROGRAMS -> {
+                if (selectionArgs.isNullOrEmpty()) return cursor
+
                 val selectionColumns = selection?.split(" AND ")
-                var filteredData = emptyMap<AVService, List<SGProgram>>()
+                var serviceId: Int = -1
+                var startTime: Long = 0
 
                 selectionColumns?.forEachIndexed { index, columnName ->
-
-                    val selectionArg = selectionArgs?.get(index)
-
-                    filteredData = when(columnName) {
+                    when (columnName) {
                         SERVICE_COLUMN_ID -> {
-                            selectionArg ?: throw IllegalArgumentException("You missed add service_id arg")
-
-                            data.filterKeys { it.id == selectionArg.toInt() } as MutableMap<AVService, List<SGProgram>>
+                            serviceId = selectionArgs[index].toInt()
                         }
 
                         PROGRAM_COLUMN_START_TIME -> {
-                            selectionArg ?: throw IllegalArgumentException("You missed add start_time arg")
-
-                            mutableMapOf<AVService, List<SGProgram>>().apply {
-                                filteredData.forEach { (key, list) ->
-                                    put(key, list.filter {
-                                        (it.startTime <= selectionArg.toLong() && it.endTime > selectionArg.toLong())
-                                                || it.startTime >= selectionArg.toLong()
-                                    })
-                                }
-                            }
+                            startTime = selectionArgs[index].toLong()
                         }
 
-                        else -> data
-                        //TODO: add implementation for other columns
-                    }
-
-                    filteredData.values.forEach { list ->
-                        list.forEach { program ->
-                            fillProgramRow(cursor, program)
+                        else -> {
+                            // ignore
                         }
                     }
                 } ?: throw IllegalArgumentException("You missed add some column name")
+
+                if (serviceId < 0) throw IllegalArgumentException("You missed add service_id arg")
+
+                var filteredData = data.filterKeys {
+                    it.id == serviceId
+                }.flatMap { it.value }
+
+                if (startTime > 0) {
+                    filteredData = filteredData.filter {
+                        it.endTime > startTime
+                    }
+                }
+
+                filteredData.forEach { program ->
+                    fillProgramRow(cursor, program)
+                }
             }
 
             URI_PROGRAM_BY_ID -> {
