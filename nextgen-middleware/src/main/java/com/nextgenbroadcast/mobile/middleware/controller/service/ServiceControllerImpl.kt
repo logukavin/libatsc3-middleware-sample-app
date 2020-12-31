@@ -15,7 +15,6 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.entities.service.Atsc3Servic
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.ServiceGuideStore
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
 import com.nextgenbroadcast.mobile.middleware.settings.IReceiverSettings
-import com.nextgenbroadcast.mobile.mmt.atsc3.media.MMTDataBuffer
 import kotlinx.coroutines.*
 
 
@@ -171,12 +170,6 @@ internal class ServiceControllerImpl (
             // Reset HELD and service if service can't be selected
             repository.setHeldPackage(null)
             repository.setSelectedService(null)
-        }
-    }
-
-    override fun createMMTSource(): MMTDataBuffer {
-        return MMTDataBuffer().also { mmtDataBuffer ->
-            atsc3Module.setMMTSource(mmtDataBuffer)
         }
     }
 

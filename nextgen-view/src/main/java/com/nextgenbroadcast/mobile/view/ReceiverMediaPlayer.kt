@@ -10,6 +10,7 @@ import com.google.android.exoplayer2.source.dash.DashMediaSource
 import com.google.android.exoplayer2.source.dash.DefaultDashChunkSource
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
 import com.google.android.exoplayer2.ui.PlayerView
+import com.google.android.exoplayer2.upstream.ContentDataSource
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
 import com.google.android.exoplayer2.upstream.DefaultLoadErrorHandlingPolicy
 import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTLoadControl
@@ -18,10 +19,9 @@ import com.nextgenbroadcast.mobile.core.AppUtils
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.permission.AlterDataSourceFactory
 import com.nextgenbroadcast.mobile.permission.UriPermissionProvider
-import com.nextgenbroadcast.mobile.mmt.atsc3.media.MMTDataBuffer
-import com.nextgenbroadcast.mobile.mmt.exoplayer2.Atsc3MMTDataSource
 import com.nextgenbroadcast.mobile.mmt.exoplayer2.Atsc3MMTExtractor
 import com.nextgenbroadcast.mobile.exoplayer2.RouteDASHLoadControl
+import com.nextgenbroadcast.mobile.mmt.provider.MMTContentProvider
 import java.io.IOException
 
 class ReceiverMediaPlayer @JvmOverloads constructor(
@@ -73,29 +73,31 @@ class ReceiverMediaPlayer @JvmOverloads constructor(
     fun play(mediaUri: Uri) {
         reset()
 
-        val dashMediaSource = dashMediaSourceFactory.createMediaSource(mediaUri)
-        player = createDefaultExoPlayer().apply {
-            prepare(dashMediaSource)
-            playWhenReady = true
-        }
-    }
+        if (mediaUri.toString().startsWith("mmt://")) {
+            isMMTPlayback = true
 
-    fun play(mmtBuffer: MMTDataBuffer) {
-        reset()
+            val mediaSource = MMTMediaSource.Factory({
+                ContentDataSource(context)
+            }, {
+                arrayOf(Atsc3MMTExtractor())
+            }).apply {
+                setLoadErrorHandlingPolicy(createDefaultLoadErrorHandlingPolicy())
+            }.createMediaSource(
+                    //TODO: move to Uri generation
+                    MMTContentProvider.getUriForService(context, resources.getString(R.string.nextgenMMTContentProvider), "123456")
+                    //"mmt".toUri()
+            )
 
-        isMMTPlayback = true
-
-        val mediaSource = MMTMediaSource.Factory({
-            Atsc3MMTDataSource(mmtBuffer)
-        }, {
-            arrayOf(Atsc3MMTExtractor())
-        }).apply {
-            setLoadErrorHandlingPolicy(createDefaultLoadErrorHandlingPolicy())
-        }.createMediaSource("mmt".toUri())
-
-        player = createMMTExoPlayer().apply {
-            prepare(mediaSource)
-            playWhenReady = true
+            player = createMMTExoPlayer().apply {
+                prepare(mediaSource)
+                playWhenReady = true
+            }
+        } else {
+            val dashMediaSource = dashMediaSourceFactory.createMediaSource(mediaUri)
+            player = createDefaultExoPlayer().apply {
+                prepare(dashMediaSource)
+                playWhenReady = true
+            }
         }
     }
 

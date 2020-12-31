@@ -1,156 +1,262 @@
-package com.nextgenbroadcast.mobile.mmt.atsc3.media;
+package com.nextgenbroadcast.mobile.mmt.provider;
 
+import android.content.ContentProvider;
+import android.content.ContentValues;
+import android.content.Context;
+import android.content.pm.ProviderInfo;
+import android.database.Cursor;
+import android.database.MatrixCursor;
+import android.net.Uri;
+import android.os.Handler;
+import android.os.HandlerThread;
+import android.os.ParcelFileDescriptor;
+import android.os.storage.StorageManager;
+import android.provider.OpenableColumns;
 import android.util.Log;
 
-import com.nextgenbroadcast.mobile.core.media.IMMTDataConsumer;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
+import com.nextgenbroadcast.mobile.mmt.MMTFileDescriptor;
+
+import org.ngbp.libatsc3.middleware.Atsc3NdkMediaMMTBridge;
+import org.ngbp.libatsc3.middleware.android.ATSC3PlayerFlags;
 import org.ngbp.libatsc3.middleware.android.DebuggingFlags;
+import org.ngbp.libatsc3.middleware.android.application.interfaces.IAtsc3NdkMediaMMTBridgeCallbacks;
 import org.ngbp.libatsc3.middleware.android.mmt.MfuByteBufferFragment;
 import org.ngbp.libatsc3.middleware.android.mmt.MmtPacketIdContext;
 import org.ngbp.libatsc3.middleware.android.mmt.MpuMetadata_HEVC_NAL_Payload;
+import org.ngbp.libatsc3.middleware.android.mmt.models.MMTAudioDecoderConfigurationRecord;
 
-import java.nio.ByteBuffer;
-import java.util.ConcurrentModificationException;
-import java.util.concurrent.LinkedBlockingDeque;
-import java.util.concurrent.TimeUnit;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 
-public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payload, MfuByteBufferFragment> {
-    private final LinkedBlockingDeque<MfuByteBufferFragment> mfuBufferQueue = new LinkedBlockingDeque<>();
+public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMediaMMTBridgeCallbacks {
+    public static final String TAG = MMTContentProvider.class.getSimpleName();
 
-    private long videoMfuPresentationTimestampUs = Long.MAX_VALUE;
-    private long audioMfuPresentationTimestampUs = Long.MAX_VALUE;
-    private long stppMfuPresentationTimestampUs = Long.MAX_VALUE;
+    //jjustman-2020-12-23 - give the a/v/s decoder some time to decode frames, otherwise we will stall at startup
+    public static final long PTS_OFFSET_US = 266000L;
 
+    private static final String[] COLUMNS = {OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE};
 
-    private MpuMetadata_HEVC_NAL_Payload InitMpuMetadata_HEVC_NAL_Payload = null;
+    private final AtomicInteger mSessionCount = new AtomicInteger();
+    private final CopyOnWriteArrayList<MMTFileDescriptor> descriptors = new CopyOnWriteArrayList<>();
+
+    private Atsc3NdkMediaMMTBridge atsc3NdkMediaMMTBridge;
+    private HandlerThread mHandlerThread;
+    private Handler mHandler;
+    private StorageManager mStorageManager;
 
     private boolean FirstMfuBufferVideoKeyframeSent = false;
-    private volatile boolean isActive = false;
-    private volatile boolean isReleased = false;
-    public int audioChannelCount;
-    public int audioSampleRate;
 
-    public MMTDataBuffer() {
-    }
+    @Override
+    public boolean onCreate() {
+        atsc3NdkMediaMMTBridge = new Atsc3NdkMediaMMTBridge(this);
 
-    public MfuByteBufferFragment poll(long timeoutMs) throws InterruptedException {
-        return mfuBufferQueue.poll(timeoutMs, TimeUnit.MILLISECONDS);
-    }
+        mHandlerThread = new HandlerThread("mmt-content-provider");
+        mHandlerThread.start();
 
-    public int getVideoWidth() {
-        return MmtPacketIdContext.video_packet_statistics.width > 0 ? MmtPacketIdContext.video_packet_statistics.width : MmtPacketIdContext.MmtMfuStatistics.FALLBACK_WIDTH;
-    }
+        mHandler = new Handler(mHandlerThread.getLooper());
 
-    public int getVideoHeight() {
-        return MmtPacketIdContext.video_packet_statistics.height > 0 ? MmtPacketIdContext.video_packet_statistics.height : MmtPacketIdContext.MmtMfuStatistics.FALLBACK_HEIGHT;
-    }
-
-    public float getVideoFrameRate() {
-        return (float) 1000000.0 / MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us;
-    }
-
-    public boolean isVideoSample(MfuByteBufferFragment sample) {
-        return MmtPacketIdContext.video_packet_id == sample.packet_id;
-    }
-
-    //jjustman-2020-12-09 - TODO - wire this up from ndk callback
-    public int getAudioChannelCount() {
-        return audioChannelCount;
-    }
-
-    public int getAudioSampleRate() {
-        return audioSampleRate;
-    }
-
-    public void setAudioConfiguration(int audioSampleRate, int audioChannelCount) {
-        this.audioSampleRate = audioSampleRate;
-        this.audioChannelCount = audioChannelCount;
-    }
-
-    public boolean isAudioSample(MfuByteBufferFragment sample) {
-        return MmtPacketIdContext.audio_packet_id == sample.packet_id;
-    }
-
-    public boolean isTextSample(MfuByteBufferFragment sample) {
-        return MmtPacketIdContext.stpp_packet_id == sample.packet_id;
-    }
-
-    public boolean isKeySample(MfuByteBufferFragment fragment) {
-        return fragment.sample_number == 1;
-    }
-
-    public int getMpuMetadataSize() {
-        if (InitMpuMetadata_HEVC_NAL_Payload == null) return 0;
-
-        ByteBuffer initBuffer = InitMpuMetadata_HEVC_NAL_Payload.myByteBuffer;
-        initBuffer.rewind();
-        return initBuffer.remaining();
-    }
-
-    public int readMpuMetadata(byte[] buffer, int offset, int length) {
-        if (InitMpuMetadata_HEVC_NAL_Payload == null) return 0;
-
-        ByteBuffer initBuffer = InitMpuMetadata_HEVC_NAL_Payload.myByteBuffer;
-        int bytesToRead = Math.min(initBuffer.remaining(), length);
-        initBuffer.get(buffer, offset, bytesToRead);
-        return bytesToRead;
+        return true;
     }
 
     @Override
-    public synchronized void open() throws ConcurrentModificationException {
-        if (isActive) {
-            try {
-                wait(1000);
-            } catch (InterruptedException e) {
-                throw new ConcurrentModificationException("Buffer is occupied by another object");
+    public void attachInfo(@NonNull Context context, @NonNull ProviderInfo info) {
+        super.attachInfo(context, info);
+
+        // Sanity check our security
+        if (info.exported) {
+            throw new SecurityException("Provider must not be exported");
+        }
+        if (!info.grantUriPermissions) {
+            throw new SecurityException("Provider must grant uri permissions");
+        }
+
+        mStorageManager = (StorageManager) context.getSystemService(Context.STORAGE_SERVICE);
+    }
+
+    @Override
+    public Cursor query(@NonNull Uri uri, @Nullable String[] projection, @Nullable String selection,
+                        @Nullable String[] selectionArgs,
+                        @Nullable String sortOrder) {
+        if (projection == null) {
+            projection = COLUMNS;
+        }
+
+        String[] cols = new String[projection.length];
+        Object[] values = new Object[projection.length];
+        int i = 0;
+        for (String col : projection) {
+            if (OpenableColumns.DISPLAY_NAME.equals(col)) {
+                cols[i] = OpenableColumns.DISPLAY_NAME;
+                values[i++] = "mmt/*"; //TODO: file.getName();
+            } else if (OpenableColumns.SIZE.equals(col)) {
+                cols[i] = OpenableColumns.SIZE;
+                values[i++] = Long.MAX_VALUE; //TODO: file.length();
             }
         }
 
-        if (isReleased) throw new IllegalStateException("Buffer was released");
+        cols = copyOf(cols, i);
+        values = copyOf(values, i);
 
-        isActive = true;
-        FirstMfuBufferVideoKeyframeSent = false;
+        final MatrixCursor cursor = new MatrixCursor(cols, 1);
+        cursor.addRow(values);
+        return cursor;
     }
 
     @Override
-    public synchronized void close() {
-        isActive = false;
-
-        notify();
+    public String getType(@NonNull Uri uri) {
+        // ContentProvider has already checked granted permissions
+        return "video/mmt";
     }
 
     @Override
-    public void release() {
-        isReleased = true;
-
-        Log.w("MMTDataBuffer","JJ: release invoked!, resetting video/audio/stpp MfuPresentationTimestamps to 0!");
-        videoMfuPresentationTimestampUs = Long.MAX_VALUE;
-        audioMfuPresentationTimestampUs = Long.MAX_VALUE;
-        stppMfuPresentationTimestampUs = Long.MAX_VALUE;
-        mfuBufferQueue.clear();
-        close();
+    public Uri insert(@NonNull Uri uri, ContentValues values) {
+        throw new UnsupportedOperationException("No external inserts");
     }
 
     @Override
-    public boolean isActive() {
-        return isActive;
+    public int update(@NonNull Uri uri, ContentValues values, @Nullable String selection,
+                      @Nullable String[] selectionArgs) {
+        throw new UnsupportedOperationException("No external updates");
     }
 
     @Override
-    public void InitMpuMetadata_HEVC_NAL_Payload(MpuMetadata_HEVC_NAL_Payload payload) {
-        if (isActive && InitMpuMetadata_HEVC_NAL_Payload == null) {
-            InitMpuMetadata_HEVC_NAL_Payload = payload;
+    public int delete(@NonNull Uri uri, @Nullable String selection,
+                      @Nullable String[] selectionArgs) {
+        throw new UnsupportedOperationException("No external deletes");
+    }
+
+    @Override
+    public ParcelFileDescriptor openFile(@NonNull Uri uri, @NonNull String mode)
+            throws FileNotFoundException {
+        // ContentProvider has already checked granted permissions
+        final int fileMode = modeToMode(mode);
+        try {
+            mSessionCount.incrementAndGet();
+
+            MMTFileDescriptor descriptor = new MMTFileDescriptor() {
+                @Override
+                public void onRelease() {
+                    super.onRelease();
+
+                    mSessionCount.decrementAndGet();
+                    descriptors.remove(this);
+                }
+            };
+
+            descriptors.add(descriptor);
+
+            return mStorageManager.openProxyFileDescriptor(fileMode, descriptor, mHandler);
+        } catch (IOException e) {
+            throw new FileNotFoundException(e.getMessage());
+        }
+    }
+
+    public static Uri getUriForService(@NonNull Context context, @NonNull String authority, @NonNull String serviceId) {
+        return new Uri.Builder().scheme("content")
+                .authority(authority).encodedPath(serviceId).build();
+    }
+
+    /**
+     * Copied from ContentResolver.java
+     */
+    private static int modeToMode(String mode) {
+        int modeBits;
+        if ("r".equals(mode)) {
+            modeBits = ParcelFileDescriptor.MODE_READ_ONLY;
+        } else if ("w".equals(mode) || "wt".equals(mode)) {
+            modeBits = ParcelFileDescriptor.MODE_WRITE_ONLY
+                    | ParcelFileDescriptor.MODE_CREATE
+                    | ParcelFileDescriptor.MODE_TRUNCATE;
+        } else if ("wa".equals(mode)) {
+            modeBits = ParcelFileDescriptor.MODE_WRITE_ONLY
+                    | ParcelFileDescriptor.MODE_CREATE
+                    | ParcelFileDescriptor.MODE_APPEND;
+        } else if ("rw".equals(mode)) {
+            modeBits = ParcelFileDescriptor.MODE_READ_WRITE
+                    | ParcelFileDescriptor.MODE_CREATE;
+        } else if ("rwt".equals(mode)) {
+            modeBits = ParcelFileDescriptor.MODE_READ_WRITE
+                    | ParcelFileDescriptor.MODE_CREATE
+                    | ParcelFileDescriptor.MODE_TRUNCATE;
         } else {
-            payload.releaseByteBuffer();
+            throw new IllegalArgumentException("Invalid mode: " + mode);
+        }
+        return modeBits;
+    }
+
+    private static String[] copyOf(String[] original, int newLength) {
+        final String[] result = new String[newLength];
+        System.arraycopy(original, 0, result, 0, newLength);
+        return result;
+    }
+
+    private static Object[] copyOf(Object[] original, int newLength) {
+        final Object[] result = new Object[newLength];
+        System.arraycopy(original, 0, result, 0, newLength);
+        return result;
+    }
+
+    @Override
+    public void showMsgFromNative(String message) {
+        Log.d(TAG, message);
+    }
+
+    @Override
+    public void pushMfuByteBufferFragment(MfuByteBufferFragment mfuByteBufferFragment) {
+        if (isActive()) {
+            if (!ATSC3PlayerFlags.ATSC3PlayerStartPlayback) {
+                ATSC3PlayerFlags.ATSC3PlayerStartPlayback = true;
+            }
+
+            PushMfuByteBufferFragment(mfuByteBufferFragment);
+        } else if (ATSC3PlayerFlags.ATSC3PlayerStartPlayback) {
+            ATSC3PlayerFlags.ATSC3PlayerStartPlayback = false;
+            mfuByteBufferFragment.unreferenceByteBuffer();
         }
     }
 
     @Override
-    public void PushMfuByteBufferFragment(MfuByteBufferFragment mfuByteBufferFragment) {
-        if (!isActive) {
-            mfuByteBufferFragment.unreferenceByteBuffer();
-            return;
+    public void pushMpuMetadata_HEVC_NAL_Payload(MpuMetadata_HEVC_NAL_Payload mpuMetadata_hevc_nal_payload) {
+        if (isActive()) {
+            if (!ATSC3PlayerFlags.ATSC3PlayerStartPlayback) {
+                ATSC3PlayerFlags.ATSC3PlayerStartPlayback = true;
+            }
+
+            InitMpuMetadata_HEVC_NAL_Payload(mpuMetadata_hevc_nal_payload);
+
+        } else if (ATSC3PlayerFlags.ATSC3PlayerStartPlayback) {
+            ATSC3PlayerFlags.ATSC3PlayerStartPlayback = false;
+            mpuMetadata_hevc_nal_payload.releaseByteBuffer();
         }
+    }
+
+    @Override
+    public void pushAudioDecoderConfigurationRecord(MMTAudioDecoderConfigurationRecord mmtAudioDecoderConfigurationRecord) {
+        descriptors.forEach(descriptor -> {
+            descriptor.pushAudioDecoderConfigurationRecord(mmtAudioDecoderConfigurationRecord);
+        });
+    }
+
+    private boolean isActive() {
+        return mSessionCount.get() > 0;
+    }
+
+    private void InitMpuMetadata_HEVC_NAL_Payload(MpuMetadata_HEVC_NAL_Payload payload) {
+        descriptors.forEach(descriptor -> {
+            descriptor.InitMpuMetadata_HEVC_NAL_Payload(payload);
+        });
+    }
+
+    private void PushMfuByteBufferFragment(MfuByteBufferFragment mfuByteBufferFragment) {
+        descriptors.forEach(descriptor -> {
+            descriptor.PushMfuByteBufferFragment(mfuByteBufferFragment);
+        });
+
 
         //jjustman-2020-11-19 - remove this hack workaround, as we may be losing audio sync due to incorrect frame calculation without analyzing trun box
 
@@ -177,34 +283,33 @@ public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payl
 //            return;
 //        }
 
-//jjustman-2020-12-02 - TODO: fix me
+        //jjustman-2020-12-02 - TODO: fix me
         if (MmtPacketIdContext.video_packet_id == mfuByteBufferFragment.packet_id) {
             addVideoFragment(mfuByteBufferFragment);
-            if(mfuByteBufferFragment.sample_number == 1) {
+            if (mfuByteBufferFragment.sample_number == 1) {
                 Log.d("PushMfuByteBufferFragment", String.format("V: packet_id: %d, mpu_sequence_number: %d, duration_us: %d,   safe_mfu_presentation_time_us_computed: %d, mfuBufferQueue size: %d",
                         mfuByteBufferFragment.packet_id, mfuByteBufferFragment.mpu_sequence_number,
                         MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us,
                         mfuByteBufferFragment.get_safe_mfu_presentation_time_uS_computed(),
-                        mfuBufferQueue.size()));
+                        maxQueueSize()/*mfuBufferQueue.size()*/));
             }
         } else if (MmtPacketIdContext.audio_packet_id == mfuByteBufferFragment.packet_id) {
             addAudioFragment(mfuByteBufferFragment);
-            if(mfuByteBufferFragment.sample_number == 1) {
+            if (mfuByteBufferFragment.sample_number == 1) {
                 Log.d("PushMfuByteBufferFragment", String.format("A: packet_id: %d, mpu_sequence_number: %d, duration_us: %d,   safe_mfu_presentation_time_us_computed: %d, mfuBufferQueue size: %d",
                         mfuByteBufferFragment.packet_id, mfuByteBufferFragment.mpu_sequence_number,
                         MmtPacketIdContext.audio_packet_statistics.extracted_sample_duration_us,
                         mfuByteBufferFragment.get_safe_mfu_presentation_time_uS_computed(),
-                        mfuBufferQueue.size()));
+                        maxQueueSize()/*mfuBufferQueue.size()*/));
             }
         } else if (MmtPacketIdContext.stpp_packet_id == mfuByteBufferFragment.packet_id) {
             addSubtitleFragment(mfuByteBufferFragment);
-            if(mfuByteBufferFragment.sample_number == 1) {
-
+            if (mfuByteBufferFragment.sample_number == 1) {
                 Log.d("PushMfuByteBufferFragment", String.format("S: packet_id: %d, mpu_sequence_number: %d, duration_us: %d,   safe_mfu_presentation_time_us_computed: %d, mfuBufferQueue size: %d",
                         mfuByteBufferFragment.packet_id, mfuByteBufferFragment.mpu_sequence_number,
                         MmtPacketIdContext.stpp_packet_statistics.extracted_sample_duration_us,
                         mfuByteBufferFragment.get_safe_mfu_presentation_time_uS_computed(),
-                        mfuBufferQueue.size()));
+                        maxQueueSize()/*mfuBufferQueue.size()*/));
             }
         }
     }
@@ -213,19 +318,10 @@ public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payl
         // if(mfuByteBufferFragment.sample_number == 1 || firstMfuBufferVideoKeyframeSent) {
         //normal flow...
 
-        //jjustman-2020-12-09 - hacks to make sure we don't fall too far behind wall-clock
-        if(mfuBufferQueue.size() > 120) {
-            Log.w("addVideoFragment", String.format("V: clearing queue, length: %d",
-                    mfuBufferQueue.size()));
-            mfuBufferQueue.clear();
-        }
-
-        mfuBufferQueue.add(mfuByteBufferFragment);
-
         if (isKeySample(mfuByteBufferFragment)) {
             if (!FirstMfuBufferVideoKeyframeSent) {
                 Log.d("pushMfuByteBufferFragment", String.format("V: pushing FIRST: queueSize: %d, sampleNumber: %d, size: %d, mpuPresentationTimeUs: %d",
-                        mfuBufferQueue.size(),
+                        maxQueueSize()/*mfuBufferQueue.size()*/,
                         mfuByteBufferFragment.sample_number,
                         mfuByteBufferFragment.bytebuffer_length,
                         mfuByteBufferFragment.mpu_presentation_time_uS_from_SI));
@@ -270,7 +366,7 @@ public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payl
                             mfuByteBufferFragment.sample_number,
                             mfuByteBufferFragment.bytebuffer_length,
                             mfuByteBufferFragment.get_safe_mfu_presentation_time_uS_computed(),
-                            mfuBufferQueue.size()));
+                            maxQueueSize()/*mfuBufferQueue.size()*/));
         }
 //            } else {
 //                //discard
@@ -287,15 +383,6 @@ public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payl
 //                //discard
 //                return;
 //            }
-        //jjustman-2020-12-09 - hacks to make sure we don't fall too far behind wall-clock
-        if(mfuBufferQueue.size() > 120) {
-            Log.w("addAudioFragment", String.format("A: clearing queue, length: %d",
-                    mfuBufferQueue.size()));
-            mfuBufferQueue.clear();
-        }
-
-        mfuBufferQueue.add(mfuByteBufferFragment);
-
         if (mfuByteBufferFragment.mfu_fragment_count_expected == mfuByteBufferFragment.mfu_fragment_count_rebuilt) {
             MmtPacketIdContext.audio_packet_statistics.complete_mfu_samples_count++;
         } else {
@@ -329,7 +416,7 @@ public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payl
                     mfuByteBufferFragment.sample_number,
                     mfuByteBufferFragment.bytebuffer_length,
                     mfuByteBufferFragment.get_safe_mfu_presentation_time_uS_computed(),
-                    mfuBufferQueue.size()));
+                    maxQueueSize()/*mfuBufferQueue.size()*/));
         }
     }
 
@@ -337,89 +424,21 @@ public class MMTDataBuffer implements IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payl
         if (!FirstMfuBufferVideoKeyframeSent) {
             return;
         }
-        if(mfuBufferQueue.size() > 5) {
-            Log.w("addSubtitleFragment", String.format("S: clearing queue, length: %d",
-                    mfuBufferQueue.size()));
-            mfuBufferQueue.clear();
-        }
 
-
-        mfuBufferQueue.add(mfuByteBufferFragment);
         MmtPacketIdContext.stpp_packet_statistics.total_mfu_samples_count++;
     }
 
-    public boolean hasMpuMetadata() {
-        return InitMpuMetadata_HEVC_NAL_Payload != null;
+    private boolean isKeySample(MfuByteBufferFragment fragment) {
+        return fragment.sample_number == 1;
     }
 
-    public boolean skipUntilKeyFrame() {
-        MfuByteBufferFragment fragment;
-        while ((fragment = mfuBufferQueue.peek()) != null) {
-            if (isKeySample(fragment) && !isTextSample(fragment)) {
-                return true;
-            } else {
-                fragment.unreferenceByteBuffer();
-                mfuBufferQueue.remove();
-            }
-        }
+    private int maxQueueSize() {
+        final AtomicInteger maxSize = new AtomicInteger(0);
+        descriptors.forEach(descriptor -> {
+            int size = descriptor.getQueueSize();
+            if (size > maxSize.get()) maxSize.set(size);
+        });
 
-        return false;
-    }
-
-    public long ptsOffsetUs() {
-        //jjustman-2020-12-23 - give the a/v/s decoder some time to decode frames, otherwise we will stall at startup
-        return 266000L;
-    }
-
-    //jjustman-2020-12-22 - TODO: handle when mfu_presentation_time_uS_computed - push last value?
-    public long getPresentationTimestampUs(MfuByteBufferFragment toProcessMfuByteBufferFragment) {
-        if (toProcessMfuByteBufferFragment.mfu_presentation_time_uS_computed != null && toProcessMfuByteBufferFragment.mfu_presentation_time_uS_computed > 0) {
-            //default values here as fallback
-            long anchorMfuPresentationTimestampUs = toProcessMfuByteBufferFragment.mpu_presentation_time_uS_from_SI;
-
-            //todo: expand size as needed, every ~ mfu_presentation_time_uS_computed 1000000uS
-            if (toProcessMfuByteBufferFragment.packet_id == MmtPacketIdContext.video_packet_id) {
-                if (videoMfuPresentationTimestampUs == Long.MAX_VALUE) {
-                    videoMfuPresentationTimestampUs = toProcessMfuByteBufferFragment.mfu_presentation_time_uS_computed;
-                }
-            } else if (toProcessMfuByteBufferFragment.packet_id == MmtPacketIdContext.audio_packet_id) {
-                if (audioMfuPresentationTimestampUs == Long.MAX_VALUE) {
-                    audioMfuPresentationTimestampUs = toProcessMfuByteBufferFragment.mfu_presentation_time_uS_computed;
-                }
-            } else if (toProcessMfuByteBufferFragment.packet_id == MmtPacketIdContext.stpp_packet_id) {
-                if (stppMfuPresentationTimestampUs == Long.MAX_VALUE) {
-                    stppMfuPresentationTimestampUs = toProcessMfuByteBufferFragment.mfu_presentation_time_uS_computed;
-                }
-            }
-            anchorMfuPresentationTimestampUs = getMinNonZeroMfuPresentationTimestampForAnchor();
-
-            long mpuPresentationTimestampDeltaUs = toProcessMfuByteBufferFragment.mfu_presentation_time_uS_computed - anchorMfuPresentationTimestampUs;
-            return mpuPresentationTimestampDeltaUs + ptsOffsetUs();
-        }
-
-        return 0;
-    }
-
-    public long getMinNonZeroMfuPresentationTimestampForAnchor() {
-        long minNonZeroMfuPresentationTimestampForAnchor = Long.MAX_VALUE;
-
-        if(videoMfuPresentationTimestampUs != Long.MAX_VALUE) {
-            minNonZeroMfuPresentationTimestampForAnchor = videoMfuPresentationTimestampUs;
-           if(audioMfuPresentationTimestampUs != Long.MAX_VALUE) {
-                minNonZeroMfuPresentationTimestampForAnchor = Math.min(minNonZeroMfuPresentationTimestampForAnchor, audioMfuPresentationTimestampUs);
-                if(stppMfuPresentationTimestampUs != Long.MAX_VALUE) {
-                    minNonZeroMfuPresentationTimestampForAnchor = Math.min(minNonZeroMfuPresentationTimestampForAnchor, stppMfuPresentationTimestampUs);
-                }
-            }
-        } else if(audioMfuPresentationTimestampUs != Long.MAX_VALUE) {
-            minNonZeroMfuPresentationTimestampForAnchor = audioMfuPresentationTimestampUs;
-            if(stppMfuPresentationTimestampUs != Long.MAX_VALUE) {
-                minNonZeroMfuPresentationTimestampForAnchor = Math.min(minNonZeroMfuPresentationTimestampForAnchor, stppMfuPresentationTimestampUs);
-            }
-        } else if(stppMfuPresentationTimestampUs != Long.MAX_VALUE) {
-            minNonZeroMfuPresentationTimestampForAnchor = stppMfuPresentationTimestampUs;
-        }
-
-        return minNonZeroMfuPresentationTimestampForAnchor;
+        return maxSize.get();
     }
 }
