@@ -24,6 +24,8 @@ android {
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
+
+        resValue("string", "nextgenMMTContentProvider", "com.nextgenbroadcast.mobile.middleware.provider.MMTContentProvider")
     }
 
     buildTypes {

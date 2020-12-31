@@ -4,8 +4,6 @@ import android.content.Context
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import android.util.Log
-import com.nextgenbroadcast.mobile.core.media.IMMTDataConsumer
-import com.nextgenbroadcast.mobile.core.media.IMMTDataProducer
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.SLTConstants
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3ApplicationFile
@@ -16,15 +14,9 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.entities.service.Atsc3Servic
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.service.LLSParserSLT
 import com.nextgenbroadcast.mobile.middleware.phy.Atsc3DeviceReceiver
 import org.ngbp.libatsc3.middleware.Atsc3NdkApplicationBridge
-import org.ngbp.libatsc3.middleware.Atsc3NdkMediaMMTBridge
 import org.ngbp.libatsc3.middleware.Atsc3NdkPHYBridge
-import org.ngbp.libatsc3.middleware.android.ATSC3PlayerFlags
 import org.ngbp.libatsc3.middleware.android.a331.PackageExtractEnvelopeMetadataAndPayload
 import org.ngbp.libatsc3.middleware.android.application.interfaces.IAtsc3NdkApplicationBridgeCallbacks
-import org.ngbp.libatsc3.middleware.android.application.interfaces.IAtsc3NdkMediaMMTBridgeCallbacks
-import org.ngbp.libatsc3.middleware.android.mmt.MfuByteBufferFragment
-import org.ngbp.libatsc3.middleware.android.mmt.MpuMetadata_HEVC_NAL_Payload
-import org.ngbp.libatsc3.middleware.android.mmt.models.MMTAudioDecoderConfigurationRecord
 import org.ngbp.libatsc3.middleware.android.phy.Atsc3NdkPHYClientBase
 import org.ngbp.libatsc3.middleware.android.phy.Atsc3UsbDevice
 import org.ngbp.libatsc3.middleware.android.phy.interfaces.IAtsc3NdkPHYBridgeCallbacks
@@ -37,12 +29,9 @@ import java.io.File
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
-typealias MMTDataConsumerType = IMMTDataConsumer<MpuMetadata_HEVC_NAL_Payload, MfuByteBufferFragment>
-
 internal class Atsc3Module(
         private val context: Context
-) : IMMTDataProducer<MpuMetadata_HEVC_NAL_Payload, MfuByteBufferFragment>,
-        IAtsc3NdkApplicationBridgeCallbacks, IAtsc3NdkPHYBridgeCallbacks, IAtsc3NdkMediaMMTBridgeCallbacks {
+): IAtsc3NdkApplicationBridgeCallbacks, IAtsc3NdkPHYBridgeCallbacks {
 
     enum class State {
         OPENED, PAUSED, IDLE
@@ -63,7 +52,6 @@ internal class Atsc3Module(
 
     private val atsc3NdkApplicationBridge = Atsc3NdkApplicationBridge(this)
     private val atsc3NdkPHYBridge = Atsc3NdkPHYBridge(this)
-    private final val atsc3NdkMediaMMTBridge = Atsc3NdkMediaMMTBridge(this)
 
     private val usbManager by lazy { context.getSystemService(Context.USB_SERVICE) as UsbManager }
 
@@ -83,12 +71,6 @@ internal class Atsc3Module(
     @Volatile
     private var phyDemodLock: Boolean = false
 
-    @Volatile
-    private var mmtSource: MMTDataConsumerType? = null
-
-    private val audioConfigurationMap = HashMap<MMTAudioDecoderConfigurationRecord, Boolean>()
-
-
     val slsProtocol: Int
         get() = selectedServiceSLSProtocol
 
@@ -96,8 +78,6 @@ internal class Atsc3Module(
     private var listener: Listener? = null
 
     fun setListener(listener: Listener?) {
-        Log.i("Atsc3Module", "setListener, and atsc3NdkMediaMMTBridge is: " + atsc3NdkMediaMMTBridge);
-
         if (this.listener != null) throw IllegalStateException("Atsc3Module listener already initialized")
         this.listener = listener
     }
@@ -224,7 +204,6 @@ internal class Atsc3Module(
         if (selectedServiceId == serviceId) return false
 
         clearHeld()
-        setMMTSource(null)
 
         selectedServiceId = serviceId
         selectedServiceSLSProtocol = atsc3NdkApplicationBridge.atsc3_slt_selectService(serviceId)
@@ -291,17 +270,6 @@ internal class Atsc3Module(
         return Atsc3NdkPHYClientBase.GetCandidatePHYImplementations(device) ?: emptyList()
     }
 
-    override fun setMMTSource(source: MMTDataConsumerType?) {
-        ATSC3PlayerFlags.ATSC3PlayerStartPlayback = false
-
-        mmtSource?.let { oldSource ->
-            oldSource.release()
-            mmtSource = null
-        }
-
-        mmtSource = source
-    }
-
     private fun getSelectedServiceMediaUri(): String? {
         var mediaUri: String? = null
         if (selectedServiceSLSProtocol == SLS_PROTOCOL_DASH) {
@@ -324,7 +292,6 @@ internal class Atsc3Module(
         clearHeld()
         clearService()
         serviceMap.clear()
-        setMMTSource(null)
 
         //TODO: temporary test solution
         if (tmpAdditionalServiceOpened) {
@@ -369,7 +336,7 @@ internal class Atsc3Module(
     }
 
     override fun onSlsHeldEmissionPresent(serviceId: Int, heldPayloadXML: String) {
-        //log("onSlsHeldEmissionPresent, $serviceId, selectedServiceID: $selectedServiceId, HELD: $heldPayloadXML")
+        log("onSlsHeldEmissionPresent, $serviceId, selectedServiceID: $selectedServiceId, HELD: $heldPayloadXML")
 
         if (serviceId == selectedServiceId) {
             if (heldPayloadXML != selectedServiceHeldXml) {
@@ -444,64 +411,16 @@ internal class Atsc3Module(
     override fun pushRfPhyStatisticsUpdate(rfPhyStatistics: RfPhyStatistics) {
         phyDemodLock = rfPhyStatistics.demod_lock != 0
         Log.i("Atsc3Module",String.format("PHY:RFStatisticsUpdate: %s", rfPhyStatistics.toString()))
-        Atsc3DeviceReceiver.Companion.PHYRfStatistics = String.format("PHY:RFStatisticsUpdate: %s", rfPhyStatistics.toString())
+        Atsc3DeviceReceiver.PHYRfStatistics = String.format("PHY:RFStatisticsUpdate: %s", rfPhyStatistics.toString())
 
     }
 
     override fun pushBwPhyStatistics(bwPhyStatistics: BwPhyStatistics) {
         Log.i("Atsc3Module",String.format("PHY:BWStatisticsUpdate: %s", bwPhyStatistics.toString()));
-        Atsc3DeviceReceiver.Companion.PHYBWStatistics = String.format("PHY:BWStatisticsUpdate: %s", bwPhyStatistics.toString())
+        Atsc3DeviceReceiver.PHYBWStatistics = String.format("PHY:BWStatisticsUpdate: %s", bwPhyStatistics.toString())
     }
 
     //////////////////////////////////////////////////////////////
-    /// IAtsc3NdkMediaMMTBridgeCallbacks
-    //////////////////////////////////////////////////////////////
-
-    override fun pushMfuByteBufferFragment(mfuByteBufferFragment: MfuByteBufferFragment) {
-        execIfMMTSourceIsActiveOrCancel({ source ->
-            source.PushMfuByteBufferFragment(mfuByteBufferFragment)
-        }, {
-            mfuByteBufferFragment.unreferenceByteBuffer()
-        })
-    }
-
-    override fun pushMpuMetadata_HEVC_NAL_Payload(mpuMetadata_hevc_nal_payload: MpuMetadata_HEVC_NAL_Payload) {
-        execIfMMTSourceIsActiveOrCancel({ source ->
-            source.InitMpuMetadata_HEVC_NAL_Payload(mpuMetadata_hevc_nal_payload)
-        }, {
-            mpuMetadata_hevc_nal_payload.releaseByteBuffer()
-        })
-    }
-
-    override fun pushAudioDecoderConfigurationRecord(mmtAudioDecoderConfigurationRecord: MMTAudioDecoderConfigurationRecord) {
-
-        //TODO: remove audioConfigurationMap.isEmpty()
-        if (audioConfigurationMap.isEmpty()) {
-            audioConfigurationMap.put(mmtAudioDecoderConfigurationRecord, false)
-        }
-
-        mmtSource.let { source->
-            source?.setAudioConfiguration(mmtAudioDecoderConfigurationRecord.sample_rate, mmtAudioDecoderConfigurationRecord.channel_count)
-        }
-    }
-
-    //////////////////////////////////////////////////////////////
-
-    private fun execIfMMTSourceIsActiveOrCancel(exec: (MMTDataConsumerType) -> Unit, cancel: () -> Unit = {}) {
-        mmtSource?.let { source ->
-            if (source.isActive()) {
-                if (!ATSC3PlayerFlags.ATSC3PlayerStartPlayback) {
-                    ATSC3PlayerFlags.ATSC3PlayerStartPlayback = true
-                }
-
-                exec.invoke(source)
-            } else if (ATSC3PlayerFlags.ATSC3PlayerStartPlayback) {
-                ATSC3PlayerFlags.ATSC3PlayerStartPlayback = false
-
-                cancel.invoke()
-            }
-        } ?: cancel.invoke()
-    }
 
     private fun PackageExtractEnvelopeMetadataAndPayload.isValid(): Boolean {
         return !packageName.isNullOrEmpty()

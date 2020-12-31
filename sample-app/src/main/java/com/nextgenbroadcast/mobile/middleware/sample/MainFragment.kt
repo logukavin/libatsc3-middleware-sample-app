@@ -24,11 +24,11 @@ import com.google.android.exoplayer2.ExoPlayerFactory
 import com.google.android.exoplayer2.trackselection.AdaptiveTrackSelection
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
 import com.google.android.exoplayer2.ui.PlayerView
-import com.google.android.exoplayer2.upstream.UdpDataSource
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTExtractor
 import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTLoadControl
 import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTMediaSource
+import com.nextgenbroadcast.mmt.exoplayer2.ext.source.PcapUdpDataSource
 import com.nextgenbroadcast.mobile.core.FileUtils
 import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.model.PhyFrequency
@@ -66,6 +66,7 @@ class MainFragment : BaseFragment() {
     private var selectorViewModel: SelectorViewModel? = null
     private var receiverViewModel: ReceiverViewModel? = null
 
+    //TODO: remove
     private var receiverPresenter: IReceiverPresenter? = null
 
     private var servicesList: List<AVService>? = null
@@ -76,8 +77,6 @@ class MainFragment : BaseFragment() {
     private lateinit var serviceAdapter: ServiceAdapter
     private lateinit var sourceAdapter: ListAdapter
     private lateinit var bottomSheetBehavior: BottomSheetBehavior<View>
-
-    private var initPlayer = false
 
     private val getContent = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         val path = uri?.let { FileUtils.getPath(requireContext(), uri) }
@@ -96,9 +95,8 @@ class MainFragment : BaseFragment() {
         playerView.player = player
         playerView.requestFocus()
 
-        //PcapUdpDataSource()
         val mediaSource = MMTMediaSource.Factory({
-            UdpDataSource()
+            PcapUdpDataSource()
         }, {
             arrayOf(MMTExtractor())
         }).apply {
@@ -218,14 +216,14 @@ class MainFragment : BaseFragment() {
             }
         }
 
-        GlobalScope.launch {
-            while(true) {
-                withContext(Dispatchers.Main) {
-                    atsc3_phy_data_log.text = Atsc3DeviceReceiver.PHYRfStatistics + "\n" + Atsc3DeviceReceiver.PHYBWStatistics
-                }
-                Thread.sleep(1000)
-            }
-        }
+//        GlobalScope.launch {
+//            while(true) {
+//                withContext(Dispatchers.Main) {
+//                    atsc3_phy_data_log.text = Atsc3DeviceReceiver.PHYRfStatistics + "\n" + Atsc3DeviceReceiver.PHYBWStatistics
+//                }
+//                Thread.sleep(1000)
+//            }
+//        }
     }
 
     override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean) {
@@ -261,13 +259,6 @@ class MainFragment : BaseFragment() {
         }
 
         receiverPresenter = binder.receiverPresenter
-
-        if (initPlayer) {
-            initPlayer = false
-            rmpViewModel?.mediaUri?.value?.let { uri ->
-                startPlayback(uri)
-            }
-        }
     }
 
     override fun onUnbind() {
@@ -361,7 +352,9 @@ class MainFragment : BaseFragment() {
             })
             preparePlayerView(receiver_player)
             mediaUri.observe(this@MainFragment, { mediaUri ->
-                mediaUri?.let { startPlayback(mediaUri) } ?: receiver_player.stopPlayback()
+                mediaUri?.let {
+                    receiver_player.startPlayback(mediaUri)
+                } ?: receiver_player.stopPlayback()
             })
             playWhenReady.observe(this@MainFragment, { playWhenReady ->
                 receiver_player.setPlayWhenReady(playWhenReady)
@@ -369,18 +362,6 @@ class MainFragment : BaseFragment() {
         }
 
         receiver_player.bind(rmpViewModel)
-    }
-
-    private fun startPlayback(mediaUri: Uri) {
-        if (mediaUri.toString().startsWith("mmt://")) {
-            receiverPresenter?.createMMTSource()?.let { source ->
-                receiver_player.startPlayback(source)
-            } ?: let {
-                initPlayer = true
-            }
-        } else {
-            receiver_player.startPlayback(mediaUri)
-        }
     }
 
     private fun changeService(serviceId: Int) {
