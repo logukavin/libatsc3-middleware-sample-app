@@ -1,4 +1,4 @@
-package com.nextgenbroadcast.mobile.mmt.provider;
+package com.nextgenbroadcast.mobile.middleware.atsc3.provider;
 
 import android.content.ContentProvider;
 import android.content.ContentValues;
@@ -17,7 +17,7 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import com.nextgenbroadcast.mobile.mmt.MMTFileDescriptor;
+import com.nextgenbroadcast.mobile.core.atsc3.mmt.MMTConstants;
 
 import org.ngbp.libatsc3.middleware.Atsc3NdkMediaMMTBridge;
 import org.ngbp.libatsc3.middleware.android.ATSC3PlayerFlags;
@@ -110,7 +110,7 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
     @Override
     public String getType(@NonNull Uri uri) {
         // ContentProvider has already checked granted permissions
-        return "video/mmt";
+        return MMTConstants.MIME_MMT;
     }
 
     @Override
@@ -150,6 +150,7 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
 
             descriptors.add(descriptor);
 
+            Log.d("!!!", "New descriptor");
             return mStorageManager.openProxyFileDescriptor(fileMode, descriptor, mHandler);
         } catch (IOException e) {
             throw new FileNotFoundException(e.getMessage());

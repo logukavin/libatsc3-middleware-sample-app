@@ -1,8 +1,10 @@
-package com.nextgenbroadcast.mobile.mmt.exoplayer2;
+package com.nextgenbroadcast.mobile.core.atsc3.mmt;
 
-import com.google.android.exoplayer2.util.Util;
+import java.nio.charset.StandardCharsets;
 
-public final class MMTDef {
+public final class MMTConstants {
+    public static final String MIME_MMT = "video/mmt";
+
     public static final int SIZE_SAMPLE_HEADER =
             Byte.BYTES          /* sample type */
             + Integer.BYTES     /* sample size */
@@ -21,9 +23,10 @@ public final class MMTDef {
             + Integer.BYTES     /* audio sample rate */
             + Long.BYTES;       /* default sample duration */
 
-    static final byte TRACK_UNDEFINED = 0;
-    static final byte TRACK_VIDEO_HEVC = 1;
-    static final byte TRACK_TEXT_TTML = 1;
+    public static final byte[] mmtSignature = "#!MMT\n".getBytes(StandardCharsets.UTF_8);
 
-    public static final byte[] mmtSignature = Util.getUtf8Bytes("#!MMT\n");
+    public static final int TRACK_TYPE_UNKNOWN = -1;
+    public static final int TRACK_TYPE_AUDIO = 1;
+    public static final int TRACK_TYPE_VIDEO = 2;
+    public static final int TRACK_TYPE_TEXT = 3;
 }

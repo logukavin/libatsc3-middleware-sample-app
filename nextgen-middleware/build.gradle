@@ -55,6 +55,8 @@ android {
         resValue("string", "Auth0ClientSecret", "rZYm-grsEEaQGSbJSgZIaLIrjAFs_oLVt5u0Wl1zfvVFKlA0VYrt8qwGm4AFKdsH")
 
         resValue("string", "SinclairPlatformUrl", "https://prod-property-gateway.sinclairplatform.com")
+
+        resValue("string", "nextgenMMTContentProvider", "com.nextgenbroadcast.mobile.middleware.provider.MMTContentProvider")
     }
 
     buildTypes {
@@ -146,7 +148,6 @@ dependencies {
     }
 
     implementation project(":nextgen-core")
-    compileOnly project(":nextgen-mmt")
 
     implementation 'com.github.nmuzhichin:jsonrpc-core:1.0.4.3'
     implementation 'com.github.nmuzhichin:jsonrpc-jackson-extension:1.0.4.3'
