@@ -12,6 +12,7 @@ import com.google.android.exoplayer2.extractor.PositionHolder;
 import com.google.android.exoplayer2.extractor.SeekMap;
 import com.google.android.exoplayer2.extractor.TrackOutput;
 import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTMediaTrackUtils;
+import com.nextgenbroadcast.mobile.core.atsc3.mmt.MMTConstants;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -28,7 +29,7 @@ public class Atsc3MMTExtractor implements Extractor {
     private boolean hasOutputFormat;
     private boolean hasOutputSeekMap;
 
-    private final ByteBuffer sampleHeaderBuffer = ByteBuffer.allocate(MMTDef.SIZE_SAMPLE_HEADER);
+    private final ByteBuffer sampleHeaderBuffer = ByteBuffer.allocate(MMTConstants.SIZE_SAMPLE_HEADER);
     private final SparseArray<MmtTrack> tracks = new SparseArray<>();
 
     @Override
@@ -67,11 +68,11 @@ public class Atsc3MMTExtractor implements Extractor {
     }
 
     private boolean readMMTHeader(ExtractorInput input) throws IOException, InterruptedException {
-        ByteBuffer buffer = ByteBuffer.allocate(MMTDef.mmtSignature.length);
-        input.readFully(buffer.array(), /* offset= */ 0, /* length= */ MMTDef.mmtSignature.length);
+        ByteBuffer buffer = ByteBuffer.allocate(MMTConstants.mmtSignature.length);
+        input.readFully(buffer.array(), /* offset= */ 0, /* length= */ MMTConstants.mmtSignature.length);
         buffer.rewind();
 
-        return Arrays.equals(buffer.array(), MMTDef.mmtSignature);
+        return Arrays.equals(buffer.array(), MMTConstants.mmtSignature);
     }
 
     private int readSample(ExtractorInput extractorInput) throws IOException, InterruptedException {
@@ -89,7 +90,9 @@ public class Atsc3MMTExtractor implements Extractor {
 
         MmtTrack track = tracks.get(currentSampleType);
         if (track == null) {
-            extractorInput.skipFully(currentSampleBytesRemaining);
+            if (currentSampleBytesRemaining > 0) {
+                extractorInput.skipFully(currentSampleBytesRemaining);
+            }
             currentSampleBytesRemaining = 0;
             return Extractor.RESULT_CONTINUE;
         }
@@ -125,7 +128,7 @@ public class Atsc3MMTExtractor implements Extractor {
     private void peekNextSampleHeader(ExtractorInput extractorInput) throws IOException, InterruptedException {
         sampleHeaderBuffer.clear();
 
-        extractorInput.readFully(sampleHeaderBuffer.array(), /* offset= */ 0, /* length= */ MMTDef.SIZE_SAMPLE_HEADER);
+        extractorInput.readFully(sampleHeaderBuffer.array(), /* offset= */ 0, /* length= */ MMTConstants.SIZE_SAMPLE_HEADER);
 
         sampleHeaderBuffer.rewind();
 
@@ -139,9 +142,9 @@ public class Atsc3MMTExtractor implements Extractor {
         if (!hasOutputFormat) {
             hasOutputFormat = true;
 
-            ByteBuffer buffer = ByteBuffer.allocate(MMTDef.SIZE_HEADER);
+            ByteBuffer buffer = ByteBuffer.allocate(MMTConstants.SIZE_HEADER);
 
-            input.readFully(buffer.array(), /* offset= */ 0, /* length= */ MMTDef.SIZE_HEADER);
+            input.readFully(buffer.array(), /* offset= */ 0, /* length= */ MMTConstants.SIZE_HEADER);
 
             buffer.rewind();
 
