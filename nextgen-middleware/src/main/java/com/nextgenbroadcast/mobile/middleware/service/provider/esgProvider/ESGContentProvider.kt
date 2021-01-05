@@ -147,6 +147,7 @@ class ESGContentProvider : ContentProvider(), LifecycleOwner {
                 val selectionColumns = selection?.split(" AND ")
                 var serviceId: Int = -1
                 var startTime: Long = 0
+                var endTime: Long = 0
 
                 selectionColumns?.forEachIndexed { index, columnName ->
                     when (columnName) {
@@ -156,6 +157,10 @@ class ESGContentProvider : ContentProvider(), LifecycleOwner {
 
                         PROGRAM_COLUMN_START_TIME -> {
                             startTime = selectionArgs[index].toLong()
+                        }
+
+                        PROGRAM_COLUMN_END_TIME -> {
+                            endTime = selectionArgs[index].toLong()
                         }
 
                         else -> {
@@ -170,10 +175,12 @@ class ESGContentProvider : ContentProvider(), LifecycleOwner {
                     it.id == serviceId
                 }.flatMap { it.value }
 
-                if (startTime > 0) {
-                    filteredData = filteredData.filter {
-                        it.endTime > startTime
-                    }
+                if (startTime > 0 && endTime > 0) {
+                    filteredData = filteredData.filter { it.endTime > startTime && it.startTime < endTime }
+                } else if (startTime > 0) {
+                    filteredData = filteredData.filter { it.endTime > startTime }
+                } else if (endTime > 0) {
+                    filteredData = filteredData.filter { it.startTime < endTime }
                 }
 
                 filteredData.forEach { program ->
