@@ -176,11 +176,11 @@ class ESGContentProvider : ContentProvider(), LifecycleOwner {
                 }.flatMap { it.value }
 
                 if (startTime > 0 && endTime > 0) {
-                    filteredData =  filteredData.filter { it.endTime > startTime && it.endTime <= endTime }
+                    filteredData = filteredData.filter { it.endTime > startTime && it.startTime < endTime }
                 } else if (startTime > 0) {
-                    filteredData =  filteredData.filter { it.endTime > startTime }
+                    filteredData = filteredData.filter { it.endTime > startTime }
                 } else if (endTime > 0) {
-                    filteredData =  filteredData.filter { it.endTime <= endTime }
+                    filteredData = filteredData.filter { it.startTime < endTime }
                 }
 
                 filteredData.forEach { program ->
