@@ -11,6 +11,7 @@ import com.google.android.exoplayer2.extractor.ExtractorOutput;
 import com.google.android.exoplayer2.extractor.PositionHolder;
 import com.google.android.exoplayer2.extractor.SeekMap;
 import com.google.android.exoplayer2.extractor.TrackOutput;
+import com.google.android.exoplayer2.util.ParsableByteArray;
 import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTMediaTrackUtils;
 import com.nextgenbroadcast.mobile.core.atsc3.mmt.MMTConstants;
 
@@ -29,8 +30,12 @@ public class Atsc3MMTExtractor implements Extractor {
     private boolean hasOutputFormat;
     private boolean hasOutputSeekMap;
 
-    private final ByteBuffer sampleHeaderBuffer = ByteBuffer.allocate(MMTConstants.SIZE_SAMPLE_HEADER);
+    private final ParsableByteArray buffer = new ParsableByteArray(64 * 1024);
     private final SparseArray<MmtTrack> tracks = new SparseArray<>();
+
+    public Atsc3MMTExtractor() {
+        buffer.setPosition(buffer.limit());
+    }
 
     @Override
     public boolean sniff(ExtractorInput input) {
@@ -76,33 +81,57 @@ public class Atsc3MMTExtractor implements Extractor {
     }
 
     private int readSample(ExtractorInput extractorInput) throws IOException, InterruptedException {
-        if (currentSampleBytesRemaining == 0) {
-            try {
-                peekNextSampleHeader(extractorInput);
-                //Log.d("!!!", "sample Type: " + currentSampleType + ", sample TimeUs: " + currentSampleTimeUs + ",  sample size: " + currentSampleSize);
-            } catch (Exception ex) {
-                Log.w("MMTExtractor", "readSample - Exception, returning END_OF_INPUT - causing ExoPlayer DataSource teardown/unwind, ex: "+ex+", messgae: "+ex.getMessage()+",  Type: " + currentSampleType + ", sample TimeUs: " + currentSampleTimeUs + ",  sample size: " + currentSampleSize);
+        try {
+            if (currentSampleBytesRemaining == 0) {
+                if (buffer.bytesLeft() < MMTConstants.SIZE_SAMPLE_HEADER) {
+                    int offset = 0;
+                    if (buffer.bytesLeft() > 0) {
+                        offset = buffer.bytesLeft();
+                        System.arraycopy(buffer.data, buffer.getPosition(), buffer.data, 0, buffer.bytesLeft());
+                    }
 
-                return Extractor.RESULT_END_OF_INPUT;
+                    extractorInput.readFully(buffer.data, /* offset= */ offset, /* length= */ /*MMTConstants.SIZE_SAMPLE_HEADER*/ buffer.limit() - offset);
+                    buffer.setPosition(0);
+                }
+
+                currentSampleType = (byte) buffer.readUnsignedByte();
+                currentSampleSize = buffer.readInt();
+                currentSampleTimeUs = buffer.readLong();
+                currentSampleIsKey = buffer.readUnsignedByte() == 1;
+                currentSampleBytesRemaining = currentSampleSize;
+                //Log.d("!!!", "sample Type: " + currentSampleType + ", sample TimeUs: " + currentSampleTimeUs + ",  sample size: " + currentSampleSize);
+            } else if (buffer.bytesLeft() == 0) {
+                extractorInput.readFully(buffer.data, /* offset= */ 0, /* length= */ buffer.limit());
+                buffer.setPosition(0);
             }
-            currentSampleBytesRemaining = currentSampleSize;
+        } catch (Exception ex) {
+            Log.w("MMTExtractor", "readSample - Exception, returning END_OF_INPUT - causing ExoPlayer DataSource teardown/unwind, ex: " + ex + ", messgae: " + ex.getMessage() + ",  Type: " + currentSampleType + ", sample TimeUs: " + currentSampleTimeUs + ",  sample size: " + currentSampleSize);
+
+            return Extractor.RESULT_END_OF_INPUT;
         }
 
         MmtTrack track = tracks.get(currentSampleType);
         if (track == null) {
             if (currentSampleBytesRemaining > 0) {
-                extractorInput.skipFully(currentSampleBytesRemaining);
+                int skipped = 0;
+                if (buffer.bytesLeft() > 0) {
+                    skipped = Math.min(currentSampleBytesRemaining, buffer.bytesLeft());
+                    buffer.skipBytes(skipped);
+                }
+                currentSampleBytesRemaining -= skipped;
             }
-            currentSampleBytesRemaining = 0;
             return Extractor.RESULT_CONTINUE;
         }
 
         TrackOutput trackOutput = track.trackOutput;
 
-        int bytesAppended = trackOutput.sampleData(extractorInput, currentSampleBytesRemaining, /* allowEndOfInput= */ true);
-        if (bytesAppended == C.RESULT_END_OF_INPUT) {
-            return Extractor.RESULT_END_OF_INPUT;
+        int bytesAppended = 0;
+        if (buffer.bytesLeft() > 0) {
+            int read = Math.min(buffer.bytesLeft(), currentSampleBytesRemaining);
+            trackOutput.sampleData(buffer, read);
+            bytesAppended += read;
         }
+
         currentSampleBytesRemaining -= bytesAppended;
         if (currentSampleBytesRemaining > 0) {
             return Extractor.RESULT_CONTINUE;
@@ -114,7 +143,7 @@ public class Atsc3MMTExtractor implements Extractor {
         }
 
         long correctSampleTime = track.correctSampleTime(currentSampleTimeUs);
-        Log.d("Atsc3MMTExtractor",String.format("JJ: readSample: sample_type: %d, correctSampleTime: %d", currentSampleType, correctSampleTime));
+        //Log.d("Atsc3MMTExtractor",String.format("JJ: readSample: sample_type: %d, correctSampleTime: %d", currentSampleType, correctSampleTime));
         trackOutput.sampleMetadata(
                 correctSampleTime,
                 sampleFlags,
@@ -123,19 +152,6 @@ public class Atsc3MMTExtractor implements Extractor {
                 /* encryptionData= */ null);
 
         return Extractor.RESULT_CONTINUE;
-    }
-
-    private void peekNextSampleHeader(ExtractorInput extractorInput) throws IOException, InterruptedException {
-        sampleHeaderBuffer.clear();
-
-        extractorInput.readFully(sampleHeaderBuffer.array(), /* offset= */ 0, /* length= */ MMTConstants.SIZE_SAMPLE_HEADER);
-
-        sampleHeaderBuffer.rewind();
-
-        currentSampleType = sampleHeaderBuffer.get();
-        currentSampleSize = sampleHeaderBuffer.getInt();
-        currentSampleTimeUs = sampleHeaderBuffer.getLong();
-        currentSampleIsKey = sampleHeaderBuffer.get() == 1;
     }
 
     private void maybeOutputFormat(ExtractorInput input) throws IOException, InterruptedException {
