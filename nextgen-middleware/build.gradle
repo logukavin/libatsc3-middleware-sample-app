@@ -45,7 +45,8 @@ android {
             }
         }
 
-        resValue("string", "nextgenMediaFileProvider", "com.nextgenbroadcast.mobile.middleware.provider")
+        resValue("string", "nextgenMediaFileProvider", "com.nextgenbroadcast.dash.provider")
+        resValue("string", "nextgenMMTContentProvider", "com.nextgenbroadcast.mmt.provider")
 
         resValue("string", "Auth0TokenUrl", "https://sinclairplatform.auth0.com/oauth/token")
         resValue("string", "Auth0Username", "middleware-service@sinclairplatform.com")
@@ -55,8 +56,6 @@ android {
         resValue("string", "Auth0ClientSecret", "rZYm-grsEEaQGSbJSgZIaLIrjAFs_oLVt5u0Wl1zfvVFKlA0VYrt8qwGm4AFKdsH")
 
         resValue("string", "SinclairPlatformUrl", "https://prod-property-gateway.sinclairplatform.com")
-
-        resValue("string", "nextgenMMTContentProvider", "com.nextgenbroadcast.mobile.middleware.provider.MMTContentProvider")
     }
 
     buildTypes {
