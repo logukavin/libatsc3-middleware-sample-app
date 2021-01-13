@@ -57,7 +57,7 @@ class UserAgentView @JvmOverloads constructor(
         if (isInEditMode) return
 
         clearCache(true)
-        setInitialScale(100)
+        //setInitialScale(100) disabled by request from Ivan Datsiv
         setBackgroundColor(Color.TRANSPARENT)
         settings?.apply {
             javaScriptEnabled = true
