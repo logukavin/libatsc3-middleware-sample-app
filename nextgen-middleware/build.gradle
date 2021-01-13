@@ -37,8 +37,8 @@ android {
         resValue("string", "Auth0ClientSecret", "rZYm-grsEEaQGSbJSgZIaLIrjAFs_oLVt5u0Wl1zfvVFKlA0VYrt8qwGm4AFKdsH")
 
         resValue("string", "SinclairPlatformUrl", "https://prod-property-gateway.sinclairplatform.com")
-        resValue("string", "nextgenServicesGuideProvider", "com.nextgenbroadcast.mobile.middleware.service.provider.esgProvider.ESGContentProvider")
-        resValue("string", "nextgenMediaFileProvider", "com.nextgenbroadcast.mobile.middleware.service.provider.MediaFileProvider")
+        resValue("string", "nextgenServicesGuideProvider", "com.nextgenbroadcast.esg.provider")
+        resValue("string", "nextgenMediaFileProvider", "com.nextgenbroadcast.dash.provider")
     }
 
     buildTypes {
