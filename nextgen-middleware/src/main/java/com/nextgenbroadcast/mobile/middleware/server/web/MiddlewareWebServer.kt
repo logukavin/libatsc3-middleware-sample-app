@@ -84,8 +84,9 @@ class MiddlewareWebServer constructor(
                 server.start()
             }
 
+            val connectors = server.connectors.asList()
             withContext(Dispatchers.Main) {
-                setSelectedPorts(server.connectors.asList())
+                setSelectedPorts(connectors)
             }
         }
     }
