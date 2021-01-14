@@ -2,6 +2,7 @@ package com.nextgenbroadcast.mobile.middleware.atsc3.entities.service
 
 import android.util.Log
 import android.util.SparseArray
+import com.nextgenbroadcast.mobile.middleware.atsc3.entities.Atsc3ServiceLocationTable
 import com.nextgenbroadcast.mobile.middleware.atsc3.utils.XmlUtils
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserException
@@ -9,15 +10,16 @@ import java.io.IOException
 import java.util.*
 
 class LLSParserSLT {
-    fun parseXML(xmlPayload: String): Pair<List<Atsc3Service>, SparseArray<String>> {
+    fun parseXML(xmlPayload: String): Atsc3ServiceLocationTable {
         val services = ArrayList<Atsc3Service>()
         val urls = SparseArray<String>()
+        var bsid = 0
         try {
             val parser = XmlUtils.newParser(xmlPayload)
             parser.nextTag()
             parser.require(XmlPullParser.START_TAG, null, "SLT")
 
-            val bsid = parser.getAttributeValue(null, "bsid")?.let {
+            bsid = parser.getAttributeValue(null, "bsid")?.let {
                 XmlUtils.strToInt(it)
             } ?: 0
 
@@ -39,7 +41,7 @@ class LLSParserSLT {
             Log.e("LLSParserSLT", "exception in parsing: $e")
         }
 
-        return Pair(services, urls)
+        return Atsc3ServiceLocationTable(bsid, services, urls)
     }
 
     @Throws(IOException::class, XmlPullParserException::class)

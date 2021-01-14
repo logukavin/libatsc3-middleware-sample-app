@@ -29,6 +29,7 @@ import com.nextgenbroadcast.mobile.middleware.R
 import com.nextgenbroadcast.mobile.middleware.analytics.Atsc3Analytics
 import com.nextgenbroadcast.mobile.middleware.analytics.IAtsc3Analytics
 import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3Module
+import com.nextgenbroadcast.mobile.middleware.atsc3.source.UsbAtsc3Source
 import com.nextgenbroadcast.mobile.middleware.cache.ApplicationCache
 import com.nextgenbroadcast.mobile.middleware.cache.DownloadManager
 import com.nextgenbroadcast.mobile.middleware.cache.IApplicationCache
@@ -209,7 +210,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
                 initializer.add(WeakReference(it))
             }.initialize(applicationContext, components)
 
-            val phyInitializer = OnboardPhyInitializer(atsc3Module).also {
+            val phyInitializer = OnboardPhyInitializer(serviceController).also {
                 initializer.add(WeakReference(it))
             }
 
@@ -261,7 +262,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         startForeground()
         unregisterDeviceReceiver()
 
-        serviceController.openRoute(device)
+        serviceController.openRoute(UsbAtsc3Source(usbManager, device))
 
         // Register BroadcastReceiver to detect when device is disconnected
         deviceReceiver = Atsc3DeviceReceiver(device.deviceName).also { receiver ->
