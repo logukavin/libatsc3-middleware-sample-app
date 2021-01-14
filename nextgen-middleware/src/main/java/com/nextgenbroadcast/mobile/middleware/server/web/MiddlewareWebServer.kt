@@ -1,5 +1,6 @@
 package com.nextgenbroadcast.mobile.middleware.server.web
 
+import android.util.Log
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
@@ -79,9 +80,13 @@ class MiddlewareWebServer constructor(
                 }
             }
 
-            server.start()
-            withContext(Dispatchers.Main) {
-                setSelectedPorts(server.connectors.asList())
+            try {
+                server.start()
+                withContext(Dispatchers.Main) {
+                    setSelectedPorts(server.connectors.asList())
+                }
+            }   catch (e: Exception) {
+                Log.e("MiddlewareWebServer", "start threw exception $e");
             }
         }
     }

@@ -9,6 +9,7 @@ import android.content.pm.ShortcutInfo
 import android.content.pm.ShortcutManager
 import android.content.res.Configuration
 import android.graphics.drawable.Icon
+import android.media.MediaCodecList
 import android.os.Bundle
 import android.view.View
 import android.widget.Toast
@@ -225,7 +226,7 @@ class MainActivity : BaseActivity() {
                 Triple("lab", "srt://lab.srt.atsc3.com:31340?passphrase=03760631-667B-4ADB-9E04-E4491B0A7CF1", false),
                 Triple("qa", "srt://lab.srt.atsc3.com:31347?passphrase=f51e5a22-9b73-4ec8-be84-e4c173f1d913", false),
                 Triple("labJJ", "srt://lab.srt.atsc3.com:31346?passphrase=055E0771-97B2-4447-8B5C-3B2497D0DE32", false),
-                Triple("labJJPixel5", "srt://lab.srt.atsc3.com:31348?passphrase=3D5E5ED2-700D-443B-968F-598DB9A2750D", false),
+                Triple("labJJPixel5", "srt://lab.srt.atsc3.com:31348?passphrase=3D5E5ED2-700D-443B-968F-598DB9A2750D&packetfilter=fec", false),
                 Triple("seaJJAndroid", "srt://sea.srt.atsc3.com:31346?passphrase=055E0771-97B2-4447-8B5C-3B2497D0DE32", false)
         )
     }

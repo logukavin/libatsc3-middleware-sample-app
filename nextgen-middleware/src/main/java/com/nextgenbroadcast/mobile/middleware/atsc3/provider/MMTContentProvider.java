@@ -37,6 +37,7 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
     public static final String TAG = MMTContentProvider.class.getSimpleName();
 
     //jjustman-2020-12-23 - give the a/v/s decoder some time to decode frames, otherwise we will stall at startup
+    //jjustman-2021-01-13 - TODO: remove me
     public static final long PTS_OFFSET_US = 266000L;
 
     private static final String[] COLUMNS = {OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE};
@@ -258,37 +259,18 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
             descriptor.PushMfuByteBufferFragment(mfuByteBufferFragment);
         });
 
-
-        //jjustman-2020-11-19 - remove this hack workaround, as we may be losing audio sync due to incorrect frame calculation without analyzing trun box
-
-        //jjustman-2020-08-19 - hack-ish workaround for ac-4 and mmt_atsc3_message signalling information w/ sample duration (or avoiding parsing the trun box)
-//        if (MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us != 0 || MmtPacketIdContext.audio_packet_statistics.extracted_sample_duration_us == 0) {
-//            if (MmtPacketIdContext.audio_packet_id == mfuByteBufferFragment.packet_id && isKeySample(mfuByteBufferFragment)) {
-//                Log.d("PushMfuByteBufferFragment:INFO", String.format(" packet_id: %d, mpu_sequence_number: %d, setting audio_packet_statistics.extracted_sample_duration_us to follow video: %d * 2",
-//                        mfuByteBufferFragment.packet_id, mfuByteBufferFragment.mpu_sequence_number, MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us));
-//            }
-//            MmtPacketIdContext.audio_packet_statistics.extracted_sample_duration_us = MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us * 2;
-//        } else
-//
         if (MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us == 0 || MmtPacketIdContext.audio_packet_statistics.extracted_sample_duration_us == 0) {
-            Log.d("PushMfuByteBufferFragment:WARN", String.format(" packet_id: %d, mpu_sequence_number: %d, video.duration_us: %d, audio.duration_us: %d, missing extracted_sample_duration",
+            Log.d("MMTDataBuffer", String.format("PushMfuByteBufferFragment:WARN:packet_id: %d, mpu_sequence_number: %d, video.duration_us: %d, audio.duration_us: %d, missing extracted_sample_duration",
                     mfuByteBufferFragment.packet_id, mfuByteBufferFragment.mpu_sequence_number,
                     MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us,
                     MmtPacketIdContext.audio_packet_statistics.extracted_sample_duration_us));
         }
 
-//        if (IsSoftFlushingFromAVPtsDiscontinuity.get()
-//                || MediaCodecInputBufferMfuBys_defauteBufferFragmentWorker.IsHardCodecFlushingFromAVPtsDiscontinuity
-//                || MediaCodecInputBufferMfuByteBufferFragmentWorker.IsResettingCodecFromDiscontinuity) {
-//            mfuByteBufferFragment.unreferenceByteBuffer();
-//            return;
-//        }
-
         //jjustman-2020-12-02 - TODO: fix me
         if (MmtPacketIdContext.video_packet_id == mfuByteBufferFragment.packet_id) {
             addVideoFragment(mfuByteBufferFragment);
             if (mfuByteBufferFragment.sample_number == 1) {
-                Log.d("PushMfuByteBufferFragment", String.format("V: packet_id: %d, mpu_sequence_number: %d, duration_us: %d,   safe_mfu_presentation_time_us_computed: %d, mfuBufferQueue size: %d",
+                Log.d("MMTContentProvider", String.format("PushMfuByteBufferFragment:\tV\tpacket_id\t%d\tmpu_sequence_number\t%d\tduration_us\t%d\tsafe_mfu_presentation_time_us_computed\t%d\tmfuBufferQueue size\t%d",
                         mfuByteBufferFragment.packet_id, mfuByteBufferFragment.mpu_sequence_number,
                         MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us,
                         mfuByteBufferFragment.get_safe_mfu_presentation_time_uS_computed(),
@@ -297,31 +279,32 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
         } else if (MmtPacketIdContext.audio_packet_id == mfuByteBufferFragment.packet_id) {
             addAudioFragment(mfuByteBufferFragment);
             if (mfuByteBufferFragment.sample_number == 1) {
-                Log.d("PushMfuByteBufferFragment", String.format("A: packet_id: %d, mpu_sequence_number: %d, duration_us: %d,   safe_mfu_presentation_time_us_computed: %d, mfuBufferQueue size: %d",
+                Log.d("MMTContentProvider", String.format("PushMfuByteBufferFragment:\tA\tpacket_id\t%d\tmpu_sequence_number\t%d\tduration_us\t%d\tsafe_mfu_presentation_time_us_computed\t%d\tmfuBufferQueue size\t%d",
                         mfuByteBufferFragment.packet_id, mfuByteBufferFragment.mpu_sequence_number,
-                        MmtPacketIdContext.audio_packet_statistics.extracted_sample_duration_us,
+                        MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us,
                         mfuByteBufferFragment.get_safe_mfu_presentation_time_uS_computed(),
                         maxQueueSize()/*mfuBufferQueue.size()*/));
             }
         } else if (MmtPacketIdContext.stpp_packet_id == mfuByteBufferFragment.packet_id) {
             addSubtitleFragment(mfuByteBufferFragment);
-            if (mfuByteBufferFragment.sample_number == 1) {
-                Log.d("PushMfuByteBufferFragment", String.format("S: packet_id: %d, mpu_sequence_number: %d, duration_us: %d,   safe_mfu_presentation_time_us_computed: %d, mfuBufferQueue size: %d",
-                        mfuByteBufferFragment.packet_id, mfuByteBufferFragment.mpu_sequence_number,
-                        MmtPacketIdContext.stpp_packet_statistics.extracted_sample_duration_us,
-                        mfuByteBufferFragment.get_safe_mfu_presentation_time_uS_computed(),
-                        maxQueueSize()/*mfuBufferQueue.size()*/));
-            }
+            Log.d("MMTContentProvider", String.format("PushMfuByteBufferFragment:\tS\tpacket_id\t%d\tmpu_sequence_number\t%d\tduration_us\t%d\tsafe_mfu_presentation_time_us_computed\t%d\tmfuBufferQueue size\t%d",
+                    mfuByteBufferFragment.packet_id, mfuByteBufferFragment.mpu_sequence_number,
+                    MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us,
+                    mfuByteBufferFragment.get_safe_mfu_presentation_time_uS_computed(),
+                    maxQueueSize()/*mfuBufferQueue.size()*/));
         }
     }
 
     private void addVideoFragment(MfuByteBufferFragment mfuByteBufferFragment) {
-        // if(mfuByteBufferFragment.sample_number == 1 || firstMfuBufferVideoKeyframeSent) {
-        //normal flow...
+        //jjustman-2020-12-09 - hacks to make sure we don't fall too far behind wall-clock
+//        if(mfuBufferQueue.size() > 120) {
+//            Log.w("MMTDataBuffer", String.format("addVideoFragment: V: clearing queue, length: %d", mfuBufferQueue.size()));
+//            mfuBufferQueue.clear();
+//        }
 
         if (isKeySample(mfuByteBufferFragment)) {
             if (!FirstMfuBufferVideoKeyframeSent) {
-                Log.d("pushMfuByteBufferFragment", String.format("V: pushing FIRST: queueSize: %d, sampleNumber: %d, size: %d, mpuPresentationTimeUs: %d",
+                Log.d("MMTContentProvider", String.format("addVideoFragment: V: pushing FIRST: queueSize: %d, sampleNumber: %d, size: %d, mpuPresentationTimeUs: %d",
                         maxQueueSize()/*mfuBufferQueue.size()*/,
                         mfuByteBufferFragment.sample_number,
                         mfuByteBufferFragment.bytebuffer_length,
@@ -361,29 +344,24 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
         MmtPacketIdContext.video_packet_statistics.total_mfu_samples_count++;
 
         if ((MmtPacketIdContext.video_packet_statistics.total_mfu_samples_count % DebuggingFlags.DEBUG_LOG_MFU_STATS_FRAME_COUNT) == 0) {
-            Log.d("pushMfuByteBufferFragment",
-                    String.format("V: appending MFU: mpu_sequence_number: %d, sampleNumber: %d, size: %d, mpuPresentationTimeUs: %d, queueSize: %d",
+            Log.d("MMTDataBuffer",
+                    String.format("pushMfuByteBufferFragment: V: appending MFU: mpu_sequence_number: %d, sampleNumber: %d, size: %d, mpuPresentationTimeUs: %d, queueSize: %d",
                             mfuByteBufferFragment.mpu_sequence_number,
                             mfuByteBufferFragment.sample_number,
                             mfuByteBufferFragment.bytebuffer_length,
                             mfuByteBufferFragment.get_safe_mfu_presentation_time_uS_computed(),
                             maxQueueSize()/*mfuBufferQueue.size()*/));
         }
-//            } else {
-//                //discard
-////                Log.d("pushMfuByteBufferFragment", "discarding video: firstMfuBufferVideoKeyframeSent: "+firstMfuBufferVideoKeyframeSent
-////                        +", sampleNumber: "+mfuByteBufferFragment.sample_number
-////                        +", size: "+mfuByteBufferFragment.bytebuffer_length
-////                        +", presentationTimeUs: "+mfuByteBufferFragment.mpu_presentation_time_us_mpu);
-//                mfuByteBufferFragment.myByteBuffer = null;
-//            }
     }
 
     private void addAudioFragment(MfuByteBufferFragment mfuByteBufferFragment) {
-//            if(!firstMfuBufferVideoKeyframeSent) {
-//                //discard
-//                return;
-//            }
+
+        //jjustman-2020-12-09 - hacks to make sure we don't fall too far behind wall-clock
+//        if(mfuBufferQueue.size() > 120) {
+//            Log.w("MMTDataBuffer", String.format("addAudioFragment: A: clearing queue, length: %d",mfuBufferQueue.size()));
+//            mfuBufferQueue.clear();
+//        }
+
         if (mfuByteBufferFragment.mfu_fragment_count_expected == mfuByteBufferFragment.mfu_fragment_count_rebuilt) {
             MmtPacketIdContext.audio_packet_statistics.complete_mfu_samples_count++;
         } else {
@@ -412,7 +390,7 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
 
         if ((MmtPacketIdContext.audio_packet_statistics.total_mfu_samples_count % DebuggingFlags.DEBUG_LOG_MFU_STATS_FRAME_COUNT) == 0) {
 
-            Log.d("pushMfuByteBufferFragment", String.format("A: appending MFU: mpu_sequence_number: %d, sampleNumber: %d, size: %d, mpuPresentationTimeUs: %d, queueSize: %d",
+            Log.d("MMTDataBuffer", String.format("pushMfuByteBufferFragment: A: appending MFU: mpu_sequence_number: %d, sampleNumber: %d, size: %d, mpuPresentationTimeUs: %d, queueSize: %d",
                     mfuByteBufferFragment.mpu_sequence_number,
                     mfuByteBufferFragment.sample_number,
                     mfuByteBufferFragment.bytebuffer_length,

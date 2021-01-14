@@ -6,6 +6,7 @@ import android.system.OsConstants;
 import android.util.Log;
 import android.util.Pair;
 
+import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTExtractor;
 import com.nextgenbroadcast.mobile.core.atsc3.mmt.MMTConstants;
 
 import org.ngbp.libatsc3.middleware.android.mmt.MfuByteBufferFragment;
@@ -344,6 +345,15 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
         } else if (stppMfuPresentationTimestampUs != Long.MAX_VALUE) {
             minNonZeroMfuPresentationTimestampForAnchor = stppMfuPresentationTimestampUs;
         }
+
+        if(MMTExtractor.SystemClockAnchor == 0) {
+            MMTExtractor.SystemClockAnchor = System.currentTimeMillis();
+        }
+
+        if(MMTExtractor.MfuClockAnchor < minNonZeroMfuPresentationTimestampForAnchor ) {
+            MMTExtractor.MfuClockAnchor = minNonZeroMfuPresentationTimestampForAnchor;
+        }
+
 
         return minNonZeroMfuPresentationTimestampForAnchor;
     }
