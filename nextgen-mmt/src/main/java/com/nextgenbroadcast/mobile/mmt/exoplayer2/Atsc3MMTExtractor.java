@@ -142,10 +142,24 @@ public class Atsc3MMTExtractor implements Extractor {
             sampleFlags = C.BUFFER_FLAG_KEY_FRAME;
         }
 
+        /*
+            jjustman-2020-12-25: NOTE:
+                track.correctSampleTime will try to re-base from System.currentTimeMillis() - trackStartTime, BUT we have already done that in:
+
+                    MMTDataByteBuffer.getPresentationTimestampUs
+
+                NOTE: for track a/v sync, the trackStartTime needs to be the periodStartTime in millis, otherwise we will have track positionUs differences
+                        that are unable to reconcile against MMT's mpu_timestamp_descriptor NTP timestamp for track syncronization,
+                        even if super small (e.g. A/V lip sync observable)
+        Log.d("Atsc3MMTExtractor",String.format("JJ: readSample: NOT calling track.correctSampleTime(), sample_type: %d, currentSampleTimeUs: %d", currentSampleType, currentSampleTimeUs));
+
+     */
         long correctSampleTime = track.correctSampleTime(currentSampleTimeUs);
         //Log.d("Atsc3MMTExtractor",String.format("JJ: readSample: sample_type: %d, correctSampleTime: %d", currentSampleType, correctSampleTime));
+        Log.d("Atsc3MMTExtractor",String.format("JJ: readSample: sample_type: %d, currentSampleTimeUs: %d, correctSampleTime: %d, diff: %d", currentSampleType, currentSampleTimeUs, correctSampleTime, (currentSampleTimeUs - correctSampleTime)));
+
         trackOutput.sampleMetadata(
-                correctSampleTime,
+                currentSampleTimeUs,
                 sampleFlags,
                 currentSampleSize,
                 /* offset= */ 0,
@@ -214,8 +228,8 @@ public class Atsc3MMTExtractor implements Extractor {
         public final TrackOutput trackOutput;
         private final long defaultSampleDurationUs;
 
-        private long timeOffsetUs;
-        private long someTime;
+        private long timeOffsetUs = 0;
+        private long someTime = 0;
 
         public MmtTrack(TrackOutput trackOutput, long defaultSampleDurationUs) {
             this.trackOutput = trackOutput;

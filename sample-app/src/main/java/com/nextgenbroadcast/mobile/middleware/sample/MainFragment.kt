@@ -7,6 +7,8 @@ import android.os.Bundle
 import android.view.GestureDetector
 import android.view.LayoutInflater
 import android.view.View
+import android.view.View.INVISIBLE
+import android.view.View.VISIBLE
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.ListAdapter
@@ -205,9 +207,21 @@ class MainFragment : BaseFragment() {
             }
         }
 
+        atsc3_data_log.visibility = INVISIBLE
+        atsc3_phy_data_log.visibility = INVISIBLE
+
         setFragmentResultListener(REQUEST_KEY_FREQUENCY) { _, bundle ->
             val freqKhz = bundle.getInt(SettingsDialog.PARAM_FREQUENCY, 0)
             receiverPresenter?.tune(PhyFrequency.user(freqKhz))
+
+            val enablePHYDebugInformationChecked = bundle.getBoolean(SettingsDialog.PARAM_PHY_DEBUG_INFORMATION_CHECKED, false)
+            if(enablePHYDebugInformationChecked) {
+                atsc3_data_log.visibility = VISIBLE
+                atsc3_phy_data_log.visibility = VISIBLE
+            } else {
+                atsc3_data_log.visibility = INVISIBLE
+                atsc3_phy_data_log.visibility = INVISIBLE
+            }
         }
 
         settings_button.setOnClickListener {
@@ -216,14 +230,14 @@ class MainFragment : BaseFragment() {
             }
         }
 
-//        GlobalScope.launch {
-//            while(true) {
-//                withContext(Dispatchers.Main) {
-//                    atsc3_phy_data_log.text = Atsc3DeviceReceiver.PHYRfStatistics + "\n" + Atsc3DeviceReceiver.PHYBWStatistics
-//                }
-//                Thread.sleep(1000)
-//            }
-//        }
+        GlobalScope.launch {
+            while(true) {
+                withContext(Dispatchers.Main) {
+                    atsc3_phy_data_log?.text = Atsc3DeviceReceiver.PHYRfStatistics + "\n" + Atsc3DeviceReceiver.PHYBWStatistics
+                }
+                Thread.sleep(1000)
+            }
+        }
     }
 
     override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean) {
@@ -237,8 +251,8 @@ class MainFragment : BaseFragment() {
             }
             View.VISIBLE
         }
-        atsc3_data_log.visibility = visibility
-        bottom_sheet.visibility = visibility
+        //atsc3_data_log.visibility = visibility
+        //bottom_sheet.visibility = visibility
     }
 
     override fun onBind(binder: IServiceBinder) {

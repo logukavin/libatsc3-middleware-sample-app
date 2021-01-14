@@ -2,5 +2,11 @@
 <resources>
     <!--     <phy-device fd="-1" path="SDIO" freqKhz="659000" /> -->
 
-    <phy-device fd="-1" path="SDIO" />
+    <!-- freqKhz="533000"
+
+     freqKhz="593000"
+
+     725000
+     -->
+    <phy-device fd="-1" path="SDIO" freqKhz="533000"/>
 </resources>
