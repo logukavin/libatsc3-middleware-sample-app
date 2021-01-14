@@ -52,10 +52,11 @@ internal class FrequencyInitializer(
                             prevLocation == null || location.distanceTo(prevLocation) > IFrequencyLocator.RECEPTION_RADIUS
                         }?.let { frequencyLocation ->
                             settings.frequencyLocation = frequencyLocation
-                            frequencyLocation.firstFrequency?.let { frequency ->
-                                receiver.tune(PhyFrequency.auto(frequency))
+                            val frequencies = frequencyLocation.frequencyList.filter { it > 0 }
+                            if (frequencies.isNotEmpty()) {
+                                receiver.tune(PhyFrequency.auto(frequencies))
+                                locationTaken = true
                             }
-                            locationTaken = true
                         }
 
                         defaultTune.cancel()

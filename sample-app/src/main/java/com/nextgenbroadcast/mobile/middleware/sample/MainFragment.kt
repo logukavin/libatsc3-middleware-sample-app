@@ -160,7 +160,7 @@ class MainFragment : BaseFragment() {
             bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
 
             servicesList?.getOrNull(position)?.let { item ->
-                setSelectedService(item.id, item.shortName)
+                setSelectedService(item.bsid, item.id, item.shortName)
             } ?: if (position == 0) {
                 showFileChooser()
             } else {
@@ -182,7 +182,7 @@ class MainFragment : BaseFragment() {
 
         setFragmentResultListener(REQUEST_KEY_FREQUENCY) { _, bundle ->
             val freqKhz = bundle.getInt(SettingsDialog.PARAM_FREQUENCY, 0)
-            receiverPresenter?.tune(PhyFrequency.user(freqKhz))
+            receiverPresenter?.tune(PhyFrequency.user(listOf(freqKhz)))
 
             //TODO: set receiverViewModel value directlly in dialog
             val enablePHYDebugInformationChecked = bundle.getBoolean(SettingsDialog.PARAM_PHY_DEBUG_INFORMATION_CHECKED, false)
@@ -262,9 +262,13 @@ class MainFragment : BaseFragment() {
         receiverViewModel = null
     }
 
-    private fun setSelectedService(serviceId: Int, serviceName: String?) {
+    private fun setSelectedService(bsid: Int, serviceId: Int, serviceName: String?) {
         bottom_sheet_title.text = serviceName
-        changeService(serviceId)
+
+        if (selectorViewModel?.selectService(bsid, serviceId) == true) {
+            receiver_player.stopPlayback()
+            setBAAvailability(false)
+        }
     }
 
     private fun openSettings(freqKhz: Int?) {
@@ -311,14 +315,14 @@ class MainFragment : BaseFragment() {
                 val selectedServiceId = selectorViewModel.getSelectedServiceId()
                 val service = services.firstOrNull { it.id == selectedServiceId }
                         ?: services.first()
-                setSelectedService(service.id, service.shortName)
+                setSelectedService(service.bsid, service.id, service.shortName)
             } else {
                 if (previewMode) {
                     serviceList.adapter = null
-                    setSelectedService(-1, getString(R.string.source_loading, previewName?.toUpperCase(Locale.ROOT)))
+                    setSelectedService(-1, -1, getString(R.string.source_loading, previewName?.toUpperCase(Locale.ROOT)))
                 } else {
                     serviceList.adapter = sourceAdapter
-                    setSelectedService(-1, getString(R.string.no_service_available))
+                    setSelectedService(-1, -1, getString(R.string.no_service_available))
                 }
             }
         })

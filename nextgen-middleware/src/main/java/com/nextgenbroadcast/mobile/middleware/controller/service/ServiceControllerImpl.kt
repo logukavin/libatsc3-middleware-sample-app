@@ -1,6 +1,5 @@
 package com.nextgenbroadcast.mobile.middleware.controller.service
 
-import android.hardware.usb.UsbDevice
 import android.util.Log
 import androidx.lifecycle.MutableLiveData
 import com.nextgenbroadcast.mobile.core.model.PhyFrequency
@@ -13,6 +12,7 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Applicatio
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPackage
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.service.Atsc3Service
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.ServiceGuideStore
+import com.nextgenbroadcast.mobile.middleware.atsc3.source.*
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
 import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
 import kotlinx.coroutines.*
@@ -46,8 +46,9 @@ internal class ServiceControllerImpl (
         atsc3Module.setListener(this)
     }
 
-    override fun onStateChanged(state: Atsc3Module.State?) {
-        val newState = state?.let { ReceiverState.valueOf(state.name) } ?: ReceiverState.IDLE
+    override fun onStateChanged(state: Atsc3Module.State) {
+        //TODO: rewrite this mapping
+        val newState = ReceiverState.valueOf(state.name)
 
         receiverState.postValue(newState)
 
@@ -56,7 +57,7 @@ internal class ServiceControllerImpl (
         }
     }
 
-    override fun onServiceListTableReceived(services: List<Atsc3Service>, reportServerUrl: String?) {
+    override fun onServiceLocationTableChanged(services: List<Atsc3Service>, reportServerUrl: String?) {
         atsc3Analytics.setReportServerUrl(reportServerUrl)
 
         // store A/V services
@@ -105,22 +106,29 @@ internal class ServiceControllerImpl (
     }
 
     override fun openRoute(path: String): Boolean {
-        closeRoute()
-
-        return if (path.startsWith("srt://")) {
-            atsc3Module.openSRTStream(path)
+        val source = if (path.startsWith("srt://")) {
+            if (path.contains('\n')) {
+                val sources = path.split('\n')
+                SrtListAtsc3Source(sources)
+            } else {
+                SrtAtsc3Source(path)
+            }
         } else {
             //TODO: temporary solution
-            val type = if (path.contains(".demux.")) Atsc3Module.PcapType.DEMUXED else Atsc3Module.PcapType.STLTP
-            atsc3Module.openPcapFile(path, type)
+            val type = if (path.contains(".demux.")) PcapAtsc3Source.PcapType.DEMUXED else PcapAtsc3Source.PcapType.STLTP
+            PcapAtsc3Source(path, type)
         }
+
+        return openRoute(source)
     }
 
-    override fun openRoute(device: UsbDevice): Boolean {
+    override fun openRoute(source: IAtsc3Source): Boolean {
         closeRoute()
 
-        if (atsc3Module.openUsbDevice(device)) {
-            tune(PhyFrequency.default(PhyFrequency.Source.AUTO))
+        if (atsc3Module.connect(source)) {
+            if (source is ITunableSource) {
+                tune(PhyFrequency.default(PhyFrequency.Source.AUTO))
+            }
             return true
         }
         return false
@@ -145,7 +153,7 @@ internal class ServiceControllerImpl (
         cancelMediaUrlAssignment()
         repository.setMediaUrl(null)
 
-        val res = atsc3Module.selectService(service.id)
+        val res = atsc3Module.selectService(service.bsid, service.id)
         if (res) {
             atsc3Analytics.startSession(service.bsid, service.id, service.globalId, service.category)
 
@@ -174,24 +182,23 @@ internal class ServiceControllerImpl (
     }
 
     override fun tune(frequency: PhyFrequency) {
-        var freqKhz = frequency.frequency
-
-        if (frequency.useDefault) {
+        val freqKhz: Int = if (frequency.list.isEmpty()) {
             val lastFrequency = settings.lastFrequency
-            val frequencyLocation = settings.frequencyLocation
+            val storedFrequency = settings.frequencyLocation?.firstFrequency
             if (lastFrequency > 0) {
-                freqKhz = lastFrequency
-            } else if (frequencyLocation != null) {
-                frequencyLocation.firstFrequency?.let {
-                    freqKhz = it
-                }
+                lastFrequency
+            } else {
+                storedFrequency ?: 0
             }
+        } else {
+            frequency.list.first()
         }
 
         this.freqKhz.postValue(freqKhz)
         settings.lastFrequency = freqKhz
         atsc3Module.tune(
                 freqKhz = freqKhz,
+                frequencies = frequency.list,
                 retuneOnDemod = frequency.source == PhyFrequency.Source.USER
         )
     }
