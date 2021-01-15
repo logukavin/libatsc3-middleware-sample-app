@@ -47,5 +47,11 @@
             android:name=".service.provider.esgProvider.ESGContentProvider"
             android:exported="true"/>
 
+        <provider
+            android:name=".atsc3.provider.MMTContentProvider"
+            android:authorities="@string/nextgenMMTContentProvider"
+            android:exported="false"
+            android:grantUriPermissions="true"/>
+
     </application>
 </manifest>

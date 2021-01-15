@@ -4,12 +4,15 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.hardware.usb.UsbConfiguration
 import android.hardware.usb.UsbDevice
+import android.hardware.usb.UsbInterface
 import android.hardware.usb.UsbManager
 import android.net.Uri
 import android.os.IBinder
 import android.os.PowerManager
 import android.os.PowerManager.WakeLock
+import android.util.Log
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
@@ -49,6 +52,7 @@ import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
 import com.nextgenbroadcast.mobile.middleware.settings.MiddlewareSettingsImpl
 import kotlinx.coroutines.*
 import java.lang.ref.WeakReference
+import java.util.HashMap
 
 abstract class Atsc3ForegroundService : BindableForegroundService() {
     private lateinit var wakeLock: WakeLock
@@ -198,22 +202,51 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
         isInitialized = true
 
-        val components = MetadataReader.discoverMetadata(this)
+        try {
+            val components = MetadataReader.discoverMetadata(this)
 
-        FrequencyInitializer(settings, serviceController).also {
-            initializer.add(WeakReference(it))
-        }.initialize(applicationContext, components)
-
-        val phyInitializer = OnboardPhyInitializer(atsc3Module).also {
-            initializer.add(WeakReference(it))
-        }
-
-        if (!phyInitializer.initialize(applicationContext, components)) {
-            UsbPhyInitializer().also {
+            FrequencyInitializer(settings, serviceController).also {
                 initializer.add(WeakReference(it))
             }.initialize(applicationContext, components)
+
+            val phyInitializer = OnboardPhyInitializer(atsc3Module).also {
+                initializer.add(WeakReference(it))
+            }
+
+            if (!phyInitializer.initialize(applicationContext, components)) {
+                UsbPhyInitializer().also {
+                    initializer.add(WeakReference(it))
+                }.initialize(applicationContext, components)
+            }
+        } catch (e: Exception) {
+            Log.d(TAG, "Can't initialize, something is wrong in metadata", e)
         }
+
+        // comment SaankhyaPHYAndroid in app manifest
+//        //jjustman-2020-12-24 - iterate over our UsbManager.getDeviceList to see if we have any candidate phys when launching
+//        scanForUsbPhyLayerDevices()
     }
+
+//    //jjustman-2020-12-24 - todo: move this somewhere else?
+//    protected fun scanForUsbPhyLayerDevices() {
+//        var deviceList: HashMap<String, UsbDevice> = usbManager.getDeviceList()
+//        deviceList.forEach { k, v ->
+//            dumpUsbDevices(v, "usbPHYLayerDeviceScan")
+//            atsc3Module.openUsbDevice(v)
+//        }
+//    }
+//
+//    private fun dumpUsbDevices(usbDevice: UsbDevice, fromAction: String) {
+//        var usbConfiguration: UsbConfiguration = usbDevice.getConfiguration(0);
+//        var usbInterface: UsbInterface = usbConfiguration.getInterface(0);
+//        var numEndpoints: Int = usbInterface.getEndpointCount();
+//        Log.i("Atsc3ForegroundService", String.format("dumpUsbDevices: %s, device: vid: %s, pid: %s, numEndpoints: %d, name: %s",
+//                fromAction,
+//                usbDevice.getVendorId(),
+//                usbDevice.getProductId(),
+//                numEndpoints,
+//                usbDevice.getDeviceName()))
+//    }
 
     private fun openRoute(filePath: String?) {
         // change source to file. So, let's unregister device receiver
@@ -424,6 +457,8 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     class InitializationException : RuntimeException()
 
     companion object {
+        val TAG: String = Atsc3ForegroundService::class.java.simpleName
+
         private const val SERVICE_ACTION = "${BuildConfig.LIBRARY_PACKAGE_NAME}.intent.action"
 
         @Deprecated("old implementation")

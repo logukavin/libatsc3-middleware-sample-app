@@ -4,6 +4,12 @@
 
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <!-- jjustman-2020-12-22 - testing for XBR -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+<!-- jjustman-2020-12-16- todo - remove me?   <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />-->
+    <uses-feature android:glEsVersion="0x00030002" android:required="true" />
 
     <application
         android:name=".App"
@@ -16,7 +22,8 @@
         android:theme="@style/AppTheme"
         android:extractNativeLibs="true"
         android:networkSecurityConfig="@xml/network_security_config"
-        android:usesCleartextTraffic="true">
+        android:usesCleartextTraffic="true"
+        android:hardwareAccelerated="true">
 
         <activity
             android:name=".MainActivity"

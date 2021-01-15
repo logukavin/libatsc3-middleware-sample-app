@@ -11,7 +11,5 @@ interface IReceiverPresenter {
     fun openRoute(path: String): Boolean
     fun closeRoute()
 
-    fun createMMTSource(): Any
-
     fun tune(frequency: PhyFrequency)
 }
