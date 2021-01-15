@@ -98,6 +98,8 @@ internal class Atsc3Module(
     fun openPhy(phy: Atsc3NdkPHYClientBase, fd: Int, devicePath: String?, freqKhz: Int): Boolean {
         if (phy.init() == 0) {
             if (phy.open(fd, devicePath) == 0) {
+
+                phy.startPhyOpenTrace();
                 if (freqKhz > 0) {
                     phy.tune(freqKhz, 0)
                 }
@@ -248,6 +250,9 @@ internal class Atsc3Module(
 
                 Atsc3UsbDevice.DumpAllAtsc3UsbDevices()
             }
+            client.stopPhyOpenTrace()
+            client.stopPhyTunedTrace()
+
             atsc3NdkPHYClientInstance = null
         }
 
@@ -418,7 +423,6 @@ internal class Atsc3Module(
         phyDemodLock = rfPhyStatistics.demod_lock != 0
         Log.i("Atsc3Module",String.format("PHY:RFStatisticsUpdate: %s", rfPhyStatistics.toString()))
         Atsc3DeviceReceiver.PHYRfStatistics = String.format("PHY:RFStatisticsUpdate: %s", rfPhyStatistics.toString())
-
     }
 
     override fun pushBwPhyStatistics(bwPhyStatistics: BwPhyStatistics) {
