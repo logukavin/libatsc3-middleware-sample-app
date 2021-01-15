@@ -4,7 +4,6 @@ import android.util.Log;
 import android.util.SparseArray;
 
 import com.google.android.exoplayer2.C;
-import com.google.android.exoplayer2.Format;
 import com.google.android.exoplayer2.ParserException;
 import com.google.android.exoplayer2.extractor.Extractor;
 import com.google.android.exoplayer2.extractor.ExtractorInput;
@@ -12,14 +11,15 @@ import com.google.android.exoplayer2.extractor.ExtractorOutput;
 import com.google.android.exoplayer2.extractor.PositionHolder;
 import com.google.android.exoplayer2.extractor.SeekMap;
 import com.google.android.exoplayer2.extractor.TrackOutput;
-import com.google.android.exoplayer2.util.MimeTypes;
+import com.google.android.exoplayer2.util.ParsableByteArray;
+import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTMediaTrackUtils;
+import com.nextgenbroadcast.mobile.core.atsc3.mmt.MMTConstants;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
-import java.util.Collections;
 
-public class MMTExtractor implements Extractor {
+public class Atsc3MMTExtractor implements Extractor {
     private ExtractorOutput extractorOutput;
 
     private int currentSampleBytesRemaining;
@@ -30,8 +30,12 @@ public class MMTExtractor implements Extractor {
     private boolean hasOutputFormat;
     private boolean hasOutputSeekMap;
 
-    private final ByteBuffer sampleHeaderBuffer = ByteBuffer.allocate(MMTDef.SIZE_SAMPLE_HEADER);
+    private final ParsableByteArray buffer = new ParsableByteArray(64 * 1024);
     private final SparseArray<MmtTrack> tracks = new SparseArray<>();
+
+    public Atsc3MMTExtractor() {
+        buffer.setPosition(buffer.limit());
+    }
 
     @Override
     public boolean sniff(ExtractorInput input) {
@@ -69,39 +73,65 @@ public class MMTExtractor implements Extractor {
     }
 
     private boolean readMMTHeader(ExtractorInput input) throws IOException, InterruptedException {
-        ByteBuffer buffer = ByteBuffer.allocate(MMTDef.mmtSignature.length);
-        input.readFully(buffer.array(), /* offset= */ 0, /* length= */ MMTDef.mmtSignature.length);
+        ByteBuffer buffer = ByteBuffer.allocate(MMTConstants.mmtSignature.length);
+        input.readFully(buffer.array(), /* offset= */ 0, /* length= */ MMTConstants.mmtSignature.length);
         buffer.rewind();
 
-        return Arrays.equals(buffer.array(), MMTDef.mmtSignature);
+        return Arrays.equals(buffer.array(), MMTConstants.mmtSignature);
     }
 
     private int readSample(ExtractorInput extractorInput) throws IOException, InterruptedException {
-        if (currentSampleBytesRemaining == 0) {
-            try {
-                peekNextSampleHeader(extractorInput);
-                //Log.d("!!!", "sample Type: " + currentSampleType + ", sample TimeUs: " + currentSampleTimeUs + ",  sample size: " + currentSampleSize);
-            } catch (Exception ex) {
-                Log.w("MMTExtractor", "readSample - Exception, returning END_OF_INPUT - causing ExoPlayer DataSource teardown/unwind, ex: "+ex+", messgae: "+ex.getMessage()+",  Type: " + currentSampleType + ", sample TimeUs: " + currentSampleTimeUs + ",  sample size: " + currentSampleSize);
+        try {
+            if (currentSampleBytesRemaining == 0) {
+                if (buffer.bytesLeft() < MMTConstants.SIZE_SAMPLE_HEADER) {
+                    int offset = 0;
+                    if (buffer.bytesLeft() > 0) {
+                        offset = buffer.bytesLeft();
+                        System.arraycopy(buffer.data, buffer.getPosition(), buffer.data, 0, buffer.bytesLeft());
+                    }
 
-                return Extractor.RESULT_END_OF_INPUT;
+                    extractorInput.readFully(buffer.data, /* offset= */ offset, /* length= */ /*MMTConstants.SIZE_SAMPLE_HEADER*/ buffer.limit() - offset);
+                    buffer.setPosition(0);
+                }
+
+                currentSampleType = (byte) buffer.readUnsignedByte();
+                currentSampleSize = buffer.readInt();
+                currentSampleTimeUs = buffer.readLong();
+                currentSampleIsKey = buffer.readUnsignedByte() == 1;
+                currentSampleBytesRemaining = currentSampleSize;
+                //Log.d("!!!", "sample Type: " + currentSampleType + ", sample TimeUs: " + currentSampleTimeUs + ",  sample size: " + currentSampleSize);
+            } else if (buffer.bytesLeft() == 0) {
+                extractorInput.readFully(buffer.data, /* offset= */ 0, /* length= */ buffer.limit());
+                buffer.setPosition(0);
             }
-            currentSampleBytesRemaining = currentSampleSize;
+        } catch (Exception ex) {
+            Log.w("MMTExtractor", "readSample - Exception, returning END_OF_INPUT - causing ExoPlayer DataSource teardown/unwind, ex: " + ex + ", messgae: " + ex.getMessage() + ",  Type: " + currentSampleType + ", sample TimeUs: " + currentSampleTimeUs + ",  sample size: " + currentSampleSize);
+
+            return Extractor.RESULT_END_OF_INPUT;
         }
 
         MmtTrack track = tracks.get(currentSampleType);
         if (track == null) {
-            extractorInput.skipFully(currentSampleBytesRemaining);
-            currentSampleBytesRemaining = 0;
+            if (currentSampleBytesRemaining > 0) {
+                int skipped = 0;
+                if (buffer.bytesLeft() > 0) {
+                    skipped = Math.min(currentSampleBytesRemaining, buffer.bytesLeft());
+                    buffer.skipBytes(skipped);
+                }
+                currentSampleBytesRemaining -= skipped;
+            }
             return Extractor.RESULT_CONTINUE;
         }
 
         TrackOutput trackOutput = track.trackOutput;
 
-        int bytesAppended = trackOutput.sampleData(extractorInput, currentSampleBytesRemaining, /* allowEndOfInput= */ true);
-        if (bytesAppended == C.RESULT_END_OF_INPUT) {
-            return Extractor.RESULT_END_OF_INPUT;
+        int bytesAppended = 0;
+        if (buffer.bytesLeft() > 0) {
+            int read = Math.min(buffer.bytesLeft(), currentSampleBytesRemaining);
+            trackOutput.sampleData(buffer, read);
+            bytesAppended += read;
         }
+
         currentSampleBytesRemaining -= bytesAppended;
         if (currentSampleBytesRemaining > 0) {
             return Extractor.RESULT_CONTINUE;
@@ -112,10 +142,24 @@ public class MMTExtractor implements Extractor {
             sampleFlags = C.BUFFER_FLAG_KEY_FRAME;
         }
 
+        /*
+            jjustman-2020-12-25: NOTE:
+                track.correctSampleTime will try to re-base from System.currentTimeMillis() - trackStartTime, BUT we have already done that in:
+
+                    MMTDataByteBuffer.getPresentationTimestampUs
+
+                NOTE: for track a/v sync, the trackStartTime needs to be the periodStartTime in millis, otherwise we will have track positionUs differences
+                        that are unable to reconcile against MMT's mpu_timestamp_descriptor NTP timestamp for track syncronization,
+                        even if super small (e.g. A/V lip sync observable)
+        Log.d("Atsc3MMTExtractor",String.format("JJ: readSample: NOT calling track.correctSampleTime(), sample_type: %d, currentSampleTimeUs: %d", currentSampleType, currentSampleTimeUs));
+
+     */
         long correctSampleTime = track.correctSampleTime(currentSampleTimeUs);
+        //Log.d("Atsc3MMTExtractor",String.format("JJ: readSample: sample_type: %d, correctSampleTime: %d", currentSampleType, correctSampleTime));
+        Log.d("Atsc3MMTExtractor",String.format("JJ: readSample: sample_type: %d, currentSampleTimeUs: %d, correctSampleTime: %d, diff: %d", currentSampleType, currentSampleTimeUs, correctSampleTime, (currentSampleTimeUs - correctSampleTime)));
 
         trackOutput.sampleMetadata(
-                correctSampleTime,
+                currentSampleTimeUs,
                 sampleFlags,
                 currentSampleSize,
                 /* offset= */ 0,
@@ -124,32 +168,19 @@ public class MMTExtractor implements Extractor {
         return Extractor.RESULT_CONTINUE;
     }
 
-    private void peekNextSampleHeader(ExtractorInput extractorInput) throws IOException, InterruptedException {
-        sampleHeaderBuffer.clear();
-
-        extractorInput.readFully(sampleHeaderBuffer.array(), /* offset= */ 0, /* length= */ MMTDef.SIZE_SAMPLE_HEADER);
-
-        sampleHeaderBuffer.rewind();
-
-        currentSampleType = sampleHeaderBuffer.get();
-        currentSampleSize = sampleHeaderBuffer.getInt();
-        currentSampleTimeUs = sampleHeaderBuffer.getLong();
-        currentSampleIsKey = sampleHeaderBuffer.get() == 1;
-    }
-
     private void maybeOutputFormat(ExtractorInput input) throws IOException, InterruptedException {
         if (!hasOutputFormat) {
             hasOutputFormat = true;
 
-            ByteBuffer buffer = ByteBuffer.allocate(MMTDef.SIZE_HEADER);
+            ByteBuffer buffer = ByteBuffer.allocate(MMTConstants.SIZE_HEADER);
 
-            input.readFully(buffer.array(), /* offset= */ 0, /* length= */ MMTDef.SIZE_HEADER);
+            input.readFully(buffer.array(), /* offset= */ 0, /* length= */ MMTConstants.SIZE_HEADER);
 
             buffer.rewind();
 
-            int videoType = buffer.get();
-            int audioType = buffer.get();
-            int textType = buffer.get();
+            int videoType = buffer.getInt();
+            int audioType = buffer.getInt();
+            int textType = buffer.getInt();
 
             int videoWidth = buffer.getInt();
             int videoHeight = buffer.getInt();
@@ -164,56 +195,19 @@ public class MMTExtractor implements Extractor {
             byte[] data = new byte[initialDataSize];
             input.readFully(data, /* offset= */ 0, /* length= */ initialDataSize);
 
-            if (videoType == MMTDef.TRACK_VIDEO_HEVC) {
-                TrackOutput trackOutput = extractorOutput.track(/* id= */ 1, C.TRACK_TYPE_VIDEO);
-                tracks.put(C.TRACK_TYPE_VIDEO, new MmtTrack(trackOutput, defaultSampleDurationUs));
-
-                trackOutput.format(
-                        Format.createVideoSampleFormat(
-                                null,
-                                MimeTypes.VIDEO_H265,
-                                null,
-                                Format.NO_VALUE,
-                                Format.NO_VALUE,
-                                videoWidth,
-                                videoHeight,
-                                videoFrameRate,
-                                Collections.singletonList(data),
-                                null)
-                );
+            TrackOutput videoOutput = MMTMediaTrackUtils.createVideoOutput(extractorOutput, /* id */1, videoType, videoWidth, videoHeight, videoFrameRate, data);
+            if (videoOutput != null) {
+                tracks.put(C.TRACK_TYPE_VIDEO, new MmtTrack(videoOutput, defaultSampleDurationUs));
             }
 
-            if (audioType == MMTDef.TRACK_AUDIO_AC4) {
-                TrackOutput trackOutput = extractorOutput.track(/* id= */ 2, C.TRACK_TYPE_AUDIO);
-                tracks.put(C.TRACK_TYPE_AUDIO, new MmtTrack(trackOutput, defaultSampleDurationUs));
-
-                trackOutput.format(
-                        Format.createAudioSampleFormat(
-                                null,
-                                MimeTypes.AUDIO_AC4,
-                                null,
-                                Format.NO_VALUE,
-                                Format.NO_VALUE,
-                                audioChannelCount,
-                                audioSampleRate,
-                                null,
-                                null,
-                                Format.NO_VALUE,
-                                null)
-                );
+            TrackOutput audioOutput = MMTMediaTrackUtils.createAudioOutput(extractorOutput, /* id */2, audioType, audioChannelCount, audioSampleRate);
+            if (audioOutput != null) {
+                tracks.put(C.TRACK_TYPE_AUDIO, new MmtTrack(audioOutput, defaultSampleDurationUs));
             }
 
-            if (textType == MMTDef.TRACK_TEXT_TTML) {
-                TrackOutput trackOutput = extractorOutput.track(/* id= */ 3, C.TRACK_TYPE_TEXT);
-                tracks.put(C.TRACK_TYPE_TEXT, new MmtTrack(trackOutput, 0));
-
-                trackOutput.format(
-                        Format.createTextSampleFormat(
-                                null,
-                                MimeTypes.APPLICATION_TTML,
-                                0,
-                                null)
-                );
+            TrackOutput textOutput = MMTMediaTrackUtils.createTextOutput(extractorOutput, /* id */3, textType);
+            if (textOutput != null) {
+                tracks.put(C.TRACK_TYPE_TEXT, new MmtTrack(textOutput, 0));
             }
 
             extractorOutput.endTracks();
@@ -234,8 +228,8 @@ public class MMTExtractor implements Extractor {
         public final TrackOutput trackOutput;
         private final long defaultSampleDurationUs;
 
-        private long timeOffsetUs;
-        private long someTime;
+        private long timeOffsetUs = 0;
+        private long someTime = 0;
 
         public MmtTrack(TrackOutput trackOutput, long defaultSampleDurationUs) {
             this.trackOutput = trackOutput;

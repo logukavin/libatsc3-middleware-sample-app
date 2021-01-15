@@ -31,7 +31,6 @@ class EmbeddedAtsc3Service : Atsc3ForegroundService() {
                 closeRoute(this@EmbeddedAtsc3Service)
             }
 
-            override fun createMMTSource() = serviceController.createMMTSource()
             override fun tune(frequency: PhyFrequency) {
                 serviceController.tune(frequency)
             }

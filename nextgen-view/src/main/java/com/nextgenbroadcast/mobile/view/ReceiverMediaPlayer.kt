@@ -4,25 +4,25 @@ import android.content.Context
 import android.net.Uri
 import android.util.AttributeSet
 import android.util.Log
-import androidx.core.net.toUri
 import com.google.android.exoplayer2.*
-import com.google.android.exoplayer2.source.ProgressiveMediaSource
 import com.google.android.exoplayer2.source.dash.DashMediaSource
 import com.google.android.exoplayer2.source.dash.DefaultDashChunkSource
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
 import com.google.android.exoplayer2.ui.PlayerView
+import com.google.android.exoplayer2.upstream.ContentDataSource
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
 import com.google.android.exoplayer2.upstream.DefaultLoadErrorHandlingPolicy
+import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTLoadControl
+import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTMediaSource
+import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTRenderersFactory
 import com.nextgenbroadcast.mobile.core.AppUtils
+import com.nextgenbroadcast.mobile.core.atsc3.mmt.MMTConstants
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.permission.AlterDataSourceFactory
 import com.nextgenbroadcast.mobile.permission.UriPermissionProvider
-import com.nextgenbroadcast.mobile.mmt.atsc3.media.MMTDataBuffer
-import com.nextgenbroadcast.mobile.mmt.exoplayer2.MMTDataSource
-import com.nextgenbroadcast.mobile.mmt.exoplayer2.MMTExtractor
-import com.nextgenbroadcast.mobile.mmt.exoplayer2.MMTMediaSource
-import com.nextgenbroadcast.mobile.mmt.exoplayer2.MMTLoadControl
+import com.nextgenbroadcast.mobile.mmt.exoplayer2.Atsc3MMTExtractor
 import com.nextgenbroadcast.mobile.exoplayer2.RouteDASHLoadControl
+import com.nextgenbroadcast.mobile.mmt.exoplayer2.Atsc3ContentDataSource
 import java.io.IOException
 
 class ReceiverMediaPlayer @JvmOverloads constructor(
@@ -74,29 +74,28 @@ class ReceiverMediaPlayer @JvmOverloads constructor(
     fun play(mediaUri: Uri) {
         reset()
 
-        val dashMediaSource = dashMediaSourceFactory.createMediaSource(mediaUri)
-        player = createDefaultExoPlayer().apply {
-            prepare(dashMediaSource)
-            playWhenReady = true
-        }
-    }
+        val mimeType = context.contentResolver.getType(mediaUri)
+        if (mimeType == MMTConstants.MIME_MMT) {
+            isMMTPlayback = true
 
-    fun play(mmtBuffer: MMTDataBuffer) {
-        reset()
+            val mediaSource = MMTMediaSource.Factory({
+                Atsc3ContentDataSource(context)
+            }, {
+                arrayOf(Atsc3MMTExtractor())
+            }).apply {
+                setLoadErrorHandlingPolicy(createDefaultLoadErrorHandlingPolicy())
+            }.createMediaSource(mediaUri)
 
-        isMMTPlayback = true
-
-        val mediaSource = MMTMediaSource.Factory({
-            MMTDataSource(mmtBuffer)
-        }, {
-            arrayOf(MMTExtractor())
-        }).apply {
-            setLoadErrorHandlingPolicy(createDefaultLoadErrorHandlingPolicy())
-        }.createMediaSource("mmt".toUri())
-
-        player = createMMTExoPlayer().apply {
-            prepare(mediaSource)
-            playWhenReady = true
+            player = createMMTExoPlayer().apply {
+                prepare(mediaSource)
+                playWhenReady = true
+            }
+        } else {
+            val dashMediaSource = dashMediaSourceFactory.createMediaSource(mediaUri)
+            player = createDefaultExoPlayer().apply {
+                prepare(dashMediaSource)
+                playWhenReady = true
+            }
         }
     }
 
@@ -114,15 +113,15 @@ class ReceiverMediaPlayer @JvmOverloads constructor(
     }
 
     private fun createDefaultExoPlayer(): SimpleExoPlayer {
-        return createExoPlayer(RouteDASHLoadControl())
+        return createExoPlayer(RouteDASHLoadControl(), DefaultRenderersFactory(context))
     }
 
     private fun createMMTExoPlayer(): SimpleExoPlayer {
-        return createExoPlayer(MMTLoadControl())
+        return createExoPlayer(MMTLoadControl(), MMTRenderersFactory(context))
     }
 
-    private fun createExoPlayer(loadControl: LoadControl): SimpleExoPlayer {
-        return ExoPlayerFactory.newSimpleInstance(context, DefaultRenderersFactory(context), DefaultTrackSelector(), loadControl).apply {
+    private fun createExoPlayer(loadControl: LoadControl, renderersFactory: RenderersFactory): SimpleExoPlayer {
+        return ExoPlayerFactory.newSimpleInstance(context, renderersFactory, DefaultTrackSelector(), loadControl).apply {
             addListener(object : Player.EventListener {
                 override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
                     updateBufferingState(playbackState == Player.STATE_BUFFERING)

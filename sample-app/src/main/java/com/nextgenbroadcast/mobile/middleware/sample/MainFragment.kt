@@ -7,9 +7,12 @@ import android.os.Bundle
 import android.view.GestureDetector
 import android.view.LayoutInflater
 import android.view.View
+import android.view.View.INVISIBLE
+import android.view.View.VISIBLE
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.ListAdapter
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
@@ -18,7 +21,16 @@ import androidx.core.os.bundleOf
 import androidx.databinding.DataBindingUtil
 import androidx.fragment.app.setFragmentResultListener
 import androidx.lifecycle.ViewModelProvider
+import com.google.android.exoplayer2.DefaultRenderersFactory
+import com.google.android.exoplayer2.ExoPlayerFactory
+import com.google.android.exoplayer2.trackselection.AdaptiveTrackSelection
+import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
+import com.google.android.exoplayer2.ui.PlayerView
 import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTExtractor
+import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTLoadControl
+import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTMediaSource
+import com.nextgenbroadcast.mmt.exoplayer2.ext.source.PcapUdpDataSource
 import com.nextgenbroadcast.mobile.core.FileUtils
 import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.model.PhyFrequency
@@ -26,6 +38,7 @@ import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.presentation.ApplicationState
 import com.nextgenbroadcast.mobile.core.presentation.IReceiverPresenter
 import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
+import com.nextgenbroadcast.mobile.middleware.phy.Atsc3DeviceReceiver
 import com.nextgenbroadcast.mobile.middleware.sample.MainActivity.Companion.sourceMap
 import com.nextgenbroadcast.mobile.middleware.sample.SettingsDialog.Companion.REQUEST_KEY_FREQUENCY
 import com.nextgenbroadcast.mobile.middleware.sample.core.SwipeGestureDetector
@@ -38,7 +51,12 @@ import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.factory.UserAgent
 import com.nextgenbroadcast.mobile.middleware.sample.useragent.ServiceAdapter
 import com.nextgenbroadcast.mobile.view.UserAgentView
 import kotlinx.android.synthetic.main.fragment_main.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.*
+import kotlin.concurrent.thread
 
 
 class MainFragment : BaseFragment() {
@@ -50,6 +68,7 @@ class MainFragment : BaseFragment() {
     private var selectorViewModel: SelectorViewModel? = null
     private var receiverViewModel: ReceiverViewModel? = null
 
+    //TODO: remove
     private var receiverPresenter: IReceiverPresenter? = null
 
     private var servicesList: List<AVService>? = null
@@ -61,11 +80,33 @@ class MainFragment : BaseFragment() {
     private lateinit var sourceAdapter: ListAdapter
     private lateinit var bottomSheetBehavior: BottomSheetBehavior<View>
 
-    private var initPlayer = false
-
     private val getContent = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         val path = uri?.let { FileUtils.getPath(requireContext(), uri) }
         path?.let { openRoute(requireContext(), path) }
+    }
+
+    fun udpMmtTest(path: String) {
+        val videoUri = Uri.parse(path)
+
+        view?.findViewById<View>(R.id.progress_bar)!!.visibility = View.GONE
+
+        val trackSelector = DefaultTrackSelector(AdaptiveTrackSelection.Factory())
+        val player = ExoPlayerFactory.newSimpleInstance(requireContext(), DefaultRenderersFactory(context), trackSelector, MMTLoadControl())
+
+        val playerView = view?.findViewById<PlayerView>(R.id.receiver_media_player)!!
+        playerView.player = player
+        playerView.requestFocus()
+
+        val mediaSource = MMTMediaSource.Factory({
+            PcapUdpDataSource()
+        }, {
+            arrayOf(MMTExtractor())
+        }).apply {
+            //setLoadErrorHandlingPolicy(createDefaultLoadErrorHandlingPolicy())
+        }.createMediaSource(videoUri)
+
+        player.prepare(mediaSource)
+        player.playWhenReady = true
     }
 
     override fun onAttach(context: Context) {
@@ -178,14 +219,35 @@ class MainFragment : BaseFragment() {
             }
         }
 
+        atsc3_data_log.visibility = INVISIBLE
+        atsc3_phy_data_log.visibility = INVISIBLE
+
         setFragmentResultListener(REQUEST_KEY_FREQUENCY) { _, bundle ->
             val freqKhz = bundle.getInt(SettingsDialog.PARAM_FREQUENCY, 0)
             receiverPresenter?.tune(PhyFrequency.user(freqKhz))
+
+            val enablePHYDebugInformationChecked = bundle.getBoolean(SettingsDialog.PARAM_PHY_DEBUG_INFORMATION_CHECKED, false)
+            if(enablePHYDebugInformationChecked) {
+                atsc3_data_log.visibility = VISIBLE
+                atsc3_phy_data_log.visibility = VISIBLE
+            } else {
+                atsc3_data_log.visibility = INVISIBLE
+                atsc3_phy_data_log.visibility = INVISIBLE
+            }
         }
 
         settings_button.setOnClickListener {
             receiverPresenter?.let {
                 openSettings(it.freqKhz.value)
+            }
+        }
+
+        GlobalScope.launch {
+            while(true) {
+                withContext(Dispatchers.Main) {
+                    atsc3_phy_data_log?.text = Atsc3DeviceReceiver.PHYRfStatistics + "\n" + Atsc3DeviceReceiver.PHYBWStatistics
+                }
+                Thread.sleep(1000)
             }
         }
     }
@@ -214,8 +276,8 @@ class MainFragment : BaseFragment() {
             }
             View.VISIBLE
         }
-        atsc3_data_log.visibility = visibility
-        bottom_sheet.visibility = visibility
+        //atsc3_data_log.visibility = visibility
+        //bottom_sheet.visibility = visibility
     }
 
     override fun onBind(binder: IServiceBinder) {
@@ -236,13 +298,6 @@ class MainFragment : BaseFragment() {
         }
 
         receiverPresenter = binder.receiverPresenter
-
-        if (initPlayer) {
-            initPlayer = false
-            rmpViewModel?.mediaUri?.value?.let { uri ->
-                startPlayback(uri)
-            }
-        }
     }
 
     override fun onUnbind() {
@@ -336,7 +391,9 @@ class MainFragment : BaseFragment() {
             })
             preparePlayerView(receiver_player)
             mediaUri.observe(this@MainFragment, { mediaUri ->
-                mediaUri?.let { startPlayback(mediaUri) } ?: receiver_player.stopPlayback()
+                mediaUri?.let {
+                    receiver_player.startPlayback(mediaUri)
+                } ?: receiver_player.stopPlayback()
             })
             playWhenReady.observe(this@MainFragment, { playWhenReady ->
                 receiver_player.setPlayWhenReady(playWhenReady)
@@ -344,18 +401,6 @@ class MainFragment : BaseFragment() {
         }
 
         receiver_player.bind(rmpViewModel)
-    }
-
-    private fun startPlayback(mediaUri: Uri) {
-        if (mediaUri.toString().startsWith("mmt://")) {
-            receiverPresenter?.createMMTSource()?.let { source ->
-                receiver_player.startPlayback(source)
-            } ?: let {
-                initPlayer = true
-            }
-        } else {
-            receiver_player.startPlayback(mediaUri)
-        }
     }
 
     private fun changeService(serviceId: Int) {
