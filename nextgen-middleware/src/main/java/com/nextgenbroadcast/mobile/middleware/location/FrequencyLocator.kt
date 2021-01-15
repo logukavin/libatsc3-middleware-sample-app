@@ -1,16 +1,9 @@
 package com.nextgenbroadcast.mobile.middleware.location
 
-import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
-import android.content.pm.PackageManager
-import android.location.Criteria
 import android.location.Location
-import android.location.LocationListener
-import android.location.LocationManager
-import android.os.Bundle
 import android.util.Log
-import androidx.core.content.ContextCompat
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.nextgenbroadcast.mobile.middleware.R
@@ -19,14 +12,8 @@ import com.nextgenbroadcast.mobile.middleware.net.auth0.Auth0Response
 import com.nextgenbroadcast.mobile.middleware.net.await
 import com.nextgenbroadcast.mobile.middleware.net.sinclair.SinclairPlatform
 import com.nextgenbroadcast.mobile.middleware.net.sinclair.Station
-import com.nextgenbroadcast.mobile.middleware.service.init.FrequencyInitializer
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.suspendCancellableCoroutine
 import okhttp3.OkHttpClient
 import java.io.IOException
-import kotlin.coroutines.resume
 
 
 class FrequencyLocator : IFrequencyLocator {
@@ -78,9 +65,13 @@ class FrequencyLocator : IFrequencyLocator {
                 }
             }
         } catch (e: IOException) {
-            e.printStackTrace()
+            Log.d(TAG, "Error on frequency request", e)
         }
 
         return emptyList()
+    }
+
+    companion object {
+        val TAG: String = FrequencyLocator::class.java.simpleName
     }
 }

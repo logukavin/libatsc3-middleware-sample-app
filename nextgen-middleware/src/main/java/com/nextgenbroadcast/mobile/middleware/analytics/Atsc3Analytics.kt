@@ -297,13 +297,18 @@ class Atsc3Analytics private constructor(
                         .post(cdmJson.toString().toRequestBody(MEDIA_TYPE_JSON))
                         .build()
 
-                val succeed = httpClient.newCall(request).await { response ->
-                    if (response.isSuccessful) {
-                        persistedStore.remove(events.size)
-                        return@await true
-                    } else {
-                        return@await false
+                val succeed = try {
+                    httpClient.newCall(request).await { response ->
+                        if (response.isSuccessful) {
+                            persistedStore.remove(events.size)
+                            return@await true
+                        } else {
+                            return@await false
+                        }
                     }
+                } catch (e: IOException) {
+                    Log.d(TAG, "Can't send reports to: $reportServerUrl", e)
+                    false
                 }
 
                 if (succeed) {

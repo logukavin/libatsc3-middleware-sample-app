@@ -1,9 +1,10 @@
 package com.nextgenbroadcast.mobile.middleware.cache
 
+import android.util.Log
 import kotlinx.coroutines.*
 import okhttp3.*
-import okhttp3.internal.ignoreIoExceptions
 import okio.Buffer
+import okio.BufferedSource
 import okio.sink
 import java.io.File
 import java.io.IOException
@@ -22,11 +23,11 @@ class DownloadManager {
         val loadingFile = File(destFile.parentFile, getLoadingName(destFile))
 
         return CoroutineScope(DOWNLOAD_IO).launch {
-            ignoreIoExceptions {
-                val request = Request.Builder()
-                        .url(sourceUrl)
-                        .build()
+            val request = Request.Builder()
+                    .url(sourceUrl)
+                    .build()
 
+            try {
                 suspendCancellableCoroutine<File> { cont ->
                     client.newCall(request).enqueue(object : Callback {
                         override fun onFailure(call: Call, e: IOException) {
@@ -41,34 +42,8 @@ class DownloadManager {
 
                             try {
                                 response.body?.source()?.use { source ->
-                                    if (!loadingFile.exists()) {
-                                        loadingFile.parentFile?.mkdirs()
-                                    }
-
-                                    var finished = false
-                                    loadingFile.sink().use { sink ->
-                                        val buffer = Buffer()
-                                        var totalBytesWritten: Long = 0
-                                        while (cont.isActive) {
-                                            val read = source.read(buffer, SEGMENT_SIZE)
-                                            if (read == -1L) {
-                                                finished = true
-                                                break
-                                            }
-
-                                            val emitByteCount = buffer.completeSegmentByteCount()
-                                            if (emitByteCount > 0L) {
-                                                totalBytesWritten += emitByteCount
-                                                sink.write(buffer, emitByteCount)
-                                            }
-                                        }
-                                        if (buffer.size > 0L) {
-                                            totalBytesWritten += buffer.size
-                                            sink.write(buffer, buffer.size)
-                                        }
-                                    }
-
-                                    if (finished) {
+                                    val saved = saveToFile(source, loadingFile, cont::isActive)
+                                    if (saved) {
                                         loadingFile.renameTo(destFile)
                                         cont.resume(loadingFile)
                                     } else {
@@ -83,13 +58,47 @@ class DownloadManager {
                         }
                     })
                 }
+            } catch (e: IOException) {
+                Log.d(TAG, "Error on file download: $sourceUrl", e)
             }
         }
+    }
+
+    private fun saveToFile(source: BufferedSource, destFile: File, isActive: () -> Boolean): Boolean {
+        if (!destFile.exists()) {
+            destFile.parentFile?.mkdirs()
+        }
+
+        var finished = false
+        destFile.sink().use { sink ->
+            val buffer = Buffer()
+            var totalBytesWritten: Long = 0
+            while (isActive()) {
+                val read = source.read(buffer, SEGMENT_SIZE)
+                if (read == -1L) {
+                    finished = true
+                    break
+                }
+
+                val emitByteCount = buffer.completeSegmentByteCount()
+                if (emitByteCount > 0L) {
+                    totalBytesWritten += emitByteCount
+                    sink.write(buffer, emitByteCount)
+                }
+            }
+            if (buffer.size > 0L) {
+                totalBytesWritten += buffer.size
+                sink.write(buffer, buffer.size)
+            }
+        }
+
+        return finished
     }
 
     fun getLoadingName(file: File) = file.name + LOADING_POSTFIX
 
     companion object {
+        val TAG: String = DownloadManager::class.java.simpleName
         private const val SEGMENT_SIZE = 8 * 1024L
         const val LOADING_POSTFIX = "_loading"
     }

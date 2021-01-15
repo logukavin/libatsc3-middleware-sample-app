@@ -8,9 +8,11 @@ import java.io.IOException
 import java.lang.Exception
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+import kotlin.jvm.Throws
 
 suspend fun Call.await(): Response = await { it }
 
+@Throws(IOException::class)
 suspend fun <T> Call.await(action: (Response) -> T): T {
     return suspendCancellableCoroutine { cont ->
         enqueue(object : Callback {
