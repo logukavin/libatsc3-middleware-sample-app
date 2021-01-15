@@ -30,7 +30,7 @@ import org.ngbp.libatsc3.middleware.android.mmt.models.MMTAudioDecoderConfigurat
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMediaMMTBridgeCallbacks {
@@ -43,7 +43,7 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
     private static final String[] COLUMNS = {OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE};
 
     private final AtomicInteger mSessionCount = new AtomicInteger();
-    private final CopyOnWriteArrayList<MMTFileDescriptor> descriptors = new CopyOnWriteArrayList<>();
+    private final ConcurrentLinkedDeque<MMTFileDescriptor> descriptors = new ConcurrentLinkedDeque<>();
 
     private Atsc3NdkMediaMMTBridge atsc3NdkMediaMMTBridge;
     private HandlerThread mHandlerThread;
