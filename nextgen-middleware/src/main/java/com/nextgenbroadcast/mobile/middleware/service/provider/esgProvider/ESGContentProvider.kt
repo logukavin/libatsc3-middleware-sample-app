@@ -14,7 +14,10 @@ import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.serviceGuide.SGProgram
 import com.nextgenbroadcast.mobile.middleware.R
 import com.nextgenbroadcast.mobile.middleware.service.EmbeddedAtsc3Service
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.suspendCancellableCoroutine
 import java.lang.Integer.parseInt
+import kotlin.coroutines.resume
 
 
 class ESGContentProvider : ContentProvider(), LifecycleOwner {
@@ -27,28 +30,28 @@ class ESGContentProvider : ContentProvider(), LifecycleOwner {
     private lateinit var PROGRAMS_CONTENT_TYPE: String
     private lateinit var PROGRAM_CONTENT_ITEM_TYPE: String
 
-    private var data: Map<AVService, List<SGProgram>> = emptyMap()
+//    private var data: Map<AVService, List<SGProgram>> = emptyMap()
     private val lifecycleRegistry = LifecycleRegistry(this)
     private val uriMatcher = UriMatcher(UriMatcher.NO_MATCH)
 
-    var isBound: Boolean = false
-        private set
-
-    private val connection = object : ServiceConnection {
-        override fun onServiceConnected(className: ComponentName, service: IBinder) {
-            val binder = service as? EmbeddedAtsc3Service.ProviderServiceBinder ?: run {
-                return
-            }
-
-            onBind(binder)
-
-            isBound = true
-        }
-
-        override fun onServiceDisconnected(arg0: ComponentName) {
-            isBound = false
-        }
-    }
+//    var isBound: Boolean = false
+//        private set
+//
+//    private val connection = object : ServiceConnection {
+//        override fun onServiceConnected(className: ComponentName, service: IBinder) {
+//            val binder = service as? EmbeddedAtsc3Service.ProviderServiceBinder ?: run {
+//                return
+//            }
+//
+////            onBind(binder)
+//
+//            isBound = true
+//        }
+//
+//        override fun onServiceDisconnected(arg0: ComponentName) {
+//            isBound = false
+//        }
+//    }
 
     private fun initializeUriMatching() {
         uriMatcher.addURI(AUTHORITY, "$SERVICE_CONTENT_PATH/#", URI_SERVICE_BY_ID)
@@ -78,33 +81,33 @@ class ESGContentProvider : ContentProvider(), LifecycleOwner {
 
         initializeUriMatching()
 
-        bindService()
+//        bindService()
 
         return true
     }
 
-    private fun bindService() {
-        if (isBound) return
-
-        Intent(context, EmbeddedAtsc3Service::class.java).also { intent ->
-            intent.action = ACTION_BIND_FROM_PROVIDER
-            context?.bindService(intent, connection, BIND_AUTO_CREATE)
-        }
-    }
-
-    private fun onBind(binder: EmbeddedAtsc3Service.ProviderServiceBinder) {
-        binder.serviceController.schedule.distinctUntilChanged().observe(this, { schedule ->
-            data = schedule?.toMutableMap() ?: emptyMap()
-            context?.contentResolver?.notifyChange(SERVICE_CONTENT_URI, null)
-        })
-    }
-
-    private fun unbindService() {
-        if (!isBound) return
-
-        context?.unbindService(connection)
-        isBound = false
-    }
+//    private fun bindService() {
+//        if (isBound) return
+//
+//        Intent(context, EmbeddedAtsc3Service::class.java).also { intent ->
+//            intent.action = ACTION_BIND_FROM_PROVIDER
+//            context?.bindService(intent, connection, BIND_AUTO_CREATE)
+//        }
+//    }
+//
+//    private fun onBind(binder: EmbeddedAtsc3Service.ProviderServiceBinder) {
+//        binder.serviceController.schedule.distinctUntilChanged().observe(this, { schedule ->
+//            data = schedule?.toMutableMap() ?: emptyMap()
+//            context?.contentResolver?.notifyChange(SERVICE_CONTENT_URI, null)
+//        })
+//    }
+//
+//    private fun unbindService() {
+//        if (!isBound) return
+//
+//        context?.unbindService(connection)
+//        isBound = false
+//    }
 
     override fun getType(uri: Uri): String {
         return when (uriMatcher.match(uri)) {
@@ -119,8 +122,42 @@ class ESGContentProvider : ContentProvider(), LifecycleOwner {
     override fun query(uri: Uri, projection: Array<String>?, selection: String?, selectionArgs: Array<String>?, sortOrder: String?): Cursor {
         val cursor = MatrixCursor(projection)
 
-        val contentResolver = context?.contentResolver ?: return cursor
+        val context = context ?: return cursor
+        val contentResolver = context.contentResolver
 
+        val data = runBlocking {
+            suspendCancellableCoroutine<Map<AVService, List<SGProgram>>> { cont ->
+                val connection = object : ServiceConnection {
+                    override fun onServiceConnected(className: ComponentName, service: IBinder) {
+                        val data = (service as? EmbeddedAtsc3Service.ProviderServiceBinder)?.let { binder ->
+                            binder.serviceController.schedule.value?.toMutableMap()
+                        }
+
+                        cont.resume(data ?: emptyMap())
+
+                        context.unbindService(this)
+                    }
+
+                    override fun onServiceDisconnected(arg0: ComponentName) {
+                        cont.resume(emptyMap())
+                    }
+                }
+
+                Intent(context, EmbeddedAtsc3Service::class.java).also { intent ->
+                    intent.action = ACTION_BIND_FROM_PROVIDER
+                    context.bindService(intent, connection, BIND_AUTO_CREATE)
+                }
+            }
+        }
+
+        if (fillCursor(uri, cursor, selectionArgs, selection, data)) return cursor
+
+        cursor.setNotificationUri(contentResolver, SERVICE_CONTENT_URI)
+
+        return cursor
+    }
+
+    private fun fillCursor(uri: Uri, cursor: MatrixCursor, selectionArgs: Array<String>?, selection: String?, data: Map<AVService, List<SGProgram>>): Boolean {
         when (uriMatcher.match(uri)) {
             URI_ALL_SERVICES -> {
                 data.forEach { (avService, _) ->
@@ -142,7 +179,7 @@ class ESGContentProvider : ContentProvider(), LifecycleOwner {
             }
 
             URI_ALL_PROGRAMS -> {
-                if (selectionArgs.isNullOrEmpty()) return cursor
+                if (selectionArgs.isNullOrEmpty()) return true
 
                 val selectionColumns = selection?.split(" AND ")
                 var serviceId: Int = -1
@@ -194,10 +231,7 @@ class ESGContentProvider : ContentProvider(), LifecycleOwner {
 
             else -> throw IllegalArgumentException("Wrong URI: $uri")
         }
-
-        cursor.setNotificationUri(contentResolver, SERVICE_CONTENT_URI)
-
-        return cursor
+        return false
     }
 
     private fun fillServiceRow(cursor: MatrixCursor, avService: AVService) {
@@ -241,7 +275,7 @@ class ESGContentProvider : ContentProvider(), LifecycleOwner {
 
         super.shutdown()
 
-        unbindService()
+//        unbindService()
     }
 
     companion object {

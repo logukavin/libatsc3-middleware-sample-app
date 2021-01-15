@@ -55,8 +55,11 @@ class StandaloneAtsc3Service : Atsc3ForegroundService() {
         ).binder
     }
 
-    override fun onUnbind(intent: Intent?): Boolean {
-        serviceHandler?.unSubscribeAll()
+    override fun onUnbind(intent: Intent): Boolean {
+        // Don't clear by provider action
+        if (intent.action == null) {
+            serviceHandler?.unSubscribeAll()
+        }
         return super.onUnbind(intent)
     }
 
