@@ -17,6 +17,7 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTExtractor;
 import com.nextgenbroadcast.mobile.core.atsc3.mmt.MMTConstants;
 
 import org.ngbp.libatsc3.middleware.Atsc3NdkMediaMMTBridge;
@@ -213,6 +214,10 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
         if (isActive()) {
             if (!ATSC3PlayerFlags.ATSC3PlayerStartPlayback) {
                 ATSC3PlayerFlags.ATSC3PlayerStartPlayback = true;
+
+                //jjustman-2021-01-13 - HACK
+                MMTExtractor.SystemClockAnchor = 0;
+                MMTExtractor.MfuClockAnchor = 0;
             }
 
             PushMfuByteBufferFragment(mfuByteBufferFragment);
