@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
+import android.net.Uri
 import android.os.IBinder
 import android.os.PowerManager
 import android.os.PowerManager.WakeLock
@@ -14,12 +15,14 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
 import androidx.lifecycle.MediatorLiveData
+import androidx.lifecycle.distinctUntilChanged
 import com.nextgenbroadcast.mobile.core.cert.UserAgentSSLContext
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.presentation.ApplicationState
 import com.nextgenbroadcast.mobile.middleware.BuildConfig
+import com.nextgenbroadcast.mobile.middleware.R
 import com.nextgenbroadcast.mobile.middleware.analytics.Atsc3Analytics
 import com.nextgenbroadcast.mobile.middleware.analytics.IAtsc3Analytics
 import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3Module
@@ -112,6 +115,13 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
                 }
             })
         }
+
+        // Temporary hacky solution
+        val AUTHORITY = getString(R.string.nextgenServicesGuideProvider)
+        val SERVICE_CONTENT_URI = Uri.parse("content://$AUTHORITY/${ESGContentProvider.SERVICE_CONTENT_PATH}")
+        repo.serviceSchedule.distinctUntilChanged().observe(this) {
+            contentResolver.notifyChange(SERVICE_CONTENT_URI, null)
+        }
     }
 
     override fun onDestroy() {
@@ -127,15 +137,25 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     }
 
     override fun onBind(intent: Intent): IBinder? {
+        // Skip presentation layer initialization if it's service request
+        if (intent.action == ESGContentProvider.ACTION_BIND_FROM_PROVIDER) {
+            return createProviderServiceBinder(serviceController)
+        }
+
         super.onBind(intent)
 
         maybeInitialize()
 
-        return if (intent.action == ESGContentProvider.ACTION_BIND_FROM_PROVIDER) {
-            createProviderServiceBinder(serviceController)
-        } else {
-            createServiceBinder(serviceController)
+        return createServiceBinder(serviceController)
+    }
+
+    override fun onUnbind(intent: Intent): Boolean {
+        // Skip presentation layer destroying if it's service request
+        if (intent.action == ESGContentProvider.ACTION_BIND_FROM_PROVIDER) {
+            return false
         }
+
+        return super.onUnbind(intent)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {

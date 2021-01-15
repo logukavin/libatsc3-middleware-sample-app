@@ -58,7 +58,7 @@ abstract class BindableForegroundService : LifecycleService() {
         isBinded = true
     }
 
-    override fun onUnbind(intent: Intent?): Boolean {
+    override fun onUnbind(intent: Intent): Boolean {
         super.onUnbind(intent)
 
         isBinded = false
