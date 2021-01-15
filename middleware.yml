@@ -46,16 +46,16 @@ steps:
       javaHomeOption: 'JDKVersion'
       publishJUnitResults: true
       testResultsFiles: '**/TEST-*.xml'
-#      tasks: ':nextgen-middleware:testReleaseUnitTest'
-#    displayName: gradlew test
-#
-#  - task: Gradle@2
-#    inputs:
-#      workingDirectory: ''
-#      gradleWrapperFile: 'gradlew'
-#      javaHomeOption: 'JDKVersion'
-#      publishJUnitResults: true
-#      testResultsFiles: '**/TEST-*.xml'
+      tasks: ':nextgen-middleware:testReleaseUnitTest'
+    displayName: gradlew test
+
+  - task: Gradle@2
+    inputs:
+      workingDirectory: ''
+      gradleWrapperFile: 'gradlew'
+      javaHomeOption: 'JDKVersion'
+      publishJUnitResults: true
+      testResultsFiles: '**/TEST-*.xml'
       tasks: ':nextgen-core:publish :nextgen-middleware:publish :nextgen-mmt:publish :nextgen-view:publish -PartifactVersion=$(ARTIFACT_VERSION)'
     displayName: gradlew publish
 

@@ -9,4 +9,5 @@
     <string name="settings_title">Settings</string>
     <string name="settings_frequency_hint">Receiver frequency in MHz</string>
     <string name="settings_apply_btn">Tune</string>
+    <string name="settings_enable_debug_info">Enable Debug Information</string>
 </resources>
