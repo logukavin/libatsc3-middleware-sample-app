@@ -50,10 +50,6 @@ class InterprocessServiceBinder(
             sendAction(IServiceBinder.ACTION_CLOSE_ROUTE)
         }
 
-        override fun createMMTSource(): Any {
-            throw UnsupportedOperationException("MMT playback is not supported with standalone service")
-        }
-
         override fun tune(frequency: PhyFrequency) {
             sendAction(IServiceBinder.ACTION_TYNE_FREQUENCY, bundleOf(
                     IServiceBinder.PARAM_FREQUENCY to frequency

@@ -26,6 +26,7 @@ import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.presentation.ApplicationState
 import com.nextgenbroadcast.mobile.core.presentation.IReceiverPresenter
 import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
+import com.nextgenbroadcast.mobile.middleware.phy.Atsc3DeviceReceiver
 import com.nextgenbroadcast.mobile.middleware.sample.MainActivity.Companion.sourceMap
 import com.nextgenbroadcast.mobile.middleware.sample.SettingsDialog.Companion.REQUEST_KEY_FREQUENCY
 import com.nextgenbroadcast.mobile.middleware.sample.core.SwipeGestureDetector
@@ -38,7 +39,9 @@ import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.factory.UserAgent
 import com.nextgenbroadcast.mobile.middleware.sample.useragent.ServiceAdapter
 import com.nextgenbroadcast.mobile.view.UserAgentView
 import kotlinx.android.synthetic.main.fragment_main.*
+import kotlinx.coroutines.*
 import java.util.*
+import kotlin.concurrent.thread
 
 
 class MainFragment : BaseFragment() {
@@ -50,6 +53,7 @@ class MainFragment : BaseFragment() {
     private var selectorViewModel: SelectorViewModel? = null
     private var receiverViewModel: ReceiverViewModel? = null
 
+    //TODO: remove
     private var receiverPresenter: IReceiverPresenter? = null
 
     private var servicesList: List<AVService>? = null
@@ -60,8 +64,6 @@ class MainFragment : BaseFragment() {
     private lateinit var serviceAdapter: ServiceAdapter
     private lateinit var sourceAdapter: ListAdapter
     private lateinit var bottomSheetBehavior: BottomSheetBehavior<View>
-
-    private var initPlayer = false
 
     private val getContent = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         val path = uri?.let { FileUtils.getPath(requireContext(), uri) }
@@ -181,11 +183,22 @@ class MainFragment : BaseFragment() {
         setFragmentResultListener(REQUEST_KEY_FREQUENCY) { _, bundle ->
             val freqKhz = bundle.getInt(SettingsDialog.PARAM_FREQUENCY, 0)
             receiverPresenter?.tune(PhyFrequency.user(freqKhz))
+
+            //TODO: set receiverViewModel value directlly in dialog
+            val enablePHYDebugInformationChecked = bundle.getBoolean(SettingsDialog.PARAM_PHY_DEBUG_INFORMATION_CHECKED, false)
+            receiverViewModel?.showDebugInfo?.value = enablePHYDebugInformationChecked
         }
 
         settings_button.setOnClickListener {
             receiverPresenter?.let {
                 openSettings(it.freqKhz.value)
+            }
+        }
+
+        GlobalScope.launch {
+            while(true) {
+                receiverViewModel?.debugData?.postValue(Atsc3DeviceReceiver.PHYRfStatistics + "\n" + Atsc3DeviceReceiver.PHYBWStatistics)
+                delay(1000)
             }
         }
     }
@@ -236,13 +249,6 @@ class MainFragment : BaseFragment() {
         }
 
         receiverPresenter = binder.receiverPresenter
-
-        if (initPlayer) {
-            initPlayer = false
-            rmpViewModel?.mediaUri?.value?.let { uri ->
-                startPlayback(uri)
-            }
-        }
     }
 
     override fun onUnbind() {
@@ -336,7 +342,9 @@ class MainFragment : BaseFragment() {
             })
             preparePlayerView(receiver_player)
             mediaUri.observe(this@MainFragment, { mediaUri ->
-                mediaUri?.let { startPlayback(mediaUri) } ?: receiver_player.stopPlayback()
+                mediaUri?.let {
+                    receiver_player.startPlayback(mediaUri)
+                } ?: receiver_player.stopPlayback()
             })
             playWhenReady.observe(this@MainFragment, { playWhenReady ->
                 receiver_player.setPlayWhenReady(playWhenReady)
@@ -344,18 +352,6 @@ class MainFragment : BaseFragment() {
         }
 
         receiver_player.bind(rmpViewModel)
-    }
-
-    private fun startPlayback(mediaUri: Uri) {
-        if (mediaUri.toString().startsWith("mmt://")) {
-            receiverPresenter?.createMMTSource()?.let { source ->
-                receiver_player.startPlayback(source)
-            } ?: let {
-                initPlayer = true
-            }
-        } else {
-            receiver_player.startPlayback(mediaUri)
-        }
     }
 
     private fun changeService(serviceId: Int) {

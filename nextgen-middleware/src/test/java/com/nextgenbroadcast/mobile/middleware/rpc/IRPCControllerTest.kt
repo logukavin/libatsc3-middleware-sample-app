@@ -104,7 +104,7 @@ class IRPCControllerTest {
         Mockito.`when`(prefs.hostName).thenReturn("localhost")
         Mockito.`when`(prefs.httpsPort).thenReturn(8443)
         Mockito.`when`(prefs.wssPort).thenReturn(9999)
-        Mockito.`when`(mediaFileProvider.getFileProviderUri(mockedMediaUrl)).thenReturn(mockedMediaUri)
+        Mockito.`when`(mediaFileProvider.getMediaFileUri(mockedMediaUrl)).thenReturn(mockedMediaUri)
         Mockito.`when`(mockedMediaUri.toString()).thenReturn(mockedMediaUrl)
         Mockito.`when`(repository.heldPackage).thenReturn(appData)
         Mockito.`when`(repository.applications).thenReturn(applications)

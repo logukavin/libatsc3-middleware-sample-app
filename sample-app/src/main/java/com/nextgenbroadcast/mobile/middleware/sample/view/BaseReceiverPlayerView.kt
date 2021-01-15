@@ -84,10 +84,6 @@ open class BaseReceiverPlayerView : FrameLayout {
         progress_bar.visibility = View.GONE
     }
 
-    open fun startPlayback(mmtSource: Any) {
-        progress_bar.visibility = View.GONE
-    }
-
     open fun stopPlayback() {
         receiver_media_player.stop()
         progress_bar.visibility = View.VISIBLE

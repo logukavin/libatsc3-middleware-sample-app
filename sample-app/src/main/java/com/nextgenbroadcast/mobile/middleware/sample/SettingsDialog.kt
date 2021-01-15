@@ -34,6 +34,9 @@ class SettingsDialog: DialogFragment() {
             if (freqKhz > 0) {
                 view.frequencyEditText.setText((freqKhz / 1000).toString())
             }
+
+            val enablePHYDebugInformationChecked = args.getBoolean(PARAM_PHY_DEBUG_INFORMATION_CHECKED, false)
+            view.enablePHYDebuggingInformation.setChecked(enablePHYDebugInformationChecked)
         }
 
         view.applyButton.setOnClickListener {
@@ -45,8 +48,11 @@ class SettingsDialog: DialogFragment() {
 
     private fun done() {
         val freqKhz = frequencyEditText.text.toString().toIntOrNull()?.let { it * 1000 } ?: 0
+        val enablePHYDebugInformationChecked = enablePHYDebuggingInformation.isChecked();
+
         val result = Bundle().apply{
             putInt(PARAM_FREQUENCY, freqKhz)
+            putBoolean(PARAM_PHY_DEBUG_INFORMATION_CHECKED, enablePHYDebugInformationChecked);
         }
         setFragmentResult(REQUEST_KEY_FREQUENCY, result)
 
@@ -57,6 +63,8 @@ class SettingsDialog: DialogFragment() {
         val TAG: String = SettingsDialog::class.java.simpleName
 
         const val PARAM_FREQUENCY = "param_frequency"
+        const val PARAM_PHY_DEBUG_INFORMATION_CHECKED = "param_phy_debug_information_checked"
+
         const val REQUEST_KEY_FREQUENCY = "requestKey_frequency"
 
         fun newInstance(freqKhz: Int?): SettingsDialog {
