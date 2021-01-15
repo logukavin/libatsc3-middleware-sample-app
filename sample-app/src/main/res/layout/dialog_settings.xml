@@ -33,15 +33,14 @@
         app:layout_constraintRight_toRightOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/frequencyField" />
 
-    <Switch
+    <androidx.appcompat.widget.SwitchCompat
         android:id="@+id/enablePHYDebuggingInformation"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginTop="15dp"
         android:checked="false"
-        android:paddingTop="50px"
-        android:text="Enable PHY Debug Information"
+        android:text="@string/settings_enable_debug_info"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/applyButton" />
-
 
 </androidx.constraintlayout.widget.ConstraintLayout>

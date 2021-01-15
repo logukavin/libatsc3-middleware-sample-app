@@ -148,7 +148,7 @@ dependencies {
         }
     }
 
-
+    // TODO: remove this after removing dependency in MMTContentProvider
     if (project.hasProperty('org.gradle.project.use_local_src_exoplayer_folder') && project.property('org.gradle.project.use_local_src_exoplayer_folder').toString().toBoolean()) {
         implementation project(':exoplayer-extension-mmt')
     } else {

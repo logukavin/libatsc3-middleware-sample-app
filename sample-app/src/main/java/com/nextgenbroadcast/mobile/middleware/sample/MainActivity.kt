@@ -9,7 +9,6 @@ import android.content.pm.ShortcutInfo
 import android.content.pm.ShortcutManager
 import android.content.res.Configuration
 import android.graphics.drawable.Icon
-import android.media.MediaCodecList
 import android.os.Bundle
 import android.view.View
 import android.widget.Toast

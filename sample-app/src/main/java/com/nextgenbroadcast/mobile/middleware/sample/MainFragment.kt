@@ -7,12 +7,9 @@ import android.os.Bundle
 import android.view.GestureDetector
 import android.view.LayoutInflater
 import android.view.View
-import android.view.View.INVISIBLE
-import android.view.View.VISIBLE
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.ListAdapter
-import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
@@ -21,16 +18,7 @@ import androidx.core.os.bundleOf
 import androidx.databinding.DataBindingUtil
 import androidx.fragment.app.setFragmentResultListener
 import androidx.lifecycle.ViewModelProvider
-import com.google.android.exoplayer2.DefaultRenderersFactory
-import com.google.android.exoplayer2.ExoPlayerFactory
-import com.google.android.exoplayer2.trackselection.AdaptiveTrackSelection
-import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
-import com.google.android.exoplayer2.ui.PlayerView
 import com.google.android.material.bottomsheet.BottomSheetBehavior
-import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTExtractor
-import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTLoadControl
-import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTMediaSource
-import com.nextgenbroadcast.mmt.exoplayer2.ext.source.PcapUdpDataSource
 import com.nextgenbroadcast.mobile.core.FileUtils
 import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.model.PhyFrequency
@@ -51,10 +39,7 @@ import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.factory.UserAgent
 import com.nextgenbroadcast.mobile.middleware.sample.useragent.ServiceAdapter
 import com.nextgenbroadcast.mobile.view.UserAgentView
 import kotlinx.android.synthetic.main.fragment_main.*
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
 import java.util.*
 import kotlin.concurrent.thread
 
@@ -83,30 +68,6 @@ class MainFragment : BaseFragment() {
     private val getContent = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         val path = uri?.let { FileUtils.getPath(requireContext(), uri) }
         path?.let { openRoute(requireContext(), path) }
-    }
-
-    fun udpMmtTest(path: String) {
-        val videoUri = Uri.parse(path)
-
-        view?.findViewById<View>(R.id.progress_bar)!!.visibility = View.GONE
-
-        val trackSelector = DefaultTrackSelector(AdaptiveTrackSelection.Factory())
-        val player = ExoPlayerFactory.newSimpleInstance(requireContext(), DefaultRenderersFactory(context), trackSelector, MMTLoadControl())
-
-        val playerView = view?.findViewById<PlayerView>(R.id.receiver_media_player)!!
-        playerView.player = player
-        playerView.requestFocus()
-
-        val mediaSource = MMTMediaSource.Factory({
-            PcapUdpDataSource()
-        }, {
-            arrayOf(MMTExtractor())
-        }).apply {
-            //setLoadErrorHandlingPolicy(createDefaultLoadErrorHandlingPolicy())
-        }.createMediaSource(videoUri)
-
-        player.prepare(mediaSource)
-        player.playWhenReady = true
     }
 
     override fun onAttach(context: Context) {
@@ -219,21 +180,13 @@ class MainFragment : BaseFragment() {
             }
         }
 
-        atsc3_data_log.visibility = INVISIBLE
-        atsc3_phy_data_log.visibility = INVISIBLE
-
         setFragmentResultListener(REQUEST_KEY_FREQUENCY) { _, bundle ->
             val freqKhz = bundle.getInt(SettingsDialog.PARAM_FREQUENCY, 0)
             receiverPresenter?.tune(PhyFrequency.user(freqKhz))
 
+            //TODO: set receiverViewModel value directlly in dialog
             val enablePHYDebugInformationChecked = bundle.getBoolean(SettingsDialog.PARAM_PHY_DEBUG_INFORMATION_CHECKED, false)
-            if(enablePHYDebugInformationChecked) {
-                atsc3_data_log.visibility = VISIBLE
-                atsc3_phy_data_log.visibility = VISIBLE
-            } else {
-                atsc3_data_log.visibility = INVISIBLE
-                atsc3_phy_data_log.visibility = INVISIBLE
-            }
+            receiverViewModel?.showDebugInfo?.value = enablePHYDebugInformationChecked
         }
 
         settings_button.setOnClickListener {
@@ -244,10 +197,8 @@ class MainFragment : BaseFragment() {
 
         GlobalScope.launch {
             while(true) {
-                withContext(Dispatchers.Main) {
-                    atsc3_phy_data_log?.text = Atsc3DeviceReceiver.PHYRfStatistics + "\n" + Atsc3DeviceReceiver.PHYBWStatistics
-                }
-                Thread.sleep(1000)
+                receiverViewModel?.debugData?.postValue(Atsc3DeviceReceiver.PHYRfStatistics + "\n" + Atsc3DeviceReceiver.PHYBWStatistics)
+                delay(1000)
             }
         }
     }
@@ -276,8 +227,8 @@ class MainFragment : BaseFragment() {
             }
             View.VISIBLE
         }
-        //atsc3_data_log.visibility = visibility
-        //bottom_sheet.visibility = visibility
+        atsc3_data_log.visibility = visibility
+        bottom_sheet.visibility = visibility
     }
 
     override fun onBind(binder: IServiceBinder) {
