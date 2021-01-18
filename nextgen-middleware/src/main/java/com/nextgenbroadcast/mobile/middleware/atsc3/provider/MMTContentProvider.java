@@ -55,6 +55,8 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
 
     @Override
     public boolean onCreate() {
+        MmtPacketIdContext.Initialize();
+
         atsc3NdkMediaMMTBridge = new Atsc3NdkMediaMMTBridge(this);
 
         mHandlerThread = new HandlerThread("mmt-content-provider");
