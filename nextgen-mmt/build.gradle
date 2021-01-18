@@ -55,9 +55,8 @@ dependencies {
         implementation project(':exoplayer-extension-mmt')
     } else {
         compileOnly "com.google.android.exoplayer:exoplayer-core:$exoplayerVersion"
-        compileOnly "com.google.android.exoplayer:exoplayer-extension-mmt:$exoplayerVersion"
+        compileOnly "com.google.android.exoplayer:exoplayer-mmt:$exoplayerVersion"
     }
-
 
     implementation project(":nextgen-core")
 

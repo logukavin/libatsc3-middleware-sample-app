@@ -134,7 +134,7 @@ dependencies {
     } else {
         implementation "org.ngbp.libatsc3:atsc3_core:$libatsc3Version"
         implementation "org.ngbp.libatsc3:atsc3_bridge:$libatsc3Version"
-        compileOnly "org.ngbp.libatsc3:atsc3_bridge_media_mmt:$libatsc3Version"
+        implementation "org.ngbp.libatsc3:atsc3_bridge_media_mmt:$libatsc3Version"
         implementation "org.ngbp.libatsc3:atsc3_phy_virtual:$libatsc3Version"
 
         if (project.hasProperty('org.gradle.project.phy_saankhya_enabled') && project.property('org.gradle.project.phy_saankhya_enabled').toString().toBoolean()) {
@@ -152,7 +152,7 @@ dependencies {
     if (project.hasProperty('org.gradle.project.use_local_src_exoplayer_folder') && project.property('org.gradle.project.use_local_src_exoplayer_folder').toString().toBoolean()) {
         implementation project(':exoplayer-extension-mmt')
     } else {
-        compileOnly "com.google.android.exoplayer:exoplayer-extension-mmt:$exoplayerVersion"
+        compileOnly "com.google.android.exoplayer:exoplayer-mmt:$exoplayerVersion"
     }
 
     implementation project(":nextgen-core")
