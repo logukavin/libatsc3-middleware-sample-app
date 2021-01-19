@@ -22,11 +22,6 @@ import org.ngbp.libatsc3.middleware.Atsc3NdkApplicationBridge
 import org.ngbp.libatsc3.middleware.Atsc3NdkPHYBridge
 import org.ngbp.libatsc3.middleware.android.a331.PackageExtractEnvelopeMetadataAndPayload
 import org.ngbp.libatsc3.middleware.android.application.interfaces.IAtsc3NdkApplicationBridgeCallbacks
-import org.ngbp.libatsc3.middleware.android.phy.Atsc3NdkPHYClientBase
-import org.ngbp.libatsc3.middleware.android.phy.Atsc3UsbDevice
-import org.ngbp.libatsc3.middleware.android.application.interfaces.IAtsc3NdkMediaMMTBridgeCallbacks
-import org.ngbp.libatsc3.middleware.android.mmt.MfuByteBufferFragment
-import org.ngbp.libatsc3.middleware.android.mmt.MpuMetadata_HEVC_NAL_Payload
 import org.ngbp.libatsc3.middleware.android.phy.interfaces.IAtsc3NdkPHYBridgeCallbacks
 import org.ngbp.libatsc3.middleware.android.phy.models.BwPhyStatistics
 import org.ngbp.libatsc3.middleware.android.phy.models.RfPhyStatistics
