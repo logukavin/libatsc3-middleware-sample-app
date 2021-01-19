@@ -358,13 +358,6 @@ class MainFragment : BaseFragment() {
         receiver_player.bind(rmpViewModel)
     }
 
-    private fun changeService(serviceId: Int) {
-        if (selectorViewModel?.selectService(serviceId) != true) return
-
-        receiver_player.stopPlayback()
-        setBAAvailability(false)
-    }
-
     private fun setBAAvailability(available: Boolean) {
         user_agent_web_view.visibility = if (available) View.VISIBLE else View.INVISIBLE
     }
