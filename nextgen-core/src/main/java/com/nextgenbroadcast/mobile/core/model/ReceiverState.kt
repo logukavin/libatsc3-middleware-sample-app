@@ -5,5 +5,5 @@ import kotlinx.android.parcel.Parcelize
 
 @Parcelize
 enum class ReceiverState : Parcelable {
-    OPENED, PAUSED, IDLE
+    SCANNING, OPENED, PAUSED, IDLE
 }

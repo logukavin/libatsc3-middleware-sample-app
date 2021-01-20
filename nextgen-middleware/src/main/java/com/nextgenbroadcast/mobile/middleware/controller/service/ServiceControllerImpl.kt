@@ -1,6 +1,5 @@
 package com.nextgenbroadcast.mobile.middleware.controller.service
 
-import android.hardware.usb.UsbDevice
 import android.util.Log
 import androidx.lifecycle.MutableLiveData
 import com.nextgenbroadcast.mobile.core.model.PhyFrequency
@@ -13,6 +12,7 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Applicatio
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPackage
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.service.Atsc3Service
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.ServiceGuideStore
+import com.nextgenbroadcast.mobile.middleware.atsc3.source.*
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
 import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
 import kotlinx.coroutines.*
@@ -46,8 +46,9 @@ internal class ServiceControllerImpl (
         atsc3Module.setListener(this)
     }
 
-    override fun onStateChanged(state: Atsc3Module.State?) {
-        val newState = state?.let { ReceiverState.valueOf(state.name) } ?: ReceiverState.IDLE
+    override fun onStateChanged(state: Atsc3Module.State) {
+        //TODO: rewrite this mapping
+        val newState = ReceiverState.valueOf(state.name)
 
         receiverState.postValue(newState)
 
@@ -56,7 +57,13 @@ internal class ServiceControllerImpl (
         }
     }
 
-    override fun onServiceListTableReceived(services: List<Atsc3Service>, reportServerUrl: String?) {
+    override fun onApplicationPackageReceived(appPackage: Atsc3Application) {
+        Log.d("ServiceControllerImpl", "onPackageReceived - appPackage: $appPackage")
+
+        repository.addOrUpdateApplication(appPackage)
+    }
+
+    override fun onServiceLocationTableChanged(services: List<Atsc3Service>, reportServerUrl: String?) {
         atsc3Analytics.setReportServerUrl(reportServerUrl)
 
         // store A/V services
@@ -84,20 +91,18 @@ internal class ServiceControllerImpl (
         }
     }
 
-    override fun onPackageReceived(appPackage: Atsc3Application) {
-        Log.d("ServiceControllerImpl", "onPackageReceived - appPackage: $appPackage")
-
-        repository.addOrUpdateApplication(appPackage)
-    }
-
-    override fun onCurrentServicePackageChanged(pkg: Atsc3HeldPackage?) {
+    override fun onServicePackageChanged(pkg: Atsc3HeldPackage?) {
         cancelHeldReset()
 
         repository.setHeldPackage(pkg)
     }
 
-    override fun onCurrentServiceDashPatched(mpdPath: String) {
-        setMediaUrlWithDelay(mpdPath)
+    override fun onServiceMediaReady(path: String, delayBeforePlayMs: Long) {
+        if (delayBeforePlayMs > 0) {
+            setMediaUrlWithDelay(path, delayBeforePlayMs)
+        } else {
+            repository.setMediaUrl(path)
+        }
     }
 
     override fun onServiceGuideUnitReceived(filePath: String) {
@@ -105,22 +110,29 @@ internal class ServiceControllerImpl (
     }
 
     override fun openRoute(path: String): Boolean {
-        closeRoute()
-
-        return if (path.startsWith("srt://")) {
-            atsc3Module.openSRTStream(path)
+        val source = if (path.startsWith("srt://")) {
+            if (path.contains('\n')) {
+                val sources = path.split('\n')
+                SrtListAtsc3Source(sources)
+            } else {
+                SrtAtsc3Source(path)
+            }
         } else {
             //TODO: temporary solution
-            val type = if (path.contains(".demux.")) Atsc3Module.PcapType.DEMUXED else Atsc3Module.PcapType.STLTP
-            atsc3Module.openPcapFile(path, type)
+            val type = if (path.contains(".demux.")) PcapAtsc3Source.PcapType.DEMUXED else PcapAtsc3Source.PcapType.STLTP
+            PcapAtsc3Source(path, type)
         }
+
+        return openRoute(source)
     }
 
-    override fun openRoute(device: UsbDevice): Boolean {
+    override fun openRoute(source: IAtsc3Source): Boolean {
         closeRoute()
 
-        if (atsc3Module.openUsbDevice(device)) {
-            tune(PhyFrequency.default(PhyFrequency.Source.AUTO))
+        if (atsc3Module.connect(source)) {
+            if (source is ITunableSource) {
+                tune(PhyFrequency.default(PhyFrequency.Source.AUTO))
+            }
             return true
         }
         return false
@@ -145,7 +157,7 @@ internal class ServiceControllerImpl (
         cancelMediaUrlAssignment()
         repository.setMediaUrl(null)
 
-        val res = atsc3Module.selectService(service.id)
+        val res = atsc3Module.selectService(service.bsid, service.id)
         if (res) {
             atsc3Analytics.startSession(service.bsid, service.id, service.globalId, service.category)
 
@@ -162,10 +174,6 @@ internal class ServiceControllerImpl (
                     repository.setHeldPackage(null)
                 }
             }
-
-            if (atsc3Module.slsProtocol == Atsc3Module.SLS_PROTOCOL_MMT) {
-                repository.setMediaUrl("mmt://${service.id}")
-            }
         } else {
             // Reset HELD and service if service can't be selected
             repository.setHeldPackage(null)
@@ -174,24 +182,31 @@ internal class ServiceControllerImpl (
     }
 
     override fun tune(frequency: PhyFrequency) {
-        var freqKhz = frequency.frequency
-
-        if (frequency.useDefault) {
+        val frequencyList: List<Int> = if (frequency.list.isEmpty()) {
             val lastFrequency = settings.lastFrequency
-            val frequencyLocation = settings.frequencyLocation
-            if (lastFrequency > 0) {
-                freqKhz = lastFrequency
-            } else if (frequencyLocation != null) {
-                frequencyLocation.firstFrequency?.let {
-                    freqKhz = it
+            settings.frequencyLocation?.let {
+                it.frequencyList.toMutableList().apply {
+                    if (lastFrequency > 0) {
+                        remove(lastFrequency)
+                        add(0, lastFrequency)
+                    }
+                }
+            } ?: mutableListOf<Int>().apply {
+                if (lastFrequency > 0) {
+                    add(lastFrequency)
                 }
             }
+        } else {
+            frequency.list
         }
+
+        val freqKhz = frequencyList.firstOrNull() ?: return
 
         this.freqKhz.postValue(freqKhz)
         settings.lastFrequency = freqKhz
         atsc3Module.tune(
                 freqKhz = freqKhz,
+                frequencies = frequencyList,
                 retuneOnDemod = frequency.source == PhyFrequency.Source.USER
         )
     }
@@ -214,12 +229,12 @@ internal class ServiceControllerImpl (
         }
     }
 
-    private fun setMediaUrlWithDelay(mpdPath: String) {
+    private fun setMediaUrlWithDelay(path: String, delayMs: Long) {
         cancelMediaUrlAssignment()
         mediaUrlAssignmentJob = ioScope.launch {
-            delay(MPD_UPDATE_DELAY)
+            delay(delayMs)
             withContext(Dispatchers.Main) {
-                repository.setMediaUrl(mpdPath)
+                repository.setMediaUrl(path)
                 mediaUrlAssignmentJob = null
             }
         }
@@ -234,6 +249,5 @@ internal class ServiceControllerImpl (
 
     companion object {
         private const val BA_LOADING_TIMEOUT = 5000L
-        private const val MPD_UPDATE_DELAY = 2000L
     }
 }

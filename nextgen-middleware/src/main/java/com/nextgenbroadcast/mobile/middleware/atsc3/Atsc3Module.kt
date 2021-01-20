@@ -1,9 +1,11 @@
 package com.nextgenbroadcast.mobile.middleware.atsc3
 
 import android.content.Context
-import android.hardware.usb.UsbDevice
-import android.hardware.usb.UsbManager
 import android.util.Log
+import android.util.SparseArray
+import androidx.annotation.MainThread
+import com.nextgenbroadcast.mobile.core.isEquals
+import com.nextgenbroadcast.mobile.middleware.atsc3.entities.Atsc3ServiceLocationTable
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.SLTConstants
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3ApplicationFile
@@ -13,56 +15,56 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.HeldXmlParser
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.service.Atsc3Service
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.service.LLSParserSLT
 import com.nextgenbroadcast.mobile.middleware.phy.Atsc3DeviceReceiver
+import com.nextgenbroadcast.mobile.middleware.atsc3.source.ConfigurableAtsc3Source
+import com.nextgenbroadcast.mobile.middleware.atsc3.source.IAtsc3Source
+import com.nextgenbroadcast.mobile.middleware.atsc3.source.ITunableSource
+import com.nextgenbroadcast.mobile.middleware.atsc3.source.TunableConfigurableAtsc3Source
+import kotlinx.coroutines.*
 import org.ngbp.libatsc3.middleware.Atsc3NdkApplicationBridge
 import org.ngbp.libatsc3.middleware.Atsc3NdkPHYBridge
 import org.ngbp.libatsc3.middleware.android.a331.PackageExtractEnvelopeMetadataAndPayload
 import org.ngbp.libatsc3.middleware.android.application.interfaces.IAtsc3NdkApplicationBridgeCallbacks
-import org.ngbp.libatsc3.middleware.android.phy.Atsc3NdkPHYClientBase
-import org.ngbp.libatsc3.middleware.android.phy.Atsc3UsbDevice
 import org.ngbp.libatsc3.middleware.android.phy.interfaces.IAtsc3NdkPHYBridgeCallbacks
 import org.ngbp.libatsc3.middleware.android.phy.models.BwPhyStatistics
 import org.ngbp.libatsc3.middleware.android.phy.models.RfPhyStatistics
-import org.ngbp.libatsc3.middleware.android.phy.virtual.PcapDemuxedVirtualPHYAndroid
-import org.ngbp.libatsc3.middleware.android.phy.virtual.PcapSTLTPVirtualPHYAndroid
-import org.ngbp.libatsc3.middleware.android.phy.virtual.srt.SRTRxSTLTPVirtualPHYAndroid
 import java.io.File
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.locks.ReentrantLock
 
 internal class Atsc3Module(
         private val context: Context
 ): IAtsc3NdkApplicationBridgeCallbacks, IAtsc3NdkPHYBridgeCallbacks {
 
     enum class State {
-        OPENED, PAUSED, IDLE
-    }
-
-    enum class PcapType {
-        DEMUXED, STLTP
+        SCANNING, OPENED, PAUSED, IDLE
     }
 
     interface Listener {
-        fun onStateChanged(state: State?)
-        fun onServiceListTableReceived(services: List<Atsc3Service>, reportServerUrl: String?)
-        fun onPackageReceived(appPackage: Atsc3Application)
-        fun onCurrentServicePackageChanged(pkg: Atsc3HeldPackage?)
-        fun onCurrentServiceDashPatched(mpdPath: String)
+        fun onStateChanged(state: State)
+        fun onApplicationPackageReceived(appPackage: Atsc3Application)
+        fun onServiceLocationTableChanged(services: List<Atsc3Service>, reportServerUrl: String?)
+        fun onServicePackageChanged(pkg: Atsc3HeldPackage?)
+        fun onServiceMediaReady(path: String, delayBeforePlayMs: Long)
         fun onServiceGuideUnitReceived(filePath: String)
     }
 
     private val atsc3NdkApplicationBridge = Atsc3NdkApplicationBridge(this)
     private val atsc3NdkPHYBridge = Atsc3NdkPHYBridge(this)
 
-    private val usbManager by lazy { context.getSystemService(Context.USB_SERVICE) as UsbManager }
+    private val stateLock = ReentrantLock()
+    private var state = State.IDLE
+    private var source: IAtsc3Source? = null
+    private var currentSourceConfiguration: Int = IAtsc3Source.CONFIG_DEFAULT
+    private var lastTunedFreqList: List<Int> = emptyList()
 
-    private var atsc3NdkPHYClientInstance: Atsc3NdkPHYClientBase? = null //whomever is currently instantiated (e.g. SRTRxSTLTPVirtualPhyAndroid, etc..)
-    private var atsc3NdkPHYClientFreqKhz: Int = 0
-
-    private val serviceMap = ConcurrentHashMap<Int, Atsc3Service>()
+    private val serviceLocationTable = ConcurrentHashMap<Int, Atsc3ServiceLocationTable>()
+    private val serviceToSourceConfig = ConcurrentHashMap<Int, Int>()
     private val packageMap = HashMap<String, Atsc3Application>()
 
-    private var state = State.IDLE
+    private var selectedServiceBsid = -1
     private var selectedServiceId = -1
+    private var suspendedServiceSelection: Boolean = false
     private var selectedServiceSLSProtocol = -1
     private var selectedServiceHeld: Atsc3Held? = null
     private var selectedServicePackage: Atsc3HeldPackage? = null
@@ -70,6 +72,8 @@ internal class Atsc3Module(
 
     @Volatile
     private var phyDemodLock: Boolean = false
+    @Volatile
+    private var isReconfiguring: Boolean = false
 
     val slsProtocol: Int
         get() = selectedServiceSLSProtocol
@@ -77,146 +81,177 @@ internal class Atsc3Module(
     @Volatile
     private var listener: Listener? = null
 
+    private var nextSourceJob: Job? = null
+
     fun setListener(listener: Listener?) {
         if (this.listener != null) throw IllegalStateException("Atsc3Module listener already initialized")
         this.listener = listener
     }
 
-    fun tune(freqKhz: Int, retuneOnDemod: Boolean) {
+    /**
+     * Tune to [freqKhz] is it's greater thar zero. The [frequencies] allows to scan and collect data from all of them.
+     */
+    fun tune(freqKhz: Int, frequencies: List<Int>, retuneOnDemod: Boolean) {
+        // make target frequency first
+        val frequencyList = frequencies.toMutableList().apply {
+            remove(freqKhz)
+            add(0, freqKhz)
+        }
         val demodLock = phyDemodLock
-        if (atsc3NdkPHYClientFreqKhz == freqKhz || (!retuneOnDemod && demodLock)) return
+        if ((freqKhz != 0 && lastTunedFreqList.isEquals(frequencyList)) || (!retuneOnDemod && demodLock)) return
 
-        atsc3NdkPHYClientInstance?.let { phy ->
-            atsc3NdkPHYClientFreqKhz = freqKhz
-
+        val src = source
+        if (src is ITunableSource) {
             reset()
 
-            phy.tune(freqKhz, 0)
-        }
-    }
+            if (src is TunableConfigurableAtsc3Source) {
+                src.setConfigs(frequencyList)
 
-    fun openPhy(phy: Atsc3NdkPHYClientBase, fd: Int, devicePath: String?, freqKhz: Int): Boolean {
-        if (phy.init() == 0) {
-            if (phy.open(fd, devicePath) == 0) {
+                setSourceConfig(IAtsc3Source.CONFIG_DEFAULT)
+                applySourceConfig(src, -1)
 
-                phy.startPhyOpenTrace();
-                if (freqKhz > 0) {
-                    phy.tune(freqKhz, 0)
-                }
-
-                close()
-                atsc3NdkPHYClientInstance = phy
-
-                return true
-            }
-        }
-
-        return false
-    }
-
-    fun openPcapFile(filename: String, type: PcapType): Boolean {
-        log("Opening PCAP file: $filename")
-
-        close()
-
-        atsc3NdkPHYClientInstance = when (type) {
-            PcapType.DEMUXED -> PcapDemuxedVirtualPHYAndroid()
-            PcapType.STLTP -> PcapSTLTPVirtualPHYAndroid()
-        }.apply {
-            init()
-        }.also { client ->
-            val res = client.open_from_capture(filename)
-
-            //TODO: for assets mAt3DrvIntf.atsc3_pcap_open_for_replay_from_assetManager(filename, assetManager);
-            if (res == RES_OK) {
-                client.run()
-                setState(State.OPENED)
-            }
-        }
-
-        return true
-    }
-
-    fun openSRTStream(srtSource: String): Boolean {
-        log("Opening SRT file: $srtSource")
-
-        close()
-
-        atsc3NdkPHYClientInstance = SRTRxSTLTPVirtualPHYAndroid().apply {
-            init()
-        }.also { client ->
-            client.setSrtSourceConnectionString(srtSource)
-            client.run()
-        }
-
-        setState(State.OPENED)
-
-        return true
-    }
-
-    fun openUsbDevice(device: UsbDevice): Boolean {
-        log("Opening USB device: ${device.deviceName}")
-
-        val candidatePHYList = getPHYImplementations(device)
-        if (candidatePHYList.isEmpty()) return false
-
-        val conn = usbManager.openDevice(device) ?: return false
-
-        close()
-
-        val atsc3UsbDevice = Atsc3UsbDevice(device, conn)
-
-        candidatePHYList.forEach { candidatePHY ->
-            val atsc3NdkPHYClientBaseCandidate = Atsc3NdkPHYClientBase.CreateInstanceFromUSBVendorIDProductIDSupportedPHY(candidatePHY)
-
-            if (candidatePHY.getIsBootloader(device)) {
-                val r = atsc3NdkPHYClientBaseCandidate.download_bootloader_firmware(atsc3UsbDevice.fd, atsc3UsbDevice.deviceName)
-                if (r < 0) {
-                    log("prepareDevices: download_bootloader_firmware with $atsc3NdkPHYClientBaseCandidate failed for path: ${atsc3UsbDevice.deviceName}, fd: ${atsc3UsbDevice.fd}")
-                } else {
-                    log("prepareDevices: download_bootloader_firmware with $atsc3NdkPHYClientBaseCandidate for path: ${atsc3UsbDevice.deviceName}, fd: ${atsc3UsbDevice.fd}, success")
-                    //pre-boot devices should re-enumerate, so don't track this connection just yet...
-                }
-
+                lastTunedFreqList = frequencyList
             } else {
-                val r = atsc3NdkPHYClientBaseCandidate.open(atsc3UsbDevice.fd, atsc3UsbDevice.deviceName)
-                if (r < 0) {
-                    log("prepareDevices: open with $atsc3NdkPHYClientBaseCandidate failed for path: ${atsc3UsbDevice.deviceName}, fd: ${atsc3UsbDevice.fd}, res: $r")
-                } else {
-                    log("prepareDevices: open with $atsc3NdkPHYClientBaseCandidate for path: ${atsc3UsbDevice.deviceName}, fd: ${atsc3UsbDevice.fd}, success")
+                lastTunedFreqList = listOf(freqKhz)
 
-                    atsc3NdkPHYClientBaseCandidate.setAtsc3UsbDevice(atsc3UsbDevice)
-                    atsc3UsbDevice.setAtsc3NdkPHYClientBase(atsc3NdkPHYClientBaseCandidate)
+                src.tune(freqKhz)
+            }
+        }
+    }
 
-                    atsc3NdkPHYClientInstance = atsc3NdkPHYClientBaseCandidate
-                    setState(State.OPENED)
+    fun connect(source: IAtsc3Source): Boolean {
+        log("Connecting to: $source")
+
+        close()
+
+        this.source = source
+
+        return withStateLock {
+            val result = source.open()
+            if (result != IAtsc3Source.RESULT_ERROR) {
+                setSourceConfig(result)
+                setState(
+                        if (result > 0) State.SCANNING else State.OPENED
+                )
+                return@withStateLock true
+            }
+            return@withStateLock false
+        }
+    }
+
+    @Synchronized
+    private fun applyNextSourceConfig() {
+        val job = nextSourceJob
+        if (job != null && job.isActive) {
+            return
+        }
+
+        nextSourceJob = CoroutineScope(Dispatchers.Main).launch {
+            setSourceConfig(IAtsc3Source.CONFIG_DEFAULT)
+            val src = source
+            if (src is ConfigurableAtsc3Source<*>) {
+                applySourceConfig(src, -1 /* apply next config */)
+            }
+        }
+    }
+
+    private fun <T> withStateLock(action: () -> T): T {
+        try {
+            stateLock.lock()
+
+            return action()
+        } finally {
+            stateLock.unlock()
+        }
+    }
+
+    private fun applySourceConfig(src: ConfigurableAtsc3Source<*>, config: Int): Int {
+        return withStateLock {
+            isReconfiguring = true
+            val result = try {
+                src.configure(config)
+            } finally {
+                isReconfiguring = false
+            }
+
+            if (result != IAtsc3Source.RESULT_ERROR) {
+                setSourceConfig(result)
+                setState(
+                        if (result > 0 && config == IAtsc3Source.CONFIG_DEFAULT) State.SCANNING else State.OPENED
+                )
+            }
+
+            return@withStateLock result
+        }
+    }
+
+    private fun getState(): State {
+        return withStateLock {
+            state
+        }
+    }
+
+    private fun setState(newState: State) {
+        withStateLock {
+            state = newState
+        }
+        listener?.onStateChanged(newState)
+    }
+
+    private fun getSourceConfig(): Int {
+        return withStateLock {
+            currentSourceConfiguration
+        }
+    }
+
+    private fun setSourceConfig(config: Int) {
+        withStateLock {
+            currentSourceConfiguration = config
+        }
+    }
+
+    private var tmpAdditionalServiceOpened = false
+
+    fun selectService(bsid: Int, serviceId: Int): Boolean {
+        if (selectedServiceBsid == bsid && selectedServiceId == serviceId) return false
+
+        clearHeld()
+        selectedServiceSLSProtocol = -1
+
+        selectedServiceBsid = bsid
+        selectedServiceId = serviceId
+
+        serviceToSourceConfig[bsid]?.let { serviceConfig ->
+            if (serviceConfig != getSourceConfig()) {
+                val src = source
+                if (src is ConfigurableAtsc3Source<*>) {
+                    withStateLock {
+                        applySourceConfig(src, serviceConfig)
+                        suspendedServiceSelection = true
+                    }
                     return true
                 }
             }
         }
 
-        atsc3UsbDevice.destroy()
-
-        return false
+        return internalSelectService(bsid, serviceId)
     }
 
-    private var tmpAdditionalServiceOpened = false
-
-    fun selectService(serviceId: Int): Boolean {
-        if (selectedServiceId == serviceId) return false
-
-        clearHeld()
-
-        selectedServiceId = serviceId
+    @MainThread
+    private fun internalSelectService(bsid: Int, serviceId: Int): Boolean {
         selectedServiceSLSProtocol = atsc3NdkApplicationBridge.atsc3_slt_selectService(serviceId)
 
         //TODO: temporary test solution
         if (!tmpAdditionalServiceOpened) {
-            serviceMap.values.firstOrNull {
+            serviceLocationTable[bsid]?.services?.firstOrNull {
                 it.serviceCategory == SLTConstants.SERVICE_CATEGORY_ESG
             }?.let { service ->
                 tmpAdditionalServiceOpened = atsc3NdkApplicationBridge.atsc3_slt_alc_select_additional_service(service.serviceId) > 0
             }
+        }
+
+        if (selectedServiceSLSProtocol == SLS_PROTOCOL_MMT) {
+            listener?.onServiceMediaReady(SCHEME_MMT + serviceId, 0)
         }
 
         return selectedServiceSLSProtocol > 0
@@ -231,48 +266,23 @@ internal class Atsc3Module(
     }
 
     fun stop() {
-        atsc3NdkPHYClientInstance?.stop()
+        source?.stop()
 
         setState(State.PAUSED)
     }
 
     fun close() {
-        atsc3NdkPHYClientInstance?.let { client ->
-            log("closeUsbDevice -- calling client.deinit")
+        source?.close()
 
-            client.deinit()
-
-            client.atsc3UsbDevice?.let { device ->
-                log("closeUsbDevice -- before FindFromUsbDevice")
-                Atsc3UsbDevice.DumpAllAtsc3UsbDevices()
-
-                device.destroy()
-
-                Atsc3UsbDevice.DumpAllAtsc3UsbDevices()
-            }
-            client.stopPhyOpenTrace()
-            client.stopPhyTunedTrace()
-
-            atsc3NdkPHYClientInstance = null
-        }
-
-        atsc3NdkPHYClientFreqKhz = 0
-
+        lastTunedFreqList = emptyList()
+        setSourceConfig(IAtsc3Source.CONFIG_DEFAULT)
         reset()
     }
 
     private fun reset() {
         setState(State.IDLE)
+        isReconfiguring = false
         clear()
-    }
-
-    private fun getPHYImplementations(device: UsbDevice): List<Atsc3NdkPHYClientBase.USBVendorIDProductIDSupportedPHY> {
-        Atsc3UsbDevice.FindFromUsbDevice(device)?.let {
-            log("usbPHYLayerDeviceTryToInstantiateFromRegisteredPHYNDKs: Atsc3UsbDevice already instantiated: $device, instance: $it")
-            return emptyList()
-        } ?: log("usbPHYLayerDeviceTryToInstantiateFromRegisteredPHYNDKs: Atsc3UsbDevice map returned : $device, but null instance?")
-
-        return Atsc3NdkPHYClientBase.GetCandidatePHYImplementations(device) ?: emptyList()
     }
 
     private fun getSelectedServiceMediaUri(): String? {
@@ -296,7 +306,8 @@ internal class Atsc3Module(
     private fun clear() {
         clearHeld()
         clearService()
-        serviceMap.clear()
+        serviceLocationTable.clear()
+        serviceToSourceConfig.clear()
 
         //TODO: temporary test solution
         if (tmpAdditionalServiceOpened) {
@@ -306,6 +317,8 @@ internal class Atsc3Module(
     }
 
     private fun clearService() {
+        suspendedServiceSelection = false
+        selectedServiceBsid = -1
         selectedServiceId = -1
         selectedServiceSLSProtocol = -1
     }
@@ -331,14 +344,30 @@ internal class Atsc3Module(
     override fun jni_getCacheDir(): File = context.cacheDir
 
     override fun onSlsTablePresent(sls_payload_xml: String) {
-        log("onSlsTablePresent, $sls_payload_xml")
+        val shouldSkip = isReconfiguring
 
-        LLSParserSLT().parseXML(sls_payload_xml).let { (services, urls) ->
-            serviceMap.putAll(services.map { it.serviceId to it }.toMap())
-            listener?.onServiceListTableReceived(
-                    Collections.unmodifiableList(services),
-                    urls[SLTConstants.URL_TYPE_REPORT_SERVER]
-            )
+        log("onSlsTablePresent, $sls_payload_xml, skip: $shouldSkip")
+
+        if (shouldSkip) return
+
+        val slt = LLSParserSLT().parseXML(sls_payload_xml)
+        serviceLocationTable[slt.bsid] = slt
+        serviceToSourceConfig[slt.bsid] = getSourceConfig()
+
+        val currentState = getState()
+        if (currentState == State.SCANNING) {
+            applyNextSourceConfig()
+        } else if (currentState != State.IDLE) {
+            val services = serviceLocationTable
+                    .toSortedMap(compareBy { serviceToSourceConfig[it] })
+                    .values.flatMap { it.services }
+            fireServiceLocationTableChanged(services, slt.urls)
+
+            if (suspendedServiceSelection) {
+                CoroutineScope(Dispatchers.Main).launch {
+                    internalSelectService(selectedServiceBsid, selectedServiceId)
+                }
+            }
         }
     }
 
@@ -347,6 +376,8 @@ internal class Atsc3Module(
     }
 
     override fun onSlsHeldEmissionPresent(serviceId: Int, heldPayloadXML: String) {
+        if (getState() == State.SCANNING) return
+
         log("onSlsHeldEmissionPresent, $serviceId, selectedServiceID: $selectedServiceId, HELD: $heldPayloadXML")
 
         if (serviceId == selectedServiceId) {
@@ -363,7 +394,7 @@ internal class Atsc3Module(
 
                     if (pkg != selectedServicePackage) {
                         selectedServicePackage = pkg
-                        listener?.onCurrentServicePackageChanged(pkg)
+                        listener?.onServicePackageChanged(pkg)
                     }
                 }
             }
@@ -375,20 +406,26 @@ internal class Atsc3Module(
     }
 
     override fun onAlcObjectClosed(service_id: Int, tsi: Int, toi: Int, s_tsid_content_location: String?, s_tsid_content_type: String?, cache_file_path: String?) {
+        //if (getState() == State.SCANNING) return we do not open an additional service when scanning
+
         when (s_tsid_content_type) {
             CONTENT_TYPE_SGDD -> {
                 // skip
             }
 
             CONTENT_TYPE_SGDU -> {
-                cache_file_path?.let {
-                    listener?.onServiceGuideUnitReceived(getFullPath(cache_file_path))
+                if (selectedServiceId == service_id) {
+                    cache_file_path?.let {
+                        listener?.onServiceGuideUnitReceived(getFullPath(cache_file_path))
+                    }
                 }
             }
         }
     }
 
     override fun onPackageExtractCompleted(packageMetadata: PackageExtractEnvelopeMetadataAndPayload) {
+        if (getState() == State.SCANNING) return
+
         log("onPackageExtractCompleted packageExtractPath: ${packageMetadata.packageExtractPath} packageName: ${packageMetadata.packageName}, appContextIdList: ${packageMetadata.appContextIdList}, files: [${packageMetadata.multipartRelatedPayloadList.map { it.contentLocation }}]")
 
         if (!packageMetadata.isValid()) {
@@ -403,14 +440,16 @@ internal class Atsc3Module(
         val appPackage = packageMap[pkgUid]
         if (appPackage != pkg) {
             packageMap[pkgUid] = pkg
-            listener?.onPackageReceived(pkg)
+            listener?.onApplicationPackageReceived(pkg)
         }
     }
 
     override fun routeDash_force_player_reload_mpd(ServiceID: Int) {
+        if (getState() == State.SCANNING) return
+
         if (ServiceID == selectedServiceId) {
             getSelectedServiceMediaUri()?.let { mpdPath ->
-                listener?.onCurrentServiceDashPatched(mpdPath)
+                listener?.onServiceMediaReady(mpdPath, MPD_UPDATE_DELAY)
             }
         }
     }
@@ -431,6 +470,15 @@ internal class Atsc3Module(
     }
 
     //////////////////////////////////////////////////////////////
+
+    //////////////////////////////////////////////////////////////
+
+    private fun fireServiceLocationTableChanged(services: List<Atsc3Service>, urls: SparseArray<String>) {
+        listener?.onServiceLocationTableChanged(
+                Collections.unmodifiableList(services),
+                urls[SLTConstants.URL_TYPE_REPORT_SERVER]
+        )
+    }
 
     private fun PackageExtractEnvelopeMetadataAndPayload.isValid(): Boolean {
         return !packageName.isNullOrEmpty()
@@ -454,11 +502,6 @@ internal class Atsc3Module(
 
     private fun getFullPath(cachePath: String) = String.format("%s/%s", jni_getCacheDir(), cachePath)
 
-    private fun setState(newState: State) {
-        state = newState
-        listener?.onStateChanged(newState)
-    }
-
     private fun log(text: String, vararg params: Any) {
         val msg = if (params.isNotEmpty()) {
             String.format(Locale.US, text, *params)
@@ -476,10 +519,13 @@ internal class Atsc3Module(
         private const val CONTENT_TYPE_SGDD = "application/vnd.oma.bcast.sgdd+xml"
         private const val CONTENT_TYPE_SGDU = "application/vnd.oma.bcast.sgdu"
 
-        private const val RES_OK = 0
+        private const val MPD_UPDATE_DELAY = 2000L
+
+        const val RES_OK = 0
 
         const val SLS_PROTOCOL_DASH = 1
         const val SLS_PROTOCOL_MMT = 2
 
+        const val SCHEME_MMT = "mmt://"
     }
 }
