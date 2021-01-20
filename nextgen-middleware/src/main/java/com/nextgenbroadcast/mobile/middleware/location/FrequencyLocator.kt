@@ -62,7 +62,7 @@ class FrequencyLocator : IFrequencyLocator {
             if (!stations.isNullOrEmpty()) {
                 return stations.map { station ->
                     station.frequency * 1000
-                }
+                }.distinct()
             }
         } catch (e: IOException) {
             Log.d(TAG, "Error on frequency request", e)

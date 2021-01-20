@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import androidx.core.content.FileProvider
 import com.nextgenbroadcast.mobile.middleware.R
+import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3Module
 import com.nextgenbroadcast.mobile.middleware.atsc3.provider.MMTContentProvider
 import java.io.File
 
@@ -30,6 +31,6 @@ open class MediaFileProvider(
     }
 
     companion object {
-        const val SCHEME_MMT = "mmt://"
+        const val SCHEME_MMT = Atsc3Module.SCHEME_MMT
     }
 }
