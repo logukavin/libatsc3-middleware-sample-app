@@ -12,3 +12,15 @@ fun String.md5(): String {
 fun Double.toDegrees(): String {
     return Location.convert(this, Location.FORMAT_DEGREES).replace(",", ".")
 }
+
+fun <T> List<T>.isEquals(second: List<T>): Boolean {
+    if (this.size != second.size) return false
+
+    this.forEachIndexed { index, value ->
+        if (second[index] != value) {
+            return false
+        }
+    }
+
+    return true
+}

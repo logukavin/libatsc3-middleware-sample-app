@@ -3,6 +3,8 @@ package com.nextgenbroadcast.mobile.middleware.atsc3
 import android.content.Context
 import android.util.Log
 import android.util.SparseArray
+import androidx.annotation.MainThread
+import com.nextgenbroadcast.mobile.core.isEquals
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.Atsc3ServiceLocationTable
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.SLTConstants
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
@@ -40,10 +42,10 @@ internal class Atsc3Module(
 
     interface Listener {
         fun onStateChanged(state: State)
+        fun onApplicationPackageReceived(appPackage: Atsc3Application)
         fun onServiceLocationTableChanged(services: List<Atsc3Service>, reportServerUrl: String?)
-        fun onPackageReceived(appPackage: Atsc3Application)
-        fun onCurrentServicePackageChanged(pkg: Atsc3HeldPackage?)
-        fun onCurrentServiceDashPatched(mpdPath: String)
+        fun onServicePackageChanged(pkg: Atsc3HeldPackage?)
+        fun onServiceMediaReady(path: String, delayBeforePlayMs: Long)
         fun onServiceGuideUnitReceived(filePath: String)
     }
 
@@ -54,7 +56,7 @@ internal class Atsc3Module(
     private var state = State.IDLE
     private var source: IAtsc3Source? = null
     private var currentSourceConfiguration: Int = IAtsc3Source.CONFIG_DEFAULT
-    private var lastTunedFreqKhz: Int = 0
+    private var lastTunedFreqList: List<Int> = emptyList()
 
     private val serviceLocationTable = ConcurrentHashMap<Int, Atsc3ServiceLocationTable>()
     private val serviceToSourceConfig = ConcurrentHashMap<Int, Int>()
@@ -70,6 +72,8 @@ internal class Atsc3Module(
 
     @Volatile
     private var phyDemodLock: Boolean = false
+    @Volatile
+    private var isReconfiguring: Boolean = false
 
     val slsProtocol: Int
         get() = selectedServiceSLSProtocol
@@ -88,26 +92,27 @@ internal class Atsc3Module(
      * Tune to [freqKhz] is it's greater thar zero. The [frequencies] allows to scan and collect data from all of them.
      */
     fun tune(freqKhz: Int, frequencies: List<Int>, retuneOnDemod: Boolean) {
+        // make target frequency first
+        val frequencyList = frequencies.toMutableList().apply {
+            remove(freqKhz)
+            add(0, freqKhz)
+        }
         val demodLock = phyDemodLock
-        if ((freqKhz != 0 && lastTunedFreqKhz == freqKhz) || (!retuneOnDemod && demodLock)) return
+        if ((freqKhz != 0 && lastTunedFreqList.isEquals(frequencyList)) || (!retuneOnDemod && demodLock)) return
 
         val src = source
         if (src is ITunableSource) {
             reset()
 
             if (src is TunableConfigurableAtsc3Source) {
-                src.setConfigs(
-                        frequencies.toMutableList().apply {
-                            // make target frequency first
-                            remove(freqKhz)
-                            add(0, freqKhz)
-                        }
-                )
+                src.setConfigs(frequencyList)
 
                 setSourceConfig(IAtsc3Source.CONFIG_DEFAULT)
                 applySourceConfig(src, -1)
+
+                lastTunedFreqList = frequencyList
             } else {
-                lastTunedFreqKhz = freqKhz
+                lastTunedFreqList = listOf(freqKhz)
 
                 src.tune(freqKhz)
             }
@@ -121,22 +126,17 @@ internal class Atsc3Module(
 
         this.source = source
 
-        try {
-            stateLock.lock()
-
+        return withStateLock {
             val result = source.open()
             if (result != IAtsc3Source.RESULT_ERROR) {
                 setSourceConfig(result)
                 setState(
                         if (result > 0) State.SCANNING else State.OPENED
                 )
-                return true
+                return@withStateLock true
             }
-        } finally {
-            stateLock.unlock()
+            return@withStateLock false
         }
-
-        return false
     }
 
     @Synchronized
@@ -155,51 +155,58 @@ internal class Atsc3Module(
         }
     }
 
-    private fun applySourceConfig(src: ConfigurableAtsc3Source<*>, config: Int): Int {
-        val result = src.configure(config)
-        if (result != IAtsc3Source.RESULT_ERROR) {
-            setSourceConfig(result)
-            setState(
-                    if (result > 0 && config == IAtsc3Source.CONFIG_DEFAULT) State.SCANNING else State.OPENED
-            )
+    private fun <T> withStateLock(action: () -> T): T {
+        try {
+            stateLock.lock()
+
+            return action()
+        } finally {
+            stateLock.unlock()
         }
-        return result
+    }
+
+    private fun applySourceConfig(src: ConfigurableAtsc3Source<*>, config: Int): Int {
+        return withStateLock {
+            isReconfiguring = true
+            val result = try {
+                src.configure(config)
+            } finally {
+                isReconfiguring = false
+            }
+
+            if (result != IAtsc3Source.RESULT_ERROR) {
+                setSourceConfig(result)
+                setState(
+                        if (result > 0 && config == IAtsc3Source.CONFIG_DEFAULT) State.SCANNING else State.OPENED
+                )
+            }
+
+            return@withStateLock result
+        }
     }
 
     private fun getState(): State {
-        try {
-            stateLock.lock()
-            return state
-        } finally {
-            stateLock.unlock()
+        return withStateLock {
+            state
         }
     }
 
     private fun setState(newState: State) {
-        try {
-            stateLock.lock()
+        withStateLock {
             state = newState
-        } finally {
-            stateLock.unlock()
         }
         listener?.onStateChanged(newState)
     }
 
     private fun getSourceConfig(): Int {
-        try {
-            stateLock.lock()
-            return currentSourceConfiguration
-        } finally {
-            stateLock.unlock()
+        return withStateLock {
+            currentSourceConfiguration
         }
     }
 
     private fun setSourceConfig(config: Int) {
-        try {
-            stateLock.lock()
+        withStateLock {
             currentSourceConfiguration = config
-        } finally {
-            stateLock.unlock()
         }
     }
 
@@ -209,6 +216,7 @@ internal class Atsc3Module(
         if (selectedServiceBsid == bsid && selectedServiceId == serviceId) return false
 
         clearHeld()
+        selectedServiceSLSProtocol = -1
 
         selectedServiceBsid = bsid
         selectedServiceId = serviceId
@@ -217,9 +225,10 @@ internal class Atsc3Module(
             if (serviceConfig != getSourceConfig()) {
                 val src = source
                 if (src is ConfigurableAtsc3Source<*>) {
-                    applySourceConfig(src, serviceConfig)
-
-                    suspendedServiceSelection = true
+                    withStateLock {
+                        applySourceConfig(src, serviceConfig)
+                        suspendedServiceSelection = true
+                    }
                     return true
                 }
             }
@@ -228,6 +237,7 @@ internal class Atsc3Module(
         return internalSelectService(bsid, serviceId)
     }
 
+    @MainThread
     private fun internalSelectService(bsid: Int, serviceId: Int): Boolean {
         selectedServiceSLSProtocol = atsc3NdkApplicationBridge.atsc3_slt_selectService(serviceId)
 
@@ -238,6 +248,10 @@ internal class Atsc3Module(
             }?.let { service ->
                 tmpAdditionalServiceOpened = atsc3NdkApplicationBridge.atsc3_slt_alc_select_additional_service(service.serviceId) > 0
             }
+        }
+
+        if (selectedServiceSLSProtocol == SLS_PROTOCOL_MMT) {
+            listener?.onServiceMediaReady(SCHEME_MMT + serviceId, 0)
         }
 
         return selectedServiceSLSProtocol > 0
@@ -260,13 +274,14 @@ internal class Atsc3Module(
     fun close() {
         source?.close()
 
-        lastTunedFreqKhz = 0
+        lastTunedFreqList = emptyList()
         setSourceConfig(IAtsc3Source.CONFIG_DEFAULT)
         reset()
     }
 
     private fun reset() {
         setState(State.IDLE)
+        isReconfiguring = false
         clear()
     }
 
@@ -329,23 +344,30 @@ internal class Atsc3Module(
     override fun jni_getCacheDir(): File = context.cacheDir
 
     override fun onSlsTablePresent(sls_payload_xml: String) {
-        log("onSlsTablePresent, $sls_payload_xml")
+        val shouldSkip = isReconfiguring
+
+        log("onSlsTablePresent, $sls_payload_xml, skip: $shouldSkip")
+
+        if (shouldSkip) return
 
         val slt = LLSParserSLT().parseXML(sls_payload_xml)
         serviceLocationTable[slt.bsid] = slt
         serviceToSourceConfig[slt.bsid] = getSourceConfig()
 
-        Log.d("!!!", "serviceLocationTable: $serviceLocationTable")
-
-        if (getState() != State.SCANNING) {
-            val services = serviceLocationTable.values.flatMap { it.services }
+        val currentState = getState()
+        if (currentState == State.SCANNING) {
+            applyNextSourceConfig()
+        } else if (currentState != State.IDLE) {
+            val services = serviceLocationTable
+                    .toSortedMap(compareBy { serviceToSourceConfig[it] })
+                    .values.flatMap { it.services }
             fireServiceLocationTableChanged(services, slt.urls)
 
             if (suspendedServiceSelection) {
-                internalSelectService(selectedServiceBsid, selectedServiceId)
+                CoroutineScope(Dispatchers.Main).launch {
+                    internalSelectService(selectedServiceBsid, selectedServiceId)
+                }
             }
-        } else {
-            applyNextSourceConfig()
         }
     }
 
@@ -372,7 +394,7 @@ internal class Atsc3Module(
 
                     if (pkg != selectedServicePackage) {
                         selectedServicePackage = pkg
-                        listener?.onCurrentServicePackageChanged(pkg)
+                        listener?.onServicePackageChanged(pkg)
                     }
                 }
             }
@@ -418,7 +440,7 @@ internal class Atsc3Module(
         val appPackage = packageMap[pkgUid]
         if (appPackage != pkg) {
             packageMap[pkgUid] = pkg
-            listener?.onPackageReceived(pkg)
+            listener?.onApplicationPackageReceived(pkg)
         }
     }
 
@@ -427,7 +449,7 @@ internal class Atsc3Module(
 
         if (ServiceID == selectedServiceId) {
             getSelectedServiceMediaUri()?.let { mpdPath ->
-                listener?.onCurrentServiceDashPatched(mpdPath)
+                listener?.onServiceMediaReady(mpdPath, MPD_UPDATE_DELAY)
             }
         }
     }
@@ -497,10 +519,13 @@ internal class Atsc3Module(
         private const val CONTENT_TYPE_SGDD = "application/vnd.oma.bcast.sgdd+xml"
         private const val CONTENT_TYPE_SGDU = "application/vnd.oma.bcast.sgdu"
 
+        private const val MPD_UPDATE_DELAY = 2000L
+
         const val RES_OK = 0
 
         const val SLS_PROTOCOL_DASH = 1
         const val SLS_PROTOCOL_MMT = 2
 
+        const val SCHEME_MMT = "mmt://"
     }
 }

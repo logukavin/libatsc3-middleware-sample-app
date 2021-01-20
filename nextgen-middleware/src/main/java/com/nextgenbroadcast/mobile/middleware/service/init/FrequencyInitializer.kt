@@ -38,7 +38,9 @@ internal class FrequencyInitializer(
                 if (!isActive) return@async
 
                 frequencyApplied = true
-                receiver.tune(PhyFrequency.default(PhyFrequency.Source.AUTO))
+                withContext(Dispatchers.Main) {
+                    receiver.tune(PhyFrequency.default(PhyFrequency.Source.AUTO))
+                }
             }
 
             withTimeout(LOCATION_REQUEST_DELAY) {
@@ -54,7 +56,9 @@ internal class FrequencyInitializer(
                             settings.frequencyLocation = frequencyLocation
                             val frequencies = frequencyLocation.frequencyList.filter { it > 0 }
                             if (frequencies.isNotEmpty()) {
-                                receiver.tune(PhyFrequency.auto(frequencies))
+                                withContext(Dispatchers.Main) {
+                                    receiver.tune(PhyFrequency.auto(frequencies))
+                                }
                                 locationTaken = true
                             }
                         }
@@ -69,7 +73,9 @@ internal class FrequencyInitializer(
             }
 
             if (!locationTaken && !frequencyApplied) {
-                receiver.tune(PhyFrequency.default(PhyFrequency.Source.AUTO))
+                withContext(Dispatchers.Main) {
+                    receiver.tune(PhyFrequency.default(PhyFrequency.Source.AUTO))
+                }
             }
         }
 

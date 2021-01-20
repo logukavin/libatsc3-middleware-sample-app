@@ -21,6 +21,7 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
     public static final String TAG = MMTFileDescriptor.class.getSimpleName();
 
     private static final int MAX_QUEUE_SIZE = 120;
+    private static final int MAX_KEY_FRAME_WAIT_TIME = 5000;
 
     private final ConcurrentLinkedDeque<Pair<MfuByteBufferFragment, ByteBuffer>> mfuBufferQueue = new ConcurrentLinkedDeque<>();
     private final ByteBuffer sampleHeaderBuffer = ByteBuffer.allocate(MMTConstants.SIZE_SAMPLE_HEADER);
@@ -39,6 +40,7 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
     private boolean isActive = true;
     private boolean sendFileHeader = true;
     private boolean readSampleHeader = false;
+    private long keyFrameWaitingStartTime;
 
     public MMTFileDescriptor() {
     }
@@ -59,7 +61,15 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
         try {
             final int bytesRead;
             if (sendFileHeader) {
-                if (!hasMpuMetadata() || !skipUntilKeyFrame()) {
+                if (!hasMpuMetadata()) {
+                    return 0;
+                }
+
+                if (keyFrameWaitingStartTime == 0) {
+                    keyFrameWaitingStartTime = System.currentTimeMillis();
+                }
+
+                if (!skipUntilKeyFrame() && (System.currentTimeMillis() - keyFrameWaitingStartTime) < MAX_KEY_FRAME_WAIT_TIME) {
                     return 0;
                 }
 

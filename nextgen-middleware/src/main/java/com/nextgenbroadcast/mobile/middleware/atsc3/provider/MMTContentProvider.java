@@ -154,7 +154,6 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
 
             descriptors.add(descriptor);
 
-            Log.d("!!!", "New descriptor");
             return mStorageManager.openProxyFileDescriptor(fileMode, descriptor, mHandler);
         } catch (IOException e) {
             throw new FileNotFoundException(e.getMessage());
