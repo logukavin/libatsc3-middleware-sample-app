@@ -10,33 +10,28 @@ abstract class ConfigurableAtsc3Source<T>(
     private var configIndex: Int = configs.size - 1
     private var scanning: Boolean = configs.size > 1
 
-    override fun open(): Int {
-        var result = super.open()
+    fun configure(configIndex: Int): Int {
+        if (configList.isEmpty() || configIndex >= configList.size) return IAtsc3Source.RESULT_ERROR
 
-        if (result != IAtsc3Source.RESULT_ERROR && configIndex >= 0) {
-            result = configIndex
+        if (configIndex >= 0) {
+            scanning = false
+            this.configIndex = configIndex
+        }
+
+        var result = applyConfig(this.configIndex)
+        if (result != IAtsc3Source.RESULT_ERROR && this.configIndex >= 0) {
+            result = this.configIndex
 
             if (scanning) {
-                if (configIndex == 0) {
+                if (this.configIndex == 0) {
                     scanning = false
                 } else {
-                    configIndex--
+                    this.configIndex--
                 }
             }
         }
 
         return result
-    }
-
-    fun configure(config: Int): Int {
-        if (configList.isEmpty() || config >= configList.size) return IAtsc3Source.RESULT_ERROR
-
-        if (config >= 0) {
-            scanning = false
-            configIndex = config
-        }
-
-        return applyConfig(configIndex)
     }
 
     fun getAllConfigs(): List<T> {
@@ -50,11 +45,11 @@ abstract class ConfigurableAtsc3Source<T>(
         scanning = configIndex > 0
     }
 
-    fun getConfig(index: Int): T {
-        return configList[index]
+    fun getConfig(configIndex: Int): T {
+        return configList[configIndex]
     }
 
     fun getConfigIndex() = configIndex
 
-    protected abstract fun applyConfig(config: Int): Int
+    protected abstract fun applyConfig(configIndex: Int): Int
 }

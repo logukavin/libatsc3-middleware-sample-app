@@ -17,7 +17,7 @@ class ReceiverViewModel(
 
     val appDataLog: LiveData<CharSequence> = _appDataLog
     val debugData = MutableLiveData<String>()
-    val showDebugInfo = MutableLiveData(false)
+    val showDebugInfo = MutableLiveData(true)
 
     init {
         _appDataLog.addSource(agentPresenter.appData) { data ->

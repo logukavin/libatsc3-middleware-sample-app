@@ -7,6 +7,10 @@ class SrtListAtsc3Source(
         srtSourceList: List<String>
 ) : ConfigurableAtsc3Source<String>(srtSourceList) {
 
+    override fun open(): Int {
+        return configure(-1)
+    }
+
     override fun openPhyClient(): Atsc3NdkPHYClientBase {
         return SRTRxSTLTPVirtualPHYAndroid().apply {
             init()
@@ -16,7 +20,7 @@ class SrtListAtsc3Source(
         }
     }
 
-    override fun applyConfig(config: Int): Int {
+    override fun applyConfig(configIndex: Int): Int {
         close()
         return super.open()
     }

@@ -12,16 +12,24 @@ class PhyAtsc3Source(
     override fun openPhyClient(): Atsc3NdkPHYClientBase? {
         if (phy.init() == 0) {
             if (phy.open(fd, devicePath) == 0) {
+                phy.startPhyOpenTrace()
+
                 if (freqKhz > 0) {
                     phy.tune(freqKhz, 0)
                 }
 
-                //TODO: remove? close()
                 return phy
             }
         }
 
         return null
+    }
+
+    override fun close() {
+        super.close()
+
+        phy.stopPhyOpenTrace()
+        phy.stopPhyTunedTrace()
     }
 
     override fun toString(): String {

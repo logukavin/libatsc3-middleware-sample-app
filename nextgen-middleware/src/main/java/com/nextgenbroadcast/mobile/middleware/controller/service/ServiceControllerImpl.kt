@@ -57,6 +57,12 @@ internal class ServiceControllerImpl (
         }
     }
 
+    override fun onApplicationPackageReceived(appPackage: Atsc3Application) {
+        Log.d("ServiceControllerImpl", "onPackageReceived - appPackage: $appPackage")
+
+        repository.addOrUpdateApplication(appPackage)
+    }
+
     override fun onServiceLocationTableChanged(services: List<Atsc3Service>, reportServerUrl: String?) {
         atsc3Analytics.setReportServerUrl(reportServerUrl)
 
@@ -85,20 +91,18 @@ internal class ServiceControllerImpl (
         }
     }
 
-    override fun onPackageReceived(appPackage: Atsc3Application) {
-        Log.d("ServiceControllerImpl", "onPackageReceived - appPackage: $appPackage")
-
-        repository.addOrUpdateApplication(appPackage)
-    }
-
-    override fun onCurrentServicePackageChanged(pkg: Atsc3HeldPackage?) {
+    override fun onServicePackageChanged(pkg: Atsc3HeldPackage?) {
         cancelHeldReset()
 
         repository.setHeldPackage(pkg)
     }
 
-    override fun onCurrentServiceDashPatched(mpdPath: String) {
-        setMediaUrlWithDelay(mpdPath)
+    override fun onServiceMediaReady(path: String, delayBeforePlayMs: Long) {
+        if (delayBeforePlayMs > 0) {
+            setMediaUrlWithDelay(path, delayBeforePlayMs)
+        } else {
+            repository.setMediaUrl(path)
+        }
     }
 
     override fun onServiceGuideUnitReceived(filePath: String) {
@@ -170,10 +174,6 @@ internal class ServiceControllerImpl (
                     repository.setHeldPackage(null)
                 }
             }
-
-            if (atsc3Module.slsProtocol == Atsc3Module.SLS_PROTOCOL_MMT) {
-                repository.setMediaUrl("mmt://${service.id}")
-            }
         } else {
             // Reset HELD and service if service can't be selected
             repository.setHeldPackage(null)
@@ -182,23 +182,31 @@ internal class ServiceControllerImpl (
     }
 
     override fun tune(frequency: PhyFrequency) {
-        val freqKhz: Int = if (frequency.list.isEmpty()) {
+        val frequencyList: List<Int> = if (frequency.list.isEmpty()) {
             val lastFrequency = settings.lastFrequency
-            val storedFrequency = settings.frequencyLocation?.firstFrequency
-            if (lastFrequency > 0) {
-                lastFrequency
-            } else {
-                storedFrequency ?: 0
+            settings.frequencyLocation?.let {
+                it.frequencyList.toMutableList().apply {
+                    if (lastFrequency > 0) {
+                        remove(lastFrequency)
+                        add(0, lastFrequency)
+                    }
+                }
+            } ?: mutableListOf<Int>().apply {
+                if (lastFrequency > 0) {
+                    add(lastFrequency)
+                }
             }
         } else {
-            frequency.list.first()
+            frequency.list
         }
+
+        val freqKhz = frequencyList.firstOrNull() ?: return
 
         this.freqKhz.postValue(freqKhz)
         settings.lastFrequency = freqKhz
         atsc3Module.tune(
                 freqKhz = freqKhz,
-                frequencies = frequency.list,
+                frequencies = frequencyList,
                 retuneOnDemod = frequency.source == PhyFrequency.Source.USER
         )
     }
@@ -221,12 +229,12 @@ internal class ServiceControllerImpl (
         }
     }
 
-    private fun setMediaUrlWithDelay(mpdPath: String) {
+    private fun setMediaUrlWithDelay(path: String, delayMs: Long) {
         cancelMediaUrlAssignment()
         mediaUrlAssignmentJob = ioScope.launch {
-            delay(MPD_UPDATE_DELAY)
+            delay(delayMs)
             withContext(Dispatchers.Main) {
-                repository.setMediaUrl(mpdPath)
+                repository.setMediaUrl(path)
                 mediaUrlAssignmentJob = null
             }
         }
@@ -241,6 +249,5 @@ internal class ServiceControllerImpl (
 
     companion object {
         private const val BA_LOADING_TIMEOUT = 5000L
-        private const val MPD_UPDATE_DELAY = 2000L
     }
 }
