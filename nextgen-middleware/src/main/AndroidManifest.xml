@@ -44,11 +44,11 @@
 
         <provider
             android:authorities="@string/nextgenServicesGuideProvider"
-            android:name=".service.provider.esgProvider.ESGContentProvider"
+            android:name=".provider.esg.ESGContentProvider"
             android:exported="true"/>
 
         <provider
-            android:name=".atsc3.provider.MMTContentProvider"
+            android:name=".provider.mmt.MMTContentProvider"
             android:authorities="@string/nextgenMMTContentProvider"
             android:exported="false"
             android:grantUriPermissions="true"/>

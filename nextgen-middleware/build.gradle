@@ -45,9 +45,9 @@ android {
             }
         }
 
-        resValue("string", "nextgenMediaFileProvider", "com.nextgenbroadcast.dash.provider")
-        resValue("string", "nextgenMMTContentProvider", "com.nextgenbroadcast.mmt.provider")
-        resValue("string", "nextgenServicesGuideProvider", "com.nextgenbroadcast.esg.provider")
+        resValue("string", "nextgenMediaFileProvider", "com.nextgenbroadcast.mobile.middleware.provider.dash")
+        resValue("string", "nextgenMMTContentProvider", "com.nextgenbroadcast.mobile.middleware.provider.mmt")
+        resValue("string", "nextgenServicesGuideProvider", "com.nextgenbroadcast.mobile.middleware.provider.esg")
 
         resValue("string", "Auth0TokenUrl", "https://sinclairplatform.auth0.com/oauth/token")
         resValue("string", "Auth0Username", "middleware-service@sinclairplatform.com")

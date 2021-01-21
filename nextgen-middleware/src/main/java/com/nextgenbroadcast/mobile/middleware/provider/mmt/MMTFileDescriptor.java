@@ -1,4 +1,4 @@
-package com.nextgenbroadcast.mobile.middleware.atsc3.provider;
+package com.nextgenbroadcast.mobile.middleware.provider.mmt;
 
 import android.os.ProxyFileDescriptorCallback;
 import android.system.ErrnoException;
