@@ -6,6 +6,8 @@ apply plugin: 'com.google.gms.google-services'
 apply plugin: 'com.google.firebase.crashlytics'
 apply plugin: 'com.google.firebase.firebase-perf'
 
+def appVersionCode = project.hasProperty('versionCode') ? versionCode.toInteger() : 1
+def appVersion = "1.0"
 
 android {
     compileSdkVersion rootProject.compileSdkVersion
@@ -24,13 +26,16 @@ android {
         applicationId "com.nextgenbroadcast.mobile.middleware.sample"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode appVersionCode
+        versionName appVersion
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
+        debug {
+            versionNameSuffix ".${appVersionCode}"
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
@@ -72,6 +77,7 @@ android {
 
         }
     }
+
     buildFeatures {
         dataBinding = true
     }
@@ -87,6 +93,12 @@ android {
         pickFirst 'lib/armeabi-v7a/libssl.so'
         pickFirst 'lib/armeabi-v7a/libc++_shared.so'
 
+    }
+
+    applicationVariants.all { variant ->
+        variant.outputs.all {output ->
+            outputFileName = outputFileName.replace(".apk", "-${defaultConfig.versionName}.${appVersionCode}.apk")
+        }
     }
 }
 
