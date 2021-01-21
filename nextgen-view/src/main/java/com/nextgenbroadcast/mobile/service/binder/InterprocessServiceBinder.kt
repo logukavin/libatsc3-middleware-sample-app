@@ -10,11 +10,9 @@ import com.nextgenbroadcast.mobile.core.presentation.*
 import com.nextgenbroadcast.mobile.core.presentation.media.IObservablePlayer
 import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
 import com.nextgenbroadcast.mobile.core.presentation.IReceiverPresenter
-import com.nextgenbroadcast.mobile.core.serviceGuide.SGScheduleMap
 import com.nextgenbroadcast.mobile.service.handler.StandaloneClientHandler
 import com.nextgenbroadcast.mobile.service.handler.OnIncomingPlayerStateListener
 import com.nextgenbroadcast.mobile.permission.IUriPermissionRequester
-import java.lang.UnsupportedOperationException
 
 class InterprocessServiceBinder(
         service: IBinder,
@@ -63,7 +61,7 @@ class InterprocessServiceBinder(
 
         override fun setApplicationState(state: ApplicationState) {
             sendAction(IServiceBinder.ACTION_BA_STATE_CHANGED, bundleOf(
-                    IServiceBinder.PARAM_APPSTATE to appState
+                    IServiceBinder.PARAM_APPSTATE to state
             ))
         }
     }

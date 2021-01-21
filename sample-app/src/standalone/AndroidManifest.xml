@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     package="com.nextgenbroadcast.mobile.middleware.sample">
 
     <application>
@@ -33,6 +34,16 @@
                 android:name="com.nextgenbroadcast.mobile.middleware.StandaloneServiceInitializer"
                 android:value="androidx.startup" />
         </provider>
+
+        <provider
+            android:name="androidx.work.impl.WorkManagerInitializer"
+            android:authorities="${applicationId}.workmanager-init"
+            tools:node="remove" />
+
+        <provider
+            android:name="com.nextgenbroadcast.mobile.middleware.provider.mmt.MMTContentProvider"
+            android:authorities="@string/nextgenMMTContentProvider"
+            android:process=":atsc3Service" />
 
     </application>
 

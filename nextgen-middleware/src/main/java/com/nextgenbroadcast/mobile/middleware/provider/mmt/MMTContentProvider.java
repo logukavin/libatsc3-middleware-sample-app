@@ -1,6 +1,7 @@
 package com.nextgenbroadcast.mobile.middleware.provider.mmt;
 
 import android.content.ContentProvider;
+import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.pm.ProviderInfo;
@@ -161,7 +162,7 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
     }
 
     public static Uri getUriForService(@NonNull Context context, @NonNull String authority, @NonNull String serviceId) {
-        return new Uri.Builder().scheme("content")
+        return new Uri.Builder().scheme(ContentResolver.SCHEME_CONTENT)
                 .authority(authority).encodedPath(serviceId).build();
     }
 

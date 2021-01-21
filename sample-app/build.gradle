@@ -53,7 +53,9 @@ android {
             dimension "service_type"
             applicationIdSuffix ".standalone"
             resValue "string", "app_name", "Atsc3 Standalone Sample App"
-            resValue "string", "nextgenMediaFileProvider", "com.nextgenbroadcast.tv.dash.provider"
+            resValue "string", "nextgenMediaFileProvider", "com.nextgenbroadcast.mobile.middleware.provider.dash.tv"
+            resValue("string", "nextgenMMTContentProvider", "com.nextgenbroadcast.mobile.middleware.provider.mmt.tv")
+            resValue("string", "nextgenServicesGuideProvider", "com.nextgenbroadcast.mobile.middleware.provider.esg.tv")
         }
 
         light {
@@ -113,10 +115,9 @@ dependencies {
 
     implementation project(":nextgen-core")
     implementation project(":nextgen-view")
+    implementation project(":nextgen-mmt")
 
     embeddedImplementation project(":nextgen-middleware")
-    embeddedImplementation project(":nextgen-mmt")
-
     standaloneImplementation project(":nextgen-middleware")
 
     implementation "androidx.core:core-ktx:$coreKtxVersion"
@@ -143,6 +144,7 @@ dependencies {
     implementation 'com.google.android.material:material:1.2.1'
 
     standaloneImplementation "androidx.startup:startup-runtime:$startupRuntime"
+    standaloneImplementation "androidx.work:work-multiprocess:2.5.0-rc01"
 
     implementation 'com.google.android.gms:play-services-basement:17.4.0'
     implementation 'com.google.firebase:firebase-analytics-ktx:17.6.0'
