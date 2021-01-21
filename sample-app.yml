@@ -66,5 +66,5 @@ steps:
 
   - task: CmdLine@2
     inputs:
-      script: firebase appdistribution:distribute $(Build.ArtifactStagingDirectory)/*.apk --token $(firebase-token) --app $(middleware-token) --release-notes ${{ parameters.release_notes }} --groups ${{ parameters.tester_groups }}
+      script: firebase appdistribution:distribute $(Build.ArtifactStagingDirectory)/*.apk --token "$(firebase-token)" --app $(middleware-token) --release-notes "${{ parameters.release_notes }}" --groups "${{ parameters.tester_groups }}"
     displayName: 'Distribute app to Firebase'
