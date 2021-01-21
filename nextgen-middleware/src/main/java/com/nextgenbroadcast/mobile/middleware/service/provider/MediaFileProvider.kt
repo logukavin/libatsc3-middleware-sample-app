@@ -5,7 +5,7 @@ import android.net.Uri
 import androidx.core.content.FileProvider
 import com.nextgenbroadcast.mobile.middleware.R
 import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3Module
-import com.nextgenbroadcast.mobile.middleware.atsc3.provider.MMTContentProvider
+import com.nextgenbroadcast.mobile.middleware.provider.mmt.MMTContentProvider
 import java.io.File
 
 open class MediaFileProvider(

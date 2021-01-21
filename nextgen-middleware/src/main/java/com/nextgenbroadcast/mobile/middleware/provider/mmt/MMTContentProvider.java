@@ -1,4 +1,4 @@
-package com.nextgenbroadcast.mobile.middleware.atsc3.provider;
+package com.nextgenbroadcast.mobile.middleware.provider.mmt;
 
 import android.content.ContentProvider;
 import android.content.ContentValues;
