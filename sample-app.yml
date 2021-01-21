@@ -10,11 +10,11 @@ variables:
   - group: firebase
 
 parameters:
-  - name: release-notes
+  - name: release_notes
     displayName: Release notes
     type: string
 
-  - name: tester-groups
+  - name: tester_groups
     displayName: Tester groups
     type: string
     default: middleware
@@ -66,5 +66,5 @@ steps:
 
   - task: CmdLine@2
     inputs:
-      script: firebase appdistribution:distribute $(Build.ArtifactStagingDirectory)/*.apk --token $(firebase-token) --app $(middleware-token) --release-notes $(release-notes) --groups $(tester-groups)
+      script: firebase appdistribution:distribute $(Build.ArtifactStagingDirectory)/*.apk --token $(firebase-token) --app $(middleware-token) --release_notes ${{ parameters.release_notes }} --groups ${{ parameters.tester_groups }}
     displayName: 'Distribute app to Firebase'
