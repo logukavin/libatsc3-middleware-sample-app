@@ -6,11 +6,32 @@
 pool:
   vmImage: 'ubuntu-latest'
 
+variables:
+  - group: firebase
+
+parameters:
+  - name: release_notes
+    displayName: Release notes
+    type: string
+
+  - name: tester_groups
+    displayName: Tester groups
+    type: string
+    default: middleware
+    values:
+      - middleware
+      - markone-handsets
+
 steps:
   - bash:
-       echo "y" | sudo $(ANDROID_SDK_ROOT)/tools/bin/sdkmanager --install "ndk;21.0.6113669" --sdk_root=${ANDROID_SDK_ROOT}
-    displayName: 'Setup NDK 21.0.6113669'
-  
+      echo "y" | sudo $(ANDROID_SDK_ROOT)/tools/bin/sdkmanager --install "ndk;21.1.6352462" --sdk_root=${ANDROID_SDK_ROOT}
+    displayName: 'Setup NDK 21.1.6352462'
+
+  - task: CmdLine@2
+    inputs:
+      script: curl -sL firebase.tools | bash
+    displayName: 'Install firebase tools'
+
   - task: MavenAuthenticate@0
     displayName: 'Maven Authenticate'
     inputs:
@@ -24,17 +45,26 @@ steps:
       gradleOptions: '-Xmx3072m'
       publishJUnitResults: true
       testResultsFiles: '**/TEST-*.xml'
-      tasks: 'clean assembleDebug'
+      options: '-PversionCode=$(Build.BuildId)'
+      tasks: 'clean assembleEmbeddedDebug'
     displayName: gradlew build
 
   - task: CopyFiles@2
     displayName: 'Copy .apk files to artifact staging directory'
     inputs:
-        SourceFolder: '$(system.defaultworkingdirectory)'
-        Contents: '**/*.apk'
-        TargetFolder: '$(build.artifactstagingdirectory)'
+      SourceFolder: '$(system.defaultworkingdirectory)'
+      Contents: '**/*.apk'
+      flattenFolders: true
+      TargetFolder: '$(Build.ArtifactStagingDirectory)'
 
   - task: PublishBuildArtifacts@1
-    displayName: 'Publish Artifact: drop'
     inputs:
-        PathtoPublish: '$(build.artifactstagingdirectory)'
+      PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+      ArtifactName: 'drop'
+      publishLocation: 'Container'
+    displayName: 'Publish Artifact: drop'
+
+  - task: CmdLine@2
+    inputs:
+      script: firebase appdistribution:distribute $(Build.ArtifactStagingDirectory)/*.apk --token "$(firebase-token)" --app $(middleware-token) --release-notes "${{ parameters.release_notes }}" --groups "${{ parameters.tester_groups }}"
+    displayName: 'Distribute app to Firebase'
