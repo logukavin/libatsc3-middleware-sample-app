@@ -2,6 +2,7 @@ package com.nextgenbroadcast.mobile.middleware.provider.mmt;
 
 import android.content.ContentProvider;
 import android.content.ContentResolver;
+import android.content.ContentUris;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.pm.ProviderInfo;
@@ -72,14 +73,6 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
     public void attachInfo(@NonNull Context context, @NonNull ProviderInfo info) {
         super.attachInfo(context, info);
 
-        // Sanity check our security
-        if (info.exported) {
-            throw new SecurityException("Provider must not be exported");
-        }
-        if (!info.grantUriPermissions) {
-            throw new SecurityException("Provider must grant uri permissions");
-        }
-
         mStorageManager = (StorageManager) context.getSystemService(Context.STORAGE_SERVICE);
     }
 
@@ -97,10 +90,10 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
         for (String col : projection) {
             if (OpenableColumns.DISPLAY_NAME.equals(col)) {
                 cols[i] = OpenableColumns.DISPLAY_NAME;
-                values[i++] = "mmt/*"; //TODO: file.getName();
+                values[i++] = ContentUris.parseId(uri) + ".mmt";
             } else if (OpenableColumns.SIZE.equals(col)) {
                 cols[i] = OpenableColumns.SIZE;
-                values[i++] = Long.MAX_VALUE; //TODO: file.length();
+                values[i++] = Long.MAX_VALUE;
             }
         }
 

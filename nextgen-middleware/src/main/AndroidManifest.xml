@@ -43,15 +43,16 @@
         </provider>
 
         <provider
-            android:authorities="@string/nextgenServicesGuideProvider"
             android:name=".provider.esg.ESGContentProvider"
-            android:exported="true"/>
+            android:authorities="@string/nextgenServicesGuideProvider"
+            android:exported="false"
+            android:grantUriPermissions="true" />
 
         <provider
             android:name=".provider.mmt.MMTContentProvider"
             android:authorities="@string/nextgenMMTContentProvider"
             android:exported="false"
-            android:grantUriPermissions="true"/>
+            android:grantUriPermissions="true" />
 
     </application>
 </manifest>
