@@ -27,10 +27,5 @@ class Atsc3DeviceReceiver(
 
     companion object {
         val TAG: String = Atsc3DeviceReceiver::class.java.simpleName
-
-        var PHYRfStatistics: String = ""
-
-        var PHYBWStatistics: String = ""
-
     }
 }
