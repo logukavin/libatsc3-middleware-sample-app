@@ -41,11 +41,11 @@
             tools:node="remove" />
 
         <provider
-            android:name="com.nextgenbroadcast.mobile.middleware.provider.esg.ESGContentProvider"
-            android:authorities="@string/nextgenServicesGuideProvider"
+            android:name="com.nextgenbroadcast.mobile.middleware.provider.dash.DashContentProvider"
+            android:authorities="@string/nextgenMediaFileProvider"
             android:exported="true"
             android:process=":atsc3Service"
-            android:readPermission="com.nextgenbroadcast.mobile.middleware.provider.esg.READ_DATA"
+            android:readPermission="com.nextgenbroadcast.mobile.middleware.provider.dash.READ_DATA"
             tools:replace="android:exported" />
 
         <provider
@@ -54,6 +54,14 @@
             android:exported="true"
             android:process=":atsc3Service"
             android:readPermission="com.nextgenbroadcast.mobile.middleware.provider.mmt.READ_DATA"
+            tools:replace="android:exported" />
+
+        <provider
+            android:name="com.nextgenbroadcast.mobile.middleware.provider.esg.ESGContentProvider"
+            android:authorities="@string/nextgenServicesGuideProvider"
+            android:exported="true"
+            android:process=":atsc3Service"
+            android:readPermission="com.nextgenbroadcast.mobile.middleware.provider.esg.READ_DATA"
             tools:replace="android:exported" />
 
     </application>

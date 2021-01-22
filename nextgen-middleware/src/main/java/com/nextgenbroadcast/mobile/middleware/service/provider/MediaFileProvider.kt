@@ -2,16 +2,16 @@ package com.nextgenbroadcast.mobile.middleware.service.provider
 
 import android.content.Context
 import android.net.Uri
-import androidx.core.content.FileProvider
 import com.nextgenbroadcast.mobile.middleware.R
 import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3Module
+import com.nextgenbroadcast.mobile.middleware.provider.dash.DashContentProvider
 import com.nextgenbroadcast.mobile.middleware.provider.mmt.MMTContentProvider
 import java.io.File
 
 open class MediaFileProvider(
         private val context: Context
 ) : IMediaFileProvider {
-    private val fileProviderAuthority = context.getString(R.string.nextgenMediaFileProvider)
+    private val dashProviderAuthority = context.getString(R.string.nextgenMediaFileProvider)
     private val mmtProviderAuthority = context.getString(R.string.nextgenMMTContentProvider)
 
     override fun getMediaFileUri(path: String): Uri {
@@ -22,9 +22,9 @@ open class MediaFileProvider(
                     path.substring(SCHEME_MMT.length)
             )
         } else {
-            FileProvider.getUriForFile(
+            DashContentProvider.getUriForFile(
                     context,
-                    fileProviderAuthority,
+                    dashProviderAuthority,
                     File(path)
             )
         }
