@@ -33,14 +33,10 @@
             android:required="false" />
 
         <provider
-            android:name="androidx.core.content.FileProvider"
+            android:name=".provider.dash.DashContentProvider"
             android:authorities="@string/nextgenMediaFileProvider"
             android:exported="false"
-            android:grantUriPermissions="true">
-            <meta-data
-                android:name="android.support.FILE_PROVIDER_PATHS"
-                android:resource="@xml/file_provider_path" />
-        </provider>
+            android:grantUriPermissions="true" />
 
         <provider
             android:name=".provider.esg.ESGContentProvider"
