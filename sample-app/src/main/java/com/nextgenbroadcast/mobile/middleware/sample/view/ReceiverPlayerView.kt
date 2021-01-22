@@ -16,7 +16,7 @@ import com.nextgenbroadcast.mobile.view.ReceiverMediaPlayer
 import kotlinx.android.synthetic.main.receiver_player_layout.view.progress_bar
 import kotlinx.android.synthetic.main.receiver_player_layout.view.receiver_media_player
 
-open class BaseReceiverPlayerView : FrameLayout {
+class ReceiverPlayerView : FrameLayout {
     private val updateMediaTimeHandler = Handler(Looper.getMainLooper())
 
     private var rmpViewModel: RMPViewModel? = null
@@ -107,7 +107,7 @@ open class BaseReceiverPlayerView : FrameLayout {
     }
 
     companion object {
-        val TAG: String = BaseReceiverPlayerView::class.java.simpleName
+        val TAG: String = ReceiverPlayerView::class.java.simpleName
 
         private const val MEDIA_TIME_UPDATE_DELAY = 500L
     }

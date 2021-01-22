@@ -16,6 +16,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.os.bundleOf
 import androidx.databinding.DataBindingUtil
+import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.setFragmentResultListener
 import androidx.lifecycle.ViewModelProvider
@@ -41,7 +42,7 @@ import kotlinx.android.synthetic.main.fragment_main.*
 import kotlinx.coroutines.*
 import java.util.*
 
-class MainFragment : BaseFragment() {
+class MainFragment : Fragment() {
 
     private lateinit var binding: FragmentMainBinding
 
@@ -246,9 +247,7 @@ class MainFragment : BaseFragment() {
         bottom_sheet.visibility = visibility
     }
 
-    override fun onBind(binder: IServiceBinder) {
-        super.onBind(binder)
-
+    fun onBind(binder: IServiceBinder) {
         val factory = UserAgentViewModelFactory(
                 binder.userAgentPresenter,
                 binder.mediaPlayerPresenter,
@@ -266,9 +265,7 @@ class MainFragment : BaseFragment() {
         receiverPresenter = binder.receiverPresenter
     }
 
-    override fun onUnbind() {
-        super.onUnbind()
-
+    fun onUnbind() {
         binding.receiverModel = null
         receiver_player.unbind()
 
@@ -360,7 +357,6 @@ class MainFragment : BaseFragment() {
                         params.scale.toFloat() / 100
                 )
             })
-            preparePlayerView(receiver_player)
             mediaUri.observe(this@MainFragment, { mediaUri ->
                 mediaUri?.let {
                     receiver_player.startPlayback(mediaUri)
