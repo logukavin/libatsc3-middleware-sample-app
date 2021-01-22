@@ -1,6 +1,5 @@
 package com.nextgenbroadcast.mobile.middleware.service.handler
 
-import android.net.Uri
 import android.os.*
 import androidx.core.os.bundleOf
 import androidx.lifecycle.LifecycleOwner
@@ -12,11 +11,9 @@ import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceControl
 import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
 import com.nextgenbroadcast.mobile.core.presentation.IMediaPlayerPresenter
 import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
-import com.nextgenbroadcast.mobile.middleware.service.provider.IStandaloneMediaFileProvider
 import com.nextgenbroadcast.mobile.core.presentation.IReceiverPresenter
 
 internal class StandaloneServiceHandler(
-        private val fileProvider: IStandaloneMediaFileProvider,
         private val lifecycleOwner: LifecycleOwner,
         private val receiverPresenter: IReceiverPresenter,
         private val serviceController: IServiceController,
@@ -35,8 +32,6 @@ internal class StandaloneServiceHandler(
             rmpLayoutParams.removeObservers(lifecycleOwner)
             rmpMediaUri.removeObservers(lifecycleOwner)
         }
-
-        fileProvider.revokeAllUriPermissions()
     }
 
     override fun handleMessage(msg: Message) {
@@ -52,9 +47,7 @@ internal class StandaloneServiceHandler(
                 observeServiceList(msg.replyTo)
                 observeAppData(msg.replyTo)
                 observeRPMLayoutParams(msg.replyTo)
-                msg.data.getString(IServiceBinder.PARAM_PERMISSION_PACKAGE)?.let { clientPackage ->
-                    observeRPMMediaUrl(msg.replyTo, clientPackage)
-                }
+                observeRPMMediaUrl(msg.replyTo)
                 observeFrequency(msg.replyTo)
             }
 
@@ -96,17 +89,6 @@ internal class StandaloneServiceHandler(
 
             IServiceBinder.CALLBACK_REMOVE_PLAYER_STATE_CHANGE -> {
                 requireViewController().addOnPlayerSateChangedCallback(playerStateListener)
-            }
-
-            IServiceBinder.ACTION_NEED_URI_PERMISSION -> {
-                msg.data.getParcelable(Uri::class.java, IServiceBinder.PARAM_URI_NEED_PERMISSION)?.let { uri ->
-                    msg.data.getString(IServiceBinder.PARAM_PERMISSION_PACKAGE)?.let { clientPackage ->
-                        fileProvider.grantUriPermission(clientPackage, uri)
-                        uri.path?.let { uriPath ->
-                            sendHavePermissions(msg.replyTo, uriPath)
-                        }
-                    }
-                }
             }
 
             IServiceBinder.ACTION_TYNE_FREQUENCY -> {
@@ -198,17 +180,14 @@ internal class StandaloneServiceHandler(
         })
     }
 
-    private fun observeRPMMediaUrl(sendToMessenger: Messenger, clientPackage: String) {
-        requireViewController().rmpMediaUri.observe(lifecycleOwner, { rmpMediaUri ->
-            rmpMediaUri?.let { uri ->
-                fileProvider.grantUriPermission(clientPackage, uri, false)
-                sendToMessenger.send(buildMessage(
-                        IServiceBinder.LIVEDATA_RMP_MEDIA_URI,
-                        bundleOf(
-                                IServiceBinder.PARAM_RMP_MEDIA_URI to uri
-                        )
-                ))
-            }
+    private fun observeRPMMediaUrl(sendToMessenger: Messenger) {
+        requireViewController().rmpMediaUri.observe(lifecycleOwner, { uri ->
+            sendToMessenger.send(buildMessage(
+                    IServiceBinder.LIVEDATA_RMP_MEDIA_URI,
+                    bundleOf(
+                            IServiceBinder.PARAM_RMP_MEDIA_URI to uri
+                    )
+            ))
         })
     }
 
@@ -222,12 +201,6 @@ internal class StandaloneServiceHandler(
                     AVService::class.java.classLoader
             ))
         })
-    }
-
-    private fun sendHavePermissions(sendToMessenger: Messenger, uriPath: String) {
-        sendToMessenger.send(buildMessage(IServiceBinder.ACTION_NEED_URI_PERMISSION, bundleOf(
-                IServiceBinder.PARAM_URI_NEED_PERMISSION to uriPath
-        )))
     }
 
     private fun buildMessage(dataType: Int, args: Bundle? = null, classLoader: ClassLoader? = null): Message = Message.obtain(null, dataType).apply {

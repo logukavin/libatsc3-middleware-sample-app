@@ -76,7 +76,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         getSystemService(Context.USB_SERVICE) as UsbManager
     }
 
-    protected open val mediaFileProvider: IMediaFileProvider by lazy {
+    private val mediaFileProvider: IMediaFileProvider by lazy {
         MediaFileProvider(applicationContext)
     }
 
