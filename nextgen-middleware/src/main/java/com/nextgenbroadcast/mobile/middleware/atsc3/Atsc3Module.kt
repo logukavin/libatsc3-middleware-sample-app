@@ -74,10 +74,6 @@ internal class Atsc3Module(
     private var phyDemodLock: Boolean = false
     @Volatile
     private var isReconfiguring: Boolean = false
-
-    val slsProtocol: Int
-        get() = selectedServiceSLSProtocol
-
     @Volatile
     private var listener: Listener? = null
 
@@ -468,8 +464,6 @@ internal class Atsc3Module(
         Log.i("Atsc3Module",String.format("PHY:BWStatisticsUpdate: %s", bwPhyStatistics.toString()));
         Atsc3DeviceReceiver.PHYBWStatistics = String.format("PHY:BWStatisticsUpdate: %s", bwPhyStatistics.toString())
     }
-
-    //////////////////////////////////////////////////////////////
 
     //////////////////////////////////////////////////////////////
 

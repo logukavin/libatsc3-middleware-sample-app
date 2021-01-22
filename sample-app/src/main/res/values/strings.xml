@@ -10,4 +10,5 @@
     <string name="settings_frequency_hint">Receiver frequency in MHz</string>
     <string name="settings_apply_btn">Tune</string>
     <string name="settings_enable_debug_info">Enable Debug Information</string>
+    <string name="settings_enable_phy_info">Enable Phy Information</string>
 </resources>

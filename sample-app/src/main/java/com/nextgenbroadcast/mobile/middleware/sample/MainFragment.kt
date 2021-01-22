@@ -16,10 +16,12 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.os.bundleOf
 import androidx.databinding.DataBindingUtil
+import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.setFragmentResultListener
 import androidx.lifecycle.ViewModelProvider
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.nextgenbroadcast.mobile.core.FileUtils
+import com.nextgenbroadcast.mobile.core.mapWith
 import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.model.PhyFrequency
 import com.nextgenbroadcast.mobile.core.model.AVService
@@ -31,17 +33,13 @@ import com.nextgenbroadcast.mobile.middleware.sample.MainActivity.Companion.sour
 import com.nextgenbroadcast.mobile.middleware.sample.SettingsDialog.Companion.REQUEST_KEY_FREQUENCY
 import com.nextgenbroadcast.mobile.middleware.sample.core.SwipeGestureDetector
 import com.nextgenbroadcast.mobile.middleware.sample.databinding.FragmentMainBinding
-import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.RMPViewModel
-import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.ReceiverViewModel
-import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.SelectorViewModel
-import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.UserAgentViewModel
+import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.*
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.factory.UserAgentViewModelFactory
 import com.nextgenbroadcast.mobile.middleware.sample.useragent.ServiceAdapter
 import com.nextgenbroadcast.mobile.view.UserAgentView
 import kotlinx.android.synthetic.main.fragment_main.*
 import kotlinx.coroutines.*
 import java.util.*
-import kotlin.concurrent.thread
 
 
 class MainFragment : BaseFragment() {
@@ -52,6 +50,8 @@ class MainFragment : BaseFragment() {
     private var userAgentViewModel: UserAgentViewModel? = null
     private var selectorViewModel: SelectorViewModel? = null
     private var receiverViewModel: ReceiverViewModel? = null
+
+    private val viewViewModel: ViewViewModel by activityViewModels()
 
     //TODO: remove
     private var receiverPresenter: IReceiverPresenter? = null
@@ -64,6 +64,8 @@ class MainFragment : BaseFragment() {
     private lateinit var serviceAdapter: ServiceAdapter
     private lateinit var sourceAdapter: ListAdapter
     private lateinit var bottomSheetBehavior: BottomSheetBehavior<View>
+
+    private var phyLoggingJob: Job? = null
 
     private val getContent = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         val path = uri?.let { FileUtils.getPath(requireContext(), uri) }
@@ -96,7 +98,7 @@ class MainFragment : BaseFragment() {
 
         binding = DataBindingUtil.inflate<FragmentMainBinding>(inflater, R.layout.fragment_main, container, false).apply {
             lifecycleOwner = viewLifecycleOwner
-            isPreviewMode = previewMode
+            viewModel = viewViewModel
         }
 
         return binding.root
@@ -183,10 +185,6 @@ class MainFragment : BaseFragment() {
         setFragmentResultListener(REQUEST_KEY_FREQUENCY) { _, bundle ->
             val freqKhz = bundle.getInt(SettingsDialog.PARAM_FREQUENCY, 0)
             receiverPresenter?.tune(PhyFrequency.user(listOf(freqKhz)))
-
-            //TODO: set receiverViewModel value directlly in dialog
-            val enablePHYDebugInformationChecked = bundle.getBoolean(SettingsDialog.PARAM_PHY_DEBUG_INFORMATION_CHECKED, false)
-            receiverViewModel?.showDebugInfo?.value = enablePHYDebugInformationChecked
         }
 
         settings_button.setOnClickListener {
@@ -195,10 +193,21 @@ class MainFragment : BaseFragment() {
             }
         }
 
-        GlobalScope.launch {
-            while(true) {
-                receiverViewModel?.debugData?.postValue(Atsc3DeviceReceiver.PHYRfStatistics + "\n" + Atsc3DeviceReceiver.PHYBWStatistics)
-                delay(1000)
+        viewViewModel.showPhyInfo.mapWith(viewViewModel.showDebugInfo) { (showPhy, showInfo) ->
+            (showInfo ?: true) && (showPhy ?: false)
+        }.observe(viewLifecycleOwner) { phyInfoEnabled ->
+            if (phyInfoEnabled == true) {
+                if (phyLoggingJob == null) {
+                    phyLoggingJob = GlobalScope.launch {
+                        while (true) {
+                            viewViewModel.debugData.postValue("${Atsc3DeviceReceiver.PHYRfStatistics}\n${Atsc3DeviceReceiver.PHYBWStatistics}")
+                            delay(1000)
+                        }
+                    }
+                }
+            } else if (phyLoggingJob != null) {
+                phyLoggingJob?.cancel()
+                phyLoggingJob = null
             }
         }
     }
@@ -214,6 +223,13 @@ class MainFragment : BaseFragment() {
         super.onStop()
 
         receiver_player.stopPlayback()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+
+        phyLoggingJob?.cancel()
+        phyLoggingJob = null
     }
 
     override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean) {
@@ -240,7 +256,7 @@ class MainFragment : BaseFragment() {
                 binder.selectorPresenter
         )
 
-        val provider = ViewModelProvider(requireActivity().viewModelStore, factory)
+        val provider = ViewModelProvider(requireActivity(), factory)
 
         bindViewModels(provider).let { (rmp, userAgent, selector) ->
             bindSelector(selector)
@@ -254,6 +270,7 @@ class MainFragment : BaseFragment() {
     override fun onUnbind() {
         super.onUnbind()
 
+        binding.receiverModel = null
         receiver_player.unbind()
 
         rmpViewModel = null
