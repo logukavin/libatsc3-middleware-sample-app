@@ -6,7 +6,8 @@ import android.location.Location
 import android.util.Log
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import com.nextgenbroadcast.mobile.middleware.R
+import com.nextgenbroadcast.mobile.middleware.BuildConfig
+import com.nextgenbroadcast.mobile.middleware.Auth0
 import com.nextgenbroadcast.mobile.middleware.net.auth0.Auth0Request
 import com.nextgenbroadcast.mobile.middleware.net.auth0.Auth0Response
 import com.nextgenbroadcast.mobile.middleware.net.await
@@ -26,7 +27,7 @@ class FrequencyLocator : IFrequencyLocator {
     override suspend fun locateFrequency(context: Context, predicate: (Location) -> Boolean): FrequencyLocation? {
         return LocationGatherer().getLastLocation(context)?.let { location ->
             if (predicate.invoke(location)) {
-                val frequencyList = getFrequenciesByLocation(context, location.latitude, location.longitude)
+                val frequencyList = getFrequenciesByLocation(location.latitude, location.longitude)
                 if (frequencyList.isNotEmpty()) {
                     return FrequencyLocation(location, frequencyList)
                 }
@@ -36,14 +37,14 @@ class FrequencyLocator : IFrequencyLocator {
         }
     }
 
-    private suspend fun getFrequenciesByLocation(context: Context, latitude: Double, longitude: Double): List<Int> {
+    private suspend fun getFrequenciesByLocation(latitude: Double, longitude: Double): List<Int> {
         val request = Auth0Request.Builder()
-                .username(context.getString(R.string.Auth0Username))
-                .password(context.getString(R.string.Auth0Password))
-                .audience(context.getString(R.string.Auth0Audience))
-                .clientId(context.getString(R.string.Auth0ClientId))
-                .clientSecret(context.getString(R.string.Auth0ClientSecret))
-                .build(context.getString(R.string.Auth0TokenUrl))
+                .username(Auth0.username())
+                .password(Auth0.password())
+                .audience(BuildConfig.Auth0Audience)
+                .clientId(Auth0.clientId())
+                .clientSecret(Auth0.clientSecret())
+                .build(BuildConfig.Auth0TokenUrl)
 
         try {
             val stations: List<Station>? = httpClient.newCall(request).await { response ->
@@ -51,7 +52,7 @@ class FrequencyLocator : IFrequencyLocator {
                     Auth0Response(body.string())
                 }?.accessToken
             }?.let { token ->
-                val frequenciesRequest = SinclairPlatform(context.getString(R.string.SinclairPlatformUrl)).frequenciesRequest(token, latitude, longitude)
+                val frequenciesRequest = SinclairPlatform(BuildConfig.SinclairPlatformUrl).frequenciesRequest(token, latitude, longitude)
                 httpClient.newCall(frequenciesRequest).await { response ->
                     response.body?.let { body ->
                         Gson().fromJson<List<Station>?>(body.string(), object : TypeToken<List<Station>?>() {}.type)
