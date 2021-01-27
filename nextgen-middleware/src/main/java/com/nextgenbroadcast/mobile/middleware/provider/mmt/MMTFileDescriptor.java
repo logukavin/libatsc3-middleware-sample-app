@@ -1,4 +1,4 @@
-package com.nextgenbroadcast.mobile.middleware.atsc3.provider;
+package com.nextgenbroadcast.mobile.middleware.provider.mmt;
 
 import android.os.ProxyFileDescriptorCallback;
 import android.system.ErrnoException;
@@ -6,7 +6,7 @@ import android.system.OsConstants;
 import android.util.Log;
 import android.util.Pair;
 
-import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTExtractor;
+import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTClockAnchor;
 import com.nextgenbroadcast.mobile.core.atsc3.mmt.MMTConstants;
 
 import org.ngbp.libatsc3.middleware.android.mmt.MfuByteBufferFragment;
@@ -365,12 +365,12 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
             minNonZeroMfuPresentationTimestampForAnchor = stppMfuPresentationTimestampUs;
         }
 
-        if(MMTExtractor.SystemClockAnchor == 0) {
-            MMTExtractor.SystemClockAnchor = System.currentTimeMillis();
+        if(MMTClockAnchor.SystemClockAnchor == 0) {
+            MMTClockAnchor.SystemClockAnchor = System.currentTimeMillis();
         }
 
-        if(MMTExtractor.MfuClockAnchor < minNonZeroMfuPresentationTimestampForAnchor ) {
-            MMTExtractor.MfuClockAnchor = minNonZeroMfuPresentationTimestampForAnchor;
+        if(MMTClockAnchor.MfuClockAnchor < minNonZeroMfuPresentationTimestampForAnchor ) {
+            MMTClockAnchor.MfuClockAnchor = minNonZeroMfuPresentationTimestampForAnchor;
         }
 
 

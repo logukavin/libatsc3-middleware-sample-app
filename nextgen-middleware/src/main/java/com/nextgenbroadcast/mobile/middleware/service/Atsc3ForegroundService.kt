@@ -4,9 +4,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.hardware.usb.UsbConfiguration
 import android.hardware.usb.UsbDevice
-import android.hardware.usb.UsbInterface
 import android.hardware.usb.UsbManager
 import android.net.Uri
 import android.os.IBinder
@@ -48,12 +46,11 @@ import com.nextgenbroadcast.mobile.middleware.server.web.MiddlewareWebServer
 import com.nextgenbroadcast.mobile.middleware.service.init.*
 import com.nextgenbroadcast.mobile.middleware.service.provider.IMediaFileProvider
 import com.nextgenbroadcast.mobile.middleware.service.provider.MediaFileProvider
-import com.nextgenbroadcast.mobile.middleware.service.provider.esgProvider.ESGContentProvider
+import com.nextgenbroadcast.mobile.middleware.provider.esg.ESGContentProvider
 import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
 import com.nextgenbroadcast.mobile.middleware.settings.MiddlewareSettingsImpl
 import kotlinx.coroutines.*
 import java.lang.ref.WeakReference
-import java.util.HashMap
 
 abstract class Atsc3ForegroundService : BindableForegroundService() {
     private lateinit var wakeLock: WakeLock
@@ -79,7 +76,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         getSystemService(Context.USB_SERVICE) as UsbManager
     }
 
-    protected open val mediaFileProvider: IMediaFileProvider by lazy {
+    private val mediaFileProvider: IMediaFileProvider by lazy {
         MediaFileProvider(applicationContext)
     }
 

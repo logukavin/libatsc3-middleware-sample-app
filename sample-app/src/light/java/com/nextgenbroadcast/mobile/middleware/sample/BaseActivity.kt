@@ -37,7 +37,7 @@ abstract class BaseActivity : AppCompatActivity() {
         private var binder: InterprocessServiceBinder? = null
 
         override fun onServiceConnected(className: ComponentName, service: IBinder) {
-            binder = InterprocessServiceBinder(service, BuildConfig.APPLICATION_ID).also {
+            binder = InterprocessServiceBinder(service).also {
                 onBind(it)
             }
             isBound = true

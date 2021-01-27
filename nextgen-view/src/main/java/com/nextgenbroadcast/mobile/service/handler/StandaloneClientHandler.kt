@@ -49,9 +49,8 @@ internal class StandaloneClientHandler(
             }
 
             IServiceBinder.LIVEDATA_RMP_MEDIA_URI -> {
-                msg.data.getParcelable(Uri::class.java, IServiceBinder.PARAM_RMP_MEDIA_URI)?.let {
-                    mediaPlayerPresenter.rmpMediaUri.postValue(it)
-                }
+                val uri = msg.data.getParcelable(Uri::class.java, IServiceBinder.PARAM_RMP_MEDIA_URI)
+                mediaPlayerPresenter.rmpMediaUri.postValue(uri)
             }
 
             IServiceBinder.ACTION_PLAYER_STATE_CHANGE_PAUSE -> {
@@ -60,12 +59,6 @@ internal class StandaloneClientHandler(
 
             IServiceBinder.ACTION_PLAYER_STATE_CHANGE_RESUME -> {
                 incomingDataListener.onPlayerStateResume()
-            }
-
-            IServiceBinder.ACTION_NEED_URI_PERMISSION -> {
-                msg.data.getString(IServiceBinder.PARAM_URI_NEED_PERMISSION)?.let { uriPath ->
-                    incomingDataListener.onPermissionGranted(uriPath)
-                }
             }
 
             IServiceBinder.ACTION_TYNE_FREQUENCY -> {

@@ -36,7 +36,7 @@ abstract class BaseActivity : AppCompatActivity() {
 
     private val connection = object : ServiceConnection {
         override fun onServiceConnected(className: ComponentName, service: IBinder) {
-            onBind(InterprocessServiceBinder(service, BuildConfig.APPLICATION_ID))
+            onBind(InterprocessServiceBinder(service))
             isBound = true
         }
 

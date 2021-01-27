@@ -1,6 +1,8 @@
-package com.nextgenbroadcast.mobile.middleware.atsc3.provider;
+package com.nextgenbroadcast.mobile.middleware.provider.mmt;
 
 import android.content.ContentProvider;
+import android.content.ContentResolver;
+import android.content.ContentUris;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.pm.ProviderInfo;
@@ -17,7 +19,7 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTExtractor;
+import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTClockAnchor;
 import com.nextgenbroadcast.mobile.core.atsc3.mmt.MMTConstants;
 
 import org.ngbp.libatsc3.middleware.Atsc3NdkMediaMMTBridge;
@@ -71,14 +73,6 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
     public void attachInfo(@NonNull Context context, @NonNull ProviderInfo info) {
         super.attachInfo(context, info);
 
-        // Sanity check our security
-        if (info.exported) {
-            throw new SecurityException("Provider must not be exported");
-        }
-        if (!info.grantUriPermissions) {
-            throw new SecurityException("Provider must grant uri permissions");
-        }
-
         mStorageManager = (StorageManager) context.getSystemService(Context.STORAGE_SERVICE);
     }
 
@@ -96,10 +90,10 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
         for (String col : projection) {
             if (OpenableColumns.DISPLAY_NAME.equals(col)) {
                 cols[i] = OpenableColumns.DISPLAY_NAME;
-                values[i++] = "mmt/*"; //TODO: file.getName();
+                values[i++] = ContentUris.parseId(uri) + ".mmt";
             } else if (OpenableColumns.SIZE.equals(col)) {
                 cols[i] = OpenableColumns.SIZE;
-                values[i++] = Long.MAX_VALUE; //TODO: file.length();
+                values[i++] = Long.MAX_VALUE;
             }
         }
 
@@ -161,7 +155,7 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
     }
 
     public static Uri getUriForService(@NonNull Context context, @NonNull String authority, @NonNull String serviceId) {
-        return new Uri.Builder().scheme("content")
+        return new Uri.Builder().scheme(ContentResolver.SCHEME_CONTENT)
                 .authority(authority).encodedPath(serviceId).build();
     }
 
@@ -217,8 +211,8 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
                 ATSC3PlayerFlags.ATSC3PlayerStartPlayback = true;
 
                 //jjustman-2021-01-13 - HACK
-                MMTExtractor.SystemClockAnchor = 0;
-                MMTExtractor.MfuClockAnchor = 0;
+                MMTClockAnchor.SystemClockAnchor = 0;
+                MMTClockAnchor.MfuClockAnchor = 0;
             }
 
             PushMfuByteBufferFragment(mfuByteBufferFragment);
