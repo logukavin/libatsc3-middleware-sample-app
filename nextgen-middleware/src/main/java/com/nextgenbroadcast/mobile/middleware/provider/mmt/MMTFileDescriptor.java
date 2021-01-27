@@ -21,6 +21,7 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
     public static final String TAG = MMTFileDescriptor.class.getSimpleName();
 
     private static final int MAX_QUEUE_SIZE = 120;
+    private static final int MAX_FIRST_MFU_WAIT_TIME = 1000;
     private static final int MAX_KEY_FRAME_WAIT_TIME = 5000;
 
     private final ConcurrentLinkedDeque<Pair<MfuByteBufferFragment, ByteBuffer>> mfuBufferQueue = new ConcurrentLinkedDeque<>();
@@ -40,6 +41,8 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
     private boolean isActive = true;
     private boolean sendFileHeader = true;
     private boolean readSampleHeader = false;
+
+    private long mpuWaitingStartTime;
     private long keyFrameWaitingStartTime;
 
     public MMTFileDescriptor() {
@@ -62,14 +65,22 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
             final int bytesRead;
             if (sendFileHeader) {
                 if (!hasMpuMetadata()) {
-                    return 0;
-                }
+                    if (mpuWaitingStartTime == 0) {
+                        mpuWaitingStartTime = System.currentTimeMillis();
+                    }
 
-                if (keyFrameWaitingStartTime == 0) {
-                    keyFrameWaitingStartTime = System.currentTimeMillis();
+                    if ((System.currentTimeMillis() - mpuWaitingStartTime) < MAX_FIRST_MFU_WAIT_TIME) {
+                        return 0;
+                    } else {
+                        throw new ErrnoException("onRead", OsConstants.EIO);
+                    }
                 }
 
                 if (!skipUntilKeyFrame() && (System.currentTimeMillis() - keyFrameWaitingStartTime) < MAX_KEY_FRAME_WAIT_TIME) {
+                    if (keyFrameWaitingStartTime == 0) {
+                        keyFrameWaitingStartTime = System.currentTimeMillis();
+                    }
+
                     return 0;
                 }
 
@@ -87,6 +98,8 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
             } else {
                 bytesRead = readBufferFully(0, size, data);
             }
+
+            if (bytesRead < 0) throw new ErrnoException("onRead", OsConstants.EIO);
 
             return bytesRead;
         } catch (Exception e) {
@@ -310,9 +323,6 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
     //jjustman-2020-12-22 - TODO: handle when mfu_presentation_time_uS_computed - push last value?
     private long getPresentationTimestampUs(MfuByteBufferFragment toProcessMfuByteBufferFragment) {
         if (toProcessMfuByteBufferFragment.mfu_presentation_time_uS_computed != null && toProcessMfuByteBufferFragment.mfu_presentation_time_uS_computed > 0) {
-            //default values here as fallback
-            long anchorMfuPresentationTimestampUs = toProcessMfuByteBufferFragment.mpu_presentation_time_uS_from_SI;
-
             //todo: expand size as needed, every ~ mfu_presentation_time_uS_computed 1000000uS
             if (isVideoSample(toProcessMfuByteBufferFragment)) {
                 if (videoMfuPresentationTimestampUs == Long.MAX_VALUE) {
@@ -327,8 +337,7 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
                     stppMfuPresentationTimestampUs = toProcessMfuByteBufferFragment.mfu_presentation_time_uS_computed;
                 }
             }
-            anchorMfuPresentationTimestampUs = getMinNonZeroMfuPresentationTimestampForAnchor();
-
+            long anchorMfuPresentationTimestampUs = getMinNonZeroMfuPresentationTimestampForAnchor();
             long mpuPresentationTimestampDeltaUs = toProcessMfuByteBufferFragment.mfu_presentation_time_uS_computed - anchorMfuPresentationTimestampUs;
             return mpuPresentationTimestampDeltaUs + MMTContentProvider.PTS_OFFSET_US;
         }
