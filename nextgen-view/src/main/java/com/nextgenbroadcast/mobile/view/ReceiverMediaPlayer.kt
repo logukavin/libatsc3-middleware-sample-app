@@ -9,7 +9,6 @@ import com.google.android.exoplayer2.source.dash.DashMediaSource
 import com.google.android.exoplayer2.source.dash.DefaultDashChunkSource
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
 import com.google.android.exoplayer2.ui.PlayerView
-import com.google.android.exoplayer2.upstream.ContentDataSource
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
 import com.google.android.exoplayer2.upstream.DefaultLoadErrorHandlingPolicy
 import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTLoadControl
@@ -18,8 +17,6 @@ import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTRenderersFactory
 import com.nextgenbroadcast.mobile.core.AppUtils
 import com.nextgenbroadcast.mobile.core.atsc3.mmt.MMTConstants
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
-import com.nextgenbroadcast.mobile.permission.AlterDataSourceFactory
-import com.nextgenbroadcast.mobile.permission.UriPermissionProvider
 import com.nextgenbroadcast.mobile.mmt.exoplayer2.Atsc3MMTExtractor
 import com.nextgenbroadcast.mobile.exoplayer2.RouteDASHLoadControl
 import com.nextgenbroadcast.mobile.mmt.exoplayer2.Atsc3ContentDataSource
@@ -40,7 +37,6 @@ class ReceiverMediaPlayer @JvmOverloads constructor(
 
     private var rmpState: PlaybackState? = null
     private var listener: EventListener? = null
-    private var uriPermissionProvider: UriPermissionProvider? = null
     private var isMMTPlayback = false
 
     val isPlaying: Boolean
@@ -65,10 +61,6 @@ class ReceiverMediaPlayer @JvmOverloads constructor(
 
     fun setListener(listener: EventListener) {
         this.listener = listener
-    }
-
-    fun setUriPermissionProvider(uriPermissionProvider: UriPermissionProvider?) {
-        this.uriPermissionProvider = uriPermissionProvider
     }
 
     fun play(mediaUri: Uri) {
@@ -178,7 +170,7 @@ class ReceiverMediaPlayer @JvmOverloads constructor(
     private fun createMediaSourceFactory(): DashMediaSource.Factory {
         val userAgent = AppUtils.getUserAgent(context)
         val manifestDataSourceFactory = DefaultDataSourceFactory(context, userAgent)
-        val mediaDataSourceFactory = AlterDataSourceFactory(context, userAgent, uriPermissionProvider)
+        val mediaDataSourceFactory = DefaultDataSourceFactory(context, userAgent)
 
         return DashMediaSource.Factory(
                 DefaultDashChunkSource.Factory(mediaDataSourceFactory),

@@ -16,19 +16,20 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.os.bundleOf
 import androidx.databinding.DataBindingUtil
+import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.setFragmentResultListener
 import androidx.lifecycle.ViewModelProvider
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.nextgenbroadcast.mobile.core.FileUtils
 import com.nextgenbroadcast.mobile.core.mapWith
+import com.nextgenbroadcast.mobile.core.atsc3.phy.PHYStatistics
 import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.model.PhyFrequency
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.presentation.ApplicationState
 import com.nextgenbroadcast.mobile.core.presentation.IReceiverPresenter
 import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
-import com.nextgenbroadcast.mobile.middleware.phy.Atsc3DeviceReceiver
 import com.nextgenbroadcast.mobile.middleware.sample.MainActivity.Companion.sourceMap
 import com.nextgenbroadcast.mobile.middleware.sample.SettingsDialog.Companion.REQUEST_KEY_FREQUENCY
 import com.nextgenbroadcast.mobile.middleware.sample.core.SwipeGestureDetector
@@ -41,8 +42,7 @@ import kotlinx.android.synthetic.main.fragment_main.*
 import kotlinx.coroutines.*
 import java.util.*
 
-
-class MainFragment : BaseFragment() {
+class MainFragment : Fragment() {
 
     private lateinit var binding: FragmentMainBinding
 
@@ -200,7 +200,7 @@ class MainFragment : BaseFragment() {
                 if (phyLoggingJob == null) {
                     phyLoggingJob = GlobalScope.launch {
                         while (true) {
-                            viewViewModel.debugData.postValue("${Atsc3DeviceReceiver.PHYRfStatistics}\n${Atsc3DeviceReceiver.PHYBWStatistics}")
+                            viewViewModel.debugData.postValue("${PHYStatistics.PHYRfStatistics}\n${PHYStatistics.PHYBWStatistics}")
                             delay(1000)
                         }
                     }
@@ -247,9 +247,7 @@ class MainFragment : BaseFragment() {
         bottom_sheet.visibility = visibility
     }
 
-    override fun onBind(binder: IServiceBinder) {
-        super.onBind(binder)
-
+    fun onBind(binder: IServiceBinder) {
         val factory = UserAgentViewModelFactory(
                 binder.userAgentPresenter,
                 binder.mediaPlayerPresenter,
@@ -267,9 +265,7 @@ class MainFragment : BaseFragment() {
         receiverPresenter = binder.receiverPresenter
     }
 
-    override fun onUnbind() {
-        super.onUnbind()
-
+    fun onUnbind() {
         binding.receiverModel = null
         receiver_player.unbind()
 
@@ -361,7 +357,6 @@ class MainFragment : BaseFragment() {
                         params.scale.toFloat() / 100
                 )
             })
-            preparePlayerView(receiver_player)
             mediaUri.observe(this@MainFragment, { mediaUri ->
                 mediaUri?.let {
                     receiver_player.startPlayback(mediaUri)

@@ -1,4 +1,4 @@
-package com.nextgenbroadcast.mobile.middleware.service.provider.esgProvider
+package com.nextgenbroadcast.mobile.middleware.provider.esg
 
 import android.content.*
 import android.content.Context.BIND_AUTO_CREATE
@@ -9,7 +9,6 @@ import android.os.IBinder
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
-import androidx.lifecycle.distinctUntilChanged
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.serviceGuide.SGProgram
 import com.nextgenbroadcast.mobile.middleware.R

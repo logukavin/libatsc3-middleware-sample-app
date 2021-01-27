@@ -4,24 +4,18 @@ import android.net.Uri
 import android.os.*
 import androidx.core.os.bundleOf
 import androidx.lifecycle.MutableLiveData
-import com.nextgenbroadcast.mobile.permission.UriPermissionProvider
 import com.nextgenbroadcast.mobile.core.model.*
 import com.nextgenbroadcast.mobile.core.presentation.*
 import com.nextgenbroadcast.mobile.core.presentation.media.IObservablePlayer
 import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
 import com.nextgenbroadcast.mobile.core.presentation.IReceiverPresenter
-import com.nextgenbroadcast.mobile.core.serviceGuide.SGScheduleMap
 import com.nextgenbroadcast.mobile.service.handler.StandaloneClientHandler
 import com.nextgenbroadcast.mobile.service.handler.OnIncomingPlayerStateListener
-import com.nextgenbroadcast.mobile.permission.IUriPermissionRequester
-import java.lang.UnsupportedOperationException
 
 class InterprocessServiceBinder(
-        service: IBinder,
-        clientPackage: String
-) : IServiceBinder, IUriPermissionRequester {
+        service: IBinder
+) : IServiceBinder {
 
-    private var uriPermissionProvider: UriPermissionProvider? = null
     private var playerStateListener: IObservablePlayer.IPlayerStateListener? = null
 
     inner class SelectorPresenter : ISelectorPresenter {
@@ -63,7 +57,7 @@ class InterprocessServiceBinder(
 
         override fun setApplicationState(state: ApplicationState) {
             sendAction(IServiceBinder.ACTION_BA_STATE_CHANGED, bundleOf(
-                    IServiceBinder.PARAM_APPSTATE to appState
+                    IServiceBinder.PARAM_APPSTATE to state
             ))
         }
     }
@@ -105,11 +99,6 @@ class InterprocessServiceBinder(
         }
     }
 
-    fun setPermissionProvider(permissionProvider: UriPermissionProvider) {
-        uriPermissionProvider = permissionProvider
-        permissionProvider.setPermissionRequester(this)
-    }
-
     override val selectorPresenter = SelectorPresenter()
 
     override val receiverPresenter = ReceiverPresenter()
@@ -133,17 +122,11 @@ class InterprocessServiceBinder(
                 override fun onPlayerStateResume() {
                     playerStateListener?.onResume(mediaPlayerPresenter)
                 }
-
-                override fun onPermissionGranted(uriPath: String) {
-                    uriPermissionProvider?.permissionGranted(uriPath)
-                }
             }
     ))
 
     init {
-        sendAction(IServiceBinder.LIVEDATA_ALL, bundleOf(
-                IServiceBinder.PARAM_PERMISSION_PACKAGE to clientPackage
-        ))
+        sendAction(IServiceBinder.LIVEDATA_ALL)
     }
 
     fun close() {
@@ -155,12 +138,5 @@ class InterprocessServiceBinder(
             data = args
             replyTo = incomingMessenger
         })
-    }
-
-    override fun requestUriPermission(uri: Uri, clientPackage: String) {
-        sendAction(IServiceBinder.ACTION_NEED_URI_PERMISSION, bundleOf(
-                IServiceBinder.PARAM_URI_NEED_PERMISSION to uri,
-                IServiceBinder.PARAM_PERMISSION_PACKAGE to clientPackage
-        ))
     }
 }
