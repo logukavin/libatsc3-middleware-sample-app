@@ -49,14 +49,9 @@ android {
         resValue("string", "nextgenMMTContentProvider", "com.nextgenbroadcast.mobile.middleware.provider.mmt")
         resValue("string", "nextgenServicesGuideProvider", "com.nextgenbroadcast.mobile.middleware.provider.esg")
 
-        resValue("string", "Auth0TokenUrl", "https://sinclairplatform.auth0.com/oauth/token")
-        resValue("string", "Auth0Username", "middleware-service@sinclairplatform.com")
-        resValue("string", "Auth0Password", "xD7R2Acu8E")
-        resValue("string", "Auth0Audience", "https://api.prod.sinclairplatform.com")
-        resValue("string", "Auth0ClientId", "vW7uQCHG3cF17W1D1uxBKFaP3jQHVf4i")
-        resValue("string", "Auth0ClientSecret", "rZYm-grsEEaQGSbJSgZIaLIrjAFs_oLVt5u0Wl1zfvVFKlA0VYrt8qwGm4AFKdsH")
-
-        resValue("string", "SinclairPlatformUrl", "https://prod-property-gateway.sinclairplatform.com")
+        buildConfigField("String", "Auth0TokenUrl", "\"https://sinclairplatform.auth0.com/oauth/token\"")
+        buildConfigField("String", "Auth0Audience", "\"https://api.prod.sinclairplatform.com\"")
+        buildConfigField("String", "SinclairPlatformUrl", "\"https://prod-property-gateway.sinclairplatform.com\"")
     }
 
     buildTypes {
