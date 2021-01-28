@@ -10,7 +10,10 @@ class ReceiverActionImpl(
         private val gateway: IRPCGateway
 ) : IReceiverAction {
 
-    override fun acquireService(): RpcResponse {
+    override fun acquireService(svcToAcquire: String): RpcResponse {
+        val result = gateway.requestServiceChange(svcToAcquire)
+        if (!result) throw RpcException(RpcErrorCode.SERVICE_NOT_FOUND)
+        //throw RpcException(RpcErrorCode.SERVICE_NOT_AUTHORIZED)
         return RpcResponse()
     }
 

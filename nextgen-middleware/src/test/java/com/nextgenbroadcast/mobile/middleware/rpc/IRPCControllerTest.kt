@@ -108,14 +108,14 @@ class IRPCControllerTest {
         Mockito.`when`(mockedMediaUri.toString()).thenReturn(mockedMediaUrl)
         Mockito.`when`(repository.heldPackage).thenReturn(appData)
         Mockito.`when`(repository.applications).thenReturn(applications)
-        Mockito.`when`(serviceController.serviceGuidUrls).thenReturn(serviceGuidUrls)
+        Mockito.`when`(serviceController.serviceGuideUrls).thenReturn(serviceGuidUrls)
         Mockito.`when`(serviceController.selectedService).thenReturn(selectedService)
-        Mockito.`when`(serviceController.serviceGuidUrls).thenReturn(serviceGuidUrls)
+        Mockito.`when`(serviceController.serviceGuideUrls).thenReturn(serviceGuidUrls)
         Mockito.`when`(repository.selectedService).thenReturn(selectedService)
         Mockito.`when`(repository.routeMediaUrl).thenReturn(routeMediaUrl)
 
         mediaPlayerController = ViewControllerImpl(repository, prefs, mediaFileProvider, atsc3Analytics)
-        coordinator = RPCGatewayImpl(mediaPlayerController, repository, applicationCache, prefs, testDispatcher, testDispatcher)
+        coordinator = RPCGatewayImpl(mediaPlayerController, serviceController, applicationCache, prefs, testDispatcher, testDispatcher)
         iRPCGateway = coordinator
         Dispatchers.setMain(testDispatcher)
     }

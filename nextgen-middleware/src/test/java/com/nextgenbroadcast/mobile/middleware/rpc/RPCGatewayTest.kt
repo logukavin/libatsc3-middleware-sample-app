@@ -114,8 +114,9 @@ class RPCGatewayTest {
         `when`(prefs.httpsPort).thenReturn(hostPost)
         `when`(repository.heldPackage).thenReturn(heldPackage)
         `when`(repository.applications).thenReturn(applications)
-        `when`(serviceController.serviceGuidUrls).thenReturn(serviceGuidUrls)
+        `when`(serviceController.serviceGuideUrls).thenReturn(serviceGuidUrls)
         `when`(serviceController.selectedService).thenReturn(selectedService)
+        `when`(serviceController.applications).thenReturn(applications)
         `when`(repository.serviceGuideUrls).thenReturn(serviceGuidUrls)
         `when`(repository.selectedService).thenReturn(selectedService)
         `when`(repository.selectedService).thenReturn(selectedService)
@@ -126,7 +127,7 @@ class RPCGatewayTest {
 
         `when`(mockedMediaUri.toString()).thenReturn(mockedMediaUrl)
 
-        iRPCGateway = RPCGatewayImpl(viewController, repository, applicationCache, prefs, testDispatcher, testDispatcher).apply {
+        iRPCGateway = RPCGatewayImpl(viewController, serviceController, applicationCache, prefs, testDispatcher, testDispatcher).apply {
             start(mockLifecycleOwner())
         }
         middlewareWebSocket = PowerMockito.spy(MiddlewareWebSocket(iRPCGateway))
