@@ -8,6 +8,7 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPacka
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.SGUrl
 import java.util.concurrent.ConcurrentHashMap
 
+//TODO: we should avoid using LiveData here
 internal class RepositoryImpl : IRepository {
     private val _applications = ConcurrentHashMap<String, Atsc3Application>()
 
@@ -46,6 +47,12 @@ internal class RepositoryImpl : IRepository {
 
     override fun setSelectedService(service: AVService?) {
         selectedService.postValue(service)
+    }
+
+    override fun findServiceById(globalServiceId: String): AVService? {
+        return services.value?.let { list ->
+            list.firstOrNull { it.globalId == globalServiceId }
+        }
     }
 
     override fun setHeldPackage(data: Atsc3HeldPackage?) {

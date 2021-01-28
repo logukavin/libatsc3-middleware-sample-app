@@ -34,7 +34,8 @@ internal class ServiceControllerImpl (
     override val receiverState = MutableLiveData(ReceiverState.IDLE)
 
     override val selectedService = repository.selectedService
-    override val serviceGuidUrls = repository.serviceGuideUrls
+    override val serviceGuideUrls = repository.serviceGuideUrls
+    override val applications = repository.applications
 
     override val sltServices = repository.services
 
@@ -152,7 +153,9 @@ internal class ServiceControllerImpl (
         repository.reset()
     }
 
-    override fun selectService(service: AVService) {
+    override fun selectService(service: AVService): Boolean {
+        if (repository.selectedService.value == service) return true
+
         // Reset current media. New media url will be received after service selection.
         cancelMediaUrlAssignment()
         repository.setMediaUrl(null)
@@ -179,6 +182,8 @@ internal class ServiceControllerImpl (
             repository.setHeldPackage(null)
             repository.setSelectedService(null)
         }
+
+        return res
     }
 
     override fun tune(frequency: PhyFrequency) {
@@ -209,6 +214,10 @@ internal class ServiceControllerImpl (
                 frequencies = frequencyList,
                 retuneOnDemod = frequency.source == PhyFrequency.Source.USER
         )
+    }
+
+    override fun findServiceById(globalServiceId: String): AVService? {
+        return repository.findServiceById(globalServiceId)
     }
 
     private fun resetHeldWithDelay() {

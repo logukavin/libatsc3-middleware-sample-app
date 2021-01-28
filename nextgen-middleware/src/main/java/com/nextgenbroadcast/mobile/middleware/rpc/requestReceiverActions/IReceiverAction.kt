@@ -11,7 +11,7 @@ import com.nextgenbroadcast.mobile.middleware.rpc.requestReceiverActions.model.A
 @JsonRpcType
 interface IReceiverAction {
     @JsonRpcMethod("org.atsc.acquire.service")
-    fun acquireService(): RpcResponse
+    fun acquireService(@JsonRpcParam("svcToAcquire") svcToAcquire: String): RpcResponse
 
     // This RPC send incorrect data: Integer instead of Double
     // Using of java.lang.Double allows us avoid cast exception
