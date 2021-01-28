@@ -2,7 +2,6 @@ package com.nextgenbroadcast.mobile.middleware.repository
 
 import androidx.lifecycle.MutableLiveData
 import com.nextgenbroadcast.mobile.core.model.AVService
-import com.nextgenbroadcast.mobile.core.serviceGuide.SGScheduleMap
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPackage
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.SGUrl
@@ -13,7 +12,6 @@ internal class RepositoryImpl : IRepository {
     private val _applications = ConcurrentHashMap<String, Atsc3Application>()
 
     override val selectedService = MutableLiveData<AVService>()
-    override val serviceSchedule = MutableLiveData<SGScheduleMap>()
     override val serviceGuideUrls = MutableLiveData<List<SGUrl>>()
 
     override val routeMediaUrl = MutableLiveData<String>()
@@ -37,14 +35,6 @@ internal class RepositoryImpl : IRepository {
         this.services.postValue(services)
     }
 
-    override fun setServiceSchedule(schedule: SGScheduleMap) {
-        serviceSchedule.postValue(schedule)
-    }
-
-    override fun setServiceGuideUrls(services: List<SGUrl>) {
-        serviceGuideUrls.postValue(services)
-    }
-
     override fun setSelectedService(service: AVService?) {
         selectedService.postValue(service)
     }
@@ -65,7 +55,6 @@ internal class RepositoryImpl : IRepository {
 
     override fun reset() {
         selectedService.postValue(null)
-        serviceSchedule.postValue(emptyMap())
         serviceGuideUrls.postValue(emptyList())
         services.postValue(emptyList())
         heldPackage.postValue(null)

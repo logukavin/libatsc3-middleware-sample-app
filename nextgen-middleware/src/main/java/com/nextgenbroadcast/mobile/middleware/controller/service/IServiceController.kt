@@ -10,7 +10,6 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.source.IAtsc3Source
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.SGUrl
 
 interface IServiceController : IReceiverPresenter, ISelectorPresenter {
-    val schedule: LiveData<SGScheduleMap?>
     val serviceGuideUrls: LiveData<List<SGUrl>?>
     val applications: LiveData<List<Atsc3Application>?>
 
