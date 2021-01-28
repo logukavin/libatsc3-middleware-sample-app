@@ -29,4 +29,6 @@ interface IRPCGateway {
     fun requestFileCache(baseUrl: String?, rootPath: String?, paths: List<String>, filters: List<String>?): Boolean
 
     fun getServiceGuideUrls(service: String?): List<ServiceGuideUrlsRpcResponse.Url>
+
+    fun requestServiceChange(globalServiceId: String): Boolean
 }

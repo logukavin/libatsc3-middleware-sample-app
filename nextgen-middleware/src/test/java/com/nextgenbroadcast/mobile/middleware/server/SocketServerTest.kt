@@ -54,6 +54,10 @@ class SocketServerTest : ServerTest() {
             override fun getServiceGuideUrls(service: String?): List<ServiceGuideUrlsRpcResponse.Url> {
                 return emptyList()
             }
+
+            override fun requestServiceChange(globalServiceId: String): Boolean {
+                TODO("Not yet implemented")
+            }
         }
 
         server.handler = object : WebSocketHandler() {

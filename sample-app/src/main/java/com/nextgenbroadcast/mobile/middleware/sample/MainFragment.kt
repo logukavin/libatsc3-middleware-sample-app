@@ -162,7 +162,7 @@ class MainFragment : Fragment() {
             bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
 
             servicesList?.getOrNull(position)?.let { item ->
-                setSelectedService(item.bsid, item.id, item.shortName)
+                selectService(item.bsid, item.id, item.shortName)
             } ?: if (position == 0) {
                 showFileChooser()
             } else {
@@ -275,13 +275,17 @@ class MainFragment : Fragment() {
         receiverViewModel = null
     }
 
-    private fun setSelectedService(bsid: Int, serviceId: Int, serviceName: String?) {
-        bottom_sheet_title.text = serviceName
+    private fun selectService(bsid: Int, serviceId: Int, serviceName: String?) {
+        setSelectedService(serviceName)
 
         if (selectorViewModel?.selectService(bsid, serviceId) == true) {
             receiver_player.stopPlayback()
             setBAAvailability(false)
         }
+    }
+
+    private fun setSelectedService(serviceName: String?) {
+        bottom_sheet_title.text = serviceName ?: getString(R.string.no_service_available)
     }
 
     private fun openSettings(freqKhz: Int?) {
@@ -328,16 +332,20 @@ class MainFragment : Fragment() {
                 val selectedServiceId = selectorViewModel.getSelectedServiceId()
                 val service = services.firstOrNull { it.id == selectedServiceId }
                         ?: services.first()
-                setSelectedService(service.bsid, service.id, service.shortName)
+                selectService(service.bsid, service.id, service.shortName)
             } else {
                 if (previewMode) {
                     serviceList.adapter = null
-                    setSelectedService(-1, -1, getString(R.string.source_loading, previewName?.toUpperCase(Locale.ROOT)))
+                    selectService(-1, -1, getString(R.string.source_loading, previewName?.toUpperCase(Locale.US)))
                 } else {
                     serviceList.adapter = sourceAdapter
-                    setSelectedService(-1, -1, getString(R.string.no_service_available))
+                    selectService(-1, -1, null)
                 }
             }
+        })
+
+        selectorViewModel.selectedService.observe(this, { service ->
+            setSelectedService(service?.shortName)
         })
     }
 
@@ -380,7 +388,6 @@ class MainFragment : Fragment() {
 
     private fun switchApplication(appData: AppData?) {
         if (appData != null && appData.isAvailable()) {
-
             if (!requireActivity().isInPictureInPictureMode) {
                 setBAAvailability(true)
             }

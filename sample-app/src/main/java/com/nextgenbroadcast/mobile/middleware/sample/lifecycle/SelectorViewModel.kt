@@ -1,24 +1,23 @@
 package com.nextgenbroadcast.mobile.middleware.sample.lifecycle
 
-import androidx.lifecycle.Transformations
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.distinctUntilChanged
 import com.nextgenbroadcast.mobile.core.presentation.ISelectorPresenter
 
 class SelectorViewModel(
         private val presenter: ISelectorPresenter
 ) : ViewModel() {
-    val services = Transformations.distinctUntilChanged(presenter.sltServices)
+    val services = presenter.sltServices.distinctUntilChanged()
+    val selectedService = presenter.selectedService.distinctUntilChanged()
 
     fun selectService(bsid: Int, serviceId: Int): Boolean {
-        services.value?.let { serviceList ->
+        return services.value?.let { serviceList ->
             val service = serviceList.firstOrNull { it.bsid == bsid && it.id == serviceId }
 
             service?.let {
                 presenter.selectService(service)
             }
-        }
-
-        return true
+        } ?: false
     }
 
     fun getSelectedServiceId() = presenter.selectedService.value?.id
