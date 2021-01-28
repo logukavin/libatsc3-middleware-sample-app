@@ -10,8 +10,8 @@ import com.nextgenbroadcast.mobile.core.unite
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3ApplicationFile
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.SGUrl
 import com.nextgenbroadcast.mobile.middleware.cache.IApplicationCache
+import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
 import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
-import com.nextgenbroadcast.mobile.middleware.repository.IRepository
 import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
 import com.nextgenbroadcast.mobile.middleware.rpc.notification.NotificationType
 import com.nextgenbroadcast.mobile.middleware.rpc.notification.RPCNotificationHelper
@@ -23,7 +23,7 @@ import java.util.concurrent.CopyOnWriteArrayList
 
 internal class RPCGatewayImpl(
         private val viewController: IViewController,
-        private val repository: IRepository,
+        private val serviceController: IServiceController,
         private val applicationCache: IApplicationCache,
         private val settings: IMiddlewareSettings,
         mainDispatcher: CoroutineDispatcher,
@@ -39,7 +39,7 @@ internal class RPCGatewayImpl(
     override val advertisingId = settings.advertisingId
     override val language: String = settings.locale.language
     override val queryServiceId: String?
-        get() = repository.selectedService.value?.globalId
+        get() = serviceController.selectedService.value?.globalId
     override val mediaUrl: String
         get() = viewController.rmpMediaUri.value.toString()
     override val playbackState: PlaybackState
@@ -55,20 +55,20 @@ internal class RPCGatewayImpl(
     private val subscribedNotifications = mutableSetOf<NotificationType>()
 
     fun start(lifecycleOwner: LifecycleOwner) {
-        viewController.appData.distinctUntilChanged().unite(repository.selectedService).observe(lifecycleOwner) { (appData, service) ->
+        viewController.appData.distinctUntilChanged().unite(serviceController.selectedService).observe(lifecycleOwner) { (appData, service) ->
             if (appData != null && service != null) {
                 onAppDataUpdated(appData, service)
             }
         }
 
-        repository.serviceGuideUrls.observe(lifecycleOwner) { urls ->
+        serviceController.serviceGuideUrls.observe(lifecycleOwner) { urls ->
             if(!urls.isNullOrEmpty()) {
                 onServiceGuidUrls(urls)
                 serviceGuideUrls.addAll(urls)
             }
         }
 
-        viewController.appData.mapWith(repository.applications) { (appData, applications) ->
+        viewController.appData.mapWith(serviceController.applications) { (appData, applications) ->
             if (appData != null && applications != null) {
                 applications.filter { app ->
                     app.cachePath == appData.cachePath
@@ -180,6 +180,12 @@ internal class RPCGatewayImpl(
             serviceGuideUrls
         }
         return mapServiceGuideUrls(urls, false)
+    }
+
+    override fun requestServiceChange(globalServiceId: String): Boolean {
+        return serviceController.findServiceById(globalServiceId)?.let { service ->
+            serviceController.selectService(service)
+        } ?: false
     }
 
     /**

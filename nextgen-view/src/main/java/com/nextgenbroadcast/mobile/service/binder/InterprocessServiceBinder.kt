@@ -22,10 +22,11 @@ class InterprocessServiceBinder(
         override val sltServices = MutableLiveData<List<AVService>>()
         override val selectedService = MutableLiveData<AVService?>()
 
-        override fun selectService(service: AVService) {
+        override fun selectService(service: AVService): Boolean {
             sendAction(IServiceBinder.ACTION_SELECT_SERVICE, bundleOf(
                     IServiceBinder.PARAM_SELECT_SERVICE to service
             ))
+            return true
         }
     }
 

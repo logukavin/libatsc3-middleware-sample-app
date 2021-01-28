@@ -7,6 +7,7 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Applicatio
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPackage
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.SGUrl
 
+//TODO: get rid of LiveData here
 internal interface IRepository {
     // Receiver
     val selectedService: LiveData<AVService?>
@@ -28,7 +29,10 @@ internal interface IRepository {
     fun setServiceSchedule(schedule: SGScheduleMap)
     fun setServiceGuideUrls(services: List<SGUrl>)
     fun setSelectedService(service: AVService?)
+    fun findServiceById(globalServiceId: String): AVService?
+
     fun setHeldPackage(data: Atsc3HeldPackage?)
     fun setMediaUrl(mediaUrl: String?)
+
     fun reset()
 }

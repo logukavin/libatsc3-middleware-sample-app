@@ -377,7 +377,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         val web = WebGatewayImpl(serviceController, repository, settings).also {
             webGateway = it
         }
-        val rpc = RPCGatewayImpl(view, repository, appCache, settings, Dispatchers.Main, Dispatchers.IO).apply {
+        val rpc = RPCGatewayImpl(view, serviceController, appCache, settings, Dispatchers.Main, Dispatchers.IO).apply {
             start(viewLifecycle)
         }.also {
             rpcGateway = it
