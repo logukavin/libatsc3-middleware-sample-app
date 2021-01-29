@@ -6,7 +6,6 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
-import android.net.Uri
 import android.os.IBinder
 import android.os.PowerManager
 import android.os.PowerManager.WakeLock
@@ -16,17 +15,16 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
 import androidx.lifecycle.MediatorLiveData
-import androidx.lifecycle.distinctUntilChanged
 import com.nextgenbroadcast.mobile.core.cert.UserAgentSSLContext
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.presentation.ApplicationState
 import com.nextgenbroadcast.mobile.middleware.BuildConfig
-import com.nextgenbroadcast.mobile.middleware.R
 import com.nextgenbroadcast.mobile.middleware.analytics.Atsc3Analytics
 import com.nextgenbroadcast.mobile.middleware.analytics.IAtsc3Analytics
 import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3Module
+import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.db.RoomServiceGuideStore
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.UsbAtsc3Source
 import com.nextgenbroadcast.mobile.middleware.cache.ApplicationCache
 import com.nextgenbroadcast.mobile.middleware.cache.DownloadManager
@@ -43,9 +41,11 @@ import com.nextgenbroadcast.mobile.middleware.phy.Atsc3DeviceReceiver
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
 import com.nextgenbroadcast.mobile.middleware.repository.RepositoryImpl
 import com.nextgenbroadcast.mobile.middleware.server.web.MiddlewareWebServer
+import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.db.SGDataBase
 import com.nextgenbroadcast.mobile.middleware.service.init.*
 import com.nextgenbroadcast.mobile.middleware.service.provider.IMediaFileProvider
 import com.nextgenbroadcast.mobile.middleware.service.provider.MediaFileProvider
+import com.nextgenbroadcast.mobile.middleware.service.provider.esgProvider.ESGContentAuthority
 import com.nextgenbroadcast.mobile.middleware.provider.esg.ESGContentProvider
 import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
 import com.nextgenbroadcast.mobile.middleware.settings.MiddlewareSettingsImpl
@@ -97,9 +97,15 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
             atsc3Module = it
         }
 
-        atsc3Analytics = Atsc3Analytics.getInstance(applicationContext, settings)
+        val sgDataBase = SGDataBase.getDatabase(applicationContext)
+        val serviceGuideStore = RoomServiceGuideStore(sgDataBase).apply {
+            subscribe {
+                contentResolver.notifyChange(ESGContentAuthority.getServiceContentUri(applicationContext), null)
+            }
+        }
 
-        serviceController = ServiceControllerImpl(repo, settings, atsc3, atsc3Analytics)
+        atsc3Analytics = Atsc3Analytics.getInstance(applicationContext, settings)
+        serviceController = ServiceControllerImpl(repo, serviceGuideStore, settings, atsc3, atsc3Analytics)
 
         appCache = ApplicationCache(atsc3.jni_getCacheDir(), DownloadManager())
 
@@ -116,13 +122,6 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
                     pushNotification(createNotification(receiverState, selectedService, playbackState))
                 }
             })
-        }
-
-        // Temporary hacky solution
-        val AUTHORITY = getString(R.string.nextgenServicesGuideProvider)
-        val SERVICE_CONTENT_URI = Uri.parse("content://$AUTHORITY/${ESGContentProvider.SERVICE_CONTENT_PATH}")
-        repo.serviceSchedule.distinctUntilChanged().observe(this) {
-            contentResolver.notifyChange(SERVICE_CONTENT_URI, null)
         }
     }
 

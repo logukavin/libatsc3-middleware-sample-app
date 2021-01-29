@@ -11,7 +11,8 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.entities.SLTConstants
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPackage
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.service.Atsc3Service
-import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.ServiceGuideStore
+import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.ServiceGuideDeliveryUnitReader
+import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.IServiceGuideStore
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.*
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
 import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
@@ -20,13 +21,14 @@ import kotlinx.coroutines.*
 
 internal class ServiceControllerImpl (
         private val repository: IRepository,
+        private val serviceGuideStore: IServiceGuideStore,
         private val settings: IMiddlewareSettings,
         private val atsc3Module: Atsc3Module,
-        private val atsc3Analytics: IAtsc3Analytics
+        private val atsc3Analytics: IAtsc3Analytics,
 ) : IServiceController, Atsc3Module.Listener {
 
     private val ioScope = CoroutineScope(Dispatchers.IO)
-    private val serviceGuideStore = ServiceGuideStore(repository, settings)
+    private val serviceGuideReader = ServiceGuideDeliveryUnitReader(serviceGuideStore)
 
     private var heldResetJob: Job? = null
     private var mediaUrlAssignmentJob: Job? = null
@@ -40,8 +42,6 @@ internal class ServiceControllerImpl (
     override val sltServices = repository.services
 
     override val freqKhz = MutableLiveData(0)
-
-    override val schedule = repository.serviceSchedule
 
     init {
         atsc3Module.setListener(this)
@@ -107,7 +107,7 @@ internal class ServiceControllerImpl (
     }
 
     override fun onServiceGuideUnitReceived(filePath: String) {
-        serviceGuideStore.readDeliveryUnit(filePath)
+        serviceGuideReader.readDeliveryUnit(filePath)
     }
 
     override fun openRoute(path: String): Boolean {
@@ -149,7 +149,7 @@ internal class ServiceControllerImpl (
         cancelMediaUrlAssignment()
         atsc3Module.close()
 
-        serviceGuideStore.clearAll()
+        serviceGuideReader.clearAll()
         repository.reset()
     }
 
