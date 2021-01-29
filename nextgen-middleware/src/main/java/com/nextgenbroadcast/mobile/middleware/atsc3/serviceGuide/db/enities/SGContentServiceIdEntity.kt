@@ -3,7 +3,7 @@ package com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.db.enities
 import androidx.room.Entity
 import androidx.room.ForeignKey
 
-@Entity(tableName = "content_serviceId",
+@Entity(tableName = "sg_content_serviceId",
         primaryKeys = ["contentId", "serviceId"],
         foreignKeys = [ForeignKey(
                 entity = SGContentEntity::class,
@@ -13,7 +13,7 @@ import androidx.room.ForeignKey
                 onUpdate = ForeignKey.CASCADE
         )]
 )
-data class ContentServiceIdEntity(
+data class SGContentServiceIdEntity(
         val contentId: String,
         val serviceId: Int
 )
