@@ -1,7 +1,6 @@
 package com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide
 
 import android.util.Log
-import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.db.SGDataBase
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.unit.SGContent
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.unit.*
 import com.nextgenbroadcast.mobile.middleware.atsc3.utils.*
@@ -14,7 +13,7 @@ import java.io.IOException
 
 internal class SGDUReader(
         private val services: MutableMap<Int, SGService>,
-        private val contents: MutableMap<String, SGContent>,
+        private val contents: MutableMap<String, SGContent>
 ) {
 
     fun readFromFile(file: File, isActive: () -> Boolean) {
