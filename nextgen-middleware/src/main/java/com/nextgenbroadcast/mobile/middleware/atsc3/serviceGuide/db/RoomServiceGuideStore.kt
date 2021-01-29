@@ -11,6 +11,13 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.unit.SGService
 internal class RoomServiceGuideStore(
         private val db: SGDataBase
 ) : IServiceGuideStore {
+
+    private var notifyUpdated: (() -> Unit)? = null
+
+    override fun subscribe(notifyUpdated: () -> Unit) {
+        this.notifyUpdated = notifyUpdated
+    }
+
     override fun storeService(serviceMap: Map<Int, SGService>) {
         val services = serviceMap.values
 
@@ -40,6 +47,8 @@ internal class RoomServiceGuideStore(
                 }
             }
         }
+
+        notifyUpdated?.invoke()
     }
 
     private fun storeServiceList(services: Collection<SGService>) {
@@ -128,6 +137,8 @@ internal class RoomServiceGuideStore(
                 }
             }
         }
+
+        notifyUpdated?.invoke()
     }
 
     private fun storeContentList(contacts: Collection<SGContent>) {

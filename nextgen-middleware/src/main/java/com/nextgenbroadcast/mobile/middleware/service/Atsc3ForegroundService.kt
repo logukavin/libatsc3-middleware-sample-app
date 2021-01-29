@@ -45,6 +45,7 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.db.SGDataBase
 import com.nextgenbroadcast.mobile.middleware.service.init.*
 import com.nextgenbroadcast.mobile.middleware.service.provider.IMediaFileProvider
 import com.nextgenbroadcast.mobile.middleware.service.provider.MediaFileProvider
+import com.nextgenbroadcast.mobile.middleware.service.provider.esgProvider.ESGContentAuthority
 import com.nextgenbroadcast.mobile.middleware.provider.esg.ESGContentProvider
 import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
 import com.nextgenbroadcast.mobile.middleware.settings.MiddlewareSettingsImpl
@@ -97,7 +98,11 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         }
 
         val sgDataBase = SGDataBase.getDatabase(applicationContext)
-        val serviceGuideStore = RoomServiceGuideStore(sgDataBase)
+        val serviceGuideStore = RoomServiceGuideStore(sgDataBase).apply {
+            subscribe {
+                contentResolver.notifyChange(ESGContentAuthority.getServiceContentUri(applicationContext), null)
+            }
+        }
 
         atsc3Analytics = Atsc3Analytics.getInstance(applicationContext, settings)
         serviceController = ServiceControllerImpl(repo, serviceGuideStore, settings, atsc3, atsc3Analytics)

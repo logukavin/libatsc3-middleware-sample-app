@@ -8,11 +8,8 @@ import android.net.Uri
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
-import com.nextgenbroadcast.mobile.core.model.AVService
-import com.nextgenbroadcast.mobile.core.serviceGuide.SGProgram
-import androidx.lifecycle.distinctUntilChanged
-import com.nextgenbroadcast.mobile.middleware.R
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.db.SGDataBase
+import com.nextgenbroadcast.mobile.middleware.service.provider.esgProvider.ESGContentAuthority
 import java.lang.Integer.parseInt
 import java.util.*
 
@@ -45,9 +42,11 @@ class ESGContentProvider : ContentProvider(), LifecycleOwner {
     }
 
     override fun onCreate(): Boolean {
-        AUTHORITY = context?.getString(R.string.nextgenServicesGuideProvider).toString()
-        SERVICE_CONTENT_URI = Uri.parse("content://$AUTHORITY/$SERVICE_CONTENT_PATH")
-        PROGRAM_CONTENT_URI = Uri.parse("content://$AUTHORITY/$PROGRAM_CONTENT_PATH")
+        val appContext = context?.applicationContext ?: return false
+
+        AUTHORITY = ESGContentAuthority.getAuthority(appContext)
+        SERVICE_CONTENT_URI = ESGContentAuthority.getServiceContentUri(appContext)
+        PROGRAM_CONTENT_URI = ESGContentAuthority.getProgramContentUri(appContext)
 
         SERVICES_CONTENT_TYPE = ("vnd.android.cursor.dir/vnd.$AUTHORITY.$SERVICE_CONTENT_PATH")
         SERVICE_CONTENT_ITEM_TYPE = ("vnd.android.cursor.item/vnd.$AUTHORITY.$SERVICE_CONTENT_PATH")
@@ -60,13 +59,7 @@ class ESGContentProvider : ContentProvider(), LifecycleOwner {
 
         initializeUriMatching()
 
-        val appContext = context?.applicationContext ?: return false
-
-        db = SGDataBase.getDatabase(appContext).apply {
-            contentDAO().getAllLD().distinctUntilChanged().observe(this@ESGContentProvider) {
-                appContext.contentResolver.notifyChange(SERVICE_CONTENT_URI, null)
-            }
-        }
+        db = SGDataBase.getDatabase(appContext)
 
         return true
     }
