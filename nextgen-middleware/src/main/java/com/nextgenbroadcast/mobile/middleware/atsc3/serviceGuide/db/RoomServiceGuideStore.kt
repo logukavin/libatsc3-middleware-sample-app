@@ -95,20 +95,36 @@ internal class RoomServiceGuideStore(
 
         storeContentList(contacts)
 
-        val contentDAO = db.contentDAO()
+        val contentNameDAO = db.contentNameDAO()
+        val contentDescriptionDAO = db.contentDescriptionDAO()
+        val contentServiceIdDAO = db.contentServiceIdDAO()
+
         contacts.forEach { content ->
-            //TODO: rework
+
             content.id?.let { contentId ->
-                content.nameMap?.forEach { language, name ->
-                    contentDAO.insertAll(ContentNameEntity(contentId, language, name))
+
+                content.nameMap?.let { nameMap ->
+                    contentNameDAO.insert(
+                            nameMap.map {
+                                (SGContentNameEntity(contentId, it.key, it.value))
+                            }
+                    )
                 }
 
-                content.descriptionMap?.forEach { locale, description ->
-                    contentDAO.insertAll(ContentDescriptionEntity(contentId, locale.language, description))
+                content.descriptionMap?.let { descriptionMap ->
+                    contentDescriptionDAO.insert(
+                            descriptionMap.map {
+                                (SGContentDescriptionEntity(contentId, it.key.language, it.value))
+                            }
+                    )
                 }
 
-                content.serviceIdList?.forEach { serviceId ->
-                    contentDAO.insertAll(ContentServiceIdEntity(contentId, serviceId))
+                content.serviceIdList?.let {
+                    contentServiceIdDAO.insert(
+                            it.map { serviceId ->
+                                SGContentServiceIdEntity(contentId, serviceId)
+                            }
+                    )
                 }
             }
         }

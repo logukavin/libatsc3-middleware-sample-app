@@ -13,9 +13,9 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.db.enities.*
     SGScheduleContentEntity::class,
     SGPresentationEntity::class,
     SGContentEntity::class,
-    ContentNameEntity::class,
-    ContentDescriptionEntity::class,
-    ContentServiceIdEntity::class
+    SGContentNameEntity::class,
+    SGContentDescriptionEntity::class,
+    SGContentServiceIdEntity::class
 ], version = 1)
 abstract class SGDataBase: RoomDatabase() {
 
@@ -24,6 +24,9 @@ abstract class SGDataBase: RoomDatabase() {
     abstract fun scheduleContentDAO(): SGScheduleContentDAO
     abstract fun presentationDAO(): SGPresentationDAO
     abstract fun contentDAO(): SGContentDAO
+    abstract fun contentNameDAO(): SGContentNameDAO
+    abstract fun contentDescriptionDAO(): SGContentDescriptionDAO
+    abstract fun contentServiceIdDAO(): SGContentServiceIdDAO
     abstract fun sgScheduleMapDAO(): SGScheduleMapDAO
 
     companion object {

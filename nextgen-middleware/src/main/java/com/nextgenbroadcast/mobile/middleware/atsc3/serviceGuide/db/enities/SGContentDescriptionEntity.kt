@@ -3,7 +3,7 @@ package com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.db.enities
 import androidx.room.Entity
 import androidx.room.ForeignKey
 
-@Entity(tableName = "content_description",
+@Entity(tableName = "sg_content_description",
         primaryKeys = ["contentId", "language"],
         foreignKeys = [ForeignKey(
                 entity = SGContentEntity::class,
@@ -13,7 +13,7 @@ import androidx.room.ForeignKey
                 onUpdate = ForeignKey.CASCADE
         )]
 )
-data class ContentDescriptionEntity(
+data class SGContentDescriptionEntity(
         val contentId: String,
         val language: String,
         val description: String
