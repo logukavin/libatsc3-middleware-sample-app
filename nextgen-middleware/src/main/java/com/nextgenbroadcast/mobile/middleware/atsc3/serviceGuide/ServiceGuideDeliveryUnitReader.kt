@@ -25,6 +25,10 @@ internal class ServiceGuideDeliveryUnitReader(
         serviceMap.clear()
         contentMap.clear()
         guideUrlsMap.clear()
+
+        CoroutineScope(getContext()).launch {
+            store.clearAll()
+        }
     }
 
     @Synchronized
