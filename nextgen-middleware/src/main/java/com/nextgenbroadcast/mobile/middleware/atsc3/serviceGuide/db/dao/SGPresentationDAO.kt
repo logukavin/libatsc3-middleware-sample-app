@@ -8,4 +8,7 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.db.enities.SGPr
 interface SGPresentationDAO : BaseDao<SGPresentationEntity> {
     @Query("SELECT * FROM sg_presentation")
     fun getAll(): List<SGPresentationEntity>
+
+    @Query("DELETE FROM sg_presentation")
+    fun deleteAll()
 }

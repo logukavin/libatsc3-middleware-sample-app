@@ -7,4 +7,7 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.db.enities.SGSe
 interface SGServiceDAO : BaseDao<SGServiceEntity> {
     @Query("SELECT * FROM sg_service")
     fun getAll(): List<SGServiceEntity>
+
+    @Query("DELETE FROM sg_service")
+    fun deleteAll()
 }
