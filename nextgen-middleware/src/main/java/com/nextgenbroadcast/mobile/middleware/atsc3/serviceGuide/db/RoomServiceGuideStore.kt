@@ -18,6 +18,17 @@ internal class RoomServiceGuideStore(
         this.notifyUpdated = notifyUpdated
     }
 
+    override fun clearAll() {
+        db.serviceDAO().deleteAll()
+        db.scheduleDAO().deleteAll()
+        db.scheduleContentDAO().deleteAll()
+        db.presentationDAO().deleteAll()
+        db.contentDAO().deleteAll()
+        db.contentNameDAO().deleteAll()
+        db.contentDescriptionDAO().deleteAll()
+        db.contentServiceIdDAO().deleteAll()
+    }
+
     override fun storeService(serviceMap: Map<Int, SGService>) {
         val services = serviceMap.values
 
