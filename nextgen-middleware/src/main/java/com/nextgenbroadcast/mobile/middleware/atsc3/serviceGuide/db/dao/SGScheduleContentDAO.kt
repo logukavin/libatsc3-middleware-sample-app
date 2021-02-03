@@ -8,4 +8,7 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.db.enities.SGSc
 interface SGScheduleContentDAO : BaseDao<SGScheduleContentEntity> {
     @Query("SELECT * FROM sg_schedule_content")
     fun getAll(): List<SGScheduleContentEntity>
+
+    @Query("DELETE FROM sg_schedule_content")
+    fun deleteAll()
 }

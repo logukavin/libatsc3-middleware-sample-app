@@ -7,7 +7,9 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.db.enities.SGCo
 
 @Dao
 interface SGContentDescriptionDAO : BaseDao<SGContentDescriptionEntity> {
-
     @Query("SELECT * FROM sg_content_description")
     fun getAll(): List<SGContentDescriptionEntity>
+
+    @Query("DELETE FROM sg_content_description")
+    fun deleteAll()
 }
