@@ -224,7 +224,7 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
                 bytesRead = readLength - bytesAlreadyRead;
                 sampleHeaderBuffer.clear();
                 sampleHeaderBuffer
-                        .put((byte) MMTConstants.TRACK_TYPE_UNKNOWN)
+                        .put((byte) MMTConstants.TRACK_TYPE_EMPTY)
                         .putInt(bytesRead - sampleHeaderBuffer.limit())
                         .putInt(0) // sample id = 0
                         .putLong(0) // PresentationTimestampUs = 0
