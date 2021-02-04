@@ -142,9 +142,15 @@ public class Atsc3MMTExtractor implements Extractor {
                 currentSampleBytesRemaining -= skipped;
             }
 
+            // Empty sample means we don't have more samples in buffer. Wait for data to come before next iteration.
+            if (currentSampleType == MMTConstants.TRACK_TYPE_EMPTY) {
+                Thread.sleep(100);
+            }
+
             if(((ReadSample_TrackIsNull_counter++) % 1000) == 0) {
                 Log.w("MMTExtractor", String.format("readSample - packet_id: %d, track is NULL, skipped: %d, returning Extrator.RESULT_CONTINUE, count: %d", currentSampleId, skipped, ReadSample_TrackIsNull_counter));
             }
+
             return Extractor.RESULT_CONTINUE;
         }
 
