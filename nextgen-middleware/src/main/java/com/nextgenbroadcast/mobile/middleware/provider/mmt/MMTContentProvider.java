@@ -25,6 +25,8 @@ import com.nextgenbroadcast.mobile.player.MMTConstants;
 import com.nextgenbroadcast.mobile.core.model.AVService;
 import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverCore;
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.SLTConstants;
+import com.nextgenbroadcast.mobile.core.atsc3.mmt.MMTConstants;
+import com.nextgenbroadcast.mobile.middleware.atsc3.buffer.Atsc3RingBuffer;
 
 import org.ngbp.libatsc3.middleware.Atsc3NdkMediaMMTBridge;
 import org.ngbp.libatsc3.middleware.android.ATSC3PlayerFlags;
@@ -37,7 +39,8 @@ import org.ngbp.libatsc3.middleware.android.mmt.models.MMTAudioDecoderConfigurat
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.concurrent.ConcurrentLinkedDeque;
+import java.nio.ByteBuffer;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMediaMMTBridgeCallbacks {
@@ -46,28 +49,32 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
     //jjustman-2020-12-23 - give the a/v/s decoder some time to decode frames, otherwise we will stall at startup
     //jjustman-2021-01-13 - TODO: remove me
     public static final long PTS_OFFSET_US = 266000L;
+    private static final int FRAGMENT_BUFFER_MAX_PAGE_COUNT = 320;
+    private static final int FRAGMENT_BUFFER_PAGE_SIZE = 16 * 1024;
+    private static final int FRAGMENT_BUFFER_SIZE = FRAGMENT_BUFFER_MAX_PAGE_COUNT * FRAGMENT_BUFFER_PAGE_SIZE;
 
     private static final String[] COLUMNS = {OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE};
 
     private final AtomicInteger mSessionCount = new AtomicInteger();
-    private final ConcurrentLinkedDeque<MMTFileDescriptor> descriptors = new ConcurrentLinkedDeque<>();
+    private final CopyOnWriteArrayList<MMTFileDescriptor> descriptors = new CopyOnWriteArrayList<>();
 
     private Atsc3ReceiverCore atsc3ReceiverCore;
     private Atsc3NdkMediaMMTBridge atsc3NdkMediaMMTBridge;
-    private HandlerThread mHandlerThread;
     private Handler mHandler;
     private StorageManager mStorageManager;
 
     private boolean FirstMfuBufferVideoKeyframeSent = false;
+
+    private final ByteBuffer fragmentBuffer = ByteBuffer.allocateDirect(FRAGMENT_BUFFER_SIZE);
 
     @Override
     public boolean onCreate() {
         MmtPacketIdContext.Initialize();
 
         atsc3ReceiverCore = Atsc3ReceiverStandalone.get(getContext());
-        atsc3NdkMediaMMTBridge = new Atsc3NdkMediaMMTBridge(this);
+        atsc3NdkMediaMMTBridge = new Atsc3NdkMediaMMTBridge(this, fragmentBuffer, FRAGMENT_BUFFER_MAX_PAGE_COUNT);
 
-        mHandlerThread = new HandlerThread("mmt-content-provider");
+        HandlerThread mHandlerThread = new HandlerThread("mmt-content-provider");
         mHandlerThread.start();
 
         mHandler = new Handler(mHandlerThread.getLooper());
@@ -154,15 +161,25 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
         final int fileMode = modeToMode(mode);
         try {
             mSessionCount.incrementAndGet();
+            //TODO: temporary solution
+            ATSC3PlayerFlags.ATSC3PlayerStartPlayback = true;
 
+            int pagePosition = atsc3NdkMediaMMTBridge.getFragmentBufferCurrentPosition();
+            int pageNumber = atsc3NdkMediaMMTBridge.getFragmentBufferCurrentPageNumber() + 1; // inc to wait for the next
+            ByteBuffer buffer = fragmentBuffer.duplicate();
+            buffer.position(pagePosition);
+            Atsc3RingBuffer fragmentBuff = new Atsc3RingBuffer(buffer, FRAGMENT_BUFFER_PAGE_SIZE, pageNumber);
             boolean audioOnly = service.getCategory() == SLTConstants.SERVICE_CATEGORY_AO;
-            MMTFileDescriptor descriptor = new MMTFileDescriptor(audioOnly) {
+
+            MMTFileDescriptor descriptor = new MMTFileDescriptor(fragmentBuff, audioOnly) {
                 @Override
                 public void onRelease() {
                     super.onRelease();
 
-                    mSessionCount.decrementAndGet();
+                    int sessionCount = mSessionCount.decrementAndGet();
                     descriptors.remove(this);
+
+                    ATSC3PlayerFlags.ATSC3PlayerStartPlayback = (sessionCount > 0);
                 }
             };
 
@@ -266,27 +283,33 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
         }
     }
 
-    @Override
-    public void pushAudioDecoderConfigurationRecord(MMTAudioDecoderConfigurationRecord mmtAudioDecoderConfigurationRecord) {
-        descriptors.forEach(descriptor -> {
-            descriptor.pushAudioDecoderConfigurationRecord(mmtAudioDecoderConfigurationRecord);
-        });
-    }
-
     private boolean isActive() {
         return mSessionCount.get() > 0;
     }
 
-    private void InitMpuMetadata_HEVC_NAL_Payload(MpuMetadata_HEVC_NAL_Payload payload) {
-        descriptors.forEach(descriptor -> {
-            descriptor.InitMpuMetadata_HEVC_NAL_Payload(payload);
-        });
+    //TODO: rewrite with ring-buffer
+    @Override
+    public void pushAudioDecoderConfigurationRecord(MMTAudioDecoderConfigurationRecord mmtAudioDecoderConfigurationRecord) {
+        try {
+            for (int i = 0; i < descriptors.size(); i++) {
+                descriptors.get(i).pushAudioDecoderConfigurationRecord(mmtAudioDecoderConfigurationRecord);
+            }
+        } catch (IndexOutOfBoundsException e) {
+            // ignore
+        }
     }
 
+    private void InitMpuMetadata_HEVC_NAL_Payload(MpuMetadata_HEVC_NAL_Payload payload) {
+//        descriptors.forEach(descriptor -> {
+//            descriptor.InitMpuMetadata_HEVC_NAL_Payload(payload);
+//        });
+    }
+
+    //TODO: do we need this?
     private void PushMfuByteBufferFragment(MfuByteBufferFragment mfuByteBufferFragment) {
-        descriptors.forEach(descriptor -> {
-            descriptor.PushMfuByteBufferFragment(mfuByteBufferFragment);
-        });
+//        descriptors.forEach(descriptor -> {
+//            descriptor.PushMfuByteBufferFragment(mfuByteBufferFragment);
+//        });
 
         if (MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us == 0 || MmtPacketIdContext.audio_packet_statistics.extracted_sample_duration_us == 0) {
             Log.d("MMTDataBuffer", String.format("PushMfuByteBufferFragment:WARN:packet_id: %d, mpu_sequence_number: %d, video.duration_us: %d, audio.duration_us: %d, missing extracted_sample_duration",
@@ -441,12 +464,8 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
     }
 
     private int maxQueueSize() {
-        final AtomicInteger maxSize = new AtomicInteger(0);
-        descriptors.forEach(descriptor -> {
-            int size = descriptor.getQueueSize();
-            if (size > maxSize.get()) maxSize.set(size);
-        });
+        int maxSize = 0;
 
-        return maxSize.get();
+        return maxSize;
     }
 }
