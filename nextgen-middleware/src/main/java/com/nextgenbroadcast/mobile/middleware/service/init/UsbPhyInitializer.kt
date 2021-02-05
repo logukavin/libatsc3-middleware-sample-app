@@ -11,7 +11,7 @@ import org.xmlpull.v1.XmlPullParser
 internal class UsbPhyInitializer : IServiceInitializer {
     private var isActive = true
 
-    override fun initialize(context: Context, components: HashMap<Class<*>, Pair<Int, String>>): Boolean {
+    override fun initialize(context: Context, components: Map<Class<*>, Pair<Int, String>>): Boolean {
         components.filter { (clazz, _) ->
             Atsc3UsbPhyConnector::class.java.isAssignableFrom(clazz)
         }.map { (clazz, data) ->

@@ -16,7 +16,7 @@ internal class FrequencyInitializer(
 
     private var locationJob: Job? = null
 
-    override fun initialize(context: Context, components: HashMap<Class<*>, Pair<Int, String>>): Boolean {
+    override fun initialize(context: Context, components: Map<Class<*>, Pair<Int, String>>): Boolean {
         val locators = components.filter { (clazz, _) ->
             IFrequencyLocator::class.java.isAssignableFrom(clazz)
         }.filter { (_, data) ->
