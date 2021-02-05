@@ -109,7 +109,7 @@ class ESGContentProvider : ContentProvider(), LifecycleOwner {
                 val args = arrayListOf<String>(lang, lang)
                 args.addAll(selectionArgs)
 
-                return db.sgScheduleMapDAO().createQueryAndGetContent(selection, args.toArray() as Array<String>, sortOrder)
+                return db.sgScheduleMapDAO().createQueryAndGetContent(selection, args.toTypedArray(), sortOrder)
             }
 
             URI_PROGRAM_BY_ID -> {
@@ -145,7 +145,7 @@ class ESGContentProvider : ContentProvider(), LifecycleOwner {
         const val PROGRAM_CONTENT_PATH = "programs_data"
 
         const val SERVICE_COLUMN_BSID = "bsid"
-        const val SERVICE_COLUMN_ID = "service_Id"
+        const val SERVICE_COLUMN_ID = "serviceId"
         const val SERVICE_COLUMN_SHORT_NAME = "shortServiceName"
         const val SERVICE_COLUMN_GLOBAL_ID = "globalServiceId"
         const val SERVICE_COLUMN_MAJOR_CHANNEL_NO = "majorChannelNo"
