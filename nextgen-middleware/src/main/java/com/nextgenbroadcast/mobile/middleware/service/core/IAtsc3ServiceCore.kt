@@ -1,10 +1,10 @@
-package com.nextgenbroadcast.mobile.middleware.service
+package com.nextgenbroadcast.mobile.middleware.service.core
 
 import com.nextgenbroadcast.mobile.core.model.PhyFrequency
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.IAtsc3Source
 
-interface IAtsc3ServiceCore {
+internal interface IAtsc3ServiceCore {
     fun openRoute(filePath: String): Boolean
     fun openRoute(source: IAtsc3Source): Boolean
     fun closeRoute()
