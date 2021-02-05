@@ -144,7 +144,7 @@ public class Atsc3MMTExtractor implements Extractor {
 
             // Empty sample means we don't have more samples in buffer. Wait for data to come before next iteration.
             if (currentSampleType == MMTConstants.TRACK_TYPE_EMPTY) {
-                Thread.sleep(100);
+                Thread.sleep(50);
             }
 
             if(((ReadSample_TrackIsNull_counter++) % 1000) == 0) {
