@@ -12,9 +12,6 @@ class EmbeddedAtsc3Service : Atsc3ForegroundService() {
     override fun createServiceBinder(serviceController: IServiceController): IBinder =
             ServiceBinder(serviceController)
 
-    override fun createProviderServiceBinder(serviceController: IServiceController): IBinder =
-            ProviderServiceBinder(serviceController)
-
     inner class ServiceBinder(
             private val serviceController: IServiceController
     ) : Binder(), IServiceBinder {
@@ -42,10 +39,6 @@ class EmbeddedAtsc3Service : Atsc3ForegroundService() {
         override val mediaPlayerPresenter: IMediaPlayerPresenter
             get() = requireViewController()
     }
-
-    internal inner class ProviderServiceBinder (
-            val serviceController: IServiceController
-    ) : Binder()
 
     companion object {
         fun init() {

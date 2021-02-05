@@ -189,7 +189,5 @@ class ESGContentProvider : ContentProvider(), LifecycleOwner {
         const val URI_SERVICE_BY_ID = 2
         const val URI_ALL_PROGRAMS = 3
         const val URI_PROGRAM_BY_ID = 4
-
-        const val ACTION_BIND_FROM_PROVIDER = "provider"
     }
 }
