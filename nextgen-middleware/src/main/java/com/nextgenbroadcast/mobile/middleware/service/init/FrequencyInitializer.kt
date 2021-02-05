@@ -3,15 +3,15 @@ package com.nextgenbroadcast.mobile.middleware.service.init
 import android.content.Context
 import android.util.Log
 import com.nextgenbroadcast.mobile.core.model.PhyFrequency
-import com.nextgenbroadcast.mobile.core.presentation.IReceiverPresenter
 import com.nextgenbroadcast.mobile.middleware.location.IFrequencyLocator
+import com.nextgenbroadcast.mobile.middleware.service.IAtsc3ServiceCore
 import com.nextgenbroadcast.mobile.middleware.settings.IReceiverSettings
 import kotlinx.coroutines.*
 import java.util.concurrent.TimeUnit
 
 internal class FrequencyInitializer(
         private val settings: IReceiverSettings,
-        private val receiver: IReceiverPresenter
+        private val atsc3Service: IAtsc3ServiceCore
 ) : IServiceInitializer {
 
     private var locationJob: Job? = null
@@ -39,7 +39,7 @@ internal class FrequencyInitializer(
 
                 frequencyApplied = true
                 withContext(Dispatchers.Main) {
-                    receiver.tune(PhyFrequency.default(PhyFrequency.Source.AUTO))
+                    atsc3Service.tune(PhyFrequency.default(PhyFrequency.Source.AUTO))
                 }
             }
 
@@ -57,7 +57,7 @@ internal class FrequencyInitializer(
                             val frequencies = frequencyLocation.frequencyList.filter { it > 0 }
                             if (frequencies.isNotEmpty()) {
                                 withContext(Dispatchers.Main) {
-                                    receiver.tune(PhyFrequency.auto(frequencies))
+                                    atsc3Service.tune(PhyFrequency.auto(frequencies))
                                 }
                                 locationTaken = true
                             }
@@ -74,7 +74,7 @@ internal class FrequencyInitializer(
 
             if (!locationTaken && !frequencyApplied) {
                 withContext(Dispatchers.Main) {
-                    receiver.tune(PhyFrequency.default(PhyFrequency.Source.AUTO))
+                    atsc3Service.tune(PhyFrequency.default(PhyFrequency.Source.AUTO))
                 }
             }
         }
