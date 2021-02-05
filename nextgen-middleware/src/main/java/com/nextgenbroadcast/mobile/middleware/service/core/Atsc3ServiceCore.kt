@@ -38,12 +38,14 @@ internal class Atsc3ServiceCore(
 ) : IAtsc3ServiceCore {
     private val repository: IRepository
     private val atsc3Module: Atsc3Module
-    val serviceController: IServiceController
     private val appCache: IApplicationCache
-    private val atsc3Analytics: IAtsc3Analytics
+    private val analytics: IAtsc3Analytics
 
+    //TODO: we should close this instances
+    val serviceController: IServiceController
     var viewController: IViewController? = null
         private set
+
     private var webGateway: IWebGateway? = null
     private var rpcGateway: IRPCGateway? = null
     private var webServer: MiddlewareWebServer? = null
@@ -67,8 +69,8 @@ internal class Atsc3ServiceCore(
             }
         }
 
-        atsc3Analytics = Atsc3Analytics.getInstance(context, settings)
-        serviceController = ServiceControllerImpl(repo, serviceGuideStore, settings, atsc3, atsc3Analytics)
+        analytics = Atsc3Analytics.getInstance(context, settings)
+        serviceController = ServiceControllerImpl(repo, serviceGuideStore, settings, atsc3, analytics)
 
         appCache = ApplicationCache(atsc3.jni_getCacheDir(), DownloadManager())
     }
@@ -79,7 +81,7 @@ internal class Atsc3ServiceCore(
     }
 
     fun createAndStartViewPresentation(lifecycleOwner: LifecycleOwner): IViewController {
-        val view = ViewControllerImpl(repository, settings, mediaFileProvider, atsc3Analytics).apply {
+        val view = ViewControllerImpl(repository, settings, mediaFileProvider, analytics).apply {
             start(lifecycleOwner)
         }.also {
             viewController = it
@@ -95,9 +97,9 @@ internal class Atsc3ServiceCore(
 
         view.appState.observe(lifecycleOwner) { appState ->
             when (appState) {
-                ApplicationState.OPENED -> atsc3Analytics.startApplicationSession()
+                ApplicationState.OPENED -> analytics.startApplicationSession()
                 ApplicationState.LOADED,
-                ApplicationState.UNAVAILABLE -> atsc3Analytics.finishApplicationSession()
+                ApplicationState.UNAVAILABLE -> analytics.finishApplicationSession()
                 else -> {
                     // ignore
                 }
