@@ -18,8 +18,8 @@ abstract class BindableForegroundService : LifecycleService() {
         private set
     protected var isBinded = false
         private set
-    private var isStartedAsForeground = false
-    private var destroyPresentationLayerJob: Job? = null
+    protected var isStartedAsForeground = false
+        private set
 
     override fun onCreate() {
         super.onCreate()
@@ -40,11 +40,6 @@ abstract class BindableForegroundService : LifecycleService() {
         super.onBind(intent)
 
         startForeground()
-
-        cancelPresentationDestroying()
-
-        createViewPresentationAndStartService()
-
         isBinded = true
 
         return null
@@ -52,30 +47,12 @@ abstract class BindableForegroundService : LifecycleService() {
 
     override fun onRebind(intent: Intent?) {
         super.onRebind(intent)
-
-        cancelPresentationDestroying()
-
         isBinded = true
     }
 
     override fun onUnbind(intent: Intent): Boolean {
         super.onUnbind(intent)
-
         isBinded = false
-
-        destroyPresentationLayerJob?.cancel()
-        if (isStartedAsForeground) {
-            destroyPresentationLayerJob = CoroutineScope(Dispatchers.IO).launch {
-                delay(PRESENTATION_DESTROYING_DELAY)
-                withContext(Dispatchers.Main) {
-                    destroyViewPresentationAndStopService()
-                    destroyPresentationLayerJob = null
-                }
-            }
-        } else {
-            destroyViewPresentationAndStopService()
-        }
-
         return true
     }
 
@@ -107,20 +84,9 @@ abstract class BindableForegroundService : LifecycleService() {
         notificationHelper.notify(NOTIFICATION_ID, notification)
     }
 
-    private fun cancelPresentationDestroying() {
-        destroyPresentationLayerJob?.let {
-            it.cancel()
-            destroyPresentationLayerJob = null
-        }
-    }
-
     protected abstract fun getReceiverState(): ReceiverState
-    protected abstract fun createViewPresentationAndStartService()
-    protected abstract fun destroyViewPresentationAndStopService()
 
     companion object {
-        private const val PRESENTATION_DESTROYING_DELAY = 1000L
-
         private const val NOTIFICATION_CHANNEL_ID = "Atsc3ServiceChannel"
         private const val NOTIFICATION_ID = 1
 

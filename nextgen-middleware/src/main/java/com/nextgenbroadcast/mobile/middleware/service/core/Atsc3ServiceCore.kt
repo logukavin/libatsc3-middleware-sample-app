@@ -1,6 +1,7 @@
 package com.nextgenbroadcast.mobile.middleware.service.core
 
 import android.content.Context
+import android.util.Log
 import androidx.lifecycle.LifecycleOwner
 import com.nextgenbroadcast.mobile.core.cert.UserAgentSSLContext
 import com.nextgenbroadcast.mobile.core.model.PhyFrequency
@@ -26,11 +27,17 @@ import com.nextgenbroadcast.mobile.middleware.gateway.web.WebGatewayImpl
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
 import com.nextgenbroadcast.mobile.middleware.repository.RepositoryImpl
 import com.nextgenbroadcast.mobile.middleware.server.web.MiddlewareWebServer
+import com.nextgenbroadcast.mobile.middleware.service.Atsc3ForegroundService
+import com.nextgenbroadcast.mobile.middleware.service.init.FrequencyInitializer
+import com.nextgenbroadcast.mobile.middleware.service.init.IServiceInitializer
+import com.nextgenbroadcast.mobile.middleware.service.init.OnboardPhyInitializer
+import com.nextgenbroadcast.mobile.middleware.service.init.UsbPhyInitializer
 import com.nextgenbroadcast.mobile.middleware.service.provider.IMediaFileProvider
 import com.nextgenbroadcast.mobile.middleware.service.provider.MediaFileProvider
 import com.nextgenbroadcast.mobile.middleware.service.provider.esgProvider.ESGContentAuthority
 import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
 import kotlinx.coroutines.Dispatchers
+import java.lang.ref.WeakReference
 
 internal class Atsc3ServiceCore(
         val context: Context,
@@ -49,10 +56,11 @@ internal class Atsc3ServiceCore(
     private var webGateway: IWebGateway? = null
     private var rpcGateway: IRPCGateway? = null
     private var webServer: MiddlewareWebServer? = null
-
     private val mediaFileProvider: IMediaFileProvider by lazy {
         MediaFileProvider(context)
     }
+
+    private val initializer = ArrayList<WeakReference<IServiceInitializer>>()
 
     init {
         val repo = RepositoryImpl().also {
@@ -76,8 +84,32 @@ internal class Atsc3ServiceCore(
     }
 
     fun destroy() {
+        initializer.forEach { ref ->
+            ref.get()?.cancel()
+        }
+
         stopAndDestroyViewPresentation()
         atsc3Module.close()
+    }
+
+    fun initialize(components: Map<Class<*>, Pair<Int, String>>) {
+        try {
+            FrequencyInitializer(settings, this).also {
+                initializer.add(WeakReference(it))
+            }.initialize(context, components)
+
+            val phyInitializer = OnboardPhyInitializer(this).also {
+                initializer.add(WeakReference(it))
+            }
+
+            if (!phyInitializer.initialize(context, components)) {
+                UsbPhyInitializer().also {
+                    initializer.add(WeakReference(it))
+                }.initialize(context, components)
+            }
+        } catch (e: Exception) {
+            Log.d(Atsc3ForegroundService.TAG, "Can't initialize, something is wrong in metadata", e)
+        }
     }
 
     fun createAndStartViewPresentation(lifecycleOwner: LifecycleOwner): IViewController {

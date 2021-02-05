@@ -25,12 +25,10 @@ import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
 import com.nextgenbroadcast.mobile.middleware.phy.Atsc3DeviceReceiver
 import com.nextgenbroadcast.mobile.middleware.service.core.Atsc3ServiceCore
 import com.nextgenbroadcast.mobile.middleware.service.init.*
-import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
 import com.nextgenbroadcast.mobile.middleware.settings.MiddlewareSettingsImpl
-import java.lang.ref.WeakReference
+import kotlinx.coroutines.*
 
 abstract class Atsc3ForegroundService : BindableForegroundService() {
-    private lateinit var settings: IMiddlewareSettings
     private lateinit var atsc3Service: Atsc3ServiceCore
     private lateinit var wakeLock: WakeLock
     private lateinit var state: MediatorLiveData<Triple<ReceiverState?, AVService?, PlaybackState?>>
@@ -39,19 +37,19 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     private var deviceReceiver: Atsc3DeviceReceiver? = null
 
     private var isInitialized = false
-    private val initializer = ArrayList<WeakReference<IServiceInitializer>>()
 
     private val usbManager: UsbManager by lazy {
         getSystemService(Context.USB_SERVICE) as UsbManager
     }
+
+    private var destroyPresentationLayerJob: Job? = null
 
     abstract fun createServiceBinder(serviceController: IServiceController): IBinder
 
     override fun onCreate() {
         super.onCreate()
 
-        settings = MiddlewareSettingsImpl.getInstance(applicationContext)
-
+        val settings = MiddlewareSettingsImpl.getInstance(applicationContext)
         atsc3Service = Atsc3ServiceCore(applicationContext, settings)
 
         wakeLock = (getSystemService(Context.POWER_SERVICE) as PowerManager).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Atsc3ForegroundService::lock")
@@ -77,19 +75,35 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
         destroyViewPresentationAndStopService()
 
-        initializer.forEach { ref ->
-            ref.get()?.cancel()
-        }
-
         atsc3Service.destroy()
     }
 
     override fun onBind(intent: Intent): IBinder? {
+        cancelPresentationDestroying()
+        createViewPresentationAndStartService()
+
         super.onBind(intent)
 
         maybeInitialize()
 
         return createServiceBinder(atsc3Service.serviceController)
+    }
+
+    override fun onRebind(intent: Intent?) {
+        cancelPresentationDestroying()
+
+        super.onRebind(intent)
+    }
+
+    override fun onUnbind(intent: Intent): Boolean {
+        cancelPresentationDestroying()
+        if (isStartedAsForeground) {
+            startPresentationDestroying()
+        } else {
+            destroyViewPresentationAndStopService()
+        }
+
+        return super.onUnbind(intent)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -133,21 +147,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         isInitialized = true
 
         try {
-            val components = MetadataReader.discoverMetadata(this)
-
-            FrequencyInitializer(settings, atsc3Service).also {
-                initializer.add(WeakReference(it))
-            }.initialize(applicationContext, components)
-
-            val phyInitializer = OnboardPhyInitializer(atsc3Service).also {
-                initializer.add(WeakReference(it))
-            }
-
-            if (!phyInitializer.initialize(applicationContext, components)) {
-                UsbPhyInitializer().also {
-                    initializer.add(WeakReference(it))
-                }.initialize(applicationContext, components)
-            }
+            atsc3Service.initialize(MetadataReader.discoverMetadata(this))
         } catch (e: Exception) {
             Log.d(TAG, "Can't initialize, something is wrong in metadata", e)
         }
@@ -242,7 +242,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
     override fun getReceiverState() = atsc3Service.getReceiverState()
 
-    override fun createViewPresentationAndStartService() {
+    private fun createViewPresentationAndStartService() {
         // we release it only when destroy presentation layer
         if (wakeLock.isHeld) return
 
@@ -263,7 +263,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         wakeLock.acquire()
     }
 
-    override fun destroyViewPresentationAndStopService() {
+    private fun destroyViewPresentationAndStopService() {
         viewPresentationLifecycle?.stopAndDestroy()
         viewPresentationLifecycle = null
 
@@ -276,6 +276,23 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         }
 
         atsc3Service.stopAndDestroyViewPresentation()
+    }
+
+    private fun startPresentationDestroying() {
+        destroyPresentationLayerJob = CoroutineScope(Dispatchers.IO).launch {
+            delay(PRESENTATION_DESTROYING_DELAY)
+            withContext(Dispatchers.Main) {
+                destroyViewPresentationAndStopService()
+                destroyPresentationLayerJob = null
+            }
+        }
+    }
+
+    private fun cancelPresentationDestroying() {
+        destroyPresentationLayerJob?.let {
+            it.cancel()
+            destroyPresentationLayerJob = null
+        }
     }
 
     protected fun requireViewController(): IViewController {
@@ -313,6 +330,8 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
     companion object {
         val TAG: String = Atsc3ForegroundService::class.java.simpleName
+
+        private const val PRESENTATION_DESTROYING_DELAY = 1000L
 
         private const val SERVICE_ACTION = "${BuildConfig.LIBRARY_PACKAGE_NAME}.intent.action"
 

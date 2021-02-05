@@ -17,7 +17,7 @@ internal class OnboardPhyInitializer(
 
     private var isActive = true
 
-    override fun initialize(context: Context, components: HashMap<Class<*>, Pair<Int, String>>): Boolean {
+    override fun initialize(context: Context, components: Map<Class<*>, Pair<Int, String>>): Boolean {
         components.filter { (clazz, _) ->
             Atsc3NdkPHYClientBase::class.java.isAssignableFrom(clazz)
         }.map { (clazz, data) ->
