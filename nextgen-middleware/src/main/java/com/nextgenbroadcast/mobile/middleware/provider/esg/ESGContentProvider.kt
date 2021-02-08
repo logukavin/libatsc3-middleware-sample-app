@@ -79,14 +79,14 @@ class ESGContentProvider : ContentProvider(), LifecycleOwner {
         val context = context ?: throw IllegalArgumentException("Wrong context")
         val contentResolver = context.contentResolver
 
-        val cursor = fillCursor(uri, selectionArgs, selection)
+        val cursor = fillCursor(uri, selectionArgs, selection, sortOrder)
 
         cursor.setNotificationUri(contentResolver, SERVICE_CONTENT_URI)
 
         return cursor
     }
 
-    private fun fillCursor(uri: Uri, selectionArgs: Array<String>?, selection: String?): Cursor {
+    private fun fillCursor(uri: Uri, selectionArgs: Array<String>?, selection: String?, sortOrder: String?): Cursor {
 
         when (uriMatcher.match(uri)) {
             URI_ALL_SERVICES -> {
@@ -104,35 +104,12 @@ class ESGContentProvider : ContentProvider(), LifecycleOwner {
             URI_ALL_PROGRAMS -> {
                 if (selectionArgs.isNullOrEmpty()) throw IllegalArgumentException("Wrong selectionArgs: $selectionArgs")
 
-                val selectionColumns = selection?.split(" AND ")
-                var serviceId: Int = -1
-                var startTime: Long = 0
-                var endTime: Long = Long.MAX_VALUE
-
-                selectionColumns?.forEachIndexed { index, columnName ->
-                    when (columnName) {
-                        SERVICE_COLUMN_ID -> {
-                            serviceId = selectionArgs[index].toInt()
-                        }
-
-                        PROGRAM_COLUMN_START_TIME -> {
-                            startTime = selectionArgs[index].toLong()
-                        }
-
-                        PROGRAM_COLUMN_END_TIME -> {
-                            endTime = selectionArgs[index].toLong()
-                        }
-
-                        else -> {
-                            // ignore
-                        }
-                    }
-                } ?: throw IllegalArgumentException("You missed add some column name")
-
-                if (serviceId < 0) throw IllegalArgumentException("You missed add contentIds arg")
-
                 //TODO: use language from settings
-                return db.sgScheduleMapDAO().getContentBy(serviceId, startTime, endTime, Locale.getDefault().language)
+                val lang = Locale.getDefault().language
+                val args = arrayListOf<String>(lang, lang)
+                args.addAll(selectionArgs)
+
+                return db.sgScheduleMapDAO().getContentBy(selection, args.toTypedArray(), sortOrder)
             }
 
             URI_PROGRAM_BY_ID -> {
