@@ -18,10 +18,10 @@ interface SGScheduleMapDAO {
     fun getServiceById(id: Int, bsid: Int, category: Int): Cursor
 
     @RawQuery
-    fun getContentByQuery(query: SupportSQLiteQuery): Cursor
+    fun getContentBy(query: SupportSQLiteQuery): Cursor
 
     @Transaction
-    fun createQueryAndGetContent(selection: String?, args: Array<String>, sortOrder: String?): Cursor {
+    fun getContentBy(selection: String?, args: Array<String>, sortOrder: String?): Cursor {
 
         val query = "SELECT sch.*, schc.contentId, schp.startTime, schp.endTime, schp.duration, cnt.icon, cntn.name, cntd.description\n" +
                 "FROM sg_schedule sch, sg_schedule_content schc, sg_presentation schp\n" +
@@ -31,6 +31,6 @@ interface SGScheduleMapDAO {
                 "WHERE schc.scheduleId = sch.id AND schp.content_Id = schc.contentId AND $selection\n" +
                 "ORDER BY $sortOrder"
 
-        return getContentByQuery(SimpleSQLiteQuery(query, args))
+        return getContentBy(SimpleSQLiteQuery(query, args))
     }
 }
