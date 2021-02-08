@@ -6,18 +6,18 @@ import android.content.res.XmlResourceParser
 import android.util.Log
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.PhyAtsc3Source
 import com.nextgenbroadcast.mobile.middleware.atsc3.utils.XmlUtils
-import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
+import com.nextgenbroadcast.mobile.middleware.service.core.IAtsc3ServiceCore
 import org.ngbp.libatsc3.middleware.android.phy.Atsc3NdkPHYClientBase
 import org.xmlpull.v1.XmlPullParser
 import java.lang.Exception
 
 internal class OnboardPhyInitializer(
-        private val serviceController: IServiceController
+        private val atsc3Service: IAtsc3ServiceCore
 ) : IServiceInitializer {
 
     private var isActive = true
 
-    override fun initialize(context: Context, components: HashMap<Class<*>, Pair<Int, String>>): Boolean {
+    override fun initialize(context: Context, components: Map<Class<*>, Pair<Int, String>>): Boolean {
         components.filter { (clazz, _) ->
             Atsc3NdkPHYClientBase::class.java.isAssignableFrom(clazz)
         }.map { (clazz, data) ->
@@ -35,7 +35,7 @@ internal class OnboardPhyInitializer(
                 var connected = false
                 params.forEach params@{ (fd, devicePath, freqKhz) ->
                     try {
-                        connected = serviceController.openRoute(PhyAtsc3Source(phy, fd, devicePath, freqKhz))
+                        connected = atsc3Service.openRoute(PhyAtsc3Source(phy, fd, devicePath, freqKhz))
                         if (connected) return@params
                     } catch (t: Throwable) {
                         t.printStackTrace()

@@ -15,105 +15,50 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
 import androidx.lifecycle.MediatorLiveData
-import com.nextgenbroadcast.mobile.core.cert.UserAgentSSLContext
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
-import com.nextgenbroadcast.mobile.core.presentation.ApplicationState
 import com.nextgenbroadcast.mobile.middleware.BuildConfig
-import com.nextgenbroadcast.mobile.middleware.analytics.Atsc3Analytics
-import com.nextgenbroadcast.mobile.middleware.analytics.IAtsc3Analytics
-import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3Module
-import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.db.RoomServiceGuideStore
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.UsbAtsc3Source
-import com.nextgenbroadcast.mobile.middleware.cache.ApplicationCache
-import com.nextgenbroadcast.mobile.middleware.cache.DownloadManager
-import com.nextgenbroadcast.mobile.middleware.cache.IApplicationCache
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
-import com.nextgenbroadcast.mobile.middleware.controller.service.ServiceControllerImpl
 import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
-import com.nextgenbroadcast.mobile.middleware.controller.view.ViewControllerImpl
-import com.nextgenbroadcast.mobile.middleware.gateway.rpc.IRPCGateway
-import com.nextgenbroadcast.mobile.middleware.gateway.rpc.RPCGatewayImpl
-import com.nextgenbroadcast.mobile.middleware.gateway.web.IWebGateway
-import com.nextgenbroadcast.mobile.middleware.gateway.web.WebGatewayImpl
 import com.nextgenbroadcast.mobile.middleware.phy.Atsc3DeviceReceiver
-import com.nextgenbroadcast.mobile.middleware.repository.IRepository
-import com.nextgenbroadcast.mobile.middleware.repository.RepositoryImpl
-import com.nextgenbroadcast.mobile.middleware.server.web.MiddlewareWebServer
-import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.db.SGDataBase
+import com.nextgenbroadcast.mobile.middleware.service.core.Atsc3ServiceCore
 import com.nextgenbroadcast.mobile.middleware.service.init.*
-import com.nextgenbroadcast.mobile.middleware.service.provider.IMediaFileProvider
-import com.nextgenbroadcast.mobile.middleware.service.provider.MediaFileProvider
-import com.nextgenbroadcast.mobile.middleware.service.provider.esgProvider.ESGContentAuthority
-import com.nextgenbroadcast.mobile.middleware.provider.esg.ESGContentProvider
-import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
 import com.nextgenbroadcast.mobile.middleware.settings.MiddlewareSettingsImpl
 import kotlinx.coroutines.*
-import java.lang.ref.WeakReference
 
 abstract class Atsc3ForegroundService : BindableForegroundService() {
+    private lateinit var atsc3Service: Atsc3ServiceCore
     private lateinit var wakeLock: WakeLock
-    private lateinit var settings: IMiddlewareSettings
-    private lateinit var repository: IRepository
-    private lateinit var atsc3Module: Atsc3Module
-    private lateinit var serviceController: IServiceController
-    private lateinit var appCache: IApplicationCache
     private lateinit var state: MediatorLiveData<Triple<ReceiverState?, AVService?, PlaybackState?>>
-    private lateinit var atsc3Analytics: IAtsc3Analytics
 
     private var viewPresentationLifecycle: ViewPresentationLifecycleOwner? = null
-    private var viewController: IViewController? = null
-    private var webGateway: IWebGateway? = null
-    private var rpcGateway: IRPCGateway? = null
-    private var webServer: MiddlewareWebServer? = null
     private var deviceReceiver: Atsc3DeviceReceiver? = null
 
     private var isInitialized = false
-    private val initializer = ArrayList<WeakReference<IServiceInitializer>>()
 
     private val usbManager: UsbManager by lazy {
         getSystemService(Context.USB_SERVICE) as UsbManager
     }
 
-    private val mediaFileProvider: IMediaFileProvider by lazy {
-        MediaFileProvider(applicationContext)
-    }
+    private var destroyPresentationLayerJob: Job? = null
 
     abstract fun createServiceBinder(serviceController: IServiceController): IBinder
-    abstract fun createProviderServiceBinder(serviceController: IServiceController): IBinder?
 
     override fun onCreate() {
         super.onCreate()
 
+        val settings = MiddlewareSettingsImpl.getInstance(applicationContext)
+        atsc3Service = Atsc3ServiceCore(applicationContext, settings)
+
         wakeLock = (getSystemService(Context.POWER_SERVICE) as PowerManager).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Atsc3ForegroundService::lock")
 
-        settings = MiddlewareSettingsImpl.getInstance(applicationContext)
-
-        val repo = RepositoryImpl().also {
-            repository = it
-        }
-        val atsc3 = Atsc3Module(this).also {
-            atsc3Module = it
-        }
-
-        val sgDataBase = SGDataBase.getDatabase(applicationContext)
-        val serviceGuideStore = RoomServiceGuideStore(sgDataBase).apply {
-            subscribe {
-                contentResolver.notifyChange(ESGContentAuthority.getServiceContentUri(applicationContext), null)
-            }
-        }
-
-        atsc3Analytics = Atsc3Analytics.getInstance(applicationContext, settings)
-        serviceController = ServiceControllerImpl(repo, serviceGuideStore, settings, atsc3, atsc3Analytics)
-
-        appCache = ApplicationCache(atsc3.jni_getCacheDir(), DownloadManager())
-
         state = MediatorLiveData<Triple<ReceiverState?, AVService?, PlaybackState?>>().apply {
-            addSource(serviceController.receiverState) { receiverState ->
+            addSource(atsc3Service.serviceController.receiverState) { receiverState ->
                 value = newState(receiverState = receiverState)
             }
-            addSource(serviceController.selectedService) { service ->
+            addSource(atsc3Service.serviceController.selectedService) { service ->
                 value = newState(selectedService = service)
             }
         }.also {
@@ -130,30 +75,32 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
         destroyViewPresentationAndStopService()
 
-        initializer.forEach { ref ->
-            ref.get()?.cancel()
-        }
-
-        atsc3Module.close()
+        atsc3Service.destroy()
     }
 
     override fun onBind(intent: Intent): IBinder? {
-        // Skip presentation layer initialization if it's service request
-        if (intent.action == ESGContentProvider.ACTION_BIND_FROM_PROVIDER) {
-            return createProviderServiceBinder(serviceController)
-        }
+        cancelPresentationDestroying()
+        createViewPresentationAndStartService()
 
         super.onBind(intent)
 
         maybeInitialize()
 
-        return createServiceBinder(serviceController)
+        return createServiceBinder(atsc3Service.serviceController)
+    }
+
+    override fun onRebind(intent: Intent?) {
+        cancelPresentationDestroying()
+
+        super.onRebind(intent)
     }
 
     override fun onUnbind(intent: Intent): Boolean {
-        // Skip presentation layer destroying if it's service request
-        if (intent.action == ESGContentProvider.ACTION_BIND_FROM_PROVIDER) {
-            return false
+        cancelPresentationDestroying()
+        if (isStartedAsForeground) {
+            startPresentationDestroying()
+        } else {
+            destroyViewPresentationAndStopService()
         }
 
         return super.onUnbind(intent)
@@ -178,9 +125,9 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
                     }
                 }
 
-                ACTION_RMP_PLAY -> viewController?.rmpResume()
+                ACTION_RMP_PLAY -> atsc3Service.viewController?.rmpResume()
 
-                ACTION_RMP_PAUSE -> viewController?.rmpPause()
+                ACTION_RMP_PAUSE -> atsc3Service.viewController?.rmpPause()
 
                 ACTION_OPEN_ROUTE -> openRoute(intent.getStringExtra(EXTRA_ROUTE_PATH))
 
@@ -200,57 +147,18 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         isInitialized = true
 
         try {
-            val components = MetadataReader.discoverMetadata(this)
-
-            FrequencyInitializer(settings, serviceController).also {
-                initializer.add(WeakReference(it))
-            }.initialize(applicationContext, components)
-
-            val phyInitializer = OnboardPhyInitializer(serviceController).also {
-                initializer.add(WeakReference(it))
-            }
-
-            if (!phyInitializer.initialize(applicationContext, components)) {
-                UsbPhyInitializer().also {
-                    initializer.add(WeakReference(it))
-                }.initialize(applicationContext, components)
-            }
+            atsc3Service.initialize(MetadataReader.discoverMetadata(this))
         } catch (e: Exception) {
             Log.d(TAG, "Can't initialize, something is wrong in metadata", e)
         }
-
-        // comment SaankhyaPHYAndroid in app manifest
-//        //jjustman-2020-12-24 - iterate over our UsbManager.getDeviceList to see if we have any candidate phys when launching
-//        scanForUsbPhyLayerDevices()
     }
-
-//    //jjustman-2020-12-24 - todo: move this somewhere else?
-//    protected fun scanForUsbPhyLayerDevices() {
-//        var deviceList: HashMap<String, UsbDevice> = usbManager.getDeviceList()
-//        deviceList.forEach { k, v ->
-//            dumpUsbDevices(v, "usbPHYLayerDeviceScan")
-//            atsc3Module.openUsbDevice(v)
-//        }
-//    }
-//
-//    private fun dumpUsbDevices(usbDevice: UsbDevice, fromAction: String) {
-//        var usbConfiguration: UsbConfiguration = usbDevice.getConfiguration(0);
-//        var usbInterface: UsbInterface = usbConfiguration.getInterface(0);
-//        var numEndpoints: Int = usbInterface.getEndpointCount();
-//        Log.i("Atsc3ForegroundService", String.format("dumpUsbDevices: %s, device: vid: %s, pid: %s, numEndpoints: %d, name: %s",
-//                fromAction,
-//                usbDevice.getVendorId(),
-//                usbDevice.getProductId(),
-//                numEndpoints,
-//                usbDevice.getDeviceName()))
-//    }
 
     private fun openRoute(filePath: String?) {
         // change source to file. So, let's unregister device receiver
         unregisterDeviceReceiver()
 
         filePath?.let {
-            serviceController.openRoute(filePath)
+            atsc3Service.openRoute(filePath)
         }
     }
 
@@ -258,7 +166,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         startForeground()
         unregisterDeviceReceiver()
 
-        serviceController.openRoute(UsbAtsc3Source(usbManager, device))
+        atsc3Service.openRoute(UsbAtsc3Source(usbManager, device))
 
         // Register BroadcastReceiver to detect when device is disconnected
         deviceReceiver = Atsc3DeviceReceiver(device.deviceName).also { receiver ->
@@ -271,8 +179,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     private fun closeRoute() {
         unregisterDeviceReceiver()
 
-        serviceController.stopRoute() // call to stopRoute is not a mistake. We use it to close previously opened file
-        serviceController.closeRoute()
+        atsc3Service.closeRoute()
 
         if (isBinded) {
             stopSelf()
@@ -287,7 +194,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         }
 
         unregisterDeviceReceiver()
-        stopWebServer()
+        atsc3Service.stopAndDestroyViewPresentation()
         stopForeground()
         stopSelf()
     }
@@ -333,31 +240,9 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         usbManager.requestPermission(device, PendingIntent.getService(this, 0, intent, 0))
     }
 
-    private fun startWebServer(rpc: IRPCGateway, web: IWebGateway) {
-        webServer = MiddlewareWebServer.Builder()
-                .rpcGateway(rpc)
-                .webGateway(web)
-                .build().also {
-                    it.start(UserAgentSSLContext(applicationContext))
-                }
-    }
+    override fun getReceiverState() = atsc3Service.getReceiverState()
 
-    private fun stopWebServer() {
-        webServer?.let { server ->
-            if (server.isRunning()) {
-                try {
-                    server.stop()
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
-            }
-        }
-        webServer = null
-    }
-
-    override fun getReceiverState() = serviceController.receiverState.value ?: ReceiverState.IDLE
-
-    override fun createViewPresentationAndStartService() {
+    private fun createViewPresentationAndStartService() {
         // we release it only when destroy presentation layer
         if (wakeLock.isHeld) return
 
@@ -368,46 +253,21 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
             viewPresentationLifecycle = it
         }
 
-        val view = ViewControllerImpl(repository, settings, mediaFileProvider, atsc3Analytics).apply {
-            start(viewLifecycle)
-        }.also {
-            viewController = it
-        }
-        val web = WebGatewayImpl(serviceController, repository, settings).also {
-            webGateway = it
-        }
-        val rpc = RPCGatewayImpl(view, serviceController, appCache, settings, Dispatchers.Main, Dispatchers.IO).apply {
-            start(viewLifecycle)
-        }.also {
-            rpcGateway = it
-        }
+        val view = atsc3Service.createAndStartViewPresentation(viewLifecycle)
 
         state.addSource(view.rmpState) { playbackState ->
             state.value = newState(playbackState = playbackState)
         }
 
-        view.appState.observe(viewLifecycle) { appState ->
-            when (appState) {
-                ApplicationState.OPENED -> atsc3Analytics.startApplicationSession()
-                ApplicationState.LOADED,
-                ApplicationState.UNAVAILABLE -> atsc3Analytics.finishApplicationSession()
-                else -> {
-                    // ignore
-                }
-            }
-        }
-
-        startWebServer(rpc, web)
-
         //TODO: add lock limitation??
         wakeLock.acquire()
     }
 
-    override fun destroyViewPresentationAndStopService() {
+    private fun destroyViewPresentationAndStopService() {
         viewPresentationLifecycle?.stopAndDestroy()
         viewPresentationLifecycle = null
 
-        viewController?.let { view ->
+        atsc3Service.viewController?.let { view ->
             state.removeSource(view.rmpState)
         }
 
@@ -415,25 +275,40 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
             wakeLock.release()
         }
 
-        stopWebServer()
+        atsc3Service.stopAndDestroyViewPresentation()
+    }
 
-        webGateway = null
-        rpcGateway = null
-        viewController = null
+    private fun startPresentationDestroying() {
+        destroyPresentationLayerJob = CoroutineScope(Dispatchers.IO).launch {
+            delay(PRESENTATION_DESTROYING_DELAY)
+            withContext(Dispatchers.Main) {
+                destroyViewPresentationAndStopService()
+                destroyPresentationLayerJob = null
+            }
+        }
+    }
+
+    private fun cancelPresentationDestroying() {
+        destroyPresentationLayerJob?.let {
+            it.cancel()
+            destroyPresentationLayerJob = null
+        }
     }
 
     protected fun requireViewController(): IViewController {
-        if (viewController == null) {
+        if (atsc3Service.viewController == null) {
             createViewPresentationAndStartService()
         }
-        return viewController ?: throw InitializationException()
+        return atsc3Service.viewController ?: throw InitializationException()
     }
 
-    private fun newState(receiverState: ReceiverState? = null, selectedService: AVService? = null, playbackState: PlaybackState? = null) = Triple(
-            receiverState ?: serviceController.receiverState.value,
-            selectedService ?: serviceController.selectedService.value,
-            playbackState ?: viewController?.rmpState?.value
-    )
+    private fun newState(receiverState: ReceiverState? = null, selectedService: AVService? = null, playbackState: PlaybackState? = null) = with(atsc3Service) {
+        Triple(
+                receiverState ?: serviceController.receiverState.value,
+                selectedService ?: serviceController.selectedService.value,
+                playbackState ?: viewController?.rmpState?.value
+        )
+    }
 
     private class ViewPresentationLifecycleOwner : LifecycleOwner {
         private val registry = LifecycleRegistry(this)
@@ -455,6 +330,8 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
     companion object {
         val TAG: String = Atsc3ForegroundService::class.java.simpleName
+
+        private const val PRESENTATION_DESTROYING_DELAY = 1000L
 
         private const val SERVICE_ACTION = "${BuildConfig.LIBRARY_PACKAGE_NAME}.intent.action"
 
