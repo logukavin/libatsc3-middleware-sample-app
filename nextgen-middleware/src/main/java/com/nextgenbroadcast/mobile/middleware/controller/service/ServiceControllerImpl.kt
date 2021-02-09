@@ -217,7 +217,7 @@ internal class ServiceControllerImpl (
     }
 
     override fun findServiceById(globalServiceId: String): AVService? {
-        return repository.findServiceById(globalServiceId)
+        return repository.findServiceBy(globalServiceId)
     }
 
     private fun resetHeldWithDelay() {
