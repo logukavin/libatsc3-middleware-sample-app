@@ -1,4 +1,4 @@
-package com.nextgenbroadcast.mobile.middleware.service.core
+package com.nextgenbroadcast.mobile.middleware.atsc3.core
 
 import android.content.Context
 import android.util.Log
@@ -41,7 +41,7 @@ import com.nextgenbroadcast.mobile.middleware.settings.MiddlewareSettingsImpl
 import kotlinx.coroutines.Dispatchers
 import java.lang.ref.WeakReference
 
-internal class Atsc3ServiceCore private constructor(
+internal class Atsc3ReceiverCore private constructor(
         private val context: Context,
         private val atsc3Module: Atsc3Module,
         private val settings: IMiddlewareSettings,
@@ -183,9 +183,9 @@ internal class Atsc3ServiceCore private constructor(
 
     companion object {
         @Volatile
-        private var INSTANCE: Atsc3ServiceCore? = null
+        private var INSTANCE: Atsc3ReceiverCore? = null
 
-        fun getInstance(context: Context): Atsc3ServiceCore {
+        fun getInstance(context: Context): Atsc3ReceiverCore {
             val appContext = context.applicationContext
 
             val instance = INSTANCE
@@ -199,7 +199,7 @@ internal class Atsc3ServiceCore private constructor(
                     val appCache = ApplicationCache(atsc3Module.jni_getCacheDir(), DownloadManager())
                     val analytics = Atsc3Analytics.getInstance(appContext, settings)
 
-                    Atsc3ServiceCore(appContext, atsc3Module, settings, repository, serviceGuideStore, appCache, analytics).also {
+                    Atsc3ReceiverCore(appContext, atsc3Module, settings, repository, serviceGuideStore, appCache, analytics).also {
                         INSTANCE = it
                     }
                 }

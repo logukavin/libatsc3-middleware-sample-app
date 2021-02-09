@@ -23,12 +23,12 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.source.UsbAtsc3Source
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
 import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
 import com.nextgenbroadcast.mobile.middleware.phy.Atsc3DeviceReceiver
-import com.nextgenbroadcast.mobile.middleware.service.core.Atsc3ServiceCore
+import com.nextgenbroadcast.mobile.middleware.atsc3.core.Atsc3ReceiverCore
 import com.nextgenbroadcast.mobile.middleware.service.init.*
 import kotlinx.coroutines.*
 
 abstract class Atsc3ForegroundService : BindableForegroundService() {
-    private lateinit var atsc3Service: Atsc3ServiceCore
+    private lateinit var atsc3Service: Atsc3ReceiverCore
     private lateinit var wakeLock: WakeLock
     private lateinit var state: MediatorLiveData<Triple<ReceiverState?, AVService?, PlaybackState?>>
 
@@ -48,7 +48,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     override fun onCreate() {
         super.onCreate()
 
-        atsc3Service = Atsc3ServiceCore.getInstance(applicationContext)
+        atsc3Service = Atsc3ReceiverCore.getInstance(applicationContext)
 
         wakeLock = (getSystemService(Context.POWER_SERVICE) as PowerManager).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Atsc3ForegroundService::lock")
 
