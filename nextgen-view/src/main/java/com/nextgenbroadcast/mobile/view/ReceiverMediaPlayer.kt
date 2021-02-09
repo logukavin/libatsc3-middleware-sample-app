@@ -67,7 +67,7 @@ class ReceiverMediaPlayer @JvmOverloads constructor(
         reset()
 
         val mimeType = context.contentResolver.getType(mediaUri)
-        if (mimeType == MMTConstants.MIME_MMT) {
+        if (mimeType == MMTConstants.MIME_MMT_VIDEO || mimeType == MMTConstants.MIME_MMT_AUDIO) {
             isMMTPlayback = true
 
             val mediaSource = MMTMediaSource.Factory({

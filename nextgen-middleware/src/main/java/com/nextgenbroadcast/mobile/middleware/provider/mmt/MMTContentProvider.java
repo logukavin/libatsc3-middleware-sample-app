@@ -21,6 +21,9 @@ import androidx.annotation.Nullable;
 
 import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTClockAnchor;
 import com.nextgenbroadcast.mobile.core.atsc3.mmt.MMTConstants;
+import com.nextgenbroadcast.mobile.core.model.AVService;
+import com.nextgenbroadcast.mobile.middleware.atsc3.core.Atsc3ReceiverCore;
+import com.nextgenbroadcast.mobile.middleware.atsc3.entities.SLTConstants;
 
 import org.ngbp.libatsc3.middleware.Atsc3NdkMediaMMTBridge;
 import org.ngbp.libatsc3.middleware.android.ATSC3PlayerFlags;
@@ -48,6 +51,7 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
     private final AtomicInteger mSessionCount = new AtomicInteger();
     private final ConcurrentLinkedDeque<MMTFileDescriptor> descriptors = new ConcurrentLinkedDeque<>();
 
+    private Atsc3ReceiverCore atsc3ReceiverCore;
     private Atsc3NdkMediaMMTBridge atsc3NdkMediaMMTBridge;
     private HandlerThread mHandlerThread;
     private Handler mHandler;
@@ -59,6 +63,7 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
     public boolean onCreate() {
         MmtPacketIdContext.Initialize();
 
+        atsc3ReceiverCore = Atsc3ReceiverCore.getInstance(getContext());
         atsc3NdkMediaMMTBridge = new Atsc3NdkMediaMMTBridge(this);
 
         mHandlerThread = new HandlerThread("mmt-content-provider");
@@ -108,7 +113,14 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
     @Override
     public String getType(@NonNull Uri uri) {
         // ContentProvider has already checked granted permissions
-        return MMTConstants.MIME_MMT;
+
+        AVService service = getServiceForUri(uri);
+        if (service == null) {
+            throw new IllegalArgumentException("Unable to find service for " + uri);
+        }
+
+        boolean audioOnly = service.getCategory() == SLTConstants.SERVICE_CATEGORY_AO;
+        return audioOnly ? MMTConstants.MIME_MMT_AUDIO : MMTConstants.MIME_MMT_VIDEO;
     }
 
     @Override
@@ -132,11 +144,18 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
     public ParcelFileDescriptor openFile(@NonNull Uri uri, @NonNull String mode)
             throws FileNotFoundException {
         // ContentProvider has already checked granted permissions
+
+        AVService service = getServiceForUri(uri);
+        if (service == null) {
+            throw new FileNotFoundException("Unable to find service for " + uri);
+        }
+
         final int fileMode = modeToMode(mode);
         try {
             mSessionCount.incrementAndGet();
 
-            MMTFileDescriptor descriptor = new MMTFileDescriptor() {
+            boolean audioOnly = service.getCategory() == SLTConstants.SERVICE_CATEGORY_AO;
+            MMTFileDescriptor descriptor = new MMTFileDescriptor(audioOnly) {
                 @Override
                 public void onRelease() {
                     super.onRelease();
@@ -148,10 +167,19 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
 
             descriptors.add(descriptor);
 
+            // hack to force an audio playback because we don't get an MFU initialization data that usually rise it
+            if (audioOnly) {
+                ATSC3PlayerFlags.ATSC3PlayerStartPlayback = true;
+            }
+
             return mStorageManager.openProxyFileDescriptor(fileMode, descriptor, mHandler);
         } catch (IOException e) {
             throw new FileNotFoundException(e.getMessage());
         }
+    }
+
+    private AVService getServiceForUri(@NonNull Uri uri) {
+        return atsc3ReceiverCore.findActiveServiceById((int) ContentUris.parseId(uri));
     }
 
     public static Uri getUriForService(@NonNull Context context, @NonNull String authority, @NonNull String serviceId) {

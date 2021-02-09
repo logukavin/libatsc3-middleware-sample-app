@@ -39,9 +39,15 @@ internal class RepositoryImpl : IRepository {
         selectedService.postValue(service)
     }
 
-    override fun findServiceById(globalServiceId: String): AVService? {
+    override fun findServiceBy(globalServiceId: String): AVService? {
         return services.value?.let { list ->
             list.firstOrNull { it.globalId == globalServiceId }
+        }
+    }
+
+    override fun findServiceBy(bsid: Int, serviceId: Int): AVService? {
+        return services.value?.let { list ->
+            list.firstOrNull { it.bsid == bsid && it.id == serviceId }
         }
     }
 

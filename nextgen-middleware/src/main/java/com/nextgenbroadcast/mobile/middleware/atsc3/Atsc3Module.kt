@@ -62,8 +62,10 @@ internal class Atsc3Module(
     private val serviceToSourceConfig = ConcurrentHashMap<Int, Int>()
     private val packageMap = HashMap<String, Atsc3Application>()
 
-    private var selectedServiceBsid = -1
-    private var selectedServiceId = -1
+    var selectedServiceBsid = -1
+        private set
+    var selectedServiceId = -1
+        private set
     private var suspendedServiceSelection: Boolean = false
     private var selectedServiceSLSProtocol = -1
     private var selectedServiceHeld: Atsc3Held? = null

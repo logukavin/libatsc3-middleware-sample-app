@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import androidx.lifecycle.LifecycleOwner
 import com.nextgenbroadcast.mobile.core.cert.UserAgentSSLContext
+import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.PhyFrequency
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.presentation.*
@@ -181,10 +182,15 @@ internal class Atsc3ReceiverCore private constructor(
         return serviceController.receiverState.value ?: ReceiverState.IDLE
     }
 
+    fun findActiveServiceById(serviceId: Int): AVService? {
+        return repository.findServiceBy(atsc3Module.selectedServiceBsid, serviceId);
+    }
+
     companion object {
         @Volatile
         private var INSTANCE: Atsc3ReceiverCore? = null
 
+        @JvmStatic
         fun getInstance(context: Context): Atsc3ReceiverCore {
             val appContext = context.applicationContext
 
