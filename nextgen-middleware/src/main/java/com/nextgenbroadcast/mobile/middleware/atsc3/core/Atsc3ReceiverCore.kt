@@ -1,6 +1,7 @@
 package com.nextgenbroadcast.mobile.middleware.atsc3.core
 
 import android.content.Context
+import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.LifecycleOwner
 import com.nextgenbroadcast.mobile.core.cert.UserAgentSSLContext
@@ -16,8 +17,7 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.db.RoomServiceG
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.db.SGDataBase
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.IAtsc3Source
 import com.nextgenbroadcast.mobile.middleware.cache.ApplicationCache
-import com.nextgenbroadcast.mobile.middleware.cache.DownloadManager
-import com.nextgenbroadcast.mobile.middleware.cache.IApplicationCache
+import com.nextgenbroadcast.mobile.middleware.cache.IDownloadManager
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
 import com.nextgenbroadcast.mobile.middleware.controller.service.ServiceControllerImpl
 import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
@@ -48,7 +48,6 @@ internal class Atsc3ReceiverCore private constructor(
         private val settings: IMiddlewareSettings,
         private val repository: IRepository,
         private val serviceGuideStore: IServiceGuideStore,
-        private val appCache: IApplicationCache,
         private val analytics: IAtsc3Analytics
 ) : IAtsc3ServiceCore {
     //TODO: we should close this instances
@@ -59,7 +58,7 @@ internal class Atsc3ReceiverCore private constructor(
     private var webGateway: IWebGateway? = null
     private var rpcGateway: IRPCGateway? = null
     private var webServer: MiddlewareWebServer? = null
-    private val mediaFileProvider: IMediaFileProvider by lazy {
+    val mediaFileProvider: IMediaFileProvider by lazy {
         MediaFileProvider(context)
     }
 
@@ -71,7 +70,7 @@ internal class Atsc3ReceiverCore private constructor(
         }
     }
 
-    fun deinitialize() {
+    fun deInitialize() {
         initializer.forEach { ref ->
             ref.get()?.cancel()
         }
@@ -100,7 +99,9 @@ internal class Atsc3ReceiverCore private constructor(
         }
     }
 
-    fun createAndStartViewPresentation(lifecycleOwner: LifecycleOwner): IViewController {
+    fun createAndStartViewPresentation(downloadManager: IDownloadManager, lifecycleOwner: LifecycleOwner): IViewController {
+        val appCache = ApplicationCache(atsc3Module.jni_getCacheDir(), downloadManager)
+
         val view = ViewControllerImpl(repository, settings, mediaFileProvider, analytics).apply {
             start(lifecycleOwner)
         }.also {
@@ -128,7 +129,7 @@ internal class Atsc3ReceiverCore private constructor(
 
         startWebServer(rpc, web)
 
-        return view;
+        return view
     }
 
     fun stopAndDestroyViewPresentation() {
@@ -182,8 +183,29 @@ internal class Atsc3ReceiverCore private constructor(
         return serviceController.receiverState.value ?: ReceiverState.IDLE
     }
 
+    fun getNextService() = getNearbyService(1)
+
+    fun getPreviousService() = getNearbyService(-1)
+
+    private fun getNearbyService(offset: Int): AVService? {
+        return repository.selectedService.value?.let { activeService ->
+            repository.services.value?.let { services ->
+                val activeServiceIndex = services.indexOf(activeService)
+                services.getOrNull(activeServiceIndex + offset)
+            }
+        }
+    }
+
     fun findActiveServiceById(serviceId: Int): AVService? {
         return repository.findServiceBy(atsc3Module.selectedServiceBsid, serviceId);
+    }
+
+    fun getCurrentlyPlayingMediaUri(): Uri? {
+        repository.routeMediaUrl.value?.let { mediaPath ->
+            return mediaFileProvider.getMediaFileUri(mediaPath)
+        }
+
+        return null
     }
 
     companion object {
@@ -202,10 +224,9 @@ internal class Atsc3ReceiverCore private constructor(
                     val repository = RepositoryImpl()
                     val serviceGuideStore = RoomServiceGuideStore(SGDataBase.getDatabase(appContext))
                     val atsc3Module = Atsc3Module(appContext)
-                    val appCache = ApplicationCache(atsc3Module.jni_getCacheDir(), DownloadManager())
                     val analytics = Atsc3Analytics.getInstance(appContext, settings)
 
-                    Atsc3ReceiverCore(appContext, atsc3Module, settings, repository, serviceGuideStore, appCache, analytics).also {
+                    Atsc3ReceiverCore(appContext, atsc3Module, settings, repository, serviceGuideStore, analytics).also {
                         INSTANCE = it
                     }
                 }

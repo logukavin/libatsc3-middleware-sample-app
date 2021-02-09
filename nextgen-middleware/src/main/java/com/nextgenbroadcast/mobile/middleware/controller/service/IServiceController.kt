@@ -11,6 +11,8 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.SGUrl
 interface IServiceController : IReceiverPresenter, ISelectorPresenter {
     val serviceGuideUrls: LiveData<List<SGUrl>?>
     val applications: LiveData<List<Atsc3Application>?>
+    //TODO: hmm, this is not good
+    val routeMediaUrl: LiveData<String?>
 
     fun openRoute(source: IAtsc3Source): Boolean
     fun stopRoute()

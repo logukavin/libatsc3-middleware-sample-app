@@ -38,6 +38,7 @@ internal class ServiceControllerImpl (
     override val selectedService = repository.selectedService
     override val serviceGuideUrls = repository.serviceGuideUrls
     override val applications = repository.applications
+    override val routeMediaUrl = repository.routeMediaUrl
 
     override val sltServices = repository.services
 

@@ -14,12 +14,12 @@ import kotlin.coroutines.resumeWithException
 
 private val DOWNLOAD_IO = Executors.newCachedThreadPool().asCoroutineDispatcher()
 
-class DownloadManager {
+class DownloadManager : IDownloadManager {
     private val client: OkHttpClient by lazy {
         OkHttpClient()
     }
 
-    fun downloadFile(sourceUrl: String, destFile: File): Job {
+    override fun downloadFile(sourceUrl: String, destFile: File): Job {
         val loadingFile = File(destFile.parentFile, getLoadingName(destFile))
 
         return CoroutineScope(DOWNLOAD_IO).launch {
@@ -95,7 +95,7 @@ class DownloadManager {
         return finished
     }
 
-    fun getLoadingName(file: File) = file.name + LOADING_POSTFIX
+    override fun getLoadingName(file: File) = file.name + LOADING_POSTFIX
 
     companion object {
         val TAG: String = DownloadManager::class.java.simpleName
