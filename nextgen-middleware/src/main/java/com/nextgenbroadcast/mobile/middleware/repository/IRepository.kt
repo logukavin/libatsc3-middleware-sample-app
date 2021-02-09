@@ -25,7 +25,8 @@ internal interface IRepository {
 
     fun setServices(services: List<AVService>)
     fun setSelectedService(service: AVService?)
-    fun findServiceById(globalServiceId: String): AVService?
+    fun findServiceBy(globalServiceId: String): AVService?
+    fun findServiceBy(bsid: Int, serviceId: Int): AVService?
 
     fun setHeldPackage(data: Atsc3HeldPackage?)
     fun setMediaUrl(mediaUrl: String?)

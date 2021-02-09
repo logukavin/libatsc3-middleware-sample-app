@@ -33,22 +33,31 @@
             android:required="false" />
 
         <provider
+            android:name="androidx.work.impl.WorkManagerInitializer"
+            android:authorities="${applicationId}.workmanager-init"
+            android:exported="false"
+            android:initOrder="4" />
+
+        <provider
             android:name=".provider.dash.DashContentProvider"
             android:authorities="@string/nextgenMediaFileProvider"
             android:exported="false"
-            android:grantUriPermissions="true" />
-
-        <provider
-            android:name=".provider.esg.ESGContentProvider"
-            android:authorities="@string/nextgenServicesGuideProvider"
-            android:exported="false"
-            android:grantUriPermissions="true" />
+            android:grantUriPermissions="true"
+            android:initOrder="3" />
 
         <provider
             android:name=".provider.mmt.MMTContentProvider"
             android:authorities="@string/nextgenMMTContentProvider"
             android:exported="false"
-            android:grantUriPermissions="true" />
+            android:grantUriPermissions="true"
+            android:initOrder="2" />
+
+        <provider
+            android:name=".provider.esg.ESGContentProvider"
+            android:authorities="@string/nextgenServicesGuideProvider"
+            android:exported="false"
+            android:grantUriPermissions="true"
+            android:initOrder="1" />
 
     </application>
 </manifest>
