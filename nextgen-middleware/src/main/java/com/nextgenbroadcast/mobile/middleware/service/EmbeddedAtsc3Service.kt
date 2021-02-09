@@ -41,6 +41,8 @@ class EmbeddedAtsc3Service : Atsc3ForegroundService() {
     }
 
     companion object {
+        const val SERVICE_INTERFACE = Atsc3ForegroundService.SERVICE_INTERFACE
+
         fun init() {
             clazz = EmbeddedAtsc3Service::class.java
         }

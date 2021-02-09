@@ -3,15 +3,13 @@ package com.nextgenbroadcast.mobile.middleware.service
 import android.app.Notification
 import android.content.Intent
 import android.os.IBinder
-import androidx.lifecycle.LifecycleService
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.middleware.R
 import com.nextgenbroadcast.mobile.middleware.notification.NotificationHelper
-import kotlinx.coroutines.*
 
-abstract class BindableForegroundService : LifecycleService() {
+abstract class BindableForegroundService : LifecycleMediaBrowserService() {
     private lateinit var notificationHelper: NotificationHelper
 
     protected var isForeground = false
@@ -29,6 +27,12 @@ abstract class BindableForegroundService : LifecycleService() {
         }
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+
+        notificationHelper.cancel(NOTIFICATION_ID)
+    }
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         isStartedAsForeground = isStartedAsForeground or (intent?.getBooleanExtra(EXTRA_FOREGROUND, false)
                 ?: false)
@@ -37,15 +41,15 @@ abstract class BindableForegroundService : LifecycleService() {
     }
 
     override fun onBind(intent: Intent): IBinder? {
-        super.onBind(intent)
+        val binder = super.onBind(intent)
 
         startForeground()
         isBinded = true
 
-        return null
+        return binder
     }
 
-    override fun onRebind(intent: Intent?) {
+    override fun onRebind(intent: Intent) {
         super.onRebind(intent)
         isBinded = true
     }
@@ -60,7 +64,7 @@ abstract class BindableForegroundService : LifecycleService() {
         if (isForeground) return
         isForeground = true
 
-        startForeground(NOTIFICATION_ID, createNotification(getReceiverState()))
+        startForeground(NOTIFICATION_ID, createNotificationBuilder(getReceiverState()).build())
     }
 
     protected fun stopForeground() {
@@ -69,15 +73,18 @@ abstract class BindableForegroundService : LifecycleService() {
         isForeground = false
     }
 
-    protected fun createNotification(state: ReceiverState? = null, service: AVService? = null, playbackState: PlaybackState? = null): Notification {
+    protected fun createNotificationBuilder(state: ReceiverState? = null, service: AVService? = null, playbackState: PlaybackState? = null): Notification.Builder {
         val title = if (state == null || state == ReceiverState.IDLE) {
             getString(R.string.atsc3_source_is_not_initialized)
         } else {
             service?.shortName ?: getString(R.string.atsc3_no_service_available)
         }
 
-        return notificationHelper.createMediaNotification(title, "", playbackState
-                ?: PlaybackState.IDLE)
+        return notificationHelper.createMediaNotificationBuilder(title, "", playbackState ?: PlaybackState.IDLE)
+    }
+
+    protected fun pushNotification(notification: Notification.Builder) {
+        pushNotification(notification.build())
     }
 
     protected fun pushNotification(notification: Notification) {

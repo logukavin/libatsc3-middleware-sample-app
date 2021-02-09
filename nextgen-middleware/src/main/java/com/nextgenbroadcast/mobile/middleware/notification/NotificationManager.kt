@@ -17,7 +17,7 @@ class NotificationManager(private val notificationHelper: NotificationHelper) : 
         if (localNewNotification != null) {
             if (currentNotification != localNewNotification) {
                 currentNotification = localNewNotification
-                notificationHelper.notify(localNewNotification.id, notificationHelper.createMediaNotification(localNewNotification))
+                notificationHelper.notify(localNewNotification.id, notificationHelper.createMediaNotificationBuilder(localNewNotification))
             }
         }
     }
