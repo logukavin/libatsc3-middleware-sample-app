@@ -10,6 +10,7 @@ import com.nextgenbroadcast.mobile.core.presentation.*
 import com.nextgenbroadcast.mobile.middleware.analytics.Atsc3Analytics
 import com.nextgenbroadcast.mobile.middleware.analytics.IAtsc3Analytics
 import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3Module
+import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.IServiceGuideStore
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.db.RoomServiceGuideStore
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.db.SGDataBase
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.IAtsc3Source
@@ -36,20 +37,21 @@ import com.nextgenbroadcast.mobile.middleware.service.provider.IMediaFileProvide
 import com.nextgenbroadcast.mobile.middleware.service.provider.MediaFileProvider
 import com.nextgenbroadcast.mobile.middleware.service.provider.esgProvider.ESGContentAuthority
 import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
+import com.nextgenbroadcast.mobile.middleware.settings.MiddlewareSettingsImpl
 import kotlinx.coroutines.Dispatchers
 import java.lang.ref.WeakReference
 
-internal class Atsc3ServiceCore(
-        val context: Context,
-        val settings: IMiddlewareSettings
+internal class Atsc3ServiceCore private constructor(
+        private val context: Context,
+        private val atsc3Module: Atsc3Module,
+        private val settings: IMiddlewareSettings,
+        private val repository: IRepository,
+        private val serviceGuideStore: IServiceGuideStore,
+        private val appCache: IApplicationCache,
+        private val analytics: IAtsc3Analytics
 ) : IAtsc3ServiceCore {
-    private val repository: IRepository
-    private val atsc3Module: Atsc3Module
-    private val appCache: IApplicationCache
-    private val analytics: IAtsc3Analytics
-
     //TODO: we should close this instances
-    val serviceController: IServiceController
+    val serviceController: IServiceController = ServiceControllerImpl(repository, serviceGuideStore, settings, atsc3Module, analytics)
     var viewController: IViewController? = null
         private set
 
@@ -63,27 +65,12 @@ internal class Atsc3ServiceCore(
     private val initializer = ArrayList<WeakReference<IServiceInitializer>>()
 
     init {
-        val repo = RepositoryImpl().also {
-            repository = it
+        serviceGuideStore.subscribe {
+            context.contentResolver.notifyChange(ESGContentAuthority.getServiceContentUri(context), null)
         }
-        val atsc3 = Atsc3Module(context).also {
-            atsc3Module = it
-        }
-
-        val sgDataBase = SGDataBase.getDatabase(context)
-        val serviceGuideStore = RoomServiceGuideStore(sgDataBase).apply {
-            subscribe {
-                context.contentResolver.notifyChange(ESGContentAuthority.getServiceContentUri(context), null)
-            }
-        }
-
-        analytics = Atsc3Analytics.getInstance(context, settings)
-        serviceController = ServiceControllerImpl(repo, serviceGuideStore, settings, atsc3, analytics)
-
-        appCache = ApplicationCache(atsc3.jni_getCacheDir(), DownloadManager())
     }
 
-    fun destroy() {
+    fun deinitialize() {
         initializer.forEach { ref ->
             ref.get()?.cancel()
         }
@@ -192,5 +179,31 @@ internal class Atsc3ServiceCore(
 
     override fun getReceiverState(): ReceiverState {
         return serviceController.receiverState.value ?: ReceiverState.IDLE
+    }
+
+    companion object {
+        @Volatile
+        private var INSTANCE: Atsc3ServiceCore? = null
+
+        fun getInstance(context: Context): Atsc3ServiceCore {
+            val appContext = context.applicationContext
+
+            val instance = INSTANCE
+            return instance ?: synchronized(this) {
+                val instance2 = INSTANCE
+                instance2 ?: let {
+                    val settings = MiddlewareSettingsImpl.getInstance(appContext)
+                    val repository = RepositoryImpl()
+                    val serviceGuideStore = RoomServiceGuideStore(SGDataBase.getDatabase(appContext))
+                    val atsc3Module = Atsc3Module(appContext)
+                    val appCache = ApplicationCache(atsc3Module.jni_getCacheDir(), DownloadManager())
+                    val analytics = Atsc3Analytics.getInstance(appContext, settings)
+
+                    Atsc3ServiceCore(appContext, atsc3Module, settings, repository, serviceGuideStore, appCache, analytics).also {
+                        INSTANCE = it
+                    }
+                }
+            }
+        }
     }
 }
