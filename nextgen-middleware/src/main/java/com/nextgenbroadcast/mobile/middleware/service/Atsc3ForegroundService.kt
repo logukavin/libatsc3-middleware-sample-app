@@ -25,7 +25,6 @@ import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
 import com.nextgenbroadcast.mobile.middleware.phy.Atsc3DeviceReceiver
 import com.nextgenbroadcast.mobile.middleware.service.core.Atsc3ServiceCore
 import com.nextgenbroadcast.mobile.middleware.service.init.*
-import com.nextgenbroadcast.mobile.middleware.settings.MiddlewareSettingsImpl
 import kotlinx.coroutines.*
 
 abstract class Atsc3ForegroundService : BindableForegroundService() {
@@ -49,8 +48,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     override fun onCreate() {
         super.onCreate()
 
-        val settings = MiddlewareSettingsImpl.getInstance(applicationContext)
-        atsc3Service = Atsc3ServiceCore(applicationContext, settings)
+        atsc3Service = Atsc3ServiceCore.getInstance(applicationContext)
 
         wakeLock = (getSystemService(Context.POWER_SERVICE) as PowerManager).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Atsc3ForegroundService::lock")
 
@@ -75,7 +73,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
         destroyViewPresentationAndStopService()
 
-        atsc3Service.destroy()
+        atsc3Service.deinitialize()
     }
 
     override fun onBind(intent: Intent): IBinder? {
