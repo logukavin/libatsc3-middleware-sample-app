@@ -109,13 +109,14 @@ def daggerVersion = rootProject.ext.daggerVersion
 def lifecycleVersion = rootProject.ext.lifecycleVersion
 def coroutinesVersion = rootProject.ext.coroutinesVersion
 def startupRuntime = rootProject.ext.startupRuntime
+def exoplayerVersion = rootProject.ext.exoplayerVersion
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
 
     implementation project(":nextgen-core")
     implementation project(":nextgen-view")
-    implementation project(":nextgen-mmt")
+    implementation project(":nextgen-player")
 
     embeddedImplementation project(":nextgen-middleware")
     standaloneImplementation project(":nextgen-middleware")
@@ -145,6 +146,20 @@ dependencies {
 
     standaloneImplementation "androidx.startup:startup-runtime:$startupRuntime"
     standaloneImplementation "androidx.work:work-multiprocess:2.5.0-rc01"
+
+    if (project.hasProperty('org.gradle.project.use_local_src_exoplayer_folder') && project.property('org.gradle.project.use_local_src_exoplayer_folder').toString().toBoolean()) {
+        implementation project(':exoplayer-library-core')
+        implementation project(':exoplayer-library-dash')
+        implementation project(':exoplayer-library-ui')
+        implementation project(':exoplayer-extension-daa')
+        implementation project(':exoplayer-extension-mmt')
+    } else {
+        implementation "com.google.android.exoplayer:exoplayer-core:$exoplayerVersion"
+        implementation "com.google.android.exoplayer:exoplayer-dash:$exoplayerVersion"
+        implementation "com.google.android.exoplayer:exoplayer-ui:$exoplayerVersion"
+        implementation "com.google.android.exoplayer:exoplayer-daa:$exoplayerVersion"
+        implementation "com.google.android.exoplayer:exoplayer-mmt:$exoplayerVersion"
+    }
 
     implementation 'com.google.android.gms:play-services-basement:17.4.0'
     implementation 'com.google.firebase:firebase-analytics-ktx:17.6.0'

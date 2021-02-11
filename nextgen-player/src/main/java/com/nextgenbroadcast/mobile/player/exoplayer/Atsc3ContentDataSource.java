@@ -1,4 +1,4 @@
-package com.nextgenbroadcast.mobile.mmt.exoplayer2;
+package com.nextgenbroadcast.mobile.player.exoplayer;
 
 import android.content.ContentResolver;
 import android.content.Context;
@@ -11,7 +11,6 @@ import com.google.android.exoplayer2.C;
 import com.google.android.exoplayer2.upstream.BaseDataSource;
 import com.google.android.exoplayer2.upstream.DataSpec;
 import com.google.android.exoplayer2.upstream.TransferListener;
-import com.google.android.exoplayer2.util.Log;
 
 import java.io.EOFException;
 import java.io.FileInputStream;

@@ -1,4 +1,4 @@
-package com.nextgenbroadcast.mobile.mmt.exoplayer2;
+package com.nextgenbroadcast.mobile.player.exoplayer;
 
 import android.util.Log;
 import android.util.SparseArray;
