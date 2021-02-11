@@ -22,10 +22,6 @@ class RPCNotificationHelper(
         sendNotification(ServiceGuideChangeNotification(urlList))
     }
 
-    fun notifyMPDChange() {
-        sendNotification(MPDChangeNotification())
-    }
-
     fun notifyRmpPlaybackStateChange(playbackState: PlaybackState) {
         sendNotification(RmpPlaybackStateChangeNotification(playbackState))
     }
