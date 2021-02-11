@@ -6,7 +6,7 @@ import java.io.File
 
 internal class ApplicationCache(
         private val cacheRoot: File,
-        private val downloadManager: DownloadManager
+        private val downloadManager: IDownloadManager
 ) : IApplicationCache {
 
     private val cacheMap: HashMap<String, CacheEntry> by lazy {

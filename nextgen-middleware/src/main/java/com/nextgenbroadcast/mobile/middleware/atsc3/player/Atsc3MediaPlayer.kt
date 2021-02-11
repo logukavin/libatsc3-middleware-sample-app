@@ -1,63 +1,47 @@
-package com.nextgenbroadcast.mobile.view
+package com.nextgenbroadcast.mobile.middleware.atsc3.player
 
 import android.content.Context
 import android.net.Uri
-import android.util.AttributeSet
 import android.util.Log
 import com.google.android.exoplayer2.*
 import com.google.android.exoplayer2.source.dash.DashMediaSource
 import com.google.android.exoplayer2.source.dash.DefaultDashChunkSource
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
-import com.google.android.exoplayer2.ui.PlayerView
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
 import com.google.android.exoplayer2.upstream.DefaultLoadErrorHandlingPolicy
+import com.google.android.exoplayer2.util.Util
 import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTLoadControl
 import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTMediaSource
 import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTRenderersFactory
-import com.nextgenbroadcast.mobile.core.AppUtils
 import com.nextgenbroadcast.mobile.core.atsc3.mmt.MMTConstants
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
-import com.nextgenbroadcast.mobile.mmt.exoplayer2.Atsc3MMTExtractor
-import com.nextgenbroadcast.mobile.exoplayer2.RouteDASHLoadControl
 import com.nextgenbroadcast.mobile.mmt.exoplayer2.Atsc3ContentDataSource
+import com.nextgenbroadcast.mobile.mmt.exoplayer2.Atsc3MMTExtractor
 import java.io.IOException
 
-class ReceiverMediaPlayer @JvmOverloads constructor(
-        context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
-) : PlayerView(context, attrs, defStyleAttr) {
-
-    private var buffering = false
-    private val enableBufferingProgress = Runnable {
-        setShowBuffering(SHOW_BUFFERING_ALWAYS)
+class Atsc3MediaPlayer(
+        private val context: Context
+) {
+    interface EventListener {
+        fun onPlayerStateChanged(state: PlaybackState) {}
+        fun onPlayerError(error: Exception) {}
+        fun onPlaybackSpeedChanged(speed: Float) {}
     }
 
-    private val dashMediaSourceFactory: DashMediaSource.Factory by lazy {
-        createMediaSourceFactory()
-    }
-
-    private var rmpState: PlaybackState? = null
     private var listener: EventListener? = null
+
+    private var player: SimpleExoPlayer? = null
     private var isMMTPlayback = false
+    private var rmpState: PlaybackState? = null
 
-    val isPlaying: Boolean
-        get() = rmpState == PlaybackState.PLAYING
-
-    val playbackPosition
-        get() = player?.currentPosition ?: 0
-
-    val playbackState: PlaybackState
-        get() = player?.let {
-            playbackState(it.playbackState, it.playWhenReady)
-        } ?: PlaybackState.IDLE
-
-    val playbackSpeed: Float
-        get() = player?.playbackParameters?.speed ?: 0f
-
-    var playWhenReady
-        get() = player?.playWhenReady ?: false
+    var playWhenReady: Boolean = true
         set(value) {
             player?.playWhenReady = value
+            field = value
         }
+
+    val isPlaying: Boolean
+        get() = player?.isPlaying ?: false
 
     fun setListener(listener: EventListener) {
         this.listener = listener
@@ -80,10 +64,10 @@ class ReceiverMediaPlayer @JvmOverloads constructor(
 
             player = createMMTExoPlayer().apply {
                 prepare(mediaSource)
-                playWhenReady = true
+                playWhenReady = this@Atsc3MediaPlayer.playWhenReady
             }
         } else {
-            val dashMediaSource = dashMediaSourceFactory.createMediaSource(mediaUri)
+            val dashMediaSource = createMediaSourceFactory().createMediaSource(mediaUri)
             player = createDefaultExoPlayer().apply {
                 prepare(dashMediaSource)
                 playWhenReady = true
@@ -91,11 +75,7 @@ class ReceiverMediaPlayer @JvmOverloads constructor(
         }
     }
 
-    fun stop() {
-        reset()
-    }
-
-    private fun reset() {
+    fun reset() {
         player?.let {
             it.stop()
             it.release()
@@ -104,8 +84,22 @@ class ReceiverMediaPlayer @JvmOverloads constructor(
         isMMTPlayback = false
     }
 
+    private fun createMediaSourceFactory(): DashMediaSource.Factory {
+        val userAgent = Util.getUserAgent(context, "middleware")//AppUtils.getUserAgent(context)
+        val manifestDataSourceFactory = DefaultDataSourceFactory(context, userAgent)
+        val mediaDataSourceFactory = DefaultDataSourceFactory(context, userAgent)
+
+        return DashMediaSource.Factory(
+                DefaultDashChunkSource.Factory(mediaDataSourceFactory),
+                manifestDataSourceFactory
+        ).apply {
+            setLoadErrorHandlingPolicy(createDefaultLoadErrorHandlingPolicy())
+        }
+    }
+
     private fun createDefaultExoPlayer(): SimpleExoPlayer {
-        return createExoPlayer(RouteDASHLoadControl(), DefaultRenderersFactory(context))
+        //TODO:
+        return createExoPlayer(/*RouteDASHLoadControl()*/DefaultLoadControl(), DefaultRenderersFactory(context))
     }
 
     private fun createMMTExoPlayer(): SimpleExoPlayer {
@@ -116,7 +110,7 @@ class ReceiverMediaPlayer @JvmOverloads constructor(
         return ExoPlayerFactory.newSimpleInstance(context, renderersFactory, DefaultTrackSelector(), loadControl).apply {
             addListener(object : Player.EventListener {
                 override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
-                    updateBufferingState(playbackState == Player.STATE_BUFFERING)
+//                    updateBufferingState(playbackState == Player.STATE_BUFFERING)
 
                     val state = playbackState(playbackState, playWhenReady) ?: return
                     if (rmpState != state) {
@@ -142,50 +136,6 @@ class ReceiverMediaPlayer @JvmOverloads constructor(
         }
     }
 
-    private fun playbackState(playbackState: Int, playWhenReady: Boolean): PlaybackState? {
-        return when (playbackState) {
-            Player.STATE_BUFFERING, Player.STATE_READY -> {
-                if (playWhenReady) PlaybackState.PLAYING else PlaybackState.PAUSED
-            }
-            Player.STATE_IDLE, Player.STATE_ENDED -> {
-                PlaybackState.IDLE
-            }
-            else -> null
-        }
-    }
-
-    private fun updateBufferingState(isBuffering: Boolean) {
-        if (isBuffering) {
-            if (!buffering) {
-                buffering = true
-                postDelayed(enableBufferingProgress, 500)
-            }
-        } else {
-            buffering = false
-            removeCallbacks(enableBufferingProgress)
-            setShowBuffering(SHOW_BUFFERING_NEVER)
-        }
-    }
-
-    private fun createMediaSourceFactory(): DashMediaSource.Factory {
-        val userAgent = AppUtils.getUserAgent(context)
-        val manifestDataSourceFactory = DefaultDataSourceFactory(context, userAgent)
-        val mediaDataSourceFactory = DefaultDataSourceFactory(context, userAgent)
-
-        return DashMediaSource.Factory(
-                DefaultDashChunkSource.Factory(mediaDataSourceFactory),
-                manifestDataSourceFactory
-        ).apply {
-            setLoadErrorHandlingPolicy(createDefaultLoadErrorHandlingPolicy())
-        }
-    }
-
-    override fun onDetachedFromWindow() {
-        super.onDetachedFromWindow()
-
-        removeCallbacks(enableBufferingProgress)
-    }
-
     private fun createDefaultLoadErrorHandlingPolicy(): DefaultLoadErrorHandlingPolicy {
         return object : DefaultLoadErrorHandlingPolicy() {
             override fun getRetryDelayMsFor(dataType: Int, loadDurationMs: Long, exception: IOException?, errorCount: Int): Long {
@@ -201,9 +151,15 @@ class ReceiverMediaPlayer @JvmOverloads constructor(
         }
     }
 
-    interface EventListener {
-        fun onPlayerStateChanged(state: PlaybackState) {}
-        fun onPlayerError(error: Exception) {}
-        fun onPlaybackSpeedChanged(speed: Float) {}
+    private fun playbackState(playbackState: Int, playWhenReady: Boolean): PlaybackState? {
+        return when (playbackState) {
+            Player.STATE_BUFFERING, Player.STATE_READY -> {
+                if (playWhenReady) PlaybackState.PLAYING else PlaybackState.PAUSED
+            }
+            Player.STATE_IDLE, Player.STATE_ENDED -> {
+                PlaybackState.IDLE
+            }
+            else -> null
+        }
     }
 }
