@@ -1,27 +1,48 @@
 package com.nextgenbroadcast.mobile.middleware.sample.view
 
 import android.content.Context
+import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.util.AttributeSet
 import android.util.Log
+import com.google.android.exoplayer2.Player
+import com.google.android.exoplayer2.ui.PlayerView
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.RMPViewModel
-import com.nextgenbroadcast.mobile.view.ReceiverMediaPlayerView
+import com.nextgenbroadcast.mobile.player.Atsc3MediaPlayer
 
-class ReceiverPlayerLayout @JvmOverloads constructor(
+class ReceiverPlayerView @JvmOverloads constructor(
         context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
-) : ReceiverMediaPlayerView(context, attrs, defStyleAttr) {
+) : PlayerView(context, attrs, defStyleAttr) {
+    private val atsc3Player = Atsc3MediaPlayer(context)
     private val updateMediaTimeHandler = Handler(Looper.getMainLooper())
 
     private var rmpViewModel: RMPViewModel? = null
+
+    private var buffering = false
+
+    val playbackPosition
+        get() = player?.currentPosition ?: 0
+
+    val playbackState: PlaybackState
+        get() = atsc3Player.playbackState
+
+    val playbackSpeed: Float
+        get() = player?.playbackParameters?.speed ?: 0f
+
+    var playWhenReady
+        get() = player?.playWhenReady ?: false
+        set(value) {
+            player?.playWhenReady = value
+        }
 
     override fun onFinishInflate() {
         super.onFinishInflate()
 
         if (isInEditMode) return
 
-        setListener(object : EventListener {
+        atsc3Player.setListener(object : Atsc3MediaPlayer.EventListener {
             override fun onPlayerStateChanged(state: PlaybackState) {
                 rmpViewModel?.setCurrentPlayerState(state)
 
@@ -57,6 +78,45 @@ class ReceiverPlayerLayout @JvmOverloads constructor(
         rmpViewModel = null
     }
 
+    fun play(mediaUri: Uri) {
+        atsc3Player.play(mediaUri)
+        player = atsc3Player.player?.also {
+            it.addListener(object : Player.EventListener {
+                override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
+                    updateBufferingState(playbackState == Player.STATE_BUFFERING)
+                }
+            })
+        }
+    }
+
+    fun stop() {
+        atsc3Player.reset()
+        player = null
+    }
+
+    private fun updateBufferingState(isBuffering: Boolean) {
+        if (isBuffering) {
+            if (!buffering) {
+                buffering = true
+                postDelayed(enableBufferingProgress, 500)
+            }
+        } else {
+            buffering = false
+            removeCallbacks(enableBufferingProgress)
+            setShowBuffering(SHOW_BUFFERING_NEVER)
+        }
+    }
+
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+
+        removeCallbacks(enableBufferingProgress)
+    }
+
+    private val enableBufferingProgress = Runnable {
+        setShowBuffering(SHOW_BUFFERING_ALWAYS)
+    }
+
     private val updateMediaTimeRunnable = object : Runnable {
         override fun run() {
             rmpViewModel?.setCurrentMediaTime(playbackPosition)
@@ -75,7 +135,7 @@ class ReceiverPlayerLayout @JvmOverloads constructor(
     }
 
     companion object {
-        val TAG: String = ReceiverPlayerLayout::class.java.simpleName
+        val TAG: String = ReceiverPlayerView::class.java.simpleName
 
         private const val MEDIA_TIME_UPDATE_DELAY = 500L
     }
