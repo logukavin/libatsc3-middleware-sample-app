@@ -1,39 +1,27 @@
 package com.nextgenbroadcast.mobile.middleware.sample.view
 
 import android.content.Context
-import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.util.AttributeSet
 import android.util.Log
-import android.view.LayoutInflater
-import android.view.View
-import android.widget.FrameLayout
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
-import com.nextgenbroadcast.mobile.middleware.sample.R
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.RMPViewModel
 import com.nextgenbroadcast.mobile.view.ReceiverMediaPlayerView
-import kotlinx.android.synthetic.main.receiver_player_layout.view.progress_bar
-import kotlinx.android.synthetic.main.receiver_player_layout.view.receiver_media_player
 
-class ReceiverPlayerLayout : FrameLayout {
+class ReceiverPlayerLayout @JvmOverloads constructor(
+        context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
+) : ReceiverMediaPlayerView(context, attrs, defStyleAttr) {
     private val updateMediaTimeHandler = Handler(Looper.getMainLooper())
 
     private var rmpViewModel: RMPViewModel? = null
-
-    constructor(context: Context) : this(context, null)
-    constructor(context: Context, attrs: AttributeSet?) : this(context, attrs, 0)
-    constructor(context: Context, attrs: AttributeSet?, defStyleAttr: Int) : this(context, attrs, defStyleAttr, 0)
-    constructor(context: Context, attrs: AttributeSet?, defStyleAttr: Int, defStyleRes: Int) : super(context, attrs, defStyleAttr, defStyleRes) {
-        LayoutInflater.from(context).inflate(R.layout.receiver_player_layout, this)
-    }
 
     override fun onFinishInflate() {
         super.onFinishInflate()
 
         if (isInEditMode) return
 
-        receiver_media_player.setListener(object : ReceiverMediaPlayerView.EventListener {
+        setListener(object : EventListener {
             override fun onPlayerStateChanged(state: PlaybackState) {
                 rmpViewModel?.setCurrentPlayerState(state)
 
@@ -61,37 +49,17 @@ class ReceiverPlayerLayout : FrameLayout {
     fun bind(viewModel: RMPViewModel) {
         rmpViewModel = viewModel
 
-        with (receiver_media_player) {
-            viewModel.setCurrentPlayerState(playbackState)
-            viewModel.setCurrentPlaybackRate(playbackSpeed)
-        }
+        viewModel.setCurrentPlayerState(playbackState)
+        viewModel.setCurrentPlaybackRate(playbackSpeed)
     }
 
     fun unbind() {
         rmpViewModel = null
     }
 
-    open fun isPlaying(): Boolean {
-        return receiver_media_player.isPlaying
-    }
-
-    fun setPlayWhenReady(playWhenReady: Boolean) {
-        receiver_media_player?.playWhenReady = playWhenReady
-    }
-
-    fun startPlayback(mpdUri: Uri) {
-        receiver_media_player.play(mpdUri)
-        progress_bar.visibility = View.GONE
-    }
-
-    open fun stopPlayback() {
-        receiver_media_player.stop()
-        progress_bar.visibility = View.VISIBLE
-    }
-
     private val updateMediaTimeRunnable = object : Runnable {
         override fun run() {
-            rmpViewModel?.setCurrentMediaTime(receiver_media_player.playbackPosition)
+            rmpViewModel?.setCurrentMediaTime(playbackPosition)
 
             updateMediaTimeHandler.postDelayed(this, MEDIA_TIME_UPDATE_DELAY)
         }

@@ -229,7 +229,7 @@ class MainFragment : Fragment() {
     override fun onStop() {
         super.onStop()
 
-        receiver_player.stopPlayback()
+        receiver_player.stop()
     }
 
     override fun onDestroy() {
@@ -333,13 +333,13 @@ class MainFragment : Fragment() {
             })
             mediaUri.observe(this@MainFragment, { mediaUri ->
                 if (mediaUri != null) {
-                    receiver_player.startPlayback(mediaUri)
+                    receiver_player.play(mediaUri)
                 } else {
-                    receiver_player.stopPlayback()
+                    receiver_player.stop()
                 }
             })
             playWhenReady.observe(this@MainFragment, { playWhenReady ->
-                receiver_player.setPlayWhenReady(playWhenReady)
+                receiver_player.playWhenReady = playWhenReady
             })
         }
 

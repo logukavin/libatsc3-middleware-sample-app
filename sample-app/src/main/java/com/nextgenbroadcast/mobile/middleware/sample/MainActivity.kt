@@ -83,6 +83,10 @@ class MainActivity : BaseActivity() {
                 viewViewModel.currentServiceTitle.value = title?.toString()
             }
 
+            override fun onPlaybackStateChanged(state: PlaybackState?) {
+                viewViewModel.isPlaying.value = state?.state == PlaybackState.STATE_PLAYING
+            }
+
             override fun onSessionDestroyed() {
                 mediaController?.unregisterCallback(this)
             }
