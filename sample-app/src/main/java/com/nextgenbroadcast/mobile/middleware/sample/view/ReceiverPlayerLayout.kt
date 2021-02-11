@@ -12,11 +12,11 @@ import android.widget.FrameLayout
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.middleware.sample.R
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.RMPViewModel
-import com.nextgenbroadcast.mobile.view.ReceiverMediaPlayer
+import com.nextgenbroadcast.mobile.view.ReceiverMediaPlayerView
 import kotlinx.android.synthetic.main.receiver_player_layout.view.progress_bar
 import kotlinx.android.synthetic.main.receiver_player_layout.view.receiver_media_player
 
-class ReceiverPlayerView : FrameLayout {
+class ReceiverPlayerLayout : FrameLayout {
     private val updateMediaTimeHandler = Handler(Looper.getMainLooper())
 
     private var rmpViewModel: RMPViewModel? = null
@@ -33,7 +33,7 @@ class ReceiverPlayerView : FrameLayout {
 
         if (isInEditMode) return
 
-        receiver_media_player.setListener(object : ReceiverMediaPlayer.EventListener {
+        receiver_media_player.setListener(object : ReceiverMediaPlayerView.EventListener {
             override fun onPlayerStateChanged(state: PlaybackState) {
                 rmpViewModel?.setCurrentPlayerState(state)
 
@@ -107,7 +107,7 @@ class ReceiverPlayerView : FrameLayout {
     }
 
     companion object {
-        val TAG: String = ReceiverPlayerView::class.java.simpleName
+        val TAG: String = ReceiverPlayerLayout::class.java.simpleName
 
         private const val MEDIA_TIME_UPDATE_DELAY = 500L
     }

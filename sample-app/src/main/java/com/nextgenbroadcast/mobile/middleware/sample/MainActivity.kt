@@ -5,30 +5,27 @@ import android.annotation.SuppressLint
 import android.app.PictureInPictureParams
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.content.pm.ShortcutInfo
-import android.content.pm.ShortcutManager
 import android.content.res.Configuration
-import android.graphics.drawable.Icon
+import android.media.session.MediaController
+import android.media.session.MediaSession
+import android.media.session.PlaybackState
 import android.os.Bundle
+import android.support.v4.media.MediaBrowserCompat
 import android.view.View
 import android.widget.Toast
+import androidx.activity.viewModels
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.core.os.bundleOf
-import androidx.lifecycle.ViewModelProvider
-import com.nextgenbroadcast.mobile.core.model.PlaybackState
+import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
-import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.RMPViewModel
+import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.ViewViewModel
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.factory.UserAgentViewModelFactory
 import dagger.android.AndroidInjection
 import java.util.*
 
 class MainActivity : BaseActivity() {
-
-    private var previewMode = false
-    private var previewName: String? = null
-    private var rmpViewModel: RMPViewModel? = null
+    private val viewViewModel: ViewViewModel by viewModels()
 
     private val hasFeaturePIP: Boolean by lazy {
         packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)
@@ -37,14 +34,6 @@ class MainActivity : BaseActivity() {
     override fun onBind(binder: IServiceBinder) {
         binder.receiverPresenter.receiverState.observe(this, { state ->
             if (state == null || state == ReceiverState.IDLE) {
-                if (previewMode) {
-                    previewName?.let { source ->
-                        sourceMap.find { (name, _, _) -> name == source }?.let { (_, path, _) ->
-                            openRoute(this, path)
-                        }
-                    }
-                }
-
                 if (isInPictureInPictureMode) {
                     startActivity(Intent(this, MainActivity::class.java).apply {
                         flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
@@ -56,19 +45,55 @@ class MainActivity : BaseActivity() {
         val factory = UserAgentViewModelFactory(
                 binder.userAgentPresenter,
                 binder.mediaPlayerPresenter,
-                binder.selectorPresenter
+                binder.receiverPresenter
         )
 
-        rmpViewModel = ViewModelProvider(viewModelStore, factory).get(RMPViewModel::class.java)
-
-        getMainFragment().onBind(binder)
+        getMainFragment().onBind(factory)
     }
 
     override fun onUnbind() {
-        rmpViewModel = null
         viewModelStore.clear()
 
         getMainFragment().onUnbind()
+    }
+
+    override fun onSourcesAvailable(sources: List<MediaBrowserCompat.MediaItem>) {
+        viewViewModel.sources.value = sources.mapNotNull { mediaItem ->
+            if (mediaItem.isBrowsable) {
+                val title = mediaItem.description.title
+                val mediaUri = mediaItem.description.mediaUri
+                if (title != null && mediaUri != null) {
+                    return@mapNotNull Pair(title.toString(), mediaUri.toString())
+                }
+            }
+            null
+        }
+    }
+
+    override fun onMediaSessionCreated() {
+        viewViewModel.services.value = mediaController.queue?.mapNotNull { it.toService() } ?: emptyList()
+        viewViewModel.currentServiceTitle.value = mediaController.queueTitle?.toString()
+
+        mediaController.registerCallback(object : MediaController.Callback() {
+            override fun onQueueChanged(queue: MutableList<MediaSession.QueueItem>?) {
+                viewViewModel.services.value = queue?.mapNotNull { it.toService() } ?: emptyList()
+            }
+
+            override fun onQueueTitleChanged(title: CharSequence?) {
+                viewViewModel.currentServiceTitle.value = title?.toString()
+            }
+
+            override fun onSessionDestroyed() {
+                mediaController?.unregisterCallback(this)
+            }
+        })
+
+    }
+
+    private fun MediaSession.QueueItem.toService(): AVService? {
+        return description.extras?.let { extras ->
+            AVService.fromBundle(extras)
+        }
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -76,20 +101,13 @@ class MainActivity : BaseActivity() {
         AndroidInjection.inject(this)
         super.onCreate(savedInstanceState)
 
-        with(intent) {
-            previewName = getStringExtra(PARAM_MODE_PREVIEW)
-            previewMode = action == ACTION_MODE_PREVIEW && !previewName.isNullOrBlank()
-        }
-
         supportFragmentManager
                 .beginTransaction()
                 .add(android.R.id.content,
-                        MainFragment.newInstance(previewName, previewMode),
+                        MainFragment.newInstance(),
                         MainFragment.TAG
                 )
                 .commit()
-
-        buildShortcuts(sourceMap.filter { (_, _, isShortcut) -> isShortcut }.map { (name, _, _) -> name })
     }
 
     override fun onStart() {
@@ -147,7 +165,7 @@ class MainActivity : BaseActivity() {
     }
 
     override fun onUserLeaveHint() {
-        if (hasFeaturePIP && (rmpViewModel?.rmpState == PlaybackState.PLAYING)) {
+        if (hasFeaturePIP && (mediaController?.playbackState?.state == PlaybackState.STATE_PLAYING)) {
             enterPictureInPictureMode(PictureInPictureParams.Builder().build())
         }
     }
@@ -188,45 +206,15 @@ class MainActivity : BaseActivity() {
         }
     }
 
-    private fun buildShortcuts(sources: List<String>) {
-        getSystemService(ShortcutManager::class.java)?.let { shortcutManager ->
-            shortcutManager.dynamicShortcuts = sources.map { name ->
-                ShortcutInfo.Builder(this, name)
-                        .setShortLabel(getString(R.string.shortcut_preview_mode, name.toUpperCase(Locale.ROOT)))
-                        .setIcon(Icon.createWithResource(this, R.drawable.ic_preview_mode))
-                        .setIntent(Intent(this, MainActivity::class.java).apply {
-                            action = ACTION_MODE_PREVIEW
-                            putExtras(bundleOf(PARAM_MODE_PREVIEW to name))
-                        })
-                        .build()
-            }
-        }
-    }
-
     private fun getMainFragment() = supportFragmentManager.findFragmentByTag(MainFragment.TAG) as MainFragment
 
     companion object {
-        const val ACTION_MODE_PREVIEW = "${BuildConfig.APPLICATION_ID}.MODE_PREVIEW"
-        const val PARAM_MODE_PREVIEW = "PARAM_MODE_PREVIEW"
-
         private const val PERMISSION_REQUEST = 1000
 
         val necessaryPermissions = listOf(
                 Manifest.permission.WRITE_EXTERNAL_STORAGE,
                 Manifest.permission.ACCESS_COARSE_LOCATION,
                 Manifest.permission.ACCESS_FINE_LOCATION
-        )
-
-        val sourceMap = listOf(
-                Triple("Select pcap file...", "", false),
-                Triple("las", "srt://las.srt.atsc3.com:31350?passphrase=A166AC45-DB7C-4B68-B957-09B8452C76A4", true),
-                Triple("bna", "srt://bna.srt.atsc3.com:31347?passphrase=88731837-0EB5-4951-83AA-F515B3BEBC20", true),
-                Triple("slc", "srt://slc.srt.atsc3.com:31341?passphrase=B9E4F7B8-3CDD-4BA2-ACA6-13088AB855C0", false),
-                Triple("lab", "srt://lab.srt.atsc3.com:31340?passphrase=03760631-667B-4ADB-9E04-E4491B0A7CF1", false),
-                Triple("qa", "srt://lab.srt.atsc3.com:31347?passphrase=f51e5a22-9b73-4ec8-be84-e4c173f1d913", false),
-                Triple("labJJ", "srt://lab.srt.atsc3.com:31346?passphrase=055E0771-97B2-4447-8B5C-3B2497D0DE32", false),
-                Triple("labJJPixel5", "srt://lab.srt.atsc3.com:31348?passphrase=3D5E5ED2-700D-443B-968F-598DB9A2750D&packetfilter=fec", false),
-                Triple("seaJJAndroid", "srt://sea.srt.atsc3.com:31346?passphrase=055E0771-97B2-4447-8B5C-3B2497D0DE32", false)
         )
     }
 }
