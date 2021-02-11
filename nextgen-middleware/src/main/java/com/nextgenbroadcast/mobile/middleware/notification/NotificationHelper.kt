@@ -6,8 +6,10 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.graphics.drawable.Icon
+import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
+import androidx.core.app.NotificationCompat
+import androidx.core.graphics.drawable.IconCompat
 import androidx.media.session.MediaButtonReceiver
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.middleware.R
@@ -19,39 +21,53 @@ class NotificationHelper(
 ) {
     private val notificationManager = context.getSystemService(NotificationManager::class.java)
 
-    fun createMediaNotificationBuilder(title: String, text: String, state: PlaybackState): Notification.Builder {
+    fun createMediaNotificationBuilder(title: String, text: String, state: PlaybackState, mediaSession: MediaSessionCompat?): NotificationCompat.Builder {
         val dialogIntent = Intent(context, ServiceDialogActivity::class.java)
         val contentIntent = PendingIntent.getActivity(context, 0, dialogIntent, 0)
         val actionIntent = MediaButtonReceiver.buildMediaButtonPendingIntent(context, PlaybackStateCompat.ACTION_PLAY_PAUSE)
 
-        val builder = Notification.Builder(context, channelID)
+        val builder = NotificationCompat.Builder(context, channelID)
                 .setSmallIcon(R.mipmap.ic_launcher_round)
                 .setContentIntent(contentIntent)
                 .setContentTitle(title)
                 .setContentText(text)
-                .setVisibility(Notification.VISIBILITY_PUBLIC)
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
 
-        when (state) {
-            PlaybackState.PLAYING -> {
-                builder.addAction(createAction(context, android.R.drawable.ic_media_pause, R.string.notification_pause_btn_title, actionIntent))
-                builder.style = Notification.MediaStyle().setShowActionsInCompactView(0)
+        if (state != PlaybackState.IDLE) {
+            builder.addAction(createAction(context, android.R.drawable.ic_media_previous, R.string.notification_btn_pause_previous,
+                    MediaButtonReceiver.buildMediaButtonPendingIntent(context, PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS)
+            ))
+
+            when (state) {
+                PlaybackState.PLAYING -> {
+                    builder.addAction(createAction(context, android.R.drawable.ic_media_pause, R.string.notification_btn_pause_title, actionIntent))
+                }
+
+                PlaybackState.PAUSED -> {
+                    builder.addAction(createAction(context, android.R.drawable.ic_media_play, R.string.notification_btn_play_title, actionIntent))
+                }
+
+                else -> {
+                }
             }
 
-            PlaybackState.PAUSED -> {
-                builder.addAction(createAction(context, android.R.drawable.ic_media_play, R.string.notification_play_btn_title, actionIntent))
-                builder.style = Notification.MediaStyle().setShowActionsInCompactView(0)
-            }
+            builder.addAction(createAction(context, android.R.drawable.ic_media_next, R.string.notification_btn_pause_next,
+                    MediaButtonReceiver.buildMediaButtonPendingIntent(context, PlaybackStateCompat.ACTION_SKIP_TO_NEXT)
+            ))
 
-            else -> {
+            val mediaStyle = androidx.media.app.NotificationCompat.MediaStyle().setShowActionsInCompactView(0, 1, 2)
+            if (mediaSession != null) {
+                mediaStyle.setMediaSession(mediaSession.sessionToken)
             }
+            builder.setStyle(mediaStyle)
         }
 
         return builder
     }
 
     private fun createAction(context: Context, iconResId: Int, titleResId: Int, pendingIntent: PendingIntent) =
-            Notification.Action.Builder(
-                    Icon.createWithResource(context, iconResId),
+            NotificationCompat.Action.Builder(
+                    IconCompat.createWithResource(context, iconResId),
                     context.getString(titleResId),
                     pendingIntent
             ).build()
@@ -70,9 +86,5 @@ class NotificationHelper(
 
     fun cancel(id: Int) {
         notificationManager.cancel(id)
-    }
-
-    fun createMediaNotificationBuilder(container: NotificationContainer): Notification {
-        return createMediaNotificationBuilder(container.title, container.message, container.state).build()
     }
 }

@@ -1,6 +1,7 @@
 package com.nextgenbroadcast.mobile.middleware.repository
 
 import androidx.lifecycle.MutableLiveData
+import com.nextgenbroadcast.mobile.core.atsc3.MediaUrl
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPackage
@@ -14,7 +15,7 @@ internal class RepositoryImpl : IRepository {
     override val selectedService = MutableLiveData<AVService>()
     override val serviceGuideUrls = MutableLiveData<List<SGUrl>>()
 
-    override val routeMediaUrl = MutableLiveData<String>()
+    override val routeMediaUrl = MutableLiveData<MediaUrl>()
 
     override val applications = MutableLiveData<List<Atsc3Application>?>()
     override val services = MutableLiveData<List<AVService>>()
@@ -55,7 +56,7 @@ internal class RepositoryImpl : IRepository {
         heldPackage.postValue(data)
     }
 
-    override fun setMediaUrl(mediaUrl: String?) {
+    override fun setMediaUrl(mediaUrl: MediaUrl?) {
         routeMediaUrl.postValue(mediaUrl)
     }
 
