@@ -36,7 +36,7 @@ steps:
       javaHomeOption: 'JDKVersion'
       publishJUnitResults: true
       testResultsFiles: '**/TEST-*.xml'
-      tasks: 'clean :nextgen-core:assembleRelease :nextgen-middleware:assembleRelease :nextgen-mmt:assembleRelease :nextgen-view:assembleRelease'
+      tasks: 'clean :nextgen-core:assembleRelease :nextgen-middleware:assembleRelease :nextgen-player:assembleRelease :nextgen-view:assembleRelease'
     displayName: gradlew clean and build
 
   - task: Gradle@2
@@ -56,7 +56,7 @@ steps:
       javaHomeOption: 'JDKVersion'
       publishJUnitResults: true
       testResultsFiles: '**/TEST-*.xml'
-      tasks: ':nextgen-core:publish :nextgen-middleware:publish :nextgen-mmt:publish :nextgen-view:publish -PartifactVersion=$(ARTIFACT_VERSION)'
+      tasks: ':nextgen-core:publish :nextgen-middleware:publish :nextgen-player:publish :nextgen-view:publish -PartifactVersion=$(ARTIFACT_VERSION)'
     displayName: gradlew publish
 
   - task: CopyFiles@2

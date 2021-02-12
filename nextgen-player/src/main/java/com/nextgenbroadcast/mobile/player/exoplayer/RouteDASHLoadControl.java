@@ -1,4 +1,4 @@
-package com.nextgenbroadcast.mobile.exoplayer2;
+package com.nextgenbroadcast.mobile.player.exoplayer;
 
 import com.google.android.exoplayer2.C;
 import com.google.android.exoplayer2.DefaultLoadControl;
