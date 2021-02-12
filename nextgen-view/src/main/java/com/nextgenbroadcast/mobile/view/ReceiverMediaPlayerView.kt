@@ -23,7 +23,7 @@ import com.nextgenbroadcast.mobile.mmt.exoplayer2.Atsc3ContentDataSource
 import java.io.IOException
 
 //TODO: reuse Atsc3MediaPlayer
-class ReceiverMediaPlayerView @JvmOverloads constructor(
+open class ReceiverMediaPlayerView @JvmOverloads constructor(
         context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
 ) : PlayerView(context, attrs, defStyleAttr) {
 

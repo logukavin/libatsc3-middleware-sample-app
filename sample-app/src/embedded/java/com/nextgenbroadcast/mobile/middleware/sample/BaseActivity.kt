@@ -37,6 +37,7 @@ abstract class BaseActivity : AppCompatActivity() {
 
         Intent(this, EmbeddedAtsc3Service::class.java).apply {
             action = EmbeddedAtsc3Service.SERVICE_INTERFACE
+            putExtra(Atsc3ForegroundService.EXTRA_PLAY_AUDIO_ON_BOARD, true)
         }.also { intent ->
             bindService(intent, connection, BIND_AUTO_CREATE)
         }

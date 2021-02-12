@@ -54,6 +54,8 @@ internal class Atsc3ReceiverCore private constructor(
     val serviceController: IServiceController = ServiceControllerImpl(repository, serviceGuideStore, settings, atsc3Module, analytics)
     var viewController: IViewController? = null
         private set
+    var ignoreAudioServiceMedia: Boolean = true
+        private set
 
     private var webGateway: IWebGateway? = null
     private var rpcGateway: IRPCGateway? = null
@@ -99,10 +101,12 @@ internal class Atsc3ReceiverCore private constructor(
         }
     }
 
-    fun createAndStartViewPresentation(downloadManager: IDownloadManager, lifecycleOwner: LifecycleOwner): IViewController {
+    fun createAndStartViewPresentation(downloadManager: IDownloadManager, lifecycleOwner: LifecycleOwner, ignoreAudioServiceMedia: Boolean): IViewController {
+        this.ignoreAudioServiceMedia = ignoreAudioServiceMedia
+
         val appCache = ApplicationCache(atsc3Module.jni_getCacheDir(), downloadManager)
 
-        val view = ViewControllerImpl(repository, settings, mediaFileProvider, analytics).apply {
+        val view = ViewControllerImpl(repository, settings, mediaFileProvider, analytics, ignoreAudioServiceMedia).apply {
             start(lifecycleOwner)
         }.also {
             viewController = it
@@ -196,17 +200,23 @@ internal class Atsc3ReceiverCore private constructor(
         }
     }
 
+    fun findServiceBy(bsid: Int, serviceId: Int): AVService? {
+        return repository.findServiceBy(bsid, serviceId)
+    }
+
     fun findActiveServiceById(serviceId: Int): AVService? {
-        return repository.findServiceBy(atsc3Module.selectedServiceBsid, serviceId);
+        return findServiceBy(atsc3Module.selectedServiceBsid, serviceId)
     }
 
     fun getCurrentlyPlayingMediaUri(): Uri? {
-        repository.routeMediaUrl.value?.let { mediaPath ->
-            return mediaFileProvider.getMediaFileUri(mediaPath)
+        getCurrentlyPlayingMediaUrl()?.let { mediaPath ->
+            return mediaFileProvider.getMediaFileUri(mediaPath.url)
         }
 
         return null
     }
+
+    fun getCurrentlyPlayingMediaUrl() = repository.routeMediaUrl.value
 
     companion object {
         @Volatile

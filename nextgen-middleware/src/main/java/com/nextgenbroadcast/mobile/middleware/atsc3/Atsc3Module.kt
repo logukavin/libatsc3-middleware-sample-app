@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import android.util.SparseArray
 import androidx.annotation.MainThread
+import com.nextgenbroadcast.mobile.core.atsc3.MediaUrl
 import com.nextgenbroadcast.mobile.core.atsc3.phy.PHYStatistics
 import com.nextgenbroadcast.mobile.core.isEquals
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.Atsc3ServiceLocationTable
@@ -45,7 +46,7 @@ internal class Atsc3Module(
         fun onApplicationPackageReceived(appPackage: Atsc3Application)
         fun onServiceLocationTableChanged(services: List<Atsc3Service>, reportServerUrl: String?)
         fun onServicePackageChanged(pkg: Atsc3HeldPackage?)
-        fun onServiceMediaReady(path: String, delayBeforePlayMs: Long)
+        fun onServiceMediaReady(mediaUrl: MediaUrl, delayBeforePlayMs: Long)
         fun onServiceGuideUnitReceived(filePath: String)
     }
 
@@ -249,7 +250,7 @@ internal class Atsc3Module(
         }
 
         if (selectedServiceSLSProtocol == SLS_PROTOCOL_MMT) {
-            listener?.onServiceMediaReady(SCHEME_MMT + serviceId, 0)
+            listener?.onServiceMediaReady(MediaUrl(SCHEME_MMT + serviceId, bsid, serviceId), 0)
         }
 
         return selectedServiceSLSProtocol > 0
@@ -441,12 +442,12 @@ internal class Atsc3Module(
         }
     }
 
-    override fun routeDash_force_player_reload_mpd(ServiceID: Int) {
+    override fun routeDash_force_player_reload_mpd(serviceID: Int) {
         if (getState() == State.SCANNING) return
 
-        if (ServiceID == selectedServiceId) {
+        if (serviceID == selectedServiceId) {
             getSelectedServiceMediaUri()?.let { mpdPath ->
-                listener?.onServiceMediaReady(mpdPath, MPD_UPDATE_DELAY)
+                listener?.onServiceMediaReady(MediaUrl(mpdPath, selectedServiceBsid, serviceID), MPD_UPDATE_DELAY)
             }
         }
     }
