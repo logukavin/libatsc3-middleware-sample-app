@@ -1,4 +1,4 @@
-package com.nextgenbroadcast.mobile.core
+package com.nextgenbroadcast.mobile.player
 
 import android.content.Context
 import com.google.android.exoplayer2.util.Util

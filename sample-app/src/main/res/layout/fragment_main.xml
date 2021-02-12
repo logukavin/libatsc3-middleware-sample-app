@@ -26,7 +26,7 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent">
 
-            <com.nextgenbroadcast.mobile.middleware.sample.view.ReceiverPlayerLayout
+            <com.nextgenbroadcast.mobile.middleware.sample.view.ReceiverPlayerView
                 android:id="@+id/receiver_player"
                 android:layout_width="0dp"
                 android:layout_height="0dp"

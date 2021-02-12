@@ -1,4 +1,4 @@
-package com.nextgenbroadcast.mobile.middleware.atsc3.player
+package com.nextgenbroadcast.mobile.player
 
 import android.content.Context
 import android.net.Uri
@@ -15,8 +15,9 @@ import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTMediaSource
 import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTRenderersFactory
 import com.nextgenbroadcast.mobile.core.atsc3.mmt.MMTConstants
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
-import com.nextgenbroadcast.mobile.mmt.exoplayer2.Atsc3ContentDataSource
-import com.nextgenbroadcast.mobile.mmt.exoplayer2.Atsc3MMTExtractor
+import com.nextgenbroadcast.mobile.player.exoplayer.Atsc3ContentDataSource
+import com.nextgenbroadcast.mobile.player.exoplayer.Atsc3MMTExtractor
+import com.nextgenbroadcast.mobile.player.exoplayer.RouteDASHLoadControl
 import java.io.IOException
 
 class Atsc3MediaPlayer(
@@ -30,18 +31,26 @@ class Atsc3MediaPlayer(
 
     private var listener: EventListener? = null
 
-    private var player: SimpleExoPlayer? = null
+    private var _player: SimpleExoPlayer? = null
     private var isMMTPlayback = false
     private var rmpState: PlaybackState? = null
 
+    val player: Player?
+        get() = _player
+
     var playWhenReady: Boolean = true
         set(value) {
-            player?.playWhenReady = value
+            _player?.playWhenReady = value
             field = value
         }
 
     val isPlaying: Boolean
-        get() = player?.isPlaying ?: false
+        get() = _player?.isPlaying ?: false
+
+    val playbackState: PlaybackState
+        get() = _player?.let {
+            playbackState(it.playbackState, it.playWhenReady)
+        } ?: PlaybackState.IDLE
 
     fun setListener(listener: EventListener) {
         this.listener = listener
@@ -62,13 +71,13 @@ class Atsc3MediaPlayer(
                 setLoadErrorHandlingPolicy(createDefaultLoadErrorHandlingPolicy())
             }.createMediaSource(mediaUri)
 
-            player = createMMTExoPlayer().apply {
+            _player = createMMTExoPlayer().apply {
                 prepare(mediaSource)
                 playWhenReady = this@Atsc3MediaPlayer.playWhenReady
             }
         } else {
             val dashMediaSource = createMediaSourceFactory().createMediaSource(mediaUri)
-            player = createDefaultExoPlayer().apply {
+            _player = createDefaultExoPlayer().apply {
                 prepare(dashMediaSource)
                 playWhenReady = true
             }
@@ -76,16 +85,16 @@ class Atsc3MediaPlayer(
     }
 
     fun reset() {
-        player?.let {
+        _player?.let {
             it.stop()
             it.release()
-            player = null
+            _player = null
         }
         isMMTPlayback = false
     }
 
     private fun createMediaSourceFactory(): DashMediaSource.Factory {
-        val userAgent = Util.getUserAgent(context, "middleware")//AppUtils.getUserAgent(context)
+        val userAgent = Util.getUserAgent(context, AppUtils.getUserAgent(context))
         val manifestDataSourceFactory = DefaultDataSourceFactory(context, userAgent)
         val mediaDataSourceFactory = DefaultDataSourceFactory(context, userAgent)
 
@@ -98,8 +107,7 @@ class Atsc3MediaPlayer(
     }
 
     private fun createDefaultExoPlayer(): SimpleExoPlayer {
-        //TODO:
-        return createExoPlayer(/*RouteDASHLoadControl()*/DefaultLoadControl(), DefaultRenderersFactory(context))
+        return createExoPlayer(RouteDASHLoadControl(), DefaultRenderersFactory(context))
     }
 
     private fun createMMTExoPlayer(): SimpleExoPlayer {
