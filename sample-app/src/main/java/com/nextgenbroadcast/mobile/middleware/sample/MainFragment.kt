@@ -141,8 +141,8 @@ class MainFragment : Fragment() {
         serviceList.setOnItemClickListener { _, _, position, _ ->
             bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
 
-            servicesList?.getOrNull(position)?.let { item ->
-                selectService(item.globalId)
+            servicesList?.getOrNull(position)?.let { service ->
+                selectService(service)
             } ?: if (position == 0) {
                 showFileChooser()
             } else {
@@ -229,7 +229,7 @@ class MainFragment : Fragment() {
     override fun onStop() {
         super.onStop()
 
-        receiver_player.stopPlayback()
+        receiver_player.stop()
     }
 
     override fun onDestroy() {
@@ -269,11 +269,14 @@ class MainFragment : Fragment() {
         rmpViewModel = null
         userAgentViewModel = null
         receiverViewModel = null
+
+        // Current view-models holds presenters from IBinder of service. Should be released
+        viewModelStore.clear()
     }
 
-    private fun selectService(globalServiceId: String?) {
-        requireActivity().mediaController?.transportControls?.let {
-            it.playFromMediaId(globalServiceId, null)
+    private fun selectService(service: AVService) {
+        requireActivity().mediaController?.transportControls?.let { controls ->
+            controls.playFromMediaId(service.globalId, null)
             //receiver_player.stopPlayback()
             //setBAAvailability(false)
         }
@@ -329,12 +332,14 @@ class MainFragment : Fragment() {
                 )
             })
             mediaUri.observe(this@MainFragment, { mediaUri ->
-                mediaUri?.let {
-                    receiver_player.startPlayback(mediaUri)
-                } ?: receiver_player.stopPlayback()
+                if (mediaUri != null) {
+                    receiver_player.play(mediaUri)
+                } else {
+                    receiver_player.stop()
+                }
             })
             playWhenReady.observe(this@MainFragment, { playWhenReady ->
-                receiver_player.setPlayWhenReady(playWhenReady)
+                receiver_player.playWhenReady = playWhenReady
             })
         }
 

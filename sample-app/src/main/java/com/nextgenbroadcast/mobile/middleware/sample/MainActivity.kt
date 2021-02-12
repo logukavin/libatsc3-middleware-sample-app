@@ -73,6 +73,7 @@ class MainActivity : BaseActivity() {
     override fun onMediaSessionCreated() {
         viewViewModel.services.value = mediaController.queue?.mapNotNull { it.toService() } ?: emptyList()
         viewViewModel.currentServiceTitle.value = mediaController.queueTitle?.toString()
+        viewViewModel.isPlaying.value = mediaController.playbackState?.state == PlaybackState.STATE_PLAYING
 
         mediaController.registerCallback(object : MediaController.Callback() {
             override fun onQueueChanged(queue: MutableList<MediaSession.QueueItem>?) {
@@ -81,6 +82,10 @@ class MainActivity : BaseActivity() {
 
             override fun onQueueTitleChanged(title: CharSequence?) {
                 viewViewModel.currentServiceTitle.value = title?.toString()
+            }
+
+            override fun onPlaybackStateChanged(state: PlaybackState?) {
+                viewViewModel.isPlaying.value = state?.state == PlaybackState.STATE_PLAYING
             }
 
             override fun onSessionDestroyed() {

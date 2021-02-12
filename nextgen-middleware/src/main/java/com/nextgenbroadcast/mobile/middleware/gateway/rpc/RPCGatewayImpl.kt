@@ -40,8 +40,8 @@ internal class RPCGatewayImpl(
     override val language: String = settings.locale.language
     override val queryServiceId: String?
         get() = serviceController.selectedService.value?.globalId
-    override val mediaUrl: String
-        get() = viewController.rmpMediaUri.value.toString()
+    override val mediaUrl: String?
+        get() = serviceController.routeMediaUrl.value?.url
     override val playbackState: PlaybackState
         get() = viewController.rmpState.value ?: PlaybackState.IDLE
     private val rmpPlaybackTime: Long
@@ -78,10 +78,6 @@ internal class RPCGatewayImpl(
             }
         }.observe(lifecycleOwner) { applicationFiles ->
             onApplicationContentChanged(applicationFiles)
-        }
-
-        viewController.rmpMediaUri.distinctUntilChanged().observe(lifecycleOwner) {
-            onMediaUrlUpdated()
         }
 
         viewController.rmpState.distinctUntilChanged().observe(lifecycleOwner) { playbackState ->
@@ -234,12 +230,6 @@ internal class RPCGatewayImpl(
         }
     }
 
-    private fun onMediaUrlUpdated() {
-        if (subscribedNotifications.contains(NotificationType.MPD_CHANGE)) {
-            rpcNotifier.notifyMPDChange()
-        }
-    }
-
     private fun onRMPPlaybackStateChanged(playbackState: PlaybackState) {
         if (subscribedNotifications.contains(NotificationType.RMP_PLAYBACK_STATE_CHANGE)) {
             rpcNotifier.notifyRmpPlaybackStateChange(playbackState)
@@ -301,7 +291,6 @@ internal class RPCGatewayImpl(
         val SUPPORTED_NOTIFICATIONS = setOf(
                 NotificationType.SERVICE_CHANGE,
                 NotificationType.SERVICE_GUIDE_CHANGE,
-                NotificationType.MPD_CHANGE,
                 NotificationType.RMP_PLAYBACK_STATE_CHANGE,
                 NotificationType.RMP_PLAYBACK_RATE_CHANGE,
                 NotificationType.RMP_MEDIA_TIME_CHANGE,

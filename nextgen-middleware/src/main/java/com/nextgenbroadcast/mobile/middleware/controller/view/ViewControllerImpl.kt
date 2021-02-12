@@ -15,6 +15,7 @@ import com.nextgenbroadcast.mobile.core.presentation.ApplicationState
 import com.nextgenbroadcast.mobile.core.presentation.media.IObservablePlayer
 import com.nextgenbroadcast.mobile.core.presentation.media.PlayerStateRegistry
 import com.nextgenbroadcast.mobile.middleware.analytics.IAtsc3Analytics
+import com.nextgenbroadcast.mobile.middleware.atsc3.entities.SLTConstants
 import com.nextgenbroadcast.mobile.middleware.service.provider.IMediaFileProvider
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
 import com.nextgenbroadcast.mobile.middleware.server.ServerUtils
@@ -24,7 +25,8 @@ internal class ViewControllerImpl(
         private val repository: IRepository,
         private val settings: IClientSettings,
         private val fileProvider: IMediaFileProvider,
-        private val atsc3Analytics: IAtsc3Analytics
+        private val atsc3Analytics: IAtsc3Analytics,
+        private val ignoreAudioServiceMedia: Boolean
 ) : IViewController {
 
     private enum class PlaybackSource {
@@ -65,9 +67,16 @@ internal class ViewControllerImpl(
     override val rmpMediaUri = playbackSource.switchMap { source ->
         if (source == PlaybackSource.BROADCAST) {
             repository.routeMediaUrl.map { input ->
-                input?.let {
-                    fileProvider.getMediaFileUri(input)
+                if (input == null) return@map null
+
+                if (ignoreAudioServiceMedia) {
+                    val service = repository.findServiceBy(input.bsid, input.serviceId)
+                    if (service?.category == SLTConstants.SERVICE_CATEGORY_AO) {
+                        return@map null
+                    }
                 }
+
+                fileProvider.getMediaFileUri(input.url)
             }
         } else {
             externalMediaUrl.map { input -> input?.toUri() }
@@ -95,7 +104,7 @@ internal class ViewControllerImpl(
     }
 
     override fun rmpPlaybackChanged(state: PlaybackState) {
-        rmpState.postValue(state)
+        rmpState.value = state
         reportPlaybackState(state)
     }
 

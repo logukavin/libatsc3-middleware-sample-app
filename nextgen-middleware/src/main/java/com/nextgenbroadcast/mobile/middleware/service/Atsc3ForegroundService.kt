@@ -37,6 +37,7 @@ import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceControl
 import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
 import com.nextgenbroadcast.mobile.middleware.phy.Atsc3DeviceReceiver
 import com.nextgenbroadcast.mobile.middleware.atsc3.core.Atsc3ReceiverCore
+import com.nextgenbroadcast.mobile.middleware.atsc3.entities.SLTConstants
 import com.nextgenbroadcast.mobile.middleware.atsc3.player.Atsc3MediaPlayer
 import com.nextgenbroadcast.mobile.middleware.cache.DownloadManager
 import com.nextgenbroadcast.mobile.middleware.service.init.*
@@ -110,7 +111,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     private fun startStateObservation() {
         playbackState.apply {
             addSource(playerState) { state ->
-                playbackState.value = mergePlaybackState(state, atsc3Receiver.viewController?.rmpState?.value)
+                playbackState.value = mergePlaybackState(atsc3Receiver.viewController?.rmpState?.value, state)
             }
         }.observe(this) { state ->
             if (state == PlaybackState.PLAYING) {
@@ -132,7 +133,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
             }
         }.observe(this, { (receiverState, selectedService, playbackState) ->
             if (isForeground) {
-                pushNotification(createNotificationBuilder(receiverState, selectedService, playbackState))
+                pushNotification(createNotificationBuilder(receiverState, selectedService, playbackState, mediaSession))
             }
         })
 
@@ -161,10 +162,12 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
                 mediaSession.setQueueTitle(service?.shortName)
             }
             serviceController.routeMediaUrl.distinctUntilChanged().observe(this@Atsc3ForegroundService) { mediaPath ->
-                //TODO: we need better condition that cover playback in service when UI exists
-                if (!isBinded) {
+                val service = mediaPath?.let {
+                    findServiceBy(mediaPath.bsid, mediaPath.serviceId)
+                }
+                if (!isBinded || (ignoreAudioServiceMedia && service?.category == SLTConstants.SERVICE_CATEGORY_AO)) {
                     mediaPath?.let {
-                        player.play(mediaFileProvider.getMediaFileUri(mediaPath))
+                        player.play(mediaFileProvider.getMediaFileUri(mediaPath.url))
                     }
                 }
             }
@@ -185,10 +188,12 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
     override fun onBind(intent: Intent): IBinder? {
         if (intent.action == SERVICE_INTERFACE) {
-            stopPlaybackOnBoard()
+            tryStopPlaybackOnBoard()
+
+            val playAudioOnBoard = intent.getBooleanExtra(EXTRA_PLAY_AUDIO_ON_BOARD, true)
 
             cancelPresentationDestroying()
-            createViewPresentationAndStartService()
+            createViewPresentationAndStartService(playAudioOnBoard)
 
             maybeInitialize()
 
@@ -202,7 +207,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
     override fun onRebind(intent: Intent) {
         if (intent.action == SERVICE_INTERFACE) {
-            stopPlaybackOnBoard()
+            tryStopPlaybackOnBoard()
 
             cancelPresentationDestroying()
         }
@@ -212,7 +217,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
     override fun onUnbind(intent: Intent): Boolean {
         if (intent.action == SERVICE_INTERFACE) {
-            restorePlaybackOnBoard()
+            tryRestorePlaybackOnBoard()
 
             cancelPresentationDestroying()
             if (isStartedAsForeground) {
@@ -225,11 +230,16 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         return super.onUnbind(intent)
     }
 
-    private fun stopPlaybackOnBoard() {
-        player.reset()
+    private fun tryStopPlaybackOnBoard() {
+        atsc3Receiver.getCurrentlyPlayingMediaUrl()?.let { mediaUrl ->
+            val service = atsc3Receiver.findServiceBy(mediaUrl.bsid, mediaUrl.serviceId)
+            if (service?.category != SLTConstants.SERVICE_CATEGORY_AO) {
+                player.reset()
+            }
+        } ?: player.reset()
     }
 
-    private fun restorePlaybackOnBoard() {
+    private fun tryRestorePlaybackOnBoard() {
         val currentMediaUri = atsc3Receiver.getCurrentlyPlayingMediaUri()
         if (currentMediaUri != null && !player.isPlaying) {
             player.play(currentMediaUri)
@@ -400,7 +410,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
     override fun getReceiverState() = atsc3Receiver.getReceiverState()
 
-    private fun createViewPresentationAndStartService() {
+    private fun createViewPresentationAndStartService(ignoreAudioServiceMedia: Boolean) {
         // we release it only when destroy presentation layer
         if (wakeLock.isHeld) return
 
@@ -412,7 +422,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         }
 
         val downloadManager = DownloadManager()
-        val view = atsc3Receiver.createAndStartViewPresentation(downloadManager, viewLifecycle)
+        val view = atsc3Receiver.createAndStartViewPresentation(downloadManager, viewLifecycle, ignoreAudioServiceMedia)
 
         playbackState.addSource(view.rmpState) { state ->
             playbackState.value = mergePlaybackState(state, playerState.value)
@@ -456,7 +466,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
     protected fun requireViewController(): IViewController {
         if (atsc3Receiver.viewController == null) {
-            createViewPresentationAndStartService()
+            createViewPresentationAndStartService(atsc3Receiver.ignoreAudioServiceMedia)
         }
         return atsc3Receiver.viewController ?: throw InitializationException()
     }
@@ -475,7 +485,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         Triple(
                 receiverState ?: serviceController.receiverState.value,
                 selectedService ?: serviceController.selectedService.value,
-                playbackState ?: atsc3Receiver.viewController?.rmpState?.value
+                playbackState ?: this@Atsc3ForegroundService.playbackState.value
         )
     }
 
@@ -513,8 +523,10 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
             mediaSession.setMetadata(MediaMetadataCompat.Builder()
                     .putString(MediaMetadataCompat.METADATA_KEY_TITLE, service.shortName)
+                    .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, "${service.majorChannelNo}-${service.minorChannelNo}")
                     .build())
 
+            //TODO: we must deactivate it
             mediaSession.isActive = true
         }
     }
@@ -595,6 +607,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
         const val EXTRA_DEVICE = UsbManager.EXTRA_DEVICE
         const val EXTRA_ROUTE_PATH = "route_path"
+        const val EXTRA_PLAY_AUDIO_ON_BOARD = "play_audio_on_board"
 
         const val MEDIA_ROOT_ID = "2262d068-67cf-11eb-ae93-0242ac130002"
 

@@ -2,6 +2,7 @@ package com.nextgenbroadcast.mobile.middleware.controller.service
 
 import android.util.Log
 import androidx.lifecycle.MutableLiveData
+import com.nextgenbroadcast.mobile.core.atsc3.MediaUrl
 import com.nextgenbroadcast.mobile.core.model.PhyFrequency
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.model.AVService
@@ -99,11 +100,11 @@ internal class ServiceControllerImpl (
         repository.setHeldPackage(pkg)
     }
 
-    override fun onServiceMediaReady(path: String, delayBeforePlayMs: Long) {
+    override fun onServiceMediaReady(mediaUrl: MediaUrl, delayBeforePlayMs: Long) {
         if (delayBeforePlayMs > 0) {
-            setMediaUrlWithDelay(path, delayBeforePlayMs)
+            setMediaUrlWithDelay(mediaUrl, delayBeforePlayMs)
         } else {
-            repository.setMediaUrl(path)
+            repository.setMediaUrl(mediaUrl)
         }
     }
 
@@ -239,12 +240,12 @@ internal class ServiceControllerImpl (
         }
     }
 
-    private fun setMediaUrlWithDelay(path: String, delayMs: Long) {
+    private fun setMediaUrlWithDelay(mediaUrl: MediaUrl, delayMs: Long) {
         cancelMediaUrlAssignment()
         mediaUrlAssignmentJob = ioScope.launch {
             delay(delayMs)
             withContext(Dispatchers.Main) {
-                repository.setMediaUrl(path)
+                repository.setMediaUrl(mediaUrl)
                 mediaUrlAssignmentJob = null
             }
         }
