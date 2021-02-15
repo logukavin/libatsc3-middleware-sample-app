@@ -3,6 +3,7 @@ package com.nextgenbroadcast.mobile.middleware.serviceController
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import com.nextgenbroadcast.mobile.core.atsc3.MediaUrl
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.PhyFrequency
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
@@ -182,9 +183,10 @@ class ServiceControllerTest {
 
     @Test
     fun testOnServiceMediaReady() {
-        serviceController.onServiceMediaReady("path", 0L)
+        val mediaUrl = MediaUrl("path", 0, 0)
+        serviceController.onServiceMediaReady(mediaUrl, 0L)
 
-        verify(repository).setMediaUrl("path")
+        verify(repository).setMediaUrl(mediaUrl)
 
         //Should I create test for delayBeforePlayMs > 0 ?
     }
@@ -551,22 +553,22 @@ class ServiceControllerTest {
 
     @Test
     fun testFindServiceByIdReturnNull() {
-        `when`(repository.findServiceById("someIdForNull")).thenReturn(null)
+        `when`(repository.findServiceBy("someIdForNull")).thenReturn(null)
 
         val result = serviceController.findServiceById("someIdForNull")
 
-        verify(repository).findServiceById("someIdForNull")
+        verify(repository).findServiceBy("someIdForNull")
         Assert.assertNull(result)
     }
 
     @Test
     fun testFindServiceByIdReturnAVService() {
         val mockData = AVService(0, 0, "short_name", "globalId", 1, 1, 0)
-        `when`(repository.findServiceById("someIdForAVService")).thenReturn(mockData)
+        `when`(repository.findServiceBy("someIdForAVService")).thenReturn(mockData)
 
         val result = serviceController.findServiceById("someIdForAVService")
 
-        verify(repository).findServiceById("someIdForAVService")
+        verify(repository).findServiceBy("someIdForAVService")
         Assert.assertThat(result, CoreMatchers.instanceOf<AVService>(AVService::class.java))
     }
 
@@ -579,7 +581,7 @@ class ServiceControllerTest {
         override val selectedService = MutableLiveData<AVService>()
         override val serviceGuideUrls = MutableLiveData<List<SGUrl>>()
 
-        override val routeMediaUrl = MutableLiveData<String>()
+        override val routeMediaUrl = MutableLiveData<MediaUrl?>()
 
         override val applications = MutableLiveData<List<Atsc3Application>?>()
         override val services = MutableLiveData<List<AVService>>()
@@ -598,15 +600,19 @@ class ServiceControllerTest {
         override fun setSelectedService(service: AVService?) {
         }
 
-        override fun findServiceById(globalServiceId: String): AVService? {
+        override fun findServiceBy(globalServiceId: String): AVService? {
             return AVService(0, 0, "short_name", globalServiceId, 1, 1, 0)
+        }
+
+        override fun findServiceBy(bsid: Int, serviceId: Int): AVService? {
+            return AVService(bsid, serviceId, "short_name", "globalServiceId", 1, 1, 0)
+        }
+
+        override fun setMediaUrl(mediaUrl: MediaUrl?) {
         }
 
         override fun setHeldPackage(data: Atsc3HeldPackage?) {
             heldPackage.postValue(data)
-        }
-
-        override fun setMediaUrl(mediaUrl: String?) {
         }
 
         override fun reset() {
