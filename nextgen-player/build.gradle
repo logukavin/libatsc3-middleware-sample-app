@@ -1,20 +1,13 @@
-apply plugin: 'com.android.library'
-apply plugin: 'kotlin-android'
-apply plugin: 'kotlin-android-extensions'
-apply plugin: 'kotlin-kapt'
+plugins {
+    id 'com.android.library'
+    id 'kotlin-android'
+    id 'kotlin-android-extensions'
+    id 'kotlin-kapt'
+}
 
 android {
     compileSdkVersion rootProject.compileSdkVersion
     buildToolsVersion rootProject.buildToolsVersion
-
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
-    }
-
-    kotlinOptions {
-        jvmTarget = "1.8"
-    }
 
     defaultConfig {
         minSdkVersion rootProject.ext.minSdkVersion
@@ -32,16 +25,19 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    kotlinOptions {
+        jvmTarget = '1.8'
+    }
 }
 
 def coreKtxVersion = rootProject.ext.coreKtxVersion
-def libatsc3Version = rootProject.ext.libatsc3Version
 def exoplayerVersion = rootProject.ext.exoplayerVersion
-def startupRuntime = rootProject.ext.startupRuntime
 
 dependencies {
-    implementation fileTree(dir: "libs", include: ["*.jar"])
-
     if (project.hasProperty('org.gradle.project.use_local_src_libatsc3_folder') && project.property('org.gradle.project.use_local_src_libatsc3_folder').toString().toBoolean()) {
         implementation project(":atsc3_core")
         implementation project(":atsc3_bridge")
@@ -60,13 +56,22 @@ dependencies {
 
     implementation project(":nextgen-core")
 
-    compileOnly 'org.checkerframework:checker-compat-qual:2.5.0'
-
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
     implementation "androidx.core:core-ktx:$coreKtxVersion"
+
     implementation 'androidx.appcompat:appcompat:1.2.0'
 
-    implementation "androidx.startup:startup-runtime:$startupRuntime"
+    if (project.hasProperty('org.gradle.project.use_local_src_exoplayer_folder') && project.property('org.gradle.project.use_local_src_exoplayer_folder').toString().toBoolean()) {
+        implementation project(':exoplayer-library-core')
+        implementation project(':exoplayer-library-dash')
+        implementation project(':exoplayer-extension-daa')
+        implementation project(':exoplayer-extension-mmt')
+    } else {
+        implementation "com.google.android.exoplayer:exoplayer-core:$exoplayerVersion"
+        implementation "com.google.android.exoplayer:exoplayer-dash:$exoplayerVersion"
+        implementation "com.google.android.exoplayer:exoplayer-daa:$exoplayerVersion"
+        implementation "com.google.android.exoplayer:exoplayer-mmt:$exoplayerVersion"
+    }
 }
 
 apply from: '../publish.gradle'

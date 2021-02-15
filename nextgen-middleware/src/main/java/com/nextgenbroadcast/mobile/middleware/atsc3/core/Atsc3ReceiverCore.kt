@@ -1,22 +1,23 @@
-package com.nextgenbroadcast.mobile.middleware.service.core
+package com.nextgenbroadcast.mobile.middleware.atsc3.core
 
 import android.content.Context
+import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.LifecycleOwner
 import com.nextgenbroadcast.mobile.core.cert.UserAgentSSLContext
+import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.PhyFrequency
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.presentation.*
 import com.nextgenbroadcast.mobile.middleware.analytics.Atsc3Analytics
 import com.nextgenbroadcast.mobile.middleware.analytics.IAtsc3Analytics
 import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3Module
-import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.ServiceGuideDeliveryUnitReader
+import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.IServiceGuideStore
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.db.RoomServiceGuideStore
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.db.SGDataBase
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.IAtsc3Source
 import com.nextgenbroadcast.mobile.middleware.cache.ApplicationCache
-import com.nextgenbroadcast.mobile.middleware.cache.DownloadManager
-import com.nextgenbroadcast.mobile.middleware.cache.IApplicationCache
+import com.nextgenbroadcast.mobile.middleware.cache.IDownloadManager
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
 import com.nextgenbroadcast.mobile.middleware.controller.service.ServiceControllerImpl
 import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
@@ -37,56 +38,41 @@ import com.nextgenbroadcast.mobile.middleware.service.provider.IMediaFileProvide
 import com.nextgenbroadcast.mobile.middleware.service.provider.MediaFileProvider
 import com.nextgenbroadcast.mobile.middleware.service.provider.esgProvider.ESGContentAuthority
 import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
+import com.nextgenbroadcast.mobile.middleware.settings.MiddlewareSettingsImpl
 import kotlinx.coroutines.Dispatchers
 import java.lang.ref.WeakReference
 
-internal class Atsc3ServiceCore(
-        val context: Context,
-        val settings: IMiddlewareSettings
+internal class Atsc3ReceiverCore private constructor(
+        private val context: Context,
+        private val atsc3Module: Atsc3Module,
+        private val settings: IMiddlewareSettings,
+        private val repository: IRepository,
+        private val serviceGuideStore: IServiceGuideStore,
+        private val analytics: IAtsc3Analytics
 ) : IAtsc3ServiceCore {
-    private val repository: IRepository
-    private val atsc3Module: Atsc3Module
-    private val appCache: IApplicationCache
-    private val analytics: IAtsc3Analytics
-
     //TODO: we should close this instances
-    val serviceController: IServiceController
+    val serviceController: IServiceController = ServiceControllerImpl(repository, serviceGuideStore, settings, atsc3Module, analytics)
     var viewController: IViewController? = null
+        private set
+    var ignoreAudioServiceMedia: Boolean = true
         private set
 
     private var webGateway: IWebGateway? = null
     private var rpcGateway: IRPCGateway? = null
     private var webServer: MiddlewareWebServer? = null
-    private val mediaFileProvider: IMediaFileProvider by lazy {
+    val mediaFileProvider: IMediaFileProvider by lazy {
         MediaFileProvider(context)
     }
 
     private val initializer = ArrayList<WeakReference<IServiceInitializer>>()
 
     init {
-        val repo = RepositoryImpl().also {
-            repository = it
+        serviceGuideStore.subscribe {
+            context.contentResolver.notifyChange(ESGContentAuthority.getServiceContentUri(context), null)
         }
-        val atsc3 = Atsc3Module(context).also {
-            atsc3Module = it
-        }
-
-        val sgDataBase = SGDataBase.getDatabase(context)
-        val serviceGuideStore = RoomServiceGuideStore(sgDataBase).apply {
-            subscribe {
-                context.contentResolver.notifyChange(ESGContentAuthority.getServiceContentUri(context), null)
-            }
-        }
-
-        val serviceGuideReader = ServiceGuideDeliveryUnitReader(serviceGuideStore)
-
-        analytics = Atsc3Analytics.getInstance(context, settings)
-        serviceController = ServiceControllerImpl(repo, settings, atsc3, analytics, serviceGuideReader)
-
-        appCache = ApplicationCache(atsc3.jni_getCacheDir(), DownloadManager())
     }
 
-    fun destroy() {
+    fun deInitialize() {
         initializer.forEach { ref ->
             ref.get()?.cancel()
         }
@@ -115,8 +101,12 @@ internal class Atsc3ServiceCore(
         }
     }
 
-    fun createAndStartViewPresentation(lifecycleOwner: LifecycleOwner): IViewController {
-        val view = ViewControllerImpl(repository, settings, mediaFileProvider, analytics).apply {
+    fun createAndStartViewPresentation(downloadManager: IDownloadManager, lifecycleOwner: LifecycleOwner, ignoreAudioServiceMedia: Boolean): IViewController {
+        this.ignoreAudioServiceMedia = ignoreAudioServiceMedia
+
+        val appCache = ApplicationCache(atsc3Module.jni_getCacheDir(), downloadManager)
+
+        val view = ViewControllerImpl(repository, settings, mediaFileProvider, analytics, ignoreAudioServiceMedia).apply {
             start(lifecycleOwner)
         }.also {
             viewController = it
@@ -143,7 +133,7 @@ internal class Atsc3ServiceCore(
 
         startWebServer(rpc, web)
 
-        return view;
+        return view
     }
 
     fun stopAndDestroyViewPresentation() {
@@ -195,5 +185,62 @@ internal class Atsc3ServiceCore(
 
     override fun getReceiverState(): ReceiverState {
         return serviceController.receiverState.value ?: ReceiverState.IDLE
+    }
+
+    fun getNextService() = getNearbyService(1)
+
+    fun getPreviousService() = getNearbyService(-1)
+
+    private fun getNearbyService(offset: Int): AVService? {
+        return repository.selectedService.value?.let { activeService ->
+            repository.services.value?.let { services ->
+                val activeServiceIndex = services.indexOf(activeService)
+                services.getOrNull(activeServiceIndex + offset)
+            }
+        }
+    }
+
+    fun findServiceBy(bsid: Int, serviceId: Int): AVService? {
+        return repository.findServiceBy(bsid, serviceId)
+    }
+
+    fun findActiveServiceById(serviceId: Int): AVService? {
+        return findServiceBy(atsc3Module.selectedServiceBsid, serviceId)
+    }
+
+    fun getCurrentlyPlayingMediaUri(): Uri? {
+        getCurrentlyPlayingMediaUrl()?.let { mediaPath ->
+            return mediaFileProvider.getMediaFileUri(mediaPath.url)
+        }
+
+        return null
+    }
+
+    fun getCurrentlyPlayingMediaUrl() = repository.routeMediaUrl.value
+
+    companion object {
+        @Volatile
+        private var INSTANCE: Atsc3ReceiverCore? = null
+
+        @JvmStatic
+        fun getInstance(context: Context): Atsc3ReceiverCore {
+            val appContext = context.applicationContext
+
+            val instance = INSTANCE
+            return instance ?: synchronized(this) {
+                val instance2 = INSTANCE
+                instance2 ?: let {
+                    val settings = MiddlewareSettingsImpl.getInstance(appContext)
+                    val repository = RepositoryImpl()
+                    val serviceGuideStore = RoomServiceGuideStore(SGDataBase.getDatabase(appContext))
+                    val atsc3Module = Atsc3Module(appContext)
+                    val analytics = Atsc3Analytics.getInstance(appContext, settings)
+
+                    Atsc3ReceiverCore(appContext, atsc3Module, settings, repository, serviceGuideStore, analytics).also {
+                        INSTANCE = it
+                    }
+                }
+            }
+        }
     }
 }

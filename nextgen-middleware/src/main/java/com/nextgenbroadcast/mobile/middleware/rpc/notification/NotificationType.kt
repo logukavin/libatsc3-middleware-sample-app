@@ -9,7 +9,6 @@ enum class NotificationType(val value: String) {
     LANGUAGE_PREF("languagePref"),
     CCD_DISPLAY_PREF("CCDisplayPref"),
     AUDIO_ACCESS_PREF("audioAccessPref"),
-    MPD_CHANGE("MPDChange"),
     ALERT_CHANGE("alertingChange"),
     CONTENT_CHANGE("contentChange"),
     CONTENT_RECOVERY_STATE_CHANGE("contentRecoveryStateChange"),

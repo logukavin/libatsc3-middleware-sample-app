@@ -24,6 +24,8 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
     private static final int MAX_FIRST_MFU_WAIT_TIME = 1000;
     private static final int MAX_KEY_FRAME_WAIT_TIME = 5000;
 
+    private final Boolean audioOnly;
+
     private final ConcurrentLinkedDeque<Pair<MfuByteBufferFragment, ByteBuffer>> mfuBufferQueue = new ConcurrentLinkedDeque<>();
     private final ByteBuffer sampleHeaderBuffer = ByteBuffer.allocate(MMTConstants.SIZE_SAMPLE_HEADER);
 
@@ -45,7 +47,8 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
     private long mpuWaitingStartTime;
     private long keyFrameWaitingStartTime;
 
-    public MMTFileDescriptor() {
+    public MMTFileDescriptor(boolean audioOnly) {
+        this.audioOnly = audioOnly;
     }
 
     @Override
@@ -64,24 +67,26 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
         try {
             final int bytesRead;
             if (sendFileHeader) {
-                if (!hasMpuMetadata()) {
-                    if (mpuWaitingStartTime == 0) {
-                        mpuWaitingStartTime = System.currentTimeMillis();
+                if (!audioOnly) {
+                    if (!hasMpuMetadata()) {
+                        if (mpuWaitingStartTime == 0) {
+                            mpuWaitingStartTime = System.currentTimeMillis();
+                        }
+
+                        if ((System.currentTimeMillis() - mpuWaitingStartTime) < MAX_FIRST_MFU_WAIT_TIME) {
+                            return 0;
+                        } else {
+                            throw new ErrnoException("onRead", OsConstants.EIO);
+                        }
                     }
 
-                    if ((System.currentTimeMillis() - mpuWaitingStartTime) < MAX_FIRST_MFU_WAIT_TIME) {
+                    if (!skipUntilKeyFrame() && (System.currentTimeMillis() - keyFrameWaitingStartTime) < MAX_KEY_FRAME_WAIT_TIME) {
+                        if (keyFrameWaitingStartTime == 0) {
+                            keyFrameWaitingStartTime = System.currentTimeMillis();
+                        }
+
                         return 0;
-                    } else {
-                        throw new ErrnoException("onRead", OsConstants.EIO);
                     }
-                }
-
-                if (!skipUntilKeyFrame() && (System.currentTimeMillis() - keyFrameWaitingStartTime) < MAX_KEY_FRAME_WAIT_TIME) {
-                    if (keyFrameWaitingStartTime == 0) {
-                        keyFrameWaitingStartTime = System.currentTimeMillis();
-                    }
-
-                    return 0;
                 }
 
                 if (headerBuffer == null) {
@@ -132,7 +137,8 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
 //                    /* jjustman-2020-11-30 - needs special audio codec specific metadata */
 //                }
         int ttmlFormat = getIntegerCodeForString("stpp");
-        fileHeaderBuffer.putInt(videoFormat)
+        fileHeaderBuffer
+                .putInt(audioOnly ? 0 : videoFormat)
                 .putInt(audioFormat)
                 .putInt(ttmlFormat)
                 .putInt(getVideoWidth())
@@ -143,9 +149,11 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
                 .putInt(audioSampleRate)
                 .putLong(MMTContentProvider.PTS_OFFSET_US);
 
-        // write initial MFU Metadata
-        InitMpuMetadata_HEVC_NAL_Payload.rewind();
-        fileHeaderBuffer.put(InitMpuMetadata_HEVC_NAL_Payload);
+        if (!audioOnly) {
+            // write initial MFU Metadata
+            InitMpuMetadata_HEVC_NAL_Payload.rewind();
+            fileHeaderBuffer.put(InitMpuMetadata_HEVC_NAL_Payload);
+        }
 
         fileHeaderBuffer.rewind();
 

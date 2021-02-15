@@ -9,12 +9,10 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
-import android.widget.ListAdapter
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.constraintlayout.widget.ConstraintSet
-import androidx.core.os.bundleOf
 import androidx.databinding.DataBindingUtil
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
@@ -25,12 +23,8 @@ import com.nextgenbroadcast.mobile.core.FileUtils
 import com.nextgenbroadcast.mobile.core.mapWith
 import com.nextgenbroadcast.mobile.core.atsc3.phy.PHYStatistics
 import com.nextgenbroadcast.mobile.core.model.AppData
-import com.nextgenbroadcast.mobile.core.model.PhyFrequency
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.presentation.ApplicationState
-import com.nextgenbroadcast.mobile.core.presentation.IReceiverPresenter
-import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
-import com.nextgenbroadcast.mobile.middleware.sample.MainActivity.Companion.sourceMap
 import com.nextgenbroadcast.mobile.middleware.sample.SettingsDialog.Companion.REQUEST_KEY_FREQUENCY
 import com.nextgenbroadcast.mobile.middleware.sample.core.SwipeGestureDetector
 import com.nextgenbroadcast.mobile.middleware.sample.databinding.FragmentMainBinding
@@ -48,21 +42,15 @@ class MainFragment : Fragment() {
 
     private var rmpViewModel: RMPViewModel? = null
     private var userAgentViewModel: UserAgentViewModel? = null
-    private var selectorViewModel: SelectorViewModel? = null
     private var receiverViewModel: ReceiverViewModel? = null
 
     private val viewViewModel: ViewViewModel by activityViewModels()
 
-    //TODO: remove
-    private var receiverPresenter: IReceiverPresenter? = null
-
     private var servicesList: List<AVService>? = null
     private var currentAppData: AppData? = null
-    private var previewMode = false
-    private var previewName: String? = null
 
     private lateinit var serviceAdapter: ServiceAdapter
-    private lateinit var sourceAdapter: ListAdapter
+    private lateinit var sourceAdapter: ArrayAdapter<String>
     private lateinit var bottomSheetBehavior: BottomSheetBehavior<View>
 
     private var phyLoggingJob: Job? = null
@@ -91,11 +79,6 @@ class MainFragment : Fragment() {
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-        arguments?.let { args ->
-            previewName = args.getString(PARAM_PREVIEW_NAME)
-            previewMode = args.getBoolean(PARAM_PREVIEW_MODE)
-        }
-
         binding = DataBindingUtil.inflate<FragmentMainBinding>(inflater, R.layout.fragment_main, container, false).apply {
             lifecycleOwner = viewLifecycleOwner
             viewModel = viewViewModel
@@ -109,10 +92,7 @@ class MainFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         serviceAdapter = ServiceAdapter(requireContext())
-
-        sourceAdapter = ArrayAdapter<String>(requireContext(), R.layout.service_list_item).apply {
-            addAll(sourceMap.map { (name, _) -> name })
-        }.also { adapter ->
+        sourceAdapter = ArrayAdapter<String>(requireContext(), R.layout.service_list_item).also { adapter ->
             serviceList.adapter = adapter
         }
 
@@ -161,12 +141,12 @@ class MainFragment : Fragment() {
         serviceList.setOnItemClickListener { _, _, position, _ ->
             bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
 
-            servicesList?.getOrNull(position)?.let { item ->
-                selectService(item.bsid, item.id, item.shortName)
+            servicesList?.getOrNull(position)?.let { service ->
+                selectService(service)
             } ?: if (position == 0) {
                 showFileChooser()
             } else {
-                sourceMap.getOrNull(position)?.let { (_, path) ->
+                viewViewModel.sources.value?.getOrNull(position - 1)?.let { (_, path) ->
                     openRoute(requireContext(), path)
                 }
             }
@@ -184,13 +164,11 @@ class MainFragment : Fragment() {
 
         setFragmentResultListener(REQUEST_KEY_FREQUENCY) { _, bundle ->
             val freqKhz = bundle.getInt(SettingsDialog.PARAM_FREQUENCY, 0)
-            receiverPresenter?.tune(PhyFrequency.user(listOf(freqKhz)))
+            receiverViewModel?.tune(freqKhz)
         }
 
         settings_button.setOnClickListener {
-            receiverPresenter?.let {
-                openSettings(it.freqKhz.value)
-            }
+            openSettings(receiverViewModel?.getFrequency())
         }
 
         viewViewModel.showPhyInfo.mapWith(viewViewModel.showDebugInfo) { (showPhy, showInfo) ->
@@ -210,6 +188,35 @@ class MainFragment : Fragment() {
                 phyLoggingJob = null
             }
         }
+
+        viewViewModel.sources.observe(viewLifecycleOwner) { sourceList ->
+            val sources = sourceList.map { (title) -> title }.toMutableList().apply {
+                add(0, "Select pcap file...")
+            }
+            sourceAdapter.clear()
+            sourceAdapter.addAll(sources)
+        }
+
+        viewViewModel.services.observe(viewLifecycleOwner) { services ->
+            updateServices(services)
+        }
+        viewViewModel.currentServiceTitle.observe(viewLifecycleOwner) { currentServiceTitle ->
+            setSelectedService(currentServiceTitle)
+        }
+    }
+
+    private fun updateServices(services: List<AVService>) {
+        servicesList = services
+
+        if (services.isNotEmpty()) {
+            serviceList.adapter = serviceAdapter
+            serviceAdapter.setServices(services)
+
+            //selectService(services.first().globalId) auto-playback starts in service
+        } else {
+            serviceList.adapter = sourceAdapter
+            setSelectedService(null)
+        }
     }
 
     override fun onStart() {
@@ -222,7 +229,7 @@ class MainFragment : Fragment() {
     override fun onStop() {
         super.onStop()
 
-        receiver_player.stopPlayback()
+        receiver_player.stop()
     }
 
     override fun onDestroy() {
@@ -247,22 +254,12 @@ class MainFragment : Fragment() {
         bottom_sheet.visibility = visibility
     }
 
-    fun onBind(binder: IServiceBinder) {
-        val factory = UserAgentViewModelFactory(
-                binder.userAgentPresenter,
-                binder.mediaPlayerPresenter,
-                binder.selectorPresenter
-        )
-
-        val provider = ViewModelProvider(requireActivity(), factory)
-
-        bindViewModels(provider).let { (rmp, userAgent, selector) ->
-            bindSelector(selector)
+    fun onBind(factory: UserAgentViewModelFactory) {
+        val provider = ViewModelProvider(viewModelStore, factory)
+        bindViewModels(provider).let { (rmp, userAgent) ->
             bindUserAgent(userAgent)
             bindMediaPlayer(rmp)
         }
-
-        receiverPresenter = binder.receiverPresenter
     }
 
     fun onUnbind() {
@@ -271,16 +268,17 @@ class MainFragment : Fragment() {
 
         rmpViewModel = null
         userAgentViewModel = null
-        selectorViewModel = null
         receiverViewModel = null
+
+        // Current view-models holds presenters from IBinder of service. Should be released
+        viewModelStore.clear()
     }
 
-    private fun selectService(bsid: Int, serviceId: Int, serviceName: String?) {
-        setSelectedService(serviceName)
-
-        if (selectorViewModel?.selectService(bsid, serviceId) == true) {
-            receiver_player.stopPlayback()
-            setBAAvailability(false)
+    private fun selectService(service: AVService) {
+        requireActivity().mediaController?.transportControls?.let { controls ->
+            controls.playFromMediaId(service.globalId, null)
+            //receiver_player.stopPlayback()
+            //setBAAvailability(false)
         }
     }
 
@@ -293,7 +291,7 @@ class MainFragment : Fragment() {
                 .show(parentFragmentManager, SettingsDialog.TAG)
     }
 
-    private fun bindViewModels(provider: ViewModelProvider): Triple<RMPViewModel, UserAgentViewModel, SelectorViewModel> {
+    private fun bindViewModels(provider: ViewModelProvider): Pair<RMPViewModel, UserAgentViewModel> {
         val rmp = provider.get(RMPViewModel::class.java).also {
             rmpViewModel = it
         }
@@ -302,15 +300,11 @@ class MainFragment : Fragment() {
             userAgentViewModel = it
         }
 
-        val selector = provider.get(SelectorViewModel::class.java).also {
-            selectorViewModel = it
-        }
-
         binding.receiverModel = provider.get(ReceiverViewModel::class.java).also {
             receiverViewModel = it
         }
 
-        return Triple(rmp, userAgent, selector)
+        return Pair(rmp, userAgent)
     }
 
     private fun onBALoadingError() {
@@ -319,34 +313,6 @@ class MainFragment : Fragment() {
         unloadBroadcasterApplication()
 
         Toast.makeText(requireContext(), getText(R.string.ba_loading_problem), Toast.LENGTH_SHORT).show()
-    }
-
-    private fun bindSelector(selectorViewModel: SelectorViewModel) {
-        selectorViewModel.services.observe(this, { services ->
-            servicesList = services
-
-            if (services.isNotEmpty()) {
-                serviceList.adapter = serviceAdapter
-                serviceAdapter.setServices(services)
-
-                val selectedServiceId = selectorViewModel.getSelectedServiceId()
-                val service = services.firstOrNull { it.id == selectedServiceId }
-                        ?: services.first()
-                selectService(service.bsid, service.id, service.shortName)
-            } else {
-                if (previewMode) {
-                    serviceList.adapter = null
-                    selectService(-1, -1, getString(R.string.source_loading, previewName?.toUpperCase(Locale.US)))
-                } else {
-                    serviceList.adapter = sourceAdapter
-                    selectService(-1, -1, null)
-                }
-            }
-        })
-
-        selectorViewModel.selectedService.observe(this, { service ->
-            setSelectedService(service?.shortName)
-        })
     }
 
     private fun bindUserAgent(userAgentViewModel: UserAgentViewModel) {
@@ -366,12 +332,14 @@ class MainFragment : Fragment() {
                 )
             })
             mediaUri.observe(this@MainFragment, { mediaUri ->
-                mediaUri?.let {
-                    receiver_player.startPlayback(mediaUri)
-                } ?: receiver_player.stopPlayback()
+                if (mediaUri != null) {
+                    receiver_player.play(mediaUri)
+                } else {
+                    receiver_player.stop()
+                }
             })
             playWhenReady.observe(this@MainFragment, { playWhenReady ->
-                receiver_player.setPlayWhenReady(playWhenReady)
+                receiver_player.playWhenReady = playWhenReady
             })
         }
 
@@ -424,13 +392,9 @@ class MainFragment : Fragment() {
 
     companion object {
         val TAG: String = MainFragment::class.java.simpleName
-        const val PARAM_PREVIEW_NAME = "PREVIEW_NAME"
-        const val PARAM_PREVIEW_MODE = "PREVIEW_MODE"
 
-        fun newInstance(previewName: String?, previewMode: Boolean): MainFragment {
-            return MainFragment().apply {
-                arguments = bundleOf(PARAM_PREVIEW_NAME to previewName, PARAM_PREVIEW_MODE to previewMode)
-            }
+        fun newInstance(): MainFragment {
+            return MainFragment()
         }
     }
 }

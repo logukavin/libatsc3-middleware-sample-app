@@ -1,6 +1,7 @@
 package com.nextgenbroadcast.mobile.middleware.repository
 
 import androidx.lifecycle.LiveData
+import com.nextgenbroadcast.mobile.core.atsc3.MediaUrl
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPackage
@@ -13,7 +14,7 @@ internal interface IRepository {
     val serviceGuideUrls: LiveData<List<SGUrl>?>
 
     // Media Player
-    val routeMediaUrl: LiveData<String?>
+    val routeMediaUrl: LiveData<MediaUrl?>
 
     // User Agent
     val applications: LiveData<List<Atsc3Application>?>
@@ -25,10 +26,11 @@ internal interface IRepository {
 
     fun setServices(services: List<AVService>)
     fun setSelectedService(service: AVService?)
-    fun findServiceById(globalServiceId: String): AVService?
+    fun findServiceBy(globalServiceId: String): AVService?
+    fun findServiceBy(bsid: Int, serviceId: Int): AVService?
 
     fun setHeldPackage(data: Atsc3HeldPackage?)
-    fun setMediaUrl(mediaUrl: String?)
+    fun setMediaUrl(mediaUrl: MediaUrl?)
 
     fun reset()
 }

@@ -3,7 +3,8 @@ package com.nextgenbroadcast.mobile.core.atsc3.mmt;
 import java.nio.charset.StandardCharsets;
 
 public final class MMTConstants {
-    public static final String MIME_MMT = "video/mmt";
+    public static final String MIME_MMT_VIDEO = "video/mmt";
+    public static final String MIME_MMT_AUDIO = "audio/mmt";
 
     public static final int SIZE_SAMPLE_HEADER =
             Byte.BYTES          /* sample type */

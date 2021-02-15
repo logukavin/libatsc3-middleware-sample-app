@@ -6,34 +6,43 @@ import android.os.Handler
 import android.os.Looper
 import android.util.AttributeSet
 import android.util.Log
-import android.view.LayoutInflater
-import android.view.View
-import android.widget.FrameLayout
+import com.google.android.exoplayer2.Player
+import com.google.android.exoplayer2.ui.PlayerView
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
-import com.nextgenbroadcast.mobile.middleware.sample.R
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.RMPViewModel
-import com.nextgenbroadcast.mobile.view.ReceiverMediaPlayer
-import kotlinx.android.synthetic.main.receiver_player_layout.view.progress_bar
-import kotlinx.android.synthetic.main.receiver_player_layout.view.receiver_media_player
+import com.nextgenbroadcast.mobile.player.Atsc3MediaPlayer
 
-class ReceiverPlayerView : FrameLayout {
+class ReceiverPlayerView @JvmOverloads constructor(
+        context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
+) : PlayerView(context, attrs, defStyleAttr) {
+    private val atsc3Player = Atsc3MediaPlayer(context)
     private val updateMediaTimeHandler = Handler(Looper.getMainLooper())
 
     private var rmpViewModel: RMPViewModel? = null
 
-    constructor(context: Context) : this(context, null)
-    constructor(context: Context, attrs: AttributeSet?) : this(context, attrs, 0)
-    constructor(context: Context, attrs: AttributeSet?, defStyleAttr: Int) : this(context, attrs, defStyleAttr, 0)
-    constructor(context: Context, attrs: AttributeSet?, defStyleAttr: Int, defStyleRes: Int) : super(context, attrs, defStyleAttr, defStyleRes) {
-        LayoutInflater.from(context).inflate(R.layout.receiver_player_layout, this)
-    }
+    private var buffering = false
+
+    val playbackPosition
+        get() = player?.currentPosition ?: 0
+
+    val playbackState: PlaybackState
+        get() = atsc3Player.playbackState
+
+    val playbackSpeed: Float
+        get() = player?.playbackParameters?.speed ?: 0f
+
+    var playWhenReady
+        get() = player?.playWhenReady ?: false
+        set(value) {
+            player?.playWhenReady = value
+        }
 
     override fun onFinishInflate() {
         super.onFinishInflate()
 
         if (isInEditMode) return
 
-        receiver_media_player.setListener(object : ReceiverMediaPlayer.EventListener {
+        atsc3Player.setListener(object : Atsc3MediaPlayer.EventListener {
             override fun onPlayerStateChanged(state: PlaybackState) {
                 rmpViewModel?.setCurrentPlayerState(state)
 
@@ -61,37 +70,56 @@ class ReceiverPlayerView : FrameLayout {
     fun bind(viewModel: RMPViewModel) {
         rmpViewModel = viewModel
 
-        with (receiver_media_player) {
-            viewModel.setCurrentPlayerState(playbackState)
-            viewModel.setCurrentPlaybackRate(playbackSpeed)
-        }
+        viewModel.setCurrentPlayerState(playbackState)
+        viewModel.setCurrentPlaybackRate(playbackSpeed)
     }
 
     fun unbind() {
         rmpViewModel = null
     }
 
-    open fun isPlaying(): Boolean {
-        return receiver_media_player.isPlaying
+    fun play(mediaUri: Uri) {
+        atsc3Player.play(mediaUri)
+        player = atsc3Player.player?.also {
+            it.addListener(object : Player.EventListener {
+                override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
+                    updateBufferingState(playbackState == Player.STATE_BUFFERING)
+                }
+            })
+        }
     }
 
-    fun setPlayWhenReady(playWhenReady: Boolean) {
-        receiver_media_player?.playWhenReady = playWhenReady
+    fun stop() {
+        atsc3Player.reset()
+        player = null
     }
 
-    fun startPlayback(mpdUri: Uri) {
-        receiver_media_player.play(mpdUri)
-        progress_bar.visibility = View.GONE
+    private fun updateBufferingState(isBuffering: Boolean) {
+        if (isBuffering) {
+            if (!buffering) {
+                buffering = true
+                postDelayed(enableBufferingProgress, 500)
+            }
+        } else {
+            buffering = false
+            removeCallbacks(enableBufferingProgress)
+            setShowBuffering(SHOW_BUFFERING_NEVER)
+        }
     }
 
-    open fun stopPlayback() {
-        receiver_media_player.stop()
-        progress_bar.visibility = View.VISIBLE
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+
+        removeCallbacks(enableBufferingProgress)
+    }
+
+    private val enableBufferingProgress = Runnable {
+        setShowBuffering(SHOW_BUFFERING_ALWAYS)
     }
 
     private val updateMediaTimeRunnable = object : Runnable {
         override fun run() {
-            rmpViewModel?.setCurrentMediaTime(receiver_media_player.playbackPosition)
+            rmpViewModel?.setCurrentMediaTime(playbackPosition)
 
             updateMediaTimeHandler.postDelayed(this, MEDIA_TIME_UPDATE_DELAY)
         }
