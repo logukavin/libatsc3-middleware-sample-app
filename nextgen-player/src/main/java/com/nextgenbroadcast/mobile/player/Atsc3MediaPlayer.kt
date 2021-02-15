@@ -1,6 +1,9 @@
 package com.nextgenbroadcast.mobile.player
 
 import android.content.Context
+import android.media.AudioAttributes
+import android.media.AudioFocusRequest
+import android.media.AudioManager
 import android.net.Uri
 import android.util.Log
 import com.google.android.exoplayer2.*
@@ -18,27 +21,36 @@ import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.player.exoplayer.Atsc3ContentDataSource
 import com.nextgenbroadcast.mobile.player.exoplayer.Atsc3MMTExtractor
 import com.nextgenbroadcast.mobile.player.exoplayer.RouteDASHLoadControl
+import kotlinx.coroutines.*
 import java.io.IOException
+import java.util.concurrent.TimeUnit
 
 class Atsc3MediaPlayer(
         private val context: Context
-) {
+): AudioManager.OnAudioFocusChangeListener {
     interface EventListener {
         fun onPlayerStateChanged(state: PlaybackState) {}
         fun onPlayerError(error: Exception) {}
         fun onPlaybackSpeedChanged(speed: Float) {}
     }
 
-    private var listener: EventListener? = null
+    private val audioManager: AudioManager by lazy {
+        context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+    }
 
+    private var audioFocusRequest: AudioFocusRequest? = null
+    private var listener: EventListener? = null
     private var _player: SimpleExoPlayer? = null
+    private var lastMediaUri: Uri? = null
     private var isMMTPlayback = false
     private var rmpState: PlaybackState? = null
+    private var resetPlayerJob: Job? = null
 
     val player: Player?
         get() = _player
+    var resetWhenLostAudioFocus: Boolean = true
 
-    var playWhenReady: Boolean = true
+    private var playWhenReady: Boolean = true
         set(value) {
             _player?.playWhenReady = value
             field = value
@@ -56,11 +68,13 @@ class Atsc3MediaPlayer(
         this.listener = listener
     }
 
-    fun play(mediaUri: Uri) {
+    fun play(mediaUri: Uri, requestAudioFocus: Boolean = true) {
         reset()
 
+        lastMediaUri = mediaUri
+
         val mimeType = context.contentResolver.getType(mediaUri)
-        if (mimeType == MMTConstants.MIME_MMT_VIDEO || mimeType == MMTConstants.MIME_MMT_AUDIO) {
+        _player = (if (mimeType == MMTConstants.MIME_MMT_VIDEO || mimeType == MMTConstants.MIME_MMT_AUDIO) {
             isMMTPlayback = true
 
             val mediaSource = MMTMediaSource.Factory({
@@ -71,26 +85,57 @@ class Atsc3MediaPlayer(
                 setLoadErrorHandlingPolicy(createDefaultLoadErrorHandlingPolicy())
             }.createMediaSource(mediaUri)
 
-            _player = createMMTExoPlayer().apply {
+            createMMTExoPlayer().apply {
                 prepare(mediaSource)
-                playWhenReady = this@Atsc3MediaPlayer.playWhenReady
             }
         } else {
             val dashMediaSource = createMediaSourceFactory().createMediaSource(mediaUri)
-            _player = createDefaultExoPlayer().apply {
+            createDefaultExoPlayer().apply {
                 prepare(dashMediaSource)
-                playWhenReady = true
+            }
+        }).apply {
+            if (!requestAudioFocus || tryRetrievedAudioFocus()) {
+                playWhenReady = this@Atsc3MediaPlayer.playWhenReady
             }
         }
     }
 
+    fun replay(requestAudioFocus: Boolean = true) {
+        if (_player == null && lastMediaUri == null) return
+
+        if (requestAudioFocus && !tryRetrievedAudioFocus()) {
+            return
+        }
+
+        cancelDelayedPlayerReset()
+
+        playWhenReady = true
+
+        if (playbackState == PlaybackState.IDLE) {
+            lastMediaUri?.let { uri ->
+                play(uri, false)
+            }
+        }
+    }
+
+    fun pause() {
+        playWhenReady = false
+    }
+
     fun reset() {
+        cancelDelayedPlayerReset()
+
         _player?.let {
             it.stop()
             it.release()
             _player = null
         }
         isMMTPlayback = false
+
+        audioFocusRequest?.let {
+            audioManager.abandonAudioFocusRequest(it)
+        }
+        audioFocusRequest = null
     }
 
     private fun createMediaSourceFactory(): DashMediaSource.Factory {
@@ -118,8 +163,6 @@ class Atsc3MediaPlayer(
         return ExoPlayerFactory.newSimpleInstance(context, renderersFactory, DefaultTrackSelector(), loadControl).apply {
             addListener(object : Player.EventListener {
                 override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
-//                    updateBufferingState(playbackState == Player.STATE_BUFFERING)
-
                     val state = playbackState(playbackState, playWhenReady) ?: return
                     if (rmpState != state) {
                         rmpState = state
@@ -169,5 +212,60 @@ class Atsc3MediaPlayer(
             }
             else -> null
         }
+    }
+
+    private fun tryRetrievedAudioFocus(): Boolean {
+        val request = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
+                .setAudioAttributes(AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_MEDIA)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                        .build())
+                .setOnAudioFocusChangeListener(this)
+                .build().also {
+                    audioFocusRequest = it
+                }
+
+        val result = audioManager.requestAudioFocus(request)
+        return result == AudioManager.AUDIOFOCUS_GAIN
+    }
+
+    override fun onAudioFocusChange(focusChange: Int) {
+        when (focusChange) {
+            AudioManager.AUDIOFOCUS_LOSS -> {
+                playWhenReady = false
+                if (resetWhenLostAudioFocus) {
+                    startDelayedPlayerReset()
+                }
+            }
+
+            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
+                playWhenReady = false
+            }
+
+            AudioManager.AUDIOFOCUS_GAIN -> {
+                playWhenReady = true
+            }
+        }
+    }
+
+    private fun startDelayedPlayerReset() {
+        resetPlayerJob = CoroutineScope(Dispatchers.IO).launch {
+            delay(PLAYER_RESET_DELAY)
+            withContext(Dispatchers.Main) {
+                reset()
+                resetPlayerJob = null
+            }
+        }
+    }
+
+    private fun cancelDelayedPlayerReset() {
+        resetPlayerJob?.let {
+            it.cancel()
+            resetPlayerJob = null
+        }
+    }
+
+    companion object {
+        private val PLAYER_RESET_DELAY = TimeUnit.SECONDS.toMillis(30)
     }
 }

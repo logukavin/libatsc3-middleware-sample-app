@@ -339,7 +339,11 @@ class MainFragment : Fragment() {
                 }
             })
             playWhenReady.observe(this@MainFragment, { playWhenReady ->
-                receiver_player.playWhenReady = playWhenReady
+                if (playWhenReady) {
+                    receiver_player.replay()
+                } else {
+                    receiver_player.pause()
+                }
             })
         }
 
