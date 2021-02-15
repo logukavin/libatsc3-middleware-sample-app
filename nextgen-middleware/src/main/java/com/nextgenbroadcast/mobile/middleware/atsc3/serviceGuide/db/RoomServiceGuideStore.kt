@@ -27,6 +27,8 @@ internal class RoomServiceGuideStore(
         db.contentNameDAO().deleteAll()
         db.contentDescriptionDAO().deleteAll()
         db.contentServiceIdDAO().deleteAll()
+
+        notifyUpdated?.invoke()
     }
 
     override fun storeService(serviceMap: Map<Int, SGService>) {

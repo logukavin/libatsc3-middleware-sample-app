@@ -75,24 +75,7 @@ class MainActivity : BaseActivity() {
         viewViewModel.currentServiceTitle.value = mediaController.queueTitle?.toString()
         viewViewModel.isPlaying.value = mediaController.playbackState?.state == PlaybackState.STATE_PLAYING
 
-        mediaController.registerCallback(object : MediaController.Callback() {
-            override fun onQueueChanged(queue: MutableList<MediaSession.QueueItem>?) {
-                viewViewModel.services.value = queue?.mapNotNull { it.toService() } ?: emptyList()
-            }
-
-            override fun onQueueTitleChanged(title: CharSequence?) {
-                viewViewModel.currentServiceTitle.value = title?.toString()
-            }
-
-            override fun onPlaybackStateChanged(state: PlaybackState?) {
-                viewViewModel.isPlaying.value = state?.state == PlaybackState.STATE_PLAYING
-            }
-
-            override fun onSessionDestroyed() {
-                mediaController?.unregisterCallback(this)
-            }
-        })
-
+        mediaController.registerCallback(mediaControllerCallback)
     }
 
     private fun MediaSession.QueueItem.toService(): AVService? {
@@ -126,6 +109,8 @@ class MainActivity : BaseActivity() {
 
     override fun onStop() {
         super.onStop()
+
+        mediaController?.unregisterCallback(mediaControllerCallback)
 
         unbindService()
     }
@@ -212,6 +197,24 @@ class MainActivity : BaseActivity() {
     }
 
     private fun getMainFragment() = supportFragmentManager.findFragmentByTag(MainFragment.TAG) as MainFragment
+
+    private val mediaControllerCallback = object : MediaController.Callback() {
+        override fun onQueueChanged(queue: MutableList<MediaSession.QueueItem>?) {
+            viewViewModel.services.value = queue?.mapNotNull { it.toService() } ?: emptyList()
+        }
+
+        override fun onQueueTitleChanged(title: CharSequence?) {
+            viewViewModel.currentServiceTitle.value = title?.toString()
+        }
+
+        override fun onPlaybackStateChanged(state: PlaybackState?) {
+            viewViewModel.isPlaying.value = state?.state == PlaybackState.STATE_PLAYING
+        }
+
+        override fun onSessionDestroyed() {
+            mediaController?.unregisterCallback(this)
+        }
+    }
 
     companion object {
         private const val PERMISSION_REQUEST = 1000
