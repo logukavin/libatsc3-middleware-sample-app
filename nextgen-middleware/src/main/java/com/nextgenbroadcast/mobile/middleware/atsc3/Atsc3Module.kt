@@ -327,11 +327,13 @@ internal class Atsc3Module(
         selectedServicePackage = null
         selectedServiceHeldXml = null
 
+        /* it reconnects additional service on service selection that leads to ESG reloading - that's bad.
+        But probably we need it when switching between services with different BSID. Lat's stose BSID in ESG data instead
         //TODO: temporary test solution
         if (tmpAdditionalServiceOpened) {
             atsc3NdkApplicationBridge.atsc3_slt_alc_clear_additional_service_selections()
             tmpAdditionalServiceOpened = false
-        }
+        }*/
     }
 
     //////////////////////////////////////////////////////////////
