@@ -2,6 +2,7 @@ package com.nextgenbroadcast.mobile.middleware.controller.service
 
 import android.util.Log
 import androidx.lifecycle.MutableLiveData
+import com.nextgenbroadcast.mobile.core.atsc3.MediaUrl
 import com.nextgenbroadcast.mobile.core.model.PhyFrequency
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.model.AVService
@@ -39,6 +40,7 @@ internal open class ServiceControllerImpl (
     override val selectedService = repository.selectedService
     override val serviceGuideUrls = repository.serviceGuideUrls
     override val applications = repository.applications
+    override val routeMediaUrl = repository.routeMediaUrl
 
     override val sltServices = repository.services
 
@@ -99,11 +101,11 @@ internal open class ServiceControllerImpl (
         repository.setHeldPackage(pkg)
     }
 
-    override fun onServiceMediaReady(path: String, delayBeforePlayMs: Long) {
+    override fun onServiceMediaReady(mediaUrl: MediaUrl, delayBeforePlayMs: Long) {
         if (delayBeforePlayMs > 0) {
-            setMediaUrlWithDelay(path, delayBeforePlayMs)
+            setMediaUrlWithDelay(mediaUrl, delayBeforePlayMs)
         } else {
-            repository.setMediaUrl(path)
+            repository.setMediaUrl(mediaUrl)
         }
     }
 
@@ -218,7 +220,7 @@ internal open class ServiceControllerImpl (
     }
 
     override fun findServiceById(globalServiceId: String): AVService? {
-        return repository.findServiceById(globalServiceId)
+        return repository.findServiceBy(globalServiceId)
     }
 
     private fun resetHeldWithDelay() {
@@ -239,12 +241,12 @@ internal open class ServiceControllerImpl (
         }
     }
 
-    private fun setMediaUrlWithDelay(path: String, delayMs: Long) {
+    private fun setMediaUrlWithDelay(mediaUrl: MediaUrl, delayMs: Long) {
         cancelMediaUrlAssignment()
         mediaUrlAssignmentJob = ioScope.launch {
             delay(delayMs)
             withContext(Dispatchers.Main) {
-                repository.setMediaUrl(path)
+                repository.setMediaUrl(mediaUrl)
                 mediaUrlAssignmentJob = null
             }
         }

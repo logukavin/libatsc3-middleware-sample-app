@@ -149,12 +149,8 @@ dependencies {
         compileOnly "com.google.android.exoplayer:exoplayer-mmt:$exoplayerVersion"
     }
 
-    implementation "androidx.room:room-runtime:2.2.6"
-    implementation "androidx.work:work-runtime:2.4.0"
-    implementation "androidx.room:room-ktx:2.2.6"
-    kapt "androidx.room:room-compiler:2.2.6"
-
     implementation project(":nextgen-core")
+    implementation project(":nextgen-player")
 
     implementation 'com.github.nmuzhichin:jsonrpc-core:1.0.4.3'
     implementation 'com.github.nmuzhichin:jsonrpc-jackson-extension:1.0.4.3'
@@ -187,6 +183,13 @@ dependencies {
     implementation "com.squareup.tape2:tape:2.0.0-beta1"
 
     implementation "androidx.work:work-runtime-ktx:2.4.0"
+
+    implementation "androidx.room:room-runtime:2.2.6"
+    implementation "androidx.work:work-runtime:2.4.0"
+    implementation "androidx.room:room-ktx:2.2.6"
+    kapt "androidx.room:room-compiler:2.2.6"
+
+    implementation "androidx.media:media:1.2.1"
 
     //testImplementation project(":nextgen-mmt")
     testImplementation 'junit:junit:4.13.1'

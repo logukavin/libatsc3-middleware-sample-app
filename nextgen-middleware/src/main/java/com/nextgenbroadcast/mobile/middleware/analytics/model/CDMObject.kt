@@ -1,6 +1,6 @@
 package com.nextgenbroadcast.mobile.middleware.analytics.model
 
-class CDMObject(
+internal class CDMObject(
         val deviceInfo: DeviceInfo,
         val avService: List<AVService>
 ) {

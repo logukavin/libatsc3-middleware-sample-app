@@ -2,7 +2,7 @@ package com.nextgenbroadcast.mobile.middleware.analytics.model
 
 import com.google.gson.annotations.SerializedName
 
-class AVService(
+internal class AVService(
         val country: String,
         val bsid: Int,
         val serviceID: Int,

@@ -3,15 +3,15 @@ package com.nextgenbroadcast.mobile.middleware.service
 import android.app.Notification
 import android.content.Intent
 import android.os.IBinder
-import androidx.lifecycle.LifecycleService
+import android.support.v4.media.session.MediaSessionCompat
+import androidx.core.app.NotificationCompat
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.middleware.R
 import com.nextgenbroadcast.mobile.middleware.notification.NotificationHelper
-import kotlinx.coroutines.*
 
-abstract class BindableForegroundService : LifecycleService() {
+abstract class BindableForegroundService : LifecycleMediaBrowserService() {
     private lateinit var notificationHelper: NotificationHelper
 
     protected var isForeground = false
@@ -29,6 +29,12 @@ abstract class BindableForegroundService : LifecycleService() {
         }
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+
+        notificationHelper.cancel(NOTIFICATION_ID)
+    }
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         isStartedAsForeground = isStartedAsForeground or (intent?.getBooleanExtra(EXTRA_FOREGROUND, false)
                 ?: false)
@@ -37,15 +43,15 @@ abstract class BindableForegroundService : LifecycleService() {
     }
 
     override fun onBind(intent: Intent): IBinder? {
-        super.onBind(intent)
+        val binder = super.onBind(intent)
 
         startForeground()
         isBinded = true
 
-        return null
+        return binder
     }
 
-    override fun onRebind(intent: Intent?) {
+    override fun onRebind(intent: Intent) {
         super.onRebind(intent)
         isBinded = true
     }
@@ -60,7 +66,7 @@ abstract class BindableForegroundService : LifecycleService() {
         if (isForeground) return
         isForeground = true
 
-        startForeground(NOTIFICATION_ID, createNotification(getReceiverState()))
+        startForeground(NOTIFICATION_ID, createNotificationBuilder(getReceiverState()).build())
     }
 
     protected fun stopForeground() {
@@ -69,15 +75,40 @@ abstract class BindableForegroundService : LifecycleService() {
         isForeground = false
     }
 
-    protected fun createNotification(state: ReceiverState? = null, service: AVService? = null, playbackState: PlaybackState? = null): Notification {
+    protected fun createNotificationBuilder(state: ReceiverState? = null, service: AVService? = null, playbackState: PlaybackState? = null, mediaSession: MediaSessionCompat? = null): NotificationCompat.Builder {
         val title = if (state == null || state == ReceiverState.IDLE) {
             getString(R.string.atsc3_source_is_not_initialized)
         } else {
             service?.shortName ?: getString(R.string.atsc3_no_service_available)
         }
 
-        return notificationHelper.createMediaNotification(title, "", playbackState
-                ?: PlaybackState.IDLE)
+        val text = if (state == null || state == ReceiverState.IDLE) {
+            getString(R.string.atsc3_receiver_state_idle)
+        } else if (playbackState != PlaybackState.IDLE) {
+            if (playbackState == PlaybackState.PLAYING) {
+                getString(R.string.atsc3_receiver_state_playing)
+            } else {
+                getString(R.string.atsc3_receiver_state_paused)
+            }
+        } else if (service != null) {
+            getString(R.string.atsc3_receiver_state_buffering)
+        } else {
+            getString(R.string.atsc3_receiver_state_connecting)
+        }
+
+        val fixedPlaybackState = if (service == null || playbackState == null) {
+            PlaybackState.IDLE
+        } else if (playbackState == PlaybackState.IDLE) {
+            PlaybackState.PAUSED
+        } else {
+            playbackState
+        }
+
+        return notificationHelper.createMediaNotificationBuilder(title, text, fixedPlaybackState, mediaSession)
+    }
+
+    protected fun pushNotification(notification: NotificationCompat.Builder) {
+        pushNotification(notification.build())
     }
 
     protected fun pushNotification(notification: Notification) {
