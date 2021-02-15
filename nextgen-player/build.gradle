@@ -36,6 +36,7 @@ android {
 
 def coreKtxVersion = rootProject.ext.coreKtxVersion
 def exoplayerVersion = rootProject.ext.exoplayerVersion
+def coroutinesVersion = rootProject.ext.coroutinesVersion
 
 dependencies {
     if (project.hasProperty('org.gradle.project.use_local_src_libatsc3_folder') && project.property('org.gradle.project.use_local_src_libatsc3_folder').toString().toBoolean()) {
@@ -72,6 +73,8 @@ dependencies {
         implementation "com.google.android.exoplayer:exoplayer-daa:$exoplayerVersion"
         implementation "com.google.android.exoplayer:exoplayer-mmt:$exoplayerVersion"
     }
+
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:$coroutinesVersion"
 }
 
 apply from: '../publish.gradle'
