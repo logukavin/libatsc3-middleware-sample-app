@@ -512,6 +512,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
             player.reset()
 
             mediaSession.setMetadata(MediaMetadataCompat.Builder()
+                    .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, service.globalId)
                     .putString(MediaMetadataCompat.METADATA_KEY_TITLE, service.shortName)
                     .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, "${service.majorChannelNo}-${service.minorChannelNo}")
                     .build())
