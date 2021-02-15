@@ -15,7 +15,9 @@ import com.nextgenbroadcast.mobile.player.Atsc3MediaPlayer
 class ReceiverPlayerView @JvmOverloads constructor(
         context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
 ) : PlayerView(context, attrs, defStyleAttr) {
-    private val atsc3Player = Atsc3MediaPlayer(context)
+    private val atsc3Player = Atsc3MediaPlayer(context).apply {
+        resetWhenLostAudioFocus = false
+    }
     private val updateMediaTimeHandler = Handler(Looper.getMainLooper())
 
     private var rmpViewModel: RMPViewModel? = null
@@ -25,17 +27,8 @@ class ReceiverPlayerView @JvmOverloads constructor(
     val playbackPosition
         get() = player?.currentPosition ?: 0
 
-    val playbackState: PlaybackState
-        get() = atsc3Player.playbackState
-
     val playbackSpeed: Float
         get() = player?.playbackParameters?.speed ?: 0f
-
-    var playWhenReady
-        get() = player?.playWhenReady ?: false
-        set(value) {
-            player?.playWhenReady = value
-        }
 
     override fun onFinishInflate() {
         super.onFinishInflate()
@@ -70,7 +63,7 @@ class ReceiverPlayerView @JvmOverloads constructor(
     fun bind(viewModel: RMPViewModel) {
         rmpViewModel = viewModel
 
-        viewModel.setCurrentPlayerState(playbackState)
+        viewModel.setCurrentPlayerState(atsc3Player.playbackState)
         viewModel.setCurrentPlaybackRate(playbackSpeed)
     }
 
@@ -87,6 +80,14 @@ class ReceiverPlayerView @JvmOverloads constructor(
                 }
             })
         }
+    }
+
+    fun replay() {
+        atsc3Player.replay()
+    }
+
+    fun pause() {
+        atsc3Player.pause()
     }
 
     fun stop() {
