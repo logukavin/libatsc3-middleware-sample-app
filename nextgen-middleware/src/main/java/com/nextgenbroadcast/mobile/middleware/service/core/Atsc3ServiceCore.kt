@@ -10,6 +10,7 @@ import com.nextgenbroadcast.mobile.core.presentation.*
 import com.nextgenbroadcast.mobile.middleware.analytics.Atsc3Analytics
 import com.nextgenbroadcast.mobile.middleware.analytics.IAtsc3Analytics
 import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3Module
+import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.ServiceGuideDeliveryUnitReader
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.db.RoomServiceGuideStore
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.db.SGDataBase
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.IAtsc3Source
@@ -77,8 +78,10 @@ internal class Atsc3ServiceCore(
             }
         }
 
+        val serviceGuideReader = ServiceGuideDeliveryUnitReader(serviceGuideStore)
+
         analytics = Atsc3Analytics.getInstance(context, settings)
-        serviceController = ServiceControllerImpl(repo, serviceGuideStore, settings, atsc3, analytics)
+        serviceController = ServiceControllerImpl(repo, settings, atsc3, analytics, serviceGuideReader)
 
         appCache = ApplicationCache(atsc3.jni_getCacheDir(), DownloadManager())
     }
