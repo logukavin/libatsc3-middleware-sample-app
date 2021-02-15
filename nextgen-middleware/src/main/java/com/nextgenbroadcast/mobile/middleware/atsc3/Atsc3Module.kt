@@ -23,8 +23,6 @@ import kotlinx.coroutines.*
 import org.ngbp.libatsc3.middleware.Atsc3NdkApplicationBridge
 import org.ngbp.libatsc3.middleware.Atsc3NdkPHYBridge
 import org.ngbp.libatsc3.middleware.android.a331.PackageExtractEnvelopeMetadataAndPayload
-import org.ngbp.libatsc3.middleware.android.application.interfaces.IAtsc3NdkApplicationBridgeCallbacks
-import org.ngbp.libatsc3.middleware.android.phy.interfaces.IAtsc3NdkPHYBridgeCallbacks
 import org.ngbp.libatsc3.middleware.android.phy.models.BwPhyStatistics
 import org.ngbp.libatsc3.middleware.android.phy.models.RfPhyStatistics
 import java.io.File
@@ -32,9 +30,9 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.locks.ReentrantLock
 
-internal class Atsc3Module(
+class Atsc3Module(
         private val context: Context
-): IAtsc3NdkApplicationBridgeCallbacks, IAtsc3NdkPHYBridgeCallbacks {
+): IAtsc3Module {
 
     enum class State {
         SCANNING, OPENED, PAUSED, IDLE
@@ -79,7 +77,7 @@ internal class Atsc3Module(
 
     private var nextSourceJob: Job? = null
 
-    fun setListener(listener: Listener?) {
+    override fun setListener(listener: Listener?) {
         if (this.listener != null) throw IllegalStateException("Atsc3Module listener already initialized")
         this.listener = listener
     }
@@ -87,7 +85,7 @@ internal class Atsc3Module(
     /**
      * Tune to [freqKhz] is it's greater thar zero. The [frequencies] allows to scan and collect data from all of them.
      */
-    fun tune(freqKhz: Int, frequencies: List<Int>, retuneOnDemod: Boolean) {
+    override fun tune(freqKhz: Int, frequencies: List<Int>, retuneOnDemod: Boolean) {
         // make target frequency first
         val frequencyList = frequencies.toMutableList().apply {
             remove(freqKhz)
@@ -115,7 +113,7 @@ internal class Atsc3Module(
         }
     }
 
-    fun connect(source: IAtsc3Source): Boolean {
+    override fun connect(source: IAtsc3Source): Boolean {
         log("Connecting to: $source")
 
         close()
@@ -208,7 +206,7 @@ internal class Atsc3Module(
 
     private var tmpAdditionalServiceOpened = false
 
-    fun selectService(bsid: Int, serviceId: Int): Boolean {
+    override fun selectService(bsid: Int, serviceId: Int): Boolean {
         if (selectedServiceBsid == bsid && selectedServiceId == serviceId) return false
 
         clearHeld()
@@ -254,20 +252,20 @@ internal class Atsc3Module(
     }
 
     @Deprecated("Do not work because additional service persistence not implemented in libatsc3")
-    fun selectAdditionalService(serviceId: Int): Boolean {
+    override fun selectAdditionalService(serviceId: Int): Boolean {
 //        //atsc3NdkApplicationBridge.atsc3_slt_alc_clear_additional_service_selections()
 //        val protocol = atsc3NdkApplicationBridge.atsc3_slt_alc_select_additional_service(serviceId)
 //        return protocol > 0
         return false
     }
 
-    fun stop() {
+    override fun stop() {
         source?.stop()
 
         setState(State.PAUSED)
     }
 
-    fun close() {
+    override fun close() {
         source?.close()
 
         lastTunedFreqList = emptyList()

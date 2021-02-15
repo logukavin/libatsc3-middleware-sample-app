@@ -7,10 +7,12 @@ import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.middleware.analytics.IAtsc3Analytics
 import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3Module
+import com.nextgenbroadcast.mobile.middleware.atsc3.IAtsc3Module
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.SLTConstants
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPackage
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.service.Atsc3Service
+import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.IServiceGuideDeliveryUnitReader
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.ServiceGuideDeliveryUnitReader
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.IServiceGuideStore
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.*
@@ -19,16 +21,15 @@ import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
 import kotlinx.coroutines.*
 
 
-internal class ServiceControllerImpl (
+internal open class ServiceControllerImpl (
         private val repository: IRepository,
-        private val serviceGuideStore: IServiceGuideStore,
         private val settings: IMiddlewareSettings,
-        private val atsc3Module: Atsc3Module,
+        private val atsc3Module: IAtsc3Module,
         private val atsc3Analytics: IAtsc3Analytics,
+        private val serviceGuideReader: IServiceGuideDeliveryUnitReader
 ) : IServiceController, Atsc3Module.Listener {
 
     private val ioScope = CoroutineScope(Dispatchers.IO)
-    private val serviceGuideReader = ServiceGuideDeliveryUnitReader(serviceGuideStore)
 
     private var heldResetJob: Job? = null
     private var mediaUrlAssignmentJob: Job? = null
