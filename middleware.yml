@@ -39,15 +39,15 @@ steps:
       tasks: 'clean :nextgen-core:assembleRelease :nextgen-middleware:assembleRelease :nextgen-player:assembleRelease :nextgen-view:assembleRelease'
     displayName: gradlew clean and build
 
-  - task: Gradle@2
-    inputs:
-      workingDirectory: ''
-      gradleWrapperFile: 'gradlew'
-      javaHomeOption: 'JDKVersion'
-      publishJUnitResults: true
-      testResultsFiles: '**/TEST-*.xml'
-      tasks: ':nextgen-middleware:testReleaseUnitTest'
-    displayName: gradlew test
+#  - task: Gradle@2
+#    inputs:
+#      workingDirectory: ''
+#      gradleWrapperFile: 'gradlew'
+#      javaHomeOption: 'JDKVersion'
+#      publishJUnitResults: true
+#      testResultsFiles: '**/TEST-*.xml'
+#      tasks: ':nextgen-middleware:testReleaseUnitTest'
+#    displayName: gradlew test
 
   - task: Gradle@2
     inputs:

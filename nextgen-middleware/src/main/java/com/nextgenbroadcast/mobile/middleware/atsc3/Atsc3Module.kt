@@ -272,7 +272,7 @@ internal class Atsc3Module(
         clear()
     }
 
-    private fun getSelectedServiceMediaUri(): String? {
+    fun getSelectedServiceMediaUri(): String? {
         var mediaUri: String? = null
         if (selectedServiceSLSProtocol == SLS_PROTOCOL_DASH) {
             val routeMPDFileName = atsc3NdkApplicationBridge.atsc3_slt_alc_get_sls_metadata_fragments_content_locations_from_monitor_service_id(selectedServiceId, CONTENT_TYPE_DASH)
@@ -281,9 +281,9 @@ internal class Atsc3Module(
             } else {
                 log("Unable to resolve Dash MPD path from MBMS envelope, service_id: %d", selectedServiceId)
             }
-        } /*else if (selectedServiceSLSProtocol == 2) {
-            //TODO: add support
-        }*/ else {
+        } else if (selectedServiceSLSProtocol == SLS_PROTOCOL_MMT) {
+            mediaUri = SCHEME_MMT + selectedServiceId
+        } else {
             log("unsupported service protocol: %d", selectedServiceSLSProtocol)
         }
 
@@ -315,11 +315,13 @@ internal class Atsc3Module(
         selectedServicePackage = null
         selectedServiceHeldXml = null
 
+        /* it reconnects additional service on service selection that leads to ESG reloading - that's bad.
+        But probably we need it when switching between services with different BSID. Lat's stose BSID in ESG data instead
         //TODO: temporary test solution
         if (tmpAdditionalServiceOpened) {
             atsc3NdkApplicationBridge.atsc3_slt_alc_clear_additional_service_selections()
             tmpAdditionalServiceOpened = false
-        }
+        }*/
     }
 
     //////////////////////////////////////////////////////////////
