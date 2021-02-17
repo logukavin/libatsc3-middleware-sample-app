@@ -9,7 +9,7 @@ import java.util.concurrent.Executors
 
 internal class ServiceGuideDeliveryUnitReader(
         private val store: IServiceGuideStore
-) {
+): IServiceGuideDeliveryUnitReader {
     @Volatile
     private var READER_IO: CoroutineDispatcher? = null
 
@@ -18,7 +18,7 @@ internal class ServiceGuideDeliveryUnitReader(
     private val guideUrlsMap = mutableMapOf<String, SGUrl>()
 
     @Synchronized
-    fun clearAll() {
+    override fun clearAll() {
         READER_IO?.cancel()
         READER_IO = null
 
@@ -32,7 +32,7 @@ internal class ServiceGuideDeliveryUnitReader(
     }
 
     @Synchronized
-    fun readDeliveryUnit(filePath: String) {
+    override fun readDeliveryUnit(filePath: String) {
         val file = File(filePath)
 
         if (file.exists() && file.isFile) {
@@ -61,7 +61,7 @@ internal class ServiceGuideDeliveryUnitReader(
         }
     }
 
-    fun readXml(filePath: String, index: Int): String? {
+    override fun readXml(filePath: String, index: Int): String? {
         try {
             SGDUFile.open(File(filePath)).use { file ->
                 if (file.seekTo(index)) {

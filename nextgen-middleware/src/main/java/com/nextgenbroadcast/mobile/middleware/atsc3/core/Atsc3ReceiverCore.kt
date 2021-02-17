@@ -13,6 +13,7 @@ import com.nextgenbroadcast.mobile.middleware.analytics.Atsc3Analytics
 import com.nextgenbroadcast.mobile.middleware.analytics.IAtsc3Analytics
 import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3Module
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.IServiceGuideStore
+import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.ServiceGuideDeliveryUnitReader
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.db.RoomServiceGuideStore
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.db.SGDataBase
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.IAtsc3Source
@@ -51,7 +52,8 @@ internal class Atsc3ReceiverCore private constructor(
         private val analytics: IAtsc3Analytics
 ) : IAtsc3ServiceCore {
     //TODO: we should close this instances
-    val serviceController: IServiceController = ServiceControllerImpl(repository, serviceGuideStore, settings, atsc3Module, analytics)
+    private val serviceGuideReader = ServiceGuideDeliveryUnitReader(serviceGuideStore)
+    val serviceController: IServiceController = ServiceControllerImpl(repository, settings, atsc3Module, analytics, serviceGuideReader, Dispatchers.IO)
     var viewController: IViewController? = null
         private set
     var ignoreAudioServiceMedia: Boolean = true
