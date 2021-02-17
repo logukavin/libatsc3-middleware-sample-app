@@ -101,8 +101,6 @@ class ServiceControllerTest {
 
         serviceController.onStateChanged(state)
 
-        serviceController.receiverState.postValue(newState)
-
         Assert.assertEquals(newState, serviceController.receiverState.value)
         verify(repository, never()).reset()
     }
@@ -113,8 +111,6 @@ class ServiceControllerTest {
         val newState = ReceiverState.valueOf(state.name)
 
         serviceController.onStateChanged(state)
-
-        serviceController.receiverState.postValue(newState)
 
         Assert.assertEquals(newState, serviceController.receiverState.value)
         verify(repository, never()).reset()
@@ -127,8 +123,6 @@ class ServiceControllerTest {
 
         serviceController.onStateChanged(state)
 
-        serviceController.receiverState.postValue(newState)
-
         Assert.assertEquals(newState, serviceController.receiverState.value)
         verify(repository, never()).reset()
     }
@@ -139,8 +133,6 @@ class ServiceControllerTest {
         val newState = ReceiverState.valueOf(state.name)
 
         serviceController.onStateChanged(state)
-
-        serviceController.receiverState.postValue(newState)
 
         Assert.assertEquals(newState, serviceController.receiverState.value)
         verify(repository).reset()
