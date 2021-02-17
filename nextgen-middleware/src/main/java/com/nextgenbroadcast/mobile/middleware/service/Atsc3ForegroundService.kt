@@ -32,15 +32,15 @@ import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.middleware.BuildConfig
+import com.nextgenbroadcast.mobile.middleware.atsc3.core.Atsc3ReceiverCore
+import com.nextgenbroadcast.mobile.middleware.atsc3.entities.SLTConstants
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.UsbAtsc3Source
+import com.nextgenbroadcast.mobile.middleware.cache.DownloadManager
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
 import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
 import com.nextgenbroadcast.mobile.middleware.phy.Atsc3DeviceReceiver
-import com.nextgenbroadcast.mobile.middleware.atsc3.core.Atsc3ReceiverCore
-import com.nextgenbroadcast.mobile.middleware.atsc3.entities.SLTConstants
-import com.nextgenbroadcast.mobile.player.Atsc3MediaPlayer
-import com.nextgenbroadcast.mobile.middleware.cache.DownloadManager
 import com.nextgenbroadcast.mobile.middleware.service.init.*
+import com.nextgenbroadcast.mobile.player.Atsc3MediaPlayer
 import kotlinx.coroutines.*
 
 abstract class Atsc3ForegroundService : BindableForegroundService() {
@@ -506,22 +506,13 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         mediaSession.setPlaybackState(stateBuilder.build())
     }
 
-    private fun successfullyRetrievedAudioFocus(): Boolean {
-        val audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
-
-        val request = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
-                .setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).build())
-                .build()
-        val result = audioManager.requestAudioFocus(request)
-        return result == AudioManager.AUDIOFOCUS_GAIN
-    }
-
     private fun selectMediaService(service: AVService) {
         val result = atsc3Receiver.serviceController.selectService(service)
         if (result) {
             player.reset()
 
             mediaSession.setMetadata(MediaMetadataCompat.Builder()
+                    .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, service.globalId)
                     .putString(MediaMetadataCompat.METADATA_KEY_TITLE, service.shortName)
                     .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, "${service.majorChannelNo}-${service.minorChannelNo}")
                     .build())
@@ -533,16 +524,16 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
     inner class MediaSessionCallback : MediaSessionCompat.Callback() {
         override fun onPlay() {
-            if (!player.playWhenReady) {
-                player.playWhenReady = true
+            if (!isBinded) {
+                player.replay()
             } else {
                 atsc3Receiver.viewController?.rmpResume()
             }
         }
 
         override fun onPause() {
-            if (player.isPlaying) {
-                player.playWhenReady = false
+            if (!isBinded) {
+                player.pause()
             } else {
                 atsc3Receiver.viewController?.rmpPause()
             }
@@ -561,8 +552,6 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         }
 
         override fun onPlayFromMediaId(mediaId: String?, extras: Bundle?) {
-            if (!successfullyRetrievedAudioFocus()) return
-
             val globalId = mediaId ?: return
             atsc3Receiver.serviceController.findServiceById(globalId)?.let { service ->
                 selectMediaService(service)
