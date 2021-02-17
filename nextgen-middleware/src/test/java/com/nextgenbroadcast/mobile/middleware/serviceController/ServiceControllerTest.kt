@@ -10,6 +10,7 @@ import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.presentation.IReceiverPresenter
 import com.nextgenbroadcast.mobile.middleware.analytics.IAtsc3Analytics
 import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3Module
+import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3ModuleState
 import com.nextgenbroadcast.mobile.middleware.atsc3.IAtsc3Module
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.SLTConstants
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
@@ -30,12 +31,13 @@ import com.nextgenbroadcast.mobile.middleware.server.web.MiddlewareWebServer
 import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.test.TestCoroutineDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runBlockingTest
 import kotlinx.coroutines.test.setMain
 import org.hamcrest.CoreMatchers
-import org.junit.Assert
-import org.junit.Before
-import org.junit.Rule
-import org.junit.Test
+import org.junit.*
 import org.junit.rules.TestRule
 import org.junit.runner.RunWith
 import org.mockito.Mock
@@ -76,10 +78,15 @@ class ServiceControllerTest {
     @Mock
     private lateinit var serviceGuideReader: IServiceGuideDeliveryUnitReader
 
+    @ExperimentalCoroutinesApi
+    private val testDispatcher = TestCoroutineDispatcher()
 
+    @ExperimentalCoroutinesApi
     @Before
     fun initController() {
-        serviceController = ServiceControllerImpl(repository, settings, atsc3Module, atsc3Analytics, serviceGuideReader)
+        serviceController = ServiceControllerImpl(repository, settings, atsc3Module, atsc3Analytics, serviceGuideReader, testDispatcher)
+
+        Dispatchers.setMain(testDispatcher)
     }
 
     @Test
@@ -89,7 +96,7 @@ class ServiceControllerTest {
 
     @Test
     fun testOnStateChangedSCANNING() {
-        val state = Atsc3Module.State.SCANNING
+        val state = Atsc3ModuleState.SCANNING
         val newState = ReceiverState.valueOf(state.name)
 
         serviceController.onStateChanged(state)
@@ -102,7 +109,7 @@ class ServiceControllerTest {
 
     @Test
     fun testOnStateChangedOPENED() {
-        val state = Atsc3Module.State.OPENED
+        val state = Atsc3ModuleState.OPENED
         val newState = ReceiverState.valueOf(state.name)
 
         serviceController.onStateChanged(state)
@@ -115,7 +122,7 @@ class ServiceControllerTest {
 
     @Test
     fun testOnStateChangedPAUSED() {
-        val state = Atsc3Module.State.PAUSED
+        val state = Atsc3ModuleState.PAUSED
         val newState = ReceiverState.valueOf(state.name)
 
         serviceController.onStateChanged(state)
@@ -128,7 +135,7 @@ class ServiceControllerTest {
 
     @Test
     fun testOnStateChangedIDLE() {
-        val state = Atsc3Module.State.IDLE
+        val state = Atsc3ModuleState.IDLE
         val newState = ReceiverState.valueOf(state.name)
 
         serviceController.onStateChanged(state)
@@ -153,7 +160,7 @@ class ServiceControllerTest {
         val services: List<Atsc3Service> = listOf(Atsc3Service(serviceCategory = SLTConstants.SERVICE_CATEGORY_ESG))
         val reportServerUrl: String? = null
 
-        serviceController.onServiceLocationTableChanged(services,reportServerUrl)
+        serviceController.onServiceLocationTableChanged(services, reportServerUrl)
 
         verify(atsc3Analytics).setReportServerUrl(reportServerUrl)
         verify(repository).setServices(emptyList())
@@ -165,7 +172,7 @@ class ServiceControllerTest {
         val services: List<Atsc3Service> = listOf(Atsc3Service())
         val reportServerUrl: String? = null
 
-        serviceController.onServiceLocationTableChanged(services,reportServerUrl)
+        serviceController.onServiceLocationTableChanged(services, reportServerUrl)
 
         verify(atsc3Analytics).setReportServerUrl(reportServerUrl)
         verify(repository).setServices(emptyList())
@@ -187,8 +194,16 @@ class ServiceControllerTest {
         serviceController.onServiceMediaReady(mediaUrl, 0L)
 
         verify(repository).setMediaUrl(mediaUrl)
+    }
 
-        //Should I create test for delayBeforePlayMs > 0 ?
+    @ExperimentalCoroutinesApi
+    @Test
+    fun testOnServiceMediaReadyWithDelay() = testDispatcher.runBlockingTest {
+        val mediaUrl = MediaUrl("path", 0, 0)
+        val delayMS = 1000L
+        serviceController.onServiceMediaReady(mediaUrl, delayMS)
+        delay(delayMS)
+        verify(repository).setMediaUrl(mediaUrl)
     }
 
     @Test
@@ -206,9 +221,8 @@ class ServiceControllerTest {
 
         `when`(atsc3Module.connect(sourceMock)).thenReturn(false)
 
-        val result  = serviceController.openRoute(sourceMock)
+        val result = serviceController.openRoute(sourceMock)
 
-//        // Check that closeRoute functionality invoke
         verify(atsc3Analytics).finishSession()
         verify(atsc3Module).close()
         verify(serviceGuideReader).clearAll()
@@ -228,9 +242,8 @@ class ServiceControllerTest {
 
         `when`(atsc3Module.connect(sourceMock)).thenReturn(true)
 
-        val result  = serviceController.openRoute(sourceMock)
+        val result = serviceController.openRoute(sourceMock)
 
-//        // Check that closeRoute functionality invoke
         verify(atsc3Analytics).finishSession()
         verify(atsc3Module).close()
         verify(serviceGuideReader).clearAll()
@@ -250,9 +263,8 @@ class ServiceControllerTest {
 
         `when`(atsc3Module.connect(sourceMock)).thenReturn(false)
 
-        val result  = serviceController.openRoute(sourceMock)
+        val result = serviceController.openRoute(sourceMock)
 
-//        // Check that closeRoute functionality invoke
         verify(atsc3Analytics).finishSession()
         verify(atsc3Module).close()
         verify(serviceGuideReader).clearAll()
@@ -272,9 +284,8 @@ class ServiceControllerTest {
 
         `when`(atsc3Module.connect(sourceMock)).thenReturn(true)
 
-        val result  = serviceController.openRoute(sourceMock)
+        val result = serviceController.openRoute(sourceMock)
 
-//        // Check that closeRoute functionality invoke
         verify(atsc3Analytics).finishSession()
         verify(atsc3Module).close()
         verify(serviceGuideReader).clearAll()
@@ -294,9 +305,8 @@ class ServiceControllerTest {
 
         `when`(atsc3Module.connect(sourceMock)).thenReturn(false)
 
-        val result  = serviceController.openRoute(sourceMock)
+        val result = serviceController.openRoute(sourceMock)
 
-//        // Check that closeRoute functionality invoke
         verify(atsc3Analytics).finishSession()
         verify(atsc3Module).close()
         verify(serviceGuideReader).clearAll()
@@ -316,9 +326,8 @@ class ServiceControllerTest {
 
         `when`(atsc3Module.connect(sourceMock)).thenReturn(true)
 
-        val result  = serviceController.openRoute(sourceMock)
+        val result = serviceController.openRoute(sourceMock)
 
-//        // Check that closeRoute functionality invoke
         verify(atsc3Analytics).finishSession()
         verify(atsc3Module).close()
         verify(serviceGuideReader).clearAll()
@@ -337,9 +346,8 @@ class ServiceControllerTest {
 
         `when`(atsc3Module.connect(sourceMock)).thenReturn(false)
 
-        val result  = serviceController.openRoute(sourceMock)
+        val result = serviceController.openRoute(sourceMock)
 
-//        // Check that closeRoute functionality invoke
         verify(atsc3Analytics).finishSession()
         verify(atsc3Module).close()
         verify(serviceGuideReader).clearAll()
@@ -358,9 +366,8 @@ class ServiceControllerTest {
 
         `when`(atsc3Module.connect(sourceMock)).thenReturn(true)
 
-        val result  = serviceController.openRoute(sourceMock)
+        val result = serviceController.openRoute(sourceMock)
 
-//        // Check that closeRoute functionality invoke
         verify(atsc3Analytics).finishSession()
         verify(atsc3Module).close()
         verify(serviceGuideReader).clearAll()
@@ -379,7 +386,6 @@ class ServiceControllerTest {
 
         val result = serviceController.openRoute(sourceMock)
 
-        // Check that closeRoute functionality invoke
         verify(atsc3Analytics).finishSession()
         verify(atsc3Module).close()
         verify(serviceGuideReader).clearAll()
@@ -398,7 +404,6 @@ class ServiceControllerTest {
 
         val result = serviceController.openRoute(sourceMock)
 
-        // Check that closeRoute functionality invoke
         verify(atsc3Analytics).finishSession()
         verify(atsc3Module).close()
         verify(serviceGuideReader).clearAll()
@@ -406,9 +411,8 @@ class ServiceControllerTest {
 
         verify(atsc3Module).connect(sourceMock)
         Assert.assertTrue(atsc3Module.connect(sourceMock))
-
         Assert.assertTrue(sourceMock is ITunableSource)
-//        verify(mock).tune(PhyFrequency.default(PhyFrequency.Source.AUTO)) // I can not check invoke this method
+
         Assert.assertTrue(result)
     }
 
@@ -427,9 +431,8 @@ class ServiceControllerTest {
 
         verify(atsc3Module).connect(sourceMock)
         Assert.assertTrue(atsc3Module.connect(sourceMock))
-
         Assert.assertFalse(sourceMock is ITunableSource)
-//        verify(mock).tune(PhyFrequency.default(PhyFrequency.Source.AUTO)) // I can not check invoke this method
+
         Assert.assertTrue(result)
     }
 
@@ -450,10 +453,11 @@ class ServiceControllerTest {
         verify(repository).reset()
     }
 
+    @ExperimentalCoroutinesApi
     @Test
     fun testSelectServiceAlreadySelectedReturnTrue() {
         val mockRepository = MockRepository()
-        serviceController = ServiceControllerImpl(mockRepository, settings, atsc3Module, atsc3Analytics, serviceGuideReader)
+        serviceController = ServiceControllerImpl(mockRepository, settings, atsc3Module, atsc3Analytics, serviceGuideReader, testDispatcher)
 
         val service = AVService(0, 0, "short_name", "globalId", 1, 1, 0)
         mockRepository.selectedService.postValue(service)
@@ -461,10 +465,11 @@ class ServiceControllerTest {
         Assert.assertTrue(serviceController.selectService(service))
     }
 
+    @ExperimentalCoroutinesApi
     @Test
     fun testSelectServiceReturnFalse() {
         val mockRepository = spy(MockRepository())
-        serviceController = ServiceControllerImpl(mockRepository, settings, atsc3Module, atsc3Analytics, serviceGuideReader)
+        serviceController = ServiceControllerImpl(mockRepository, settings, atsc3Module, atsc3Analytics, serviceGuideReader, testDispatcher)
         val service = AVService(0, 0, "short_name", "globalId", 1, 1, 0)
 
         `when`(atsc3Module.selectService(service.bsid, service.id)).thenReturn(false)
@@ -478,10 +483,11 @@ class ServiceControllerTest {
         Assert.assertFalse(result)
     }
 
+    @ExperimentalCoroutinesApi
     @Test
     fun testSelectServiceHeldPackageIsNullReturnTrue() {
         val mockRepository = spy(MockRepository())
-        serviceController = ServiceControllerImpl(mockRepository, settings, atsc3Module, atsc3Analytics, serviceGuideReader)
+        serviceController = ServiceControllerImpl(mockRepository, settings, atsc3Module, atsc3Analytics, serviceGuideReader, testDispatcher)
         val service = AVService(0, 0, "short_name", "globalId", 1, 1, 0)
 
         `when`(atsc3Module.selectService(service.bsid, service.id)).thenReturn(true)
@@ -495,10 +501,11 @@ class ServiceControllerTest {
         Assert.assertTrue(result)
     }
 
+    @ExperimentalCoroutinesApi
     @Test
     fun testSelectServiceHeldPackageNotNullResetHeldWithoutDelayReturnTrue() {
         val mockRepository = spy(MockRepository())
-        serviceController = ServiceControllerImpl(mockRepository, settings, atsc3Module, atsc3Analytics, serviceGuideReader)
+        serviceController = ServiceControllerImpl(mockRepository, settings, atsc3Module, atsc3Analytics, serviceGuideReader, testDispatcher)
         val service = AVService(0, 0, "short_name", "globalId", 1, 1, 0)
         mockRepository.setHeldPackage(Atsc3HeldPackage())
 
@@ -514,10 +521,11 @@ class ServiceControllerTest {
         Assert.assertTrue(result)
     }
 
+    @ExperimentalCoroutinesApi
     @Test
-    fun testSelectServiceHeldPackageNotNullResetHeldWithDelayReturnTrue() {
+    fun testSelectServiceHeldPackageNotNullResetHeldWithDelayReturnTrue() = testDispatcher.runBlockingTest {
         val mockRepository = spy(MockRepository())
-        serviceController = ServiceControllerImpl(mockRepository, settings, atsc3Module, atsc3Analytics, serviceGuideReader)
+        serviceController = ServiceControllerImpl(mockRepository, settings, atsc3Module, atsc3Analytics, serviceGuideReader, testDispatcher)
         val service = AVService(0, 123, "short_name", "globalId", 1, 1, 0)
         mockRepository.setHeldPackage(Atsc3HeldPackage(coupledServices = listOf(123)))
 
@@ -530,15 +538,15 @@ class ServiceControllerTest {
         verify(atsc3Analytics).startSession(service.bsid, service.id, service.globalId, service.category)
         verify(mockRepository).setSelectedService(service)
 
-//        Should check with delay
-//        verify(mockRepository).setHeldPackage(null)
+        delay(5000L)
+        verify(mockRepository).setHeldPackage(null)
 
         Assert.assertTrue(result)
     }
 
     @Test
     fun testTune() {
-        val frequency = PhyFrequency(listOf(1,2,3), PhyFrequency.Source.USER)
+        val frequency = PhyFrequency(listOf(1, 2, 3), PhyFrequency.Source.USER)
         val freqKhz = frequency.list.first()
 
         serviceController.tune(frequency)
@@ -572,10 +580,17 @@ class ServiceControllerTest {
         Assert.assertThat(result, CoreMatchers.instanceOf<AVService>(AVService::class.java))
     }
 
-    abstract class MockTunableAtsc3Source: IAtsc3Source, ITunableSource
-    abstract class MockAtsc3Source: IAtsc3Source
+    @ExperimentalCoroutinesApi
+    @After
+    fun cleanUp() {
+        Dispatchers.resetMain()
+        testDispatcher.cleanupTestCoroutines()
+    }
 
-    open class MockRepository: IRepository {
+    abstract class MockTunableAtsc3Source : IAtsc3Source, ITunableSource
+    abstract class MockAtsc3Source : IAtsc3Source
+
+    open class MockRepository : IRepository {
         private val _applications = ConcurrentHashMap<String, Atsc3Application>()
 
         override val selectedService = MutableLiveData<AVService>()
