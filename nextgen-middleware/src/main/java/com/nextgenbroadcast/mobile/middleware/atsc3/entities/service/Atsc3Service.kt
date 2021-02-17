@@ -3,7 +3,7 @@ package com.nextgenbroadcast.mobile.middleware.atsc3.entities.service
 import kotlin.collections.ArrayList
 
 data class Atsc3Service(
-        val bsid: Int,
+        val bsid: Int = 0,
         var serviceId: Int = 0,
         var globalServiceId: String? = null,
         var sltSvcSeqNum: Int = 0,

@@ -36,26 +36,14 @@ import java.util.concurrent.locks.ReentrantLock
 
 internal class Atsc3Module(
         private val context: Context
-): IAtsc3NdkApplicationBridgeCallbacks, IAtsc3NdkPHYBridgeCallbacks {
+): IAtsc3Module, IAtsc3NdkApplicationBridgeCallbacks, IAtsc3NdkPHYBridgeCallbacks {
 
-    enum class State {
-        SCANNING, OPENED, PAUSED, IDLE
-    }
-
-    interface Listener {
-        fun onStateChanged(state: State)
-        fun onApplicationPackageReceived(appPackage: Atsc3Application)
-        fun onServiceLocationTableChanged(services: List<Atsc3Service>, reportServerUrl: String?)
-        fun onServicePackageChanged(pkg: Atsc3HeldPackage?)
-        fun onServiceMediaReady(mediaUrl: MediaUrl, delayBeforePlayMs: Long)
-        fun onServiceGuideUnitReceived(filePath: String)
-    }
 
     private val atsc3NdkApplicationBridge = Atsc3NdkApplicationBridge(this)
     private val atsc3NdkPHYBridge = Atsc3NdkPHYBridge(this)
 
     private val stateLock = ReentrantLock()
-    private var state = State.IDLE
+    private var state = Atsc3ModuleState.IDLE
     private var source: IAtsc3Source? = null
     private var currentSourceConfiguration: Int = IAtsc3Source.CONFIG_DEFAULT
     private var lastTunedFreqList: List<Int> = emptyList()
@@ -79,11 +67,11 @@ internal class Atsc3Module(
     @Volatile
     private var isReconfiguring: Boolean = false
     @Volatile
-    private var listener: Listener? = null
+    private var listener: Atsc3ModuleListener? = null
 
     private var nextSourceJob: Job? = null
 
-    fun setListener(listener: Listener?) {
+    override fun setListener(listener: Atsc3ModuleListener?) {
         if (this.listener != null) throw IllegalStateException("Atsc3Module listener already initialized")
         this.listener = listener
     }
@@ -91,7 +79,7 @@ internal class Atsc3Module(
     /**
      * Tune to [freqKhz] is it's greater thar zero. The [frequencies] allows to scan and collect data from all of them.
      */
-    fun tune(freqKhz: Int, frequencies: List<Int>, retuneOnDemod: Boolean) {
+    override fun tune(freqKhz: Int, frequencies: List<Int>, retuneOnDemod: Boolean) {
         // make target frequency first
         val frequencyList = frequencies.toMutableList().apply {
             remove(freqKhz)
@@ -119,7 +107,7 @@ internal class Atsc3Module(
         }
     }
 
-    fun connect(source: IAtsc3Source): Boolean {
+    override fun connect(source: IAtsc3Source): Boolean {
         log("Connecting to: $source")
 
         close()
@@ -131,7 +119,7 @@ internal class Atsc3Module(
             if (result != IAtsc3Source.RESULT_ERROR) {
                 setSourceConfig(result)
                 setState(
-                        if (result > 0) State.SCANNING else State.OPENED
+                        if (result > 0) Atsc3ModuleState.SCANNING else Atsc3ModuleState.OPENED
                 )
                 return@withStateLock true
             }
@@ -177,7 +165,7 @@ internal class Atsc3Module(
             if (result != IAtsc3Source.RESULT_ERROR) {
                 setSourceConfig(result)
                 setState(
-                        if (result > 0 && config == IAtsc3Source.CONFIG_DEFAULT) State.SCANNING else State.OPENED
+                        if (result > 0 && config == IAtsc3Source.CONFIG_DEFAULT) Atsc3ModuleState.SCANNING else Atsc3ModuleState.OPENED
                 )
             }
 
@@ -185,13 +173,13 @@ internal class Atsc3Module(
         }
     }
 
-    private fun getState(): State {
+    private fun getState(): Atsc3ModuleState {
         return withStateLock {
             state
         }
     }
 
-    private fun setState(newState: State) {
+    private fun setState(newState: Atsc3ModuleState) {
         withStateLock {
             state = newState
         }
@@ -212,7 +200,7 @@ internal class Atsc3Module(
 
     private var tmpAdditionalServiceOpened = false
 
-    fun selectService(bsid: Int, serviceId: Int): Boolean {
+    override fun selectService(bsid: Int, serviceId: Int): Boolean {
         if (selectedServiceBsid == bsid && selectedServiceId == serviceId) return false
 
         clearHeld()
@@ -258,20 +246,20 @@ internal class Atsc3Module(
     }
 
     @Deprecated("Do not work because additional service persistence not implemented in libatsc3")
-    fun selectAdditionalService(serviceId: Int): Boolean {
+    override fun selectAdditionalService(serviceId: Int): Boolean {
 //        //atsc3NdkApplicationBridge.atsc3_slt_alc_clear_additional_service_selections()
 //        val protocol = atsc3NdkApplicationBridge.atsc3_slt_alc_select_additional_service(serviceId)
 //        return protocol > 0
         return false
     }
 
-    fun stop() {
+    override fun stop() {
         source?.stop()
 
-        setState(State.PAUSED)
+        setState(Atsc3ModuleState.PAUSED)
     }
 
-    fun close() {
+    override fun close() {
         source?.close()
 
         lastTunedFreqList = emptyList()
@@ -280,7 +268,7 @@ internal class Atsc3Module(
     }
 
     private fun reset() {
-        setState(State.IDLE)
+        setState(Atsc3ModuleState.IDLE)
         isReconfiguring = false
         clear()
     }
@@ -367,9 +355,9 @@ internal class Atsc3Module(
         serviceToSourceConfig[slt.bsid] = getSourceConfig()
 
         val currentState = getState()
-        if (currentState == State.SCANNING) {
+        if (currentState == Atsc3ModuleState.SCANNING) {
             applyNextSourceConfig()
-        } else if (currentState != State.IDLE) {
+        } else if (currentState != Atsc3ModuleState.IDLE) {
             val services = serviceLocationTable
                     .toSortedMap(compareBy { serviceToSourceConfig[it] })
                     .values.flatMap { it.services }
@@ -388,7 +376,7 @@ internal class Atsc3Module(
     }
 
     override fun onSlsHeldEmissionPresent(serviceId: Int, heldPayloadXML: String) {
-        if (getState() == State.SCANNING) return
+        if (getState() == Atsc3ModuleState.SCANNING) return
 
         log("onSlsHeldEmissionPresent, $serviceId, selectedServiceID: $selectedServiceId, HELD: $heldPayloadXML")
 
@@ -435,7 +423,7 @@ internal class Atsc3Module(
     }
 
     override fun onPackageExtractCompleted(packageMetadata: PackageExtractEnvelopeMetadataAndPayload) {
-        if (getState() == State.SCANNING) return
+        if (getState() == Atsc3ModuleState.SCANNING) return
 
         log("onPackageExtractCompleted packageExtractPath: ${packageMetadata.packageExtractPath} packageName: ${packageMetadata.packageName}, appContextIdList: ${packageMetadata.appContextIdList}, files: [${packageMetadata.multipartRelatedPayloadList.map { it.contentLocation }}]")
 
@@ -456,7 +444,7 @@ internal class Atsc3Module(
     }
 
     override fun routeDash_force_player_reload_mpd(serviceID: Int) {
-        if (getState() == State.SCANNING) return
+        if (getState() == Atsc3ModuleState.SCANNING) return
 
         if (serviceID == selectedServiceId) {
             getSelectedServiceMediaUri()?.let { mpdPath ->
