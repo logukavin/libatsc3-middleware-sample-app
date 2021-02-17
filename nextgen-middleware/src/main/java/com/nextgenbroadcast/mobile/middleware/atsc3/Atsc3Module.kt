@@ -3,6 +3,7 @@ package com.nextgenbroadcast.mobile.middleware.atsc3
 import android.content.Context
 import android.util.Log
 import android.util.SparseArray
+import android.widget.Toast
 import androidx.annotation.MainThread
 import com.nextgenbroadcast.mobile.core.atsc3.MediaUrl
 import com.nextgenbroadcast.mobile.core.atsc3.phy.PHYStatistics
@@ -341,6 +342,16 @@ internal class Atsc3Module(
     //////////////////////////////////////////////////////////////
 
     override fun showMsgFromNative(message: String) = log(message)
+
+    //////////////////////////////////////////////////////////////
+    /// IAtsc3NdkPHYBridgeCallbacks
+    //////////////////////////////////////////////////////////////
+
+    override fun onPhyLogMessage(message: String) = log(message)
+
+    override fun onPhyError(message: String) {
+        Toast.makeText(context, String.format("PHY Error: %s", message), Toast.LENGTH_SHORT).show()
+    }
 
     override fun jni_getCacheDir(): File = context.cacheDir
 
