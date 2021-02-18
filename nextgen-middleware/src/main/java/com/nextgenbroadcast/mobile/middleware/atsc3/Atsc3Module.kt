@@ -447,6 +447,7 @@ internal class Atsc3Module(
     override fun onPhyLogMessage(message: String) = log(message)
 
     override fun onPhyError(message: String) {
+        listener?.onError("PHY Error: $message")
         log("PHY Error: $message")
     }
 
