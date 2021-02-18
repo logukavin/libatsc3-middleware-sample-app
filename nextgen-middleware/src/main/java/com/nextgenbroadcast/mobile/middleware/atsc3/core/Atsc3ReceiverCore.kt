@@ -2,6 +2,8 @@ package com.nextgenbroadcast.mobile.middleware.atsc3.core
 
 import android.content.Context
 import android.net.Uri
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.widget.Toast
 import androidx.lifecycle.LifecycleOwner
@@ -191,7 +193,10 @@ internal class Atsc3ReceiverCore private constructor(
     }
 
     private fun onError(message: String) {
-        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+        //super hack activity.runOnUiThread() {
+        Handler(Looper.getMainLooper()).post {
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+        }
     }
 
     fun getNextService() = getNearbyService(1)
