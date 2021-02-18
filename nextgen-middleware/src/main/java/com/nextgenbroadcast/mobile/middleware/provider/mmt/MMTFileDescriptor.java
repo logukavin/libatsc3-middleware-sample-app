@@ -21,7 +21,7 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
     public static final String TAG = MMTFileDescriptor.class.getSimpleName();
 
     private static final int MAX_QUEUE_SIZE = 120;
-    private static final int MAX_FIRST_MFU_WAIT_TIME = 1000;
+    private static final int MAX_FIRST_MFU_WAIT_TIME = 5000;
     private static final int MAX_KEY_FRAME_WAIT_TIME = 5000;
 
     private final Boolean audioOnly;
