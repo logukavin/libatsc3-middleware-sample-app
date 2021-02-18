@@ -231,7 +231,8 @@ class RpcGatewayTest {
             start(mockLifecycleOwner())
         }
 
-        mockRpcGateway.requestFileCache(null, null, listOf(), null)
+        val result = mockRpcGateway.requestFileCache(null, null, listOf(), null)
+        Assert.assertFalse(result)
     }
 
     @Test
