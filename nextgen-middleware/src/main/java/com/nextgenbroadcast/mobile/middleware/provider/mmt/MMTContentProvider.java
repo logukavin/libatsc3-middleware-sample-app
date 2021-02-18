@@ -51,7 +51,7 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
 
     //jjustman-2020-12-23 - give the a/v/s decoder some time to decode frames, otherwise we will stall at startup
     //jjustman-2021-01-13 - TODO: remove me
-    public static final long PTS_OFFSET_US = 266000L;
+    public static final long PTS_OFFSET_US = 0L;
     private static final int FRAGMENT_BUFFER_MAX_PAGE_COUNT = 320;
     private static final int FRAGMENT_BUFFER_PAGE_SIZE = 16 * 1024;
     private static final int FRAGMENT_BUFFER_SIZE = FRAGMENT_BUFFER_MAX_PAGE_COUNT * FRAGMENT_BUFFER_PAGE_SIZE;
