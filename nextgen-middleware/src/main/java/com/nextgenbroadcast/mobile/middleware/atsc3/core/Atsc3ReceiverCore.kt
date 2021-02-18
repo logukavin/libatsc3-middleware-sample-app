@@ -3,6 +3,7 @@ package com.nextgenbroadcast.mobile.middleware.atsc3.core
 import android.content.Context
 import android.net.Uri
 import android.util.Log
+import android.widget.Toast
 import androidx.lifecycle.LifecycleOwner
 import com.nextgenbroadcast.mobile.core.cert.UserAgentSSLContext
 import com.nextgenbroadcast.mobile.core.model.AVService
@@ -53,7 +54,7 @@ internal class Atsc3ReceiverCore private constructor(
 ) : IAtsc3ServiceCore {
     //TODO: we should close this instances
     private val serviceGuideReader = ServiceGuideDeliveryUnitReader(serviceGuideStore)
-    val serviceController: IServiceController = ServiceControllerImpl(repository, settings, atsc3Module, analytics, serviceGuideReader, Dispatchers.IO)
+    val serviceController: IServiceController = ServiceControllerImpl(repository, settings, atsc3Module, analytics, serviceGuideReader, Dispatchers.IO, ::onError)
     var viewController: IViewController? = null
         private set
     var ignoreAudioServiceMedia: Boolean = true
@@ -187,6 +188,10 @@ internal class Atsc3ReceiverCore private constructor(
 
     override fun getReceiverState(): ReceiverState {
         return serviceController.receiverState.value ?: ReceiverState.IDLE
+    }
+
+    private fun onError(message: String) {
+        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
     }
 
     fun getNextService() = getNearbyService(1)
