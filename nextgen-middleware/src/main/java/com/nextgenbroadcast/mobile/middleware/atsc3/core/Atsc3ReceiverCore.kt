@@ -235,7 +235,7 @@ internal class Atsc3ReceiverCore private constructor(
                     val settings = MiddlewareSettingsImpl.getInstance(appContext)
                     val repository = RepositoryImpl()
                     val serviceGuideStore = RoomServiceGuideStore(SGDataBase.getDatabase(appContext))
-                    val atsc3Module = Atsc3Module(appContext)
+                    val atsc3Module = Atsc3Module(appContext.cacheDir)
                     val analytics = Atsc3Analytics.getInstance(appContext, settings)
 
                     Atsc3ReceiverCore(appContext, atsc3Module, settings, repository, serviceGuideStore, analytics).also {
