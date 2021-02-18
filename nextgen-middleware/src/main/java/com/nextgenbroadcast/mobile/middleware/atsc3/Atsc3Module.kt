@@ -1,9 +1,7 @@
 package com.nextgenbroadcast.mobile.middleware.atsc3
 
-import android.content.Context
 import android.util.Log
 import android.util.SparseArray
-import android.widget.Toast
 import androidx.annotation.MainThread
 import com.nextgenbroadcast.mobile.core.atsc3.MediaUrl
 import com.nextgenbroadcast.mobile.core.atsc3.phy.PHYStatistics
@@ -35,9 +33,8 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.locks.ReentrantLock
 
 internal class Atsc3Module(
-        private val context: Context
+        private val cacheDir: File
 ): IAtsc3Module, IAtsc3NdkApplicationBridgeCallbacks, IAtsc3NdkPHYBridgeCallbacks {
-
 
     private val atsc3NdkApplicationBridge = Atsc3NdkApplicationBridge(this)
     private val atsc3NdkPHYBridge = Atsc3NdkPHYBridge(this)
@@ -331,7 +328,7 @@ internal class Atsc3Module(
 
     override fun showMsgFromNative(message: String) = log(message)
 
-    override fun jni_getCacheDir(): File = context.cacheDir
+    override fun jni_getCacheDir(): File = cacheDir
 
     override fun onSlsTablePresent(sls_payload_xml: String) {
         val shouldSkip = isReconfiguring
@@ -450,18 +447,20 @@ internal class Atsc3Module(
     override fun onPhyLogMessage(message: String) = log(message)
 
     override fun onPhyError(message: String) {
-        Toast.makeText(context, String.format("PHY Error: %s", message), Toast.LENGTH_SHORT).show()
+        log("PHY Error: $message")
     }
 
     override fun pushRfPhyStatisticsUpdate(rfPhyStatistics: RfPhyStatistics) {
         phyDemodLock = rfPhyStatistics.demod_lock != 0
-        Log.i("Atsc3Module",String.format("PHY:RFStatisticsUpdate: %s", rfPhyStatistics.toString()))
-        PHYStatistics.PHYRfStatistics = String.format("PHY:RFStatisticsUpdate: %s", rfPhyStatistics.toString())
+        PHYStatistics.PHYRfStatistics = "PHY:RFStatisticsUpdate: $rfPhyStatistics".also {
+            log(it)
+        }
     }
 
     override fun pushBwPhyStatistics(bwPhyStatistics: BwPhyStatistics) {
-        Log.i("Atsc3Module",String.format("PHY:BWStatisticsUpdate: %s", bwPhyStatistics.toString()));
-        PHYStatistics.PHYBWStatistics = String.format("PHY:BWStatisticsUpdate: %s", bwPhyStatistics.toString())
+        PHYStatistics.PHYBWStatistics = "PHY:BWStatisticsUpdate: $bwPhyStatistics".also {
+            log(it)
+        }
     }
 
     //////////////////////////////////////////////////////////////
