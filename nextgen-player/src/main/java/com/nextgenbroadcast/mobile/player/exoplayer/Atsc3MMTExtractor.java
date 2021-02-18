@@ -126,7 +126,8 @@ public class Atsc3MMTExtractor implements Extractor {
 
             // Empty sample means we don't have more samples in buffer. Wait for data to come before next iteration.
             if (currentSampleType == MMTConstants.TRACK_TYPE_EMPTY) {
-                Thread.sleep(50);
+                //jjustman-2021-02-18 - don't sleep here, let the ExoPlayerImpl eventloop doSomeWork() be responsible for timing
+                // Thread.sleep(50);
             }
 
             return Extractor.RESULT_CONTINUE;
@@ -165,7 +166,9 @@ public class Atsc3MMTExtractor implements Extractor {
      */
 //        long correctSampleTime = track.correctSampleTime(currentSampleTimeUs);
 //        //Log.d("Atsc3MMTExtractor",String.format("JJ: readSample: sample_type: %d, correctSampleTime: %d", currentSampleType, correctSampleTime));
-//        Log.d("Atsc3MMTExtractor",String.format("JJ: readSample: sample_type: %d, currentSampleTimeUs: %d, correctSampleTime: %d, diff: %d", currentSampleType, currentSampleTimeUs, correctSampleTime, (currentSampleTimeUs - correctSampleTime)));
+
+
+        //Log.d("Atsc3MMTExtractor",String.format("JJ: readSample: sample_type: %d, currentSampleTimeUs: %d", currentSampleType, currentSampleTimeUs));
 
         trackOutput.sampleMetadata(
                 currentSampleTimeUs,
