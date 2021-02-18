@@ -26,14 +26,14 @@ internal class RPCGatewayImpl(
         private val serviceController: IServiceController,
         private val applicationCache: IApplicationCache,
         private val settings: IMiddlewareSettings,
-        mainDispatcher: CoroutineDispatcher,
-        ioDispatcher: CoroutineDispatcher
+        private val mainScope: CoroutineScope = CoroutineScope(Dispatchers.Main),
+        private val ioScope: CoroutineScope = CoroutineScope(Dispatchers.IO),
+        private val sessions: CopyOnWriteArrayList<MiddlewareWebSocket> = CopyOnWriteArrayList(),
+        private val subscribedNotifications: MutableSet<NotificationType> = mutableSetOf()
 ) : IRPCGateway {
-    private val mainScope = CoroutineScope(mainDispatcher)
-    private val ioScope = CoroutineScope(ioDispatcher)
-    private val sessions = CopyOnWriteArrayList<MiddlewareWebSocket>()
     private val rpcNotifier = RPCNotificationHelper(this::sendNotification)
     private val serviceGuideUrls = HashSet<SGUrl>()
+    private val appFiles = mutableListOf<Atsc3ApplicationFile>()
 
     override val deviceId = settings.deviceId
     override val advertisingId = settings.advertisingId
@@ -50,9 +50,6 @@ internal class RPCGatewayImpl(
     private var currentAppContextId: String? = null
     private var currentServiceId: String? = null
     private var mediaTimeUpdateJob: Job? = null
-
-    private val appFiles = mutableListOf<Atsc3ApplicationFile>()
-    private val subscribedNotifications = mutableSetOf<NotificationType>()
 
     fun start(lifecycleOwner: LifecycleOwner) {
         viewController.appData.distinctUntilChanged().unite(serviceController.selectedService).observe(lifecycleOwner) { (appData, service) ->

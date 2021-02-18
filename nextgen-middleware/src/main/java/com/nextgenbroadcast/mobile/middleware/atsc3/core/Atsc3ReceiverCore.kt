@@ -117,7 +117,7 @@ internal class Atsc3ReceiverCore private constructor(
         val web = WebGatewayImpl(serviceController, repository, settings).also {
             webGateway = it
         }
-        val rpc = RPCGatewayImpl(view, serviceController, appCache, settings, Dispatchers.Main, Dispatchers.IO).apply {
+        val rpc = RPCGatewayImpl(view, serviceController, appCache, settings).apply {
             start(lifecycleOwner)
         }.also {
             rpcGateway = it
