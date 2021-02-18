@@ -223,19 +223,30 @@ class Atsc3Analytics private constructor(
     //          PERSISTENT CACHE
     /////////////////////////////////////////////////////////////////////////////////////////
 
+    private inline fun QueueFile.clearOnError(action: () -> Unit) {
+        try {
+            action()
+        } catch (t: Throwable) {
+            Log.e(TAG, "Analytic queue IO exception", t)
+            clear()
+        }
+    }
+
     private fun addToStore(avService: AVService) {
         damp(avService)
 
         CoroutineScope(LOGGING_IO).launch {
-            suspendCancellableCoroutine<CacheEntry> { cont ->
-                if (persistedStore.size() >= MAX_CACHE_SIZE) {
-                    persistedStore.remove()
+            persistedStore.clearOnError {
+                suspendCancellableCoroutine<CacheEntry> { cont ->
+                    if (persistedStore.size() >= MAX_CACHE_SIZE) {
+                        persistedStore.remove()
+                    }
+
+                    val entry = CacheEntry(avService, deviceLocation)
+                    persistedStore.add(gson.toJson(entry).toByteArray())
+
+                    cont.resume(entry)
                 }
-
-                val entry = CacheEntry(avService, deviceLocation)
-                persistedStore.add(gson.toJson(entry).toByteArray())
-
-                cont.resume(entry)
             }
 
             if (persistedStore.size() >= CACHE_FULL_SIZE) {
@@ -270,26 +281,24 @@ class Atsc3Analytics private constructor(
     }
 
     @Suppress("SameParameterValue")
-    private fun peekFromStore(maxCount: Int): List<JSONObject> {
-        var count = 0
-        return mutableListOf<JSONObject>().apply {
-            val iterator = persistedStore.iterator()
-            try {
-                while (count++ < maxCount && iterator.hasNext()) {
-                    add(JSONObject(String(iterator.next())))
+    private suspend fun peekFromStore(maxCount: Int): List<JSONObject> {
+        return withContext(LOGGING_IO) {
+            var count = 0
+            mutableListOf<JSONObject>().apply {
+                val iterator = persistedStore.iterator()
+                persistedStore.clearOnError {
+                    while (count++ < maxCount && iterator.hasNext()) {
+                        add(JSONObject(String(iterator.next())))
+                    }
                 }
-            } catch (e: IOException) {
-                e.printStackTrace()
             }
         }
     }
 
     fun sendAllEvents(reportServerUrl: String): Job {
         return CoroutineScope(SENDING_IO).launch {
-            while (isActive && !persistedStore.isEmpty) {
-                val events = peekFromStore(5)
-                if (events.isEmpty()) break
-
+            var events = peekFromStore(5)
+            while (isActive && events.isNotEmpty()) {
                 val cdmJson = createCDMJson(events)
                 val request = Request.Builder()
                         .url(reportServerUrl)
@@ -317,6 +326,8 @@ class Atsc3Analytics private constructor(
                     cancel()
                     break
                 }
+
+                events = peekFromStore(5)
             }
         }
     }
