@@ -7,7 +7,6 @@ import com.nextgenbroadcast.mobile.core.model.PhyFrequency
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.middleware.analytics.IAtsc3Analytics
-import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3Module
 import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3ModuleListener
 import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3ModuleState
 import com.nextgenbroadcast.mobile.middleware.atsc3.IAtsc3Module
@@ -16,8 +15,6 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Applicatio
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPackage
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.service.Atsc3Service
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.IServiceGuideDeliveryUnitReader
-import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.ServiceGuideDeliveryUnitReader
-import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.IServiceGuideStore
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.*
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
 import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
@@ -30,7 +27,8 @@ internal class ServiceControllerImpl (
         private val atsc3Module: IAtsc3Module,
         private val atsc3Analytics: IAtsc3Analytics,
         private val serviceGuideReader: IServiceGuideDeliveryUnitReader,
-        private val ioDispatcher: CoroutineDispatcher
+        private val ioDispatcher: CoroutineDispatcher,
+        private val onError: ((message: String) -> Unit)? = null
 ) : IServiceController, Atsc3ModuleListener {
 
     private val ioScope = CoroutineScope(ioDispatcher)
@@ -114,6 +112,10 @@ internal class ServiceControllerImpl (
 
     override fun onServiceGuideUnitReceived(filePath: String) {
         serviceGuideReader.readDeliveryUnit(filePath)
+    }
+
+    override fun onError(message: String) {
+        onError?.invoke(message)
     }
 
     override fun openRoute(path: String): Boolean {

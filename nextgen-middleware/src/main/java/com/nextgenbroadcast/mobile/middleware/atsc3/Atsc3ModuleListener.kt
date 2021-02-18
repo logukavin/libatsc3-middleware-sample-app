@@ -12,4 +12,5 @@ interface Atsc3ModuleListener {
     fun onServicePackageChanged(pkg: Atsc3HeldPackage?)
     fun onServiceMediaReady(mediaUrl: MediaUrl, delayBeforePlayMs: Long)
     fun onServiceGuideUnitReceived(filePath: String)
+    fun onError(message: String)
 }
