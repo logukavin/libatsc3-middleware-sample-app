@@ -331,16 +331,6 @@ internal class Atsc3Module(
 
     override fun showMsgFromNative(message: String) = log(message)
 
-    //////////////////////////////////////////////////////////////
-    /// IAtsc3NdkPHYBridgeCallbacks
-    //////////////////////////////////////////////////////////////
-
-    override fun onPhyLogMessage(message: String) = log(message)
-
-    override fun onPhyError(message: String) {
-        Toast.makeText(context, String.format("PHY Error: %s", message), Toast.LENGTH_SHORT).show()
-    }
-
     override fun jni_getCacheDir(): File = context.cacheDir
 
     override fun onSlsTablePresent(sls_payload_xml: String) {
@@ -456,6 +446,12 @@ internal class Atsc3Module(
     //////////////////////////////////////////////////////////////
     /// IAtsc3NdkPHYBridgeCallbacks
     //////////////////////////////////////////////////////////////
+
+    override fun onPhyLogMessage(message: String) = log(message)
+
+    override fun onPhyError(message: String) {
+        Toast.makeText(context, String.format("PHY Error: %s", message), Toast.LENGTH_SHORT).show()
+    }
 
     override fun pushRfPhyStatisticsUpdate(rfPhyStatistics: RfPhyStatistics) {
         phyDemodLock = rfPhyStatistics.demod_lock != 0
