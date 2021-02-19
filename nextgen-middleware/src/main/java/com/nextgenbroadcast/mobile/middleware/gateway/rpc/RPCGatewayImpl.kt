@@ -27,13 +27,14 @@ internal class RPCGatewayImpl(
         private val applicationCache: IApplicationCache,
         private val settings: IMiddlewareSettings,
         private val mainScope: CoroutineScope = CoroutineScope(Dispatchers.Main),
-        private val ioScope: CoroutineScope = CoroutineScope(Dispatchers.IO),
-        private val sessions: CopyOnWriteArrayList<MiddlewareWebSocket> = CopyOnWriteArrayList(),
-        private val subscribedNotifications: MutableSet<NotificationType> = mutableSetOf()
+        private val ioScope: CoroutineScope = CoroutineScope(Dispatchers.IO)
 ) : IRPCGateway {
     private val rpcNotifier = RPCNotificationHelper(this::sendNotification)
     private val serviceGuideUrls = HashSet<SGUrl>()
     private val appFiles = mutableListOf<Atsc3ApplicationFile>()
+
+    private val sessions: CopyOnWriteArrayList<MiddlewareWebSocket> = CopyOnWriteArrayList()
+    private val subscribedNotifications: MutableSet<NotificationType> = mutableSetOf()
 
     override val deviceId = settings.deviceId
     override val advertisingId = settings.advertisingId

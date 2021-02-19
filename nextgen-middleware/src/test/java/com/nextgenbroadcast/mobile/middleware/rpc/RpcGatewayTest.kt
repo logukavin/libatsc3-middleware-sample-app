@@ -64,6 +64,9 @@ class RpcGatewayTest {
     @Mock
     private lateinit var settings: IMiddlewareSettings
 
+    @Mock
+    private lateinit var mockSocket: MiddlewareWebSocket
+
     @ExperimentalCoroutinesApi
     private val testDispatcher = TestCoroutineDispatcher()
 
@@ -88,9 +91,6 @@ class RpcGatewayTest {
     private val rmpState: LiveData<PlaybackState> = MutableLiveData()
     private val rmpPlaybackRate: LiveData<Float> = MutableLiveData()
 
-    private val mockSessions = CopyOnWriteArrayList<MiddlewareWebSocket>()
-    private val mockSubscribedNotifications: MutableSet<NotificationType> = mutableSetOf()
-
     @ExperimentalCoroutinesApi
     @Before
     fun initController() {
@@ -111,9 +111,12 @@ class RpcGatewayTest {
         `when`(settings.hostName).thenReturn(hostName)
         `when`(settings.httpsPort).thenReturn(hostPost)
 
-        rpcGateway = RPCGatewayImpl(viewController, serviceController, applicationCache, settings, TestCoroutineScope(testDispatcher), TestCoroutineScope(testDispatcher), mockSessions, mockSubscribedNotifications).apply {
+        rpcGateway = RPCGatewayImpl(viewController, serviceController, applicationCache, settings, TestCoroutineScope(testDispatcher), TestCoroutineScope(testDispatcher)).apply {
             start(mockLifecycleOwner())
         }
+
+        mockSocket = PowerMockito.spy(MiddlewareWebSocket(rpcGateway))
+        rpcGateway.onSocketOpened(mockSocket)
 
         Dispatchers.setMain(testDispatcher)
     }
@@ -129,24 +132,6 @@ class RpcGatewayTest {
     @Test
     fun testRpcGatewayCreated() {
         Assert.assertNotNull(rpcGateway)
-    }
-
-    @Test
-    fun testOnSocketOpened() {
-        val mockSocket = PowerMockito.spy(MiddlewareWebSocket(rpcGateway))
-
-        rpcGateway.onSocketOpened(mockSocket)
-
-        Assert.assertTrue(mockSessions.isNotEmpty())
-    }
-
-    @Test
-    fun testOnSocketClosed() {
-        val mockSocket = PowerMockito.spy(MiddlewareWebSocket(rpcGateway))
-
-        rpcGateway.onSocketClosed(mockSocket)
-
-        Assert.assertFalse(mockSessions.contains(mockSocket))
     }
 
     @Test
@@ -186,8 +171,6 @@ class RpcGatewayTest {
 
         val result = rpcGateway.subscribeNotifications(mockAvailable)
 
-        Assert.assertTrue(mockSubscribedNotifications.containsAll(mockAvailable))
-
         Assert.assertEquals(mockAvailable, result)
     }
 
@@ -197,16 +180,12 @@ class RpcGatewayTest {
 
         val result = rpcGateway.unsubscribeNotifications(mockAvailable)
 
-        Assert.assertFalse(mockSubscribedNotifications.containsAll(mockAvailable))
-
         Assert.assertEquals(mockAvailable, result)
     }
 
     @Test
     fun testSendNotification() {
-        val mockSocket = PowerMockito.spy(MiddlewareWebSocket(rpcGateway))
         val message = "message"
-        mockSessions.add(mockSocket)
 
         rpcGateway.sendNotification(message)
 
@@ -227,7 +206,7 @@ class RpcGatewayTest {
         `when`(viewController.rmpState).thenReturn(rmpState)
         `when`(viewController.rmpPlaybackRate).thenReturn(rmpPlaybackRate)
 
-        val mockRpcGateway = RPCGatewayImpl(viewController, serviceController, applicationCache, settings, TestCoroutineScope(testDispatcher), TestCoroutineScope(testDispatcher), mockSessions, mockSubscribedNotifications).apply {
+        val mockRpcGateway = RPCGatewayImpl(viewController, serviceController, applicationCache, settings, TestCoroutineScope(testDispatcher), TestCoroutineScope(testDispatcher)).apply {
             start(mockLifecycleOwner())
         }
 
@@ -270,7 +249,6 @@ class RpcGatewayTest {
         val result = rpcGateway.getServiceGuideUrls(null)
 
         Assert.assertEquals(mapServiceGuideUrls(mockedServiceGuideUrls, false), result)
-//        Assert.assertThat(result, CoreMatchers.instanceOf<List<ServiceGuideUrlsRpcResponse.Url>>(List::class.java))
     }
 
     @Test
@@ -279,7 +257,6 @@ class RpcGatewayTest {
 
         Assert.assertTrue(mockedServiceGuideUrls.map { it.service }.contains(mockedServiceUrl))
         Assert.assertEquals(mapServiceGuideUrls(mockedServiceGuideUrls, false), result)
-//        Assert.assertThat(result, CoreMatchers.instanceOf<List<ServiceGuideUrlsRpcResponse.Url>>(List::class.java))
     }
 
     @Test
