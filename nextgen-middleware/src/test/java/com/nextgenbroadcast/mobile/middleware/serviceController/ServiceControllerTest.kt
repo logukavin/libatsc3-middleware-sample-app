@@ -52,7 +52,6 @@ import java.util.concurrent.ConcurrentHashMap
 
 
 @RunWith(PowerMockRunner::class)
-@PrepareForTest(ServiceControllerTest.MockClass::class)
 class ServiceControllerTest {
 
     private lateinit var serviceController: ServiceControllerImpl
@@ -80,7 +79,7 @@ class ServiceControllerTest {
     private lateinit var serviceGuideReader: IServiceGuideDeliveryUnitReader
 
     @Mock
-    private lateinit var mockClass: MockClass
+    private lateinit var mockErrorFun: (message: String) -> Unit
 
     @ExperimentalCoroutinesApi
     private val testDispatcher = TestCoroutineDispatcher()
@@ -88,7 +87,7 @@ class ServiceControllerTest {
     @ExperimentalCoroutinesApi
     @Before
     fun initController() {
-        serviceController = ServiceControllerImpl(repository, settings, atsc3Module, atsc3Analytics, serviceGuideReader, testDispatcher, mockClass::testErrorFun)
+        serviceController = ServiceControllerImpl(repository, settings, atsc3Module, atsc3Analytics, serviceGuideReader, testDispatcher, mockErrorFun)
 
         Dispatchers.setMain(testDispatcher)
     }
@@ -579,12 +578,10 @@ class ServiceControllerTest {
     @Test
     fun onErrorTest() {
         val errorMessage = "error"
-        serviceController.onError(errorMessage)
-        verify(mockClass).testErrorFun(errorMessage)
-    }
 
-    class MockClass {
-        fun testErrorFun(error: String) {}
+        serviceController.onError(errorMessage)
+
+        verify(mockErrorFun).invoke(errorMessage)
     }
 
     @ExperimentalCoroutinesApi
