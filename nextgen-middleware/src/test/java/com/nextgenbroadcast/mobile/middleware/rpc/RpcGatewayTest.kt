@@ -21,10 +21,7 @@ import com.nextgenbroadcast.mobile.middleware.server.ws.MiddlewareWebSocket
 import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.TestCoroutineDispatcher
-import kotlinx.coroutines.test.TestCoroutineScope
-import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.test.*
 import org.hamcrest.CoreMatchers
 import org.junit.*
 import org.junit.rules.TestRule
@@ -132,6 +129,17 @@ class RpcGatewayTest {
     @Test
     fun testRpcGatewayCreated() {
         Assert.assertNotNull(rpcGateway)
+    }
+
+    @ExperimentalCoroutinesApi
+    @Test
+    fun testOnSocketOpened() = testDispatcher.runBlockingTest {
+        val previousSocket = mockSocket
+        val newSocket = PowerMockito.spy(MiddlewareWebSocket(rpcGateway))
+
+        rpcGateway.onSocketOpened(newSocket)
+
+        verify(previousSocket).disconnect()
     }
 
     @Test
