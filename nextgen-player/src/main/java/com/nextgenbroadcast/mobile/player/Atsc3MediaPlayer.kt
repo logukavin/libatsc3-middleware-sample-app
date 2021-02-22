@@ -10,6 +10,8 @@ import com.google.android.exoplayer2.*
 import com.google.android.exoplayer2.source.dash.DashMediaSource
 import com.google.android.exoplayer2.source.dash.DefaultDashChunkSource
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
+import com.google.android.exoplayer2.trackselection.DefaultTrackSelector.SelectionOverride
+import com.google.android.exoplayer2.trackselection.TrackSelector
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
 import com.google.android.exoplayer2.upstream.DefaultLoadErrorHandlingPolicy
 import com.google.android.exoplayer2.util.Util
@@ -41,6 +43,7 @@ class Atsc3MediaPlayer(
     private var audioFocusRequest: AudioFocusRequest? = null
     private var listener: EventListener? = null
     private var _player: SimpleExoPlayer? = null
+    private var _trackSelector: DefaultTrackSelector? = null
     private var lastMediaUri: Uri? = null
     private var isMMTPlayback = false
     private var rmpState: PlaybackState? = null
@@ -48,6 +51,9 @@ class Atsc3MediaPlayer(
 
     val player: Player?
         get() = _player
+    val trackSelector: DefaultTrackSelector?
+        get() = _trackSelector
+
     var resetWhenLostAudioFocus: Boolean = true
 
     private var playWhenReady: Boolean = true
@@ -73,6 +79,10 @@ class Atsc3MediaPlayer(
 
         lastMediaUri = mediaUri
 
+        val selector = DefaultTrackSelector().also {
+            _trackSelector = it
+        }
+
         val mimeType = context.contentResolver.getType(mediaUri)
         _player = (if (mimeType == MMTConstants.MIME_MMT_VIDEO || mimeType == MMTConstants.MIME_MMT_AUDIO) {
             isMMTPlayback = true
@@ -85,12 +95,12 @@ class Atsc3MediaPlayer(
                 setLoadErrorHandlingPolicy(createDefaultLoadErrorHandlingPolicy())
             }.createMediaSource(mediaUri)
 
-            createMMTExoPlayer().apply {
+            createMMTExoPlayer(selector).apply {
                 prepare(mediaSource)
             }
         } else {
             val dashMediaSource = createMediaSourceFactory().createMediaSource(mediaUri)
-            createDefaultExoPlayer().apply {
+            createDefaultExoPlayer(selector).apply {
                 prepare(dashMediaSource)
             }
         }).apply {
@@ -129,6 +139,7 @@ class Atsc3MediaPlayer(
             it.stop()
             it.release()
             _player = null
+            _trackSelector = null
         }
         isMMTPlayback = false
 
@@ -136,6 +147,55 @@ class Atsc3MediaPlayer(
             audioManager.abandonAudioFocusRequest(it)
         }
         audioFocusRequest = null
+    }
+
+    fun getSubtitleFormats(): List<Triple<Format, Boolean, Int>> {
+        val rendererType = C.TRACK_TYPE_AUDIO
+
+        return mutableListOf<Triple<Format, Boolean, Int>>().apply {
+            trackSelector?.let { selector ->
+                val parameters = selector.parameters
+                selector.currentMappedTrackInfo?.let { trackInfo ->
+                    for (rendererIndex in 0 until trackInfo.rendererCount) {
+                        if (rendererType == trackInfo.getRendererType(rendererIndex)) {
+                            val trackGroups = trackInfo.getTrackGroups(rendererIndex)
+                            val override = parameters.getSelectionOverride(rendererIndex, trackGroups)
+                            for (groupIndex in 0 until trackGroups.length) {
+                                val group = trackGroups[groupIndex]
+                                for (trackIndex in 0 until group.length) {
+                                    val format = group.getFormat(trackIndex)
+                                    val compositeIndex = ((rendererIndex and 0xff) shl 16) or ((groupIndex and 0xff) shl 8) or (trackIndex and 0xff)
+                                    val isSelected = override != null && override.groupIndex == groupIndex && override.containsTrack(trackIndex)
+                                    add(Triple(format, isSelected, compositeIndex))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    fun selectTrack(compositeIndex: Int) {
+        val trackIndex = compositeIndex and 0xff
+        val groupIndex = (compositeIndex shr 8) and 0xff
+        val rendererIndex = (compositeIndex shr 16) and 0xff
+
+        trackSelector?.let { selector ->
+            val parameters = selector.parameters
+
+            selector.currentMappedTrackInfo?.let { trackInfo ->
+                val trackGroups = trackInfo.getTrackGroups(rendererIndex)
+                //val override = parameters.getSelectionOverride(rendererIndex, trackGroups)
+
+                val builder: DefaultTrackSelector.ParametersBuilder = parameters.buildUpon()
+                builder.clearSelectionOverrides(rendererIndex)
+                //TODO: override.tracks to add/replace tracks
+                builder.setSelectionOverride(rendererIndex, trackGroups, SelectionOverride(groupIndex, trackIndex))
+
+                selector.setParameters(builder)
+            }
+        }
     }
 
     private fun createMediaSourceFactory(): DashMediaSource.Factory {
@@ -151,16 +211,16 @@ class Atsc3MediaPlayer(
         }
     }
 
-    private fun createDefaultExoPlayer(): SimpleExoPlayer {
-        return createExoPlayer(RouteDASHLoadControl(), DefaultRenderersFactory(context))
+    private fun createDefaultExoPlayer(trackSelector: TrackSelector): SimpleExoPlayer {
+        return createExoPlayer(RouteDASHLoadControl(), DefaultRenderersFactory(context), trackSelector)
     }
 
-    private fun createMMTExoPlayer(): SimpleExoPlayer {
-        return createExoPlayer(MMTLoadControl(), MMTRenderersFactory(context))
+    private fun createMMTExoPlayer(trackSelector: TrackSelector): SimpleExoPlayer {
+        return createExoPlayer(MMTLoadControl(), MMTRenderersFactory(context), trackSelector)
     }
 
-    private fun createExoPlayer(loadControl: LoadControl, renderersFactory: RenderersFactory): SimpleExoPlayer {
-        return ExoPlayerFactory.newSimpleInstance(context, renderersFactory, DefaultTrackSelector(), loadControl).apply {
+    private fun createExoPlayer(loadControl: LoadControl, renderersFactory: RenderersFactory, trackSelector: TrackSelector): SimpleExoPlayer {
+        return ExoPlayerFactory.newSimpleInstance(context, renderersFactory, trackSelector, loadControl).apply {
             addListener(object : Player.EventListener {
                 override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
                     val state = playbackState(playbackState, playWhenReady) ?: return
