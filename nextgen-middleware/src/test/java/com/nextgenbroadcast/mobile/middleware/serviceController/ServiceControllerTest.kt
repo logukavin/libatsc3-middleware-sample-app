@@ -52,6 +52,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 
 @RunWith(PowerMockRunner::class)
+@PrepareForTest(ServiceControllerTest.MockClass::class)
 class ServiceControllerTest {
 
     private lateinit var serviceController: ServiceControllerImpl
@@ -78,13 +79,16 @@ class ServiceControllerTest {
     @Mock
     private lateinit var serviceGuideReader: IServiceGuideDeliveryUnitReader
 
+    @Mock
+    private lateinit var mockClass: MockClass
+
     @ExperimentalCoroutinesApi
     private val testDispatcher = TestCoroutineDispatcher()
 
     @ExperimentalCoroutinesApi
     @Before
     fun initController() {
-        serviceController = ServiceControllerImpl(repository, settings, atsc3Module, atsc3Analytics, serviceGuideReader, testDispatcher)
+        serviceController = ServiceControllerImpl(repository, settings, atsc3Module, atsc3Analytics, serviceGuideReader, testDispatcher, mockClass::testErrorFun)
 
         Dispatchers.setMain(testDispatcher)
     }
@@ -570,6 +574,17 @@ class ServiceControllerTest {
 
         verify(repository).findServiceBy("someIdForAVService")
         Assert.assertThat(result, CoreMatchers.instanceOf<AVService>(AVService::class.java))
+    }
+
+    @Test
+    fun onErrorTest() {
+        val errorMessage = "error"
+        serviceController.onError(errorMessage)
+        verify(mockClass).testErrorFun(errorMessage)
+    }
+
+    class MockClass {
+        fun testErrorFun(error: String) {}
     }
 
     @ExperimentalCoroutinesApi
