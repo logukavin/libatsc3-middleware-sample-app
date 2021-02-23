@@ -2,6 +2,11 @@ apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-android-extensions'
 apply plugin: 'kotlin-kapt'
+apply plugin: 'de.mobilej.unmock'
+
+unMock {
+    keep "android.net.Uri"
+}
 
 android {
     compileSdkVersion rootProject.compileSdkVersion
