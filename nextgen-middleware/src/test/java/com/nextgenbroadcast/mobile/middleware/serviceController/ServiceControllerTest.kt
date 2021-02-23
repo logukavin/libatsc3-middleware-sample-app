@@ -78,13 +78,16 @@ class ServiceControllerTest {
     @Mock
     private lateinit var serviceGuideReader: IServiceGuideDeliveryUnitReader
 
+    @Mock
+    private lateinit var mockErrorFun: (message: String) -> Unit
+
     @ExperimentalCoroutinesApi
     private val testDispatcher = TestCoroutineDispatcher()
 
     @ExperimentalCoroutinesApi
     @Before
     fun initController() {
-        serviceController = ServiceControllerImpl(repository, settings, atsc3Module, atsc3Analytics, serviceGuideReader, testDispatcher)
+        serviceController = ServiceControllerImpl(repository, settings, atsc3Module, atsc3Analytics, serviceGuideReader, testDispatcher, mockErrorFun)
 
         Dispatchers.setMain(testDispatcher)
     }
@@ -570,6 +573,15 @@ class ServiceControllerTest {
 
         verify(repository).findServiceBy("someIdForAVService")
         Assert.assertThat(result, CoreMatchers.instanceOf<AVService>(AVService::class.java))
+    }
+
+    @Test
+    fun onErrorTest() {
+        val errorMessage = "error"
+
+        serviceController.onError(errorMessage)
+
+        verify(mockErrorFun).invoke(errorMessage)
     }
 
     @ExperimentalCoroutinesApi
