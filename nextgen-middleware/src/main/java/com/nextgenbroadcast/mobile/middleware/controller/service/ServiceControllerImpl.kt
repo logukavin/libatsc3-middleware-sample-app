@@ -2,6 +2,7 @@ package com.nextgenbroadcast.mobile.middleware.controller.service
 
 import android.util.Log
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.map
 import com.nextgenbroadcast.mobile.core.atsc3.MediaUrl
 import com.nextgenbroadcast.mobile.core.model.PhyFrequency
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
@@ -43,7 +44,7 @@ internal class ServiceControllerImpl (
     override val applications = repository.applications
     override val routeMediaUrl = repository.routeMediaUrl
 
-    override val sltServices = repository.services
+    override val sltServices = repository.services.map { services -> services.filter { !it.hidden } }
 
     override val freqKhz = MutableLiveData(0)
 
@@ -83,7 +84,8 @@ internal class ServiceControllerImpl (
                     it.globalServiceId,
                     it.majorChannelNo,
                     it.minorChannelNo,
-                    it.serviceCategory
+                    it.serviceCategory,
+                    it.hidden
             )
         }
         repository.setServices(avServices)
@@ -226,6 +228,15 @@ internal class ServiceControllerImpl (
 
     override fun findServiceById(globalServiceId: String): AVService? {
         return repository.findServiceBy(globalServiceId)
+    }
+
+    override fun getNearbyService(offset: Int): AVService? {
+        return selectedService.value?.let { activeService ->
+            sltServices.value?.let { services ->
+                val activeServiceIndex = services.indexOf(activeService)
+                services.getOrNull(activeServiceIndex + offset)
+            }
+        }
     }
 
     private fun resetHeldWithDelay() {
