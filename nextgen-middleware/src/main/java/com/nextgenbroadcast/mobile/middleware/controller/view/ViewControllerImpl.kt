@@ -26,14 +26,13 @@ internal class ViewControllerImpl(
         private val settings: IClientSettings,
         private val fileProvider: IMediaFileProvider,
         private val atsc3Analytics: IAtsc3Analytics,
-        private val ignoreAudioServiceMedia: Boolean,
-        private val rmpListeners: PlayerStateRegistry = PlayerStateRegistry()
+        private val ignoreAudioServiceMedia: Boolean
 ) : IViewController {
 
     private enum class PlaybackSource {
         BROADCAST, BROADBAND
     }
-
+    private val rmpListeners: PlayerStateRegistry = PlayerStateRegistry()
     private val playbackSource = MutableLiveData(PlaybackSource.BROADCAST)
     private val externalMediaUrl = MutableLiveData<String?>()
 
