@@ -71,7 +71,7 @@ class RpcGatewayTest {
     private val mockedServiceUrl = "serviceUrl"
     private val mockedGlobalServiceId = "tag:sinclairplatform.com,2020:WZTV:2727"
 
-    private val mockedAVService: AVService = AVService(1, 5003, "WZTV", mockedGlobalServiceId, 22, 1, 0)
+    private val mockedAVService: AVService = AVService(1, 5003, "WZTV", mockedGlobalServiceId, 22, 1, 0, false)
     private val mockedServiceGuideUrls = listOf(SGUrl(SGUrl.SGUrlType.Service, "TestUrl", mockedServiceUrl, null, 0))
     private val mockedAppData = AppData(mockAppContextId, "entryPage", listOf(1, 2, 3), "cachePath")
 
