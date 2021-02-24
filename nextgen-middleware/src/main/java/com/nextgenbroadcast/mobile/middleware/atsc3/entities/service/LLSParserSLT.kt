@@ -76,6 +76,7 @@ class LLSParserSLT {
                 "minorChannelNo" -> currentService.minorChannelNo = XmlUtils.strToInt(parser.getAttributeValue(i))
                 "serviceCategory" -> currentService.serviceCategory = XmlUtils.strToInt(parser.getAttributeValue(i))
                 "shortServiceName" -> currentService.shortServiceName = parser.getAttributeValue(i)
+                "hidden" -> currentService.hidden = XmlUtils.strToBool(parser.getAttributeValue(i))
                 else -> {
                     // skip attribute
                 }
