@@ -28,6 +28,7 @@ import com.nextgenbroadcast.mobile.middleware.controller.view.ViewControllerImpl
 import com.nextgenbroadcast.mobile.middleware.gateway.rpc.RPCGatewayImpl
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
 import com.nextgenbroadcast.mobile.middleware.server.web.MiddlewareWebServer
+import com.nextgenbroadcast.mobile.middleware.server.ws.MiddlewareWebSocket
 import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -52,9 +53,8 @@ import java.util.concurrent.ConcurrentHashMap
 
 
 @RunWith(PowerMockRunner::class)
+@PrepareForTest(IServiceController::class, ServiceControllerImpl::class, IRepository::class, IMiddlewareSettings::class, IAtsc3Analytics::class, IAtsc3Module::class, IServiceGuideDeliveryUnitReader::class)
 class ServiceControllerTest {
-
-    private lateinit var serviceController: ServiceControllerImpl
 
     @JvmField
     @Rule
@@ -62,6 +62,9 @@ class ServiceControllerTest {
 
     @Rule
     var instantTaskExecutorRule = InstantTaskExecutorRule()
+
+    @Mock
+    private lateinit var serviceController: ServiceControllerImpl
 
     @Mock
     private lateinit var repository: IRepository
@@ -83,6 +86,15 @@ class ServiceControllerTest {
 
     @ExperimentalCoroutinesApi
     private val testDispatcher = TestCoroutineDispatcher()
+
+    private val previousService = AVService(0, 0, "short_name", "globalServiceId", 1, 1, 0, false)
+    private val selectedService = AVService(0, 1, "short_name", "globalServiceId", 1, 1, 0, false)
+    private val nextService = AVService(0, 2, "short_name", "globalServiceId", 1, 1, 0, false)
+    private val services = listOf(previousService, selectedService, nextService)
+
+    private var selectedServiceLV: MutableLiveData<AVService?> = MutableLiveData()
+    private var sltServicesLV: MutableLiveData<List<AVService>> = MutableLiveData()
+
 
     @ExperimentalCoroutinesApi
     @Before
@@ -394,7 +406,7 @@ class ServiceControllerTest {
 
     @Test
     fun testOpenRouteBySourceConnectedWithITunableSourceReturnTrue() {
-        val sourceMock = Mockito.mock(MockTunableAtsc3Source::class.java)
+        val sourceMock = mock(MockTunableAtsc3Source::class.java)
         `when`(atsc3Module.connect(sourceMock)).thenReturn(true)
 
         val result = serviceController.openRoute(sourceMock)
@@ -413,7 +425,7 @@ class ServiceControllerTest {
 
     @Test
     fun testOpenRouteBySourceConnectedWithoutITunableSourceReturnTrue() {
-        val sourceMock = Mockito.mock(MockAtsc3Source::class.java)
+        val sourceMock = mock(MockAtsc3Source::class.java)
         `when`(atsc3Module.connect(sourceMock)).thenReturn(true)
 
         val result = serviceController.openRoute(sourceMock)
@@ -454,10 +466,9 @@ class ServiceControllerTest {
         val mockRepository = MockRepository()
         serviceController = ServiceControllerImpl(mockRepository, settings, atsc3Module, atsc3Analytics, serviceGuideReader, testDispatcher)
 
-        val service = AVService(0, 0, "short_name", "globalId", 1, 1, 0)
-        mockRepository.selectedService.postValue(service)
+        mockRepository.selectedService.postValue(selectedService)
 
-        Assert.assertTrue(serviceController.selectService(service))
+        Assert.assertTrue(serviceController.selectService(selectedService))
     }
 
     @ExperimentalCoroutinesApi
@@ -465,14 +476,13 @@ class ServiceControllerTest {
     fun testSelectServiceReturnFalse() {
         val mockRepository = spy(MockRepository())
         serviceController = ServiceControllerImpl(mockRepository, settings, atsc3Module, atsc3Analytics, serviceGuideReader, testDispatcher)
-        val service = AVService(0, 0, "short_name", "globalId", 1, 1, 0)
 
-        `when`(atsc3Module.selectService(service.bsid, service.id)).thenReturn(false)
+        `when`(atsc3Module.selectService(selectedService.bsid, selectedService.id)).thenReturn(false)
 
-        val result = serviceController.selectService(service)
+        val result = serviceController.selectService(selectedService)
 
         verify(mockRepository).setMediaUrl(null)
-        verify(atsc3Module).selectService(service.bsid, service.id)
+        verify(atsc3Module).selectService(selectedService.bsid, selectedService.id)
         verify(mockRepository).setHeldPackage(null)
         verify(mockRepository).setSelectedService(null)
         Assert.assertFalse(result)
@@ -483,16 +493,15 @@ class ServiceControllerTest {
     fun testSelectServiceHeldPackageIsNullReturnTrue() {
         val mockRepository = spy(MockRepository())
         serviceController = ServiceControllerImpl(mockRepository, settings, atsc3Module, atsc3Analytics, serviceGuideReader, testDispatcher)
-        val service = AVService(0, 0, "short_name", "globalId", 1, 1, 0)
 
-        `when`(atsc3Module.selectService(service.bsid, service.id)).thenReturn(true)
+        `when`(atsc3Module.selectService(selectedService.bsid, selectedService.id)).thenReturn(true)
 
-        val result = serviceController.selectService(service)
+        val result = serviceController.selectService(selectedService)
 
         verify(mockRepository).setMediaUrl(null)
-        verify(atsc3Module).selectService(service.bsid, service.id)
-        verify(atsc3Analytics).startSession(service.bsid, service.id, service.globalId, service.category)
-        verify(mockRepository).setSelectedService(service)
+        verify(atsc3Module).selectService(selectedService.bsid, selectedService.id)
+        verify(atsc3Analytics).startSession(selectedService.bsid, selectedService.id, selectedService.globalId, selectedService.category)
+        verify(mockRepository).setSelectedService(selectedService)
         Assert.assertTrue(result)
     }
 
@@ -501,17 +510,16 @@ class ServiceControllerTest {
     fun testSelectServiceHeldPackageNotNullResetHeldWithoutDelayReturnTrue() {
         val mockRepository = spy(MockRepository())
         serviceController = ServiceControllerImpl(mockRepository, settings, atsc3Module, atsc3Analytics, serviceGuideReader, testDispatcher)
-        val service = AVService(0, 0, "short_name", "globalId", 1, 1, 0)
         mockRepository.setHeldPackage(Atsc3HeldPackage())
 
-        `when`(atsc3Module.selectService(service.bsid, service.id)).thenReturn(true)
+        `when`(atsc3Module.selectService(selectedService.bsid, selectedService.id)).thenReturn(true)
 
-        val result = serviceController.selectService(service)
+        val result = serviceController.selectService(selectedService)
 
         verify(mockRepository).setMediaUrl(null)
-        verify(atsc3Module).selectService(service.bsid, service.id)
-        verify(atsc3Analytics).startSession(service.bsid, service.id, service.globalId, service.category)
-        verify(mockRepository).setSelectedService(service)
+        verify(atsc3Module).selectService(selectedService.bsid, selectedService.id)
+        verify(atsc3Analytics).startSession(selectedService.bsid, selectedService.id, selectedService.globalId, selectedService.category)
+        verify(mockRepository).setSelectedService(selectedService)
         verify(mockRepository).setHeldPackage(null)
         Assert.assertTrue(result)
     }
@@ -521,17 +529,16 @@ class ServiceControllerTest {
     fun testSelectServiceHeldPackageNotNullResetHeldWithDelayReturnTrue() = testDispatcher.runBlockingTest {
         val mockRepository = spy(MockRepository())
         serviceController = ServiceControllerImpl(mockRepository, settings, atsc3Module, atsc3Analytics, serviceGuideReader, testDispatcher)
-        val service = AVService(0, 123, "short_name", "globalId", 1, 1, 0)
         mockRepository.setHeldPackage(Atsc3HeldPackage(coupledServices = listOf(123)))
 
-        `when`(atsc3Module.selectService(service.bsid, service.id)).thenReturn(true)
+        `when`(atsc3Module.selectService(selectedService.bsid, selectedService.id)).thenReturn(true)
 
-        val result = serviceController.selectService(service)
+        val result = serviceController.selectService(selectedService)
 
         verify(mockRepository).setMediaUrl(null)
-        verify(atsc3Module).selectService(service.bsid, service.id)
-        verify(atsc3Analytics).startSession(service.bsid, service.id, service.globalId, service.category)
-        verify(mockRepository).setSelectedService(service)
+        verify(atsc3Module).selectService(selectedService.bsid, selectedService.id)
+        verify(atsc3Analytics).startSession(selectedService.bsid, selectedService.id, selectedService.globalId, selectedService.category)
+        verify(mockRepository).setSelectedService(selectedService)
 
         delay(5000L)
         verify(mockRepository).setHeldPackage(null)
@@ -566,8 +573,7 @@ class ServiceControllerTest {
 
     @Test
     fun testFindServiceByIdReturnAVService() {
-        val mockData = AVService(0, 0, "short_name", "globalId", 1, 1, 0)
-        `when`(repository.findServiceBy("someIdForAVService")).thenReturn(mockData)
+        `when`(repository.findServiceBy("someIdForAVService")).thenReturn(selectedService)
 
         val result = serviceController.findServiceById("someIdForAVService")
 
@@ -578,10 +584,62 @@ class ServiceControllerTest {
     @Test
     fun onErrorTest() {
         val errorMessage = "error"
-
         serviceController.onError(errorMessage)
-
         verify(mockErrorFun).invoke(errorMessage)
+    }
+
+    @Test
+    fun testGetNearbyServiceReturnNext() {
+        val offset = 1
+        val selectedServiceIndex = services.indexOf(selectedService)
+
+        selectedServiceLV.value = selectedService
+        sltServicesLV.value = services
+
+        val mock = spy(serviceController)
+
+        `when`(mock.selectedService).thenReturn(selectedServiceLV)
+        `when`(mock.sltServices).thenReturn(sltServicesLV)
+
+        val result = mock.getNearbyService(offset)
+
+        Assert.assertEquals(services[selectedServiceIndex + offset], result)
+    }
+
+    @Test
+    fun testGetNearbyServiceReturnPrevious() {
+        val offset = -1
+        val selectedServiceIndex = services.indexOf(selectedService)
+
+        selectedServiceLV.value = selectedService
+        sltServicesLV.value = services
+
+        val mock = spy(serviceController)
+
+        `when`(mock.selectedService).thenReturn(selectedServiceLV)
+        `when`(mock.sltServices).thenReturn(sltServicesLV)
+
+        val result = mock.getNearbyService(offset)
+
+        Assert.assertEquals(services[selectedServiceIndex + offset], result)
+    }
+
+    @Test
+    fun testGetNearbyServiceReturnNull() {
+        val offset = 1
+        val selectedServiceIndex = services.indexOf(selectedService)
+
+        selectedServiceLV.value = null
+        sltServicesLV.value = null
+
+        val mock = spy(serviceController)
+
+        `when`(mock.selectedService).thenReturn(selectedServiceLV)
+        `when`(mock.sltServices).thenReturn(sltServicesLV)
+
+        val result = mock.getNearbyService(offset)
+
+        Assert.assertEquals(null, result)
     }
 
     @ExperimentalCoroutinesApi
@@ -620,11 +678,11 @@ class ServiceControllerTest {
         }
 
         override fun findServiceBy(globalServiceId: String): AVService? {
-            return AVService(0, 0, "short_name", globalServiceId, 1, 1, 0)
+            return AVService(0, 0, "short_name", globalServiceId, 1, 1, 0, false)
         }
 
         override fun findServiceBy(bsid: Int, serviceId: Int): AVService? {
-            return AVService(bsid, serviceId, "short_name", "globalServiceId", 1, 1, 0)
+            return AVService(bsid, serviceId, "short_name", "globalServiceId", 1, 1, 0, false)
         }
 
         override fun setMediaUrl(mediaUrl: MediaUrl?) {
