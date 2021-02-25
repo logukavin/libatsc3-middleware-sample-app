@@ -9,6 +9,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
+import android.widget.PopupMenu
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
@@ -20,29 +21,34 @@ import androidx.fragment.app.setFragmentResultListener
 import androidx.lifecycle.ViewModelProvider
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.nextgenbroadcast.mobile.core.FileUtils
-import com.nextgenbroadcast.mobile.core.mapWith
 import com.nextgenbroadcast.mobile.core.atsc3.phy.PHYStatistics
-import com.nextgenbroadcast.mobile.core.model.AppData
+import com.nextgenbroadcast.mobile.core.mapWith
 import com.nextgenbroadcast.mobile.core.model.AVService
+import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.presentation.ApplicationState
 import com.nextgenbroadcast.mobile.middleware.sample.SettingsDialog.Companion.REQUEST_KEY_FREQUENCY
 import com.nextgenbroadcast.mobile.middleware.sample.core.SwipeGestureDetector
 import com.nextgenbroadcast.mobile.middleware.sample.databinding.FragmentMainBinding
-import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.*
+import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.RMPViewModel
+import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.ReceiverViewModel
+import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.UserAgentViewModel
+import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.ViewViewModel
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.factory.UserAgentViewModelFactory
 import com.nextgenbroadcast.mobile.middleware.sample.useragent.ServiceAdapter
 import com.nextgenbroadcast.mobile.view.UserAgentView
 import kotlinx.android.synthetic.main.fragment_main.*
-import kotlinx.coroutines.*
-import java.util.*
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 class MainFragment : Fragment() {
 
     private lateinit var binding: FragmentMainBinding
-
     private var rmpViewModel: RMPViewModel? = null
     private var userAgentViewModel: UserAgentViewModel? = null
     private var receiverViewModel: ReceiverViewModel? = null
+    private var isShowingTrackSelectionDialog = false
 
     private val viewViewModel: ViewViewModel by activityViewModels()
 
@@ -168,7 +174,9 @@ class MainFragment : Fragment() {
         }
 
         settings_button.setOnClickListener {
-            openSettings(receiverViewModel?.getFrequency())
+            settings_button.setOnClickListener {
+                showPopupSettingsMenu(settings_button)
+            }
         }
 
         viewViewModel.showPhyInfo.mapWith(viewViewModel.showDebugInfo) { (showPhy, showInfo) ->
@@ -202,6 +210,41 @@ class MainFragment : Fragment() {
         }
         viewViewModel.currentServiceTitle.observe(viewLifecycleOwner) { currentServiceTitle ->
             setSelectedService(currentServiceTitle)
+        }
+    }
+
+    private fun showPopupSettingsMenu(v: View) {
+        val popupMenu = PopupMenu(context, v)
+        popupMenu.inflate(R.menu.settings_menu)
+        popupMenu
+                .setOnMenuItemClickListener { item ->
+                    when (item.itemId) {
+                        R.id.menu_settings -> {
+                            openSettingsDialog(receiverViewModel?.getFrequency())
+                            true
+                        }
+                        R.id.menu_select_tracks -> {
+                            openSelectTracksDialog()
+                            true
+                        }
+
+                        else -> false
+                    }
+                }
+        popupMenu.setOnDismissListener { }
+        popupMenu.show()
+    }
+
+    private fun openSelectTracksDialog() {
+        val trackSelection = receiver_player.getTrackSelector()
+        if (!isShowingTrackSelectionDialog
+                && trackSelection != null
+                && TrackSelectionDialog.willHaveContent(trackSelection)) {
+            isShowingTrackSelectionDialog = true
+            val trackSelectionDialog = TrackSelectionDialog.createForTrackSelector(
+                    trackSelection /* onDismissListener= */
+            ) { _ -> isShowingTrackSelectionDialog = false }
+            trackSelectionDialog.show(parentFragmentManager,  /* tag= */null)
         }
     }
 
@@ -286,7 +329,7 @@ class MainFragment : Fragment() {
         bottom_sheet_title.text = serviceName ?: getString(R.string.no_service_available)
     }
 
-    private fun openSettings(freqKhz: Int?) {
+    private fun openSettingsDialog(freqKhz: Int?) {
         SettingsDialog.newInstance(freqKhz)
                 .show(parentFragmentManager, SettingsDialog.TAG)
     }
