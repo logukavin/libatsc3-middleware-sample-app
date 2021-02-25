@@ -75,6 +75,7 @@ internal class ServiceControllerImpl (
         val avServices = services.filter { service ->
             service.serviceCategory == SLTConstants.SERVICE_CATEGORY_AV
                     || service.serviceCategory == SLTConstants.SERVICE_CATEGORY_AO
+                    || service.serviceCategory == SLTConstants.SERVICE_CATEGORY_ABS
         }.map {
             AVService(
                     it.bsid,
