@@ -35,7 +35,7 @@
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
                 app:resize_mode="fit"
-                app:controller_layout_id="@layout/exo_player_control_view"/>
+                app:use_controller="false"/>
 
             <ProgressBar
                 android:id="@+id/progress_bar"
