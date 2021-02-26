@@ -4,6 +4,7 @@ import com.nextgenbroadcast.mobile.core.atsc3.MediaUrl
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPackage
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.service.Atsc3Service
+import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.AlertingRpcResponse
 
 interface Atsc3ModuleListener {
     fun onStateChanged(state: Atsc3ModuleState)
@@ -13,4 +14,5 @@ interface Atsc3ModuleListener {
     fun onServiceMediaReady(mediaUrl: MediaUrl, delayBeforePlayMs: Long)
     fun onServiceGuideUnitReceived(filePath: String)
     fun onError(message: String)
+    fun onAeatTableChanged(list: List<AlertingRpcResponse.Alert>)
 }
