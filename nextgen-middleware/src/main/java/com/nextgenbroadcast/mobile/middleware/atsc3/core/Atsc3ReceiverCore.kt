@@ -56,7 +56,7 @@ internal class Atsc3ReceiverCore private constructor(
 ) : IAtsc3ServiceCore {
     //TODO: we should close this instances
     private val serviceGuideReader = ServiceGuideDeliveryUnitReader(serviceGuideStore)
-    val serviceController = ServiceControllerImpl(repository, settings, atsc3Module, analytics, serviceGuideReader, Dispatchers.IO, ::onError)
+    val serviceController: IServiceController = ServiceControllerImpl(repository, settings, atsc3Module, analytics, serviceGuideReader, Dispatchers.IO, ::onError)
     var viewController: IViewController? = null
         private set
     var ignoreAudioServiceMedia: Boolean = true
