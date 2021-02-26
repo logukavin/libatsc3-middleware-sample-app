@@ -47,8 +47,8 @@ class ReceiverQueryApiImpl(
         return BaseURIRpcResponse()
     }
 
-    override fun queryAlertingSignaling(): AlertingRpcResponse {
-        return AlertingRpcResponse()
+    override fun queryAlertingSignaling(alertingTypes: List<String>): AlertingRpcResponse {
+        return AlertingRpcResponse(gateway.getAlertChangingData(alertingTypes))
     }
 
     override fun queryServiceGuideURLs(service: String?): ServiceGuideUrlsRpcResponse {

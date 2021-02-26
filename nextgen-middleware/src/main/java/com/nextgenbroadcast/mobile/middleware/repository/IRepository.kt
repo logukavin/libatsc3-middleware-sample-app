@@ -6,6 +6,7 @@ import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPackage
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.SGUrl
+import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.AlertingRpcResponse
 
 //TODO: get rid of LiveData here
 internal interface IRepository {
@@ -21,6 +22,8 @@ internal interface IRepository {
     val services: LiveData<List<AVService>>
     val heldPackage: LiveData<Atsc3HeldPackage?>
 
+    val alerts: LiveData<List<AlertingRpcResponse.Alert>>
+
     fun addOrUpdateApplication(application: Atsc3Application)
     fun findApplication(appContextId: String): Atsc3Application?
 
@@ -31,6 +34,8 @@ internal interface IRepository {
 
     fun setHeldPackage(data: Atsc3HeldPackage?)
     fun setMediaUrl(mediaUrl: MediaUrl?)
+
+    fun setAlerts(list: List<AlertingRpcResponse.Alert>)
 
     fun reset()
 }

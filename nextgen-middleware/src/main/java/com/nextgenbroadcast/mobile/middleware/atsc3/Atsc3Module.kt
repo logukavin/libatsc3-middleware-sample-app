@@ -195,7 +195,8 @@ internal class Atsc3Module(
         }
     }
 
-    private var tmpAdditionalServiceOpened = false
+    private var tmpAdditionalESGServiceOpened = false
+    private var tmpAdditionalEASServiceOpened = false
 
     override fun selectService(bsid: Int, serviceId: Int): Boolean {
         if (selectedServiceBsid == bsid && selectedServiceId == serviceId) return false
@@ -227,11 +228,19 @@ internal class Atsc3Module(
         selectedServiceSLSProtocol = atsc3NdkApplicationBridge.atsc3_slt_selectService(serviceId)
 
         //TODO: temporary test solution
-        if (!tmpAdditionalServiceOpened) {
+        if (!tmpAdditionalESGServiceOpened) {
             serviceLocationTable[bsid]?.services?.firstOrNull {
                 it.serviceCategory == SLTConstants.SERVICE_CATEGORY_ESG
             }?.let { service ->
-                tmpAdditionalServiceOpened = atsc3NdkApplicationBridge.atsc3_slt_alc_select_additional_service(service.serviceId) > 0
+                tmpAdditionalESGServiceOpened = atsc3NdkApplicationBridge.atsc3_slt_alc_select_additional_service(service.serviceId) > 0
+            }
+        }
+
+        if (!tmpAdditionalEASServiceOpened) {
+            serviceLocationTable[bsid]?.services?.firstOrNull {
+                        it.serviceCategory == SLTConstants.SERVICE_CATEGORY_EAS
+            }?.let { service ->
+                tmpAdditionalEASServiceOpened = atsc3NdkApplicationBridge.atsc3_slt_alc_select_additional_service(service.serviceId) > 0
             }
         }
 
@@ -295,9 +304,10 @@ internal class Atsc3Module(
         serviceToSourceConfig.clear()
 
         //TODO: temporary test solution
-        if (tmpAdditionalServiceOpened) {
+        if (tmpAdditionalESGServiceOpened || tmpAdditionalEASServiceOpened) {
             atsc3NdkApplicationBridge.atsc3_slt_alc_clear_additional_service_selections()
-            tmpAdditionalServiceOpened = false
+            tmpAdditionalESGServiceOpened = false
+            tmpAdditionalEASServiceOpened = false
         }
     }
 

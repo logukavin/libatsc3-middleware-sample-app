@@ -1,6 +1,7 @@
 package com.nextgenbroadcast.mobile.middleware.controller.service
 
 import android.util.Log
+import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import com.nextgenbroadcast.mobile.core.atsc3.MediaUrl
 import com.nextgenbroadcast.mobile.core.model.PhyFrequency
@@ -17,6 +18,7 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.entities.service.Atsc3Servic
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.IServiceGuideDeliveryUnitReader
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.*
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
+import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.AlertingRpcResponse
 import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
 import kotlinx.coroutines.*
 
@@ -46,6 +48,8 @@ internal class ServiceControllerImpl (
     override val sltServices = repository.services
 
     override val freqKhz = MutableLiveData(0)
+
+    override val alertList = repository.alerts
 
     init {
         atsc3Module.setListener(this)
@@ -116,6 +120,10 @@ internal class ServiceControllerImpl (
 
     override fun onError(message: String) {
         onError?.invoke(message)
+    }
+
+    override fun onAeatTableChanged(list: List<AlertingRpcResponse.Alert>) {
+        repository.setAlerts(list)
     }
 
     override fun openRoute(path: String): Boolean {
