@@ -32,10 +32,9 @@ internal class ViewControllerImpl(
     private enum class PlaybackSource {
         BROADCAST, BROADBAND
     }
-
-    private val playbackSource = MutableLiveData<PlaybackSource>(PlaybackSource.BROADCAST)
+    private val rmpListeners: PlayerStateRegistry = PlayerStateRegistry()
+    private val playbackSource = MutableLiveData(PlaybackSource.BROADCAST)
     private val externalMediaUrl = MutableLiveData<String?>()
-    private val rmpListeners = PlayerStateRegistry()
 
     override val appData: LiveData<AppData?> = repository.heldPackage.mapWith(repository.applications) { (held, applications) ->
         held?.let {
@@ -58,11 +57,6 @@ internal class ViewControllerImpl(
     }
 
     override val appState = MutableLiveData(ApplicationState.UNAVAILABLE)
-
-    override fun setApplicationState(state: ApplicationState) {
-        appState.postValue(state)
-    }
-
     override val rmpLayoutParams = MutableLiveData(RPMParams())
     override val rmpMediaUri = playbackSource.switchMap { source ->
         if (source == PlaybackSource.BROADCAST) {
@@ -97,6 +91,10 @@ internal class ViewControllerImpl(
                 rmpResume()
             }
         }
+    }
+
+    override fun setApplicationState(state: ApplicationState) {
+        appState.postValue(state)
     }
 
     override fun rmpLayoutReset() {

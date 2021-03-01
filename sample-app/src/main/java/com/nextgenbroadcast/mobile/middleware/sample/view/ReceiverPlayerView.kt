@@ -7,6 +7,7 @@ import android.os.Looper
 import android.util.AttributeSet
 import android.util.Log
 import com.google.android.exoplayer2.Player
+import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
 import com.google.android.exoplayer2.ui.PlayerView
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.RMPViewModel
@@ -133,6 +134,9 @@ class ReceiverPlayerView @JvmOverloads constructor(
 
     private fun cancelMediaTimeUpdate() {
         updateMediaTimeHandler.removeCallbacks(updateMediaTimeRunnable)
+    }
+    fun getTrackSelector(): DefaultTrackSelector? {
+        return atsc3Player.trackSelector;
     }
 
     companion object {
