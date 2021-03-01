@@ -21,4 +21,5 @@ interface IServiceController : IReceiverPresenter, ISelectorPresenter {
     fun stopRoute()
 
     fun findServiceById(globalServiceId: String): AVService?
+    fun getNearbyService(offset: Int): AVService?
 }
