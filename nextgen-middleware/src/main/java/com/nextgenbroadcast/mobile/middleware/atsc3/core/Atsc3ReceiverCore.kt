@@ -199,18 +199,9 @@ internal class Atsc3ReceiverCore private constructor(
         }
     }
 
-    fun getNextService() = getNearbyService(1)
+    fun getNextService() = serviceController.getNearbyService(1)
 
-    fun getPreviousService() = getNearbyService(-1)
-
-    private fun getNearbyService(offset: Int): AVService? {
-        return repository.selectedService.value?.let { activeService ->
-            repository.services.value?.let { services ->
-                val activeServiceIndex = services.indexOf(activeService)
-                services.getOrNull(activeServiceIndex + offset)
-            }
-        }
-    }
+    fun getPreviousService() = serviceController.getNearbyService(-1)
 
     fun findServiceBy(bsid: Int, serviceId: Int): AVService? {
         return repository.findServiceBy(bsid, serviceId)
