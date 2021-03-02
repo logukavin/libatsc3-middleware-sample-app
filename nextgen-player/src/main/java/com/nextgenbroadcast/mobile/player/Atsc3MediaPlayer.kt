@@ -18,7 +18,6 @@ import com.google.android.exoplayer2.util.Util
 import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTLoadControl
 import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTMediaSource
 import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTRenderersFactory
-import com.nextgenbroadcast.mobile.core.atsc3.mmt.MMTConstants
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.player.exoplayer.Atsc3ContentDataSource
 import com.nextgenbroadcast.mobile.player.exoplayer.Atsc3MMTExtractor
