@@ -3,11 +3,12 @@ package com.nextgenbroadcast.mobile.middleware.provider.mmt;
 import android.os.ProxyFileDescriptorCallback;
 import android.system.ErrnoException;
 import android.system.OsConstants;
+import android.util.ArrayMap;
 import android.util.Log;
 import android.util.Pair;
 
 import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTClockAnchor;
-import com.nextgenbroadcast.mobile.core.atsc3.mmt.MMTConstants;
+import com.nextgenbroadcast.mobile.player.MMTConstants;
 
 import org.ngbp.libatsc3.middleware.android.mmt.MfuByteBufferFragment;
 import org.ngbp.libatsc3.middleware.android.mmt.MmtPacketIdContext;
@@ -15,6 +16,8 @@ import org.ngbp.libatsc3.middleware.android.mmt.MpuMetadata_HEVC_NAL_Payload;
 import org.ngbp.libatsc3.middleware.android.mmt.models.MMTAudioDecoderConfigurationRecord;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
 public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
@@ -28,17 +31,15 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
 
     private final ConcurrentLinkedDeque<Pair<MfuByteBufferFragment, ByteBuffer>> mfuBufferQueue = new ConcurrentLinkedDeque<>();
     private final ByteBuffer sampleHeaderBuffer = ByteBuffer.allocate(MMTConstants.SIZE_SAMPLE_HEADER);
+    private final ArrayMap<Integer, MMTAudioDecoderConfigurationRecord> audioConfigurationMap = new ArrayMap<>();
 
     private ByteBuffer InitMpuMetadata_HEVC_NAL_Payload = null;
     private ByteBuffer currentSample = null;
     private ByteBuffer headerBuffer;
 
     private long videoMfuPresentationTimestampUs = Long.MAX_VALUE;
-    private long audioMfuPresentationTimestampUs = Long.MAX_VALUE;
+    private final ArrayMap<Integer, Long> audioMfuPresentationTimestampMap = new ArrayMap<>();
     private long stppMfuPresentationTimestampUs = Long.MAX_VALUE;
-
-    private int audioChannelCount;
-    private int audioSampleRate;
 
     private boolean isActive = true;
     private boolean sendFileHeader = true;
@@ -87,6 +88,11 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
 
                         return 0;
                     }
+
+                    //TODO: we need better criteria
+                    if (audioConfigurationMap.isEmpty()) {
+                        return 0;
+                    }
                 }
 
                 if (headerBuffer == null) {
@@ -120,43 +126,75 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
     }
 
     private ByteBuffer createFileHeader() {
-        int mpuMetadataSize = getMpuMetadataSize();
-        int headerSize = MMTConstants.mmtSignature.length + MMTConstants.SIZE_HEADER + mpuMetadataSize;
+        byte videoTrackCount = (byte) (audioOnly ? 0 : 1);
+        byte audioTrackCount = (byte) audioConfigurationMap.size();
+        byte textTrackCount = (byte) 1;
 
-        ByteBuffer fileHeaderBuffer = ByteBuffer.allocate(headerSize);
+        int mpuMetadataSize = getMpuMetadataSize();
+        int videoHeaderSize = MMTConstants.VIDEO_TRACK_HEADER_SIZE * videoTrackCount + mpuMetadataSize;
+        int audioHeaderSize = MMTConstants.AUDIO_TRACK_HEADER_SIZE * audioTrackCount;
+        int textHeaderSize = MMTConstants.CC_TRACK_HEADER_SIZE * textTrackCount;
+        int headerSize = MMTConstants.HEADER_SIZE + videoHeaderSize + audioHeaderSize + textHeaderSize;
+
+        ByteBuffer fileHeaderBuffer = ByteBuffer.allocate(MMTConstants.mmtSignature.length + headerSize);
 
         // Read identification header
         fileHeaderBuffer.put(MMTConstants.mmtSignature);
 
         // write stream Header data
-        //jjustman-2020-12-02 - TODO - pass-thru fourcc from
-        int videoFormat = getIntegerCodeForString("hev1");
-        int audioFormat = getIntegerCodeForString("ac-4");
-//                if(true) {
-//                    audioFormat = Util.getIntegerCodeForString("mp4a");
-//                    /* jjustman-2020-11-30 - needs special audio codec specific metadata */
-//                }
-        int ttmlFormat = getIntegerCodeForString("stpp");
-        fileHeaderBuffer
-                .putInt(audioOnly ? 0 : videoFormat)
-                .putInt(audioFormat)
-                .putInt(ttmlFormat)
+        fileHeaderBuffer.putInt(headerSize)
+            .putLong(MMTContentProvider.PTS_OFFSET_US);
+
+        if (videoTrackCount > 0) {
+            int videoFormat = getIntegerCodeForString("hev1");
+
+            // write initial MFU Metadata
+            InitMpuMetadata_HEVC_NAL_Payload.rewind();
+
+            fileHeaderBuffer
+                .putInt(MMTConstants.VIDEO_TRACK_HEADER_SIZE + mpuMetadataSize)
+                .put((byte) MMTConstants.TRACK_TYPE_VIDEO)
+                .putInt(videoFormat)
+                .putInt(MmtPacketIdContext.video_packet_id) //TODO: replace MmtPacketIdContext.video_packet_id
                 .putInt(getVideoWidth())
                 .putInt(getVideoHeight())
                 .putFloat(getVideoFrameRate())
                 .putInt(mpuMetadataSize)
-                .putInt(audioChannelCount)
-                .putInt(audioSampleRate)
-                .putLong(MMTContentProvider.PTS_OFFSET_US);
+                .put(InitMpuMetadata_HEVC_NAL_Payload);
+        }
 
-        if (!audioOnly) {
-            // write initial MFU Metadata
-            InitMpuMetadata_HEVC_NAL_Payload.rewind();
-            fileHeaderBuffer.put(InitMpuMetadata_HEVC_NAL_Payload);
+        if (audioTrackCount > 0) {
+            //jjustman-2020-12-02 - TODO - pass-thru fourcc from
+            int audioFormat = getIntegerCodeForString("ac-4");
+//                if(true) {
+//                    audioFormat = Util.getIntegerCodeForString("mp4a");
+//                    /* jjustman-2020-11-30 - needs special audio codec specific metadata */
+//                }
+            List<MMTAudioDecoderConfigurationRecord> list = new ArrayList<>(audioConfigurationMap.values());
+            //for (int i = list.size() - 1; i >=0; i--) {
+              //  MMTAudioDecoderConfigurationRecord info = list.get(i);
+            for (MMTAudioDecoderConfigurationRecord info : audioConfigurationMap.values()) {
+                fileHeaderBuffer
+                        .putInt(MMTConstants.AUDIO_TRACK_HEADER_SIZE)
+                        .put((byte) MMTConstants.TRACK_TYPE_AUDIO)
+                        .putInt(audioFormat)
+                        .putInt(info.packet_id)
+                        .putInt(info.channel_count)
+                        .putInt(info.sample_rate);
+            }
+        }
+
+        if (textTrackCount > 0) {
+            int ttmlFormat = getIntegerCodeForString("stpp");
+
+            fileHeaderBuffer
+                .putInt(MMTConstants.CC_TRACK_HEADER_SIZE)
+                .put((byte) MMTConstants.TRACK_TYPE_TEXT)
+                .putInt(ttmlFormat)
+                .putInt(MmtPacketIdContext.stpp_packet_id); //TODO: replace MmtPacketIdContext.stpp_packet_id
         }
 
         fileHeaderBuffer.rewind();
-
         return fileHeaderBuffer;
     }
 
@@ -178,6 +216,7 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
                 sampleHeaderBuffer
                         .put((byte) MMTConstants.TRACK_TYPE_UNKNOWN)
                         .putInt(bytesRead - sampleHeaderBuffer.limit())
+                        .putInt(0) // sample id = 0
                         .putLong(0) // PresentationTimestampUs = 0
                         .put((byte) 0); // isKeyFrame = false
                 sampleHeaderBuffer.rewind();
@@ -240,6 +279,7 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
             sampleHeaderBuffer
                     .put(sampleType)
                     .putInt(fragment.bytebuffer_length)
+                    .putInt(fragment.packet_id)
                     .putLong(computedPresentationTimestampUs)
                     .put(isKeySample(fragment) ? (byte) 1 : (byte) 0);
             sampleHeaderBuffer.rewind();
@@ -312,7 +352,7 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
     }
 
     private boolean isAudioSample(MfuByteBufferFragment sample) {
-        return MmtPacketIdContext.audio_packet_id == sample.packet_id;
+        return audioConfigurationMap.containsKey(sample.packet_id);
     }
 
     private boolean isTextSample(MfuByteBufferFragment sample) {
@@ -337,15 +377,15 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
                     videoMfuPresentationTimestampUs = toProcessMfuByteBufferFragment.mfu_presentation_time_uS_computed;
                 }
             } else if (isAudioSample(toProcessMfuByteBufferFragment)) {
-                if (audioMfuPresentationTimestampUs == Long.MAX_VALUE) {
-                    audioMfuPresentationTimestampUs = toProcessMfuByteBufferFragment.mfu_presentation_time_uS_computed;
+                if (!audioMfuPresentationTimestampMap.containsKey(toProcessMfuByteBufferFragment.packet_id)) {
+                    audioMfuPresentationTimestampMap.put(toProcessMfuByteBufferFragment.packet_id, toProcessMfuByteBufferFragment.mfu_presentation_time_uS_computed);
                 }
             } else if (isTextSample(toProcessMfuByteBufferFragment)) {
                 if (stppMfuPresentationTimestampUs == Long.MAX_VALUE) {
                     stppMfuPresentationTimestampUs = toProcessMfuByteBufferFragment.mfu_presentation_time_uS_computed;
                 }
             }
-            long anchorMfuPresentationTimestampUs = getMinNonZeroMfuPresentationTimestampForAnchor();
+            long anchorMfuPresentationTimestampUs = getMinNonZeroMfuPresentationTimestampForAnchor(toProcessMfuByteBufferFragment.packet_id);
             long mpuPresentationTimestampDeltaUs = toProcessMfuByteBufferFragment.mfu_presentation_time_uS_computed - anchorMfuPresentationTimestampUs;
             return mpuPresentationTimestampDeltaUs + MMTContentProvider.PTS_OFFSET_US;
         }
@@ -353,18 +393,19 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
         return 0;
     }
 
-    private long getMinNonZeroMfuPresentationTimestampForAnchor() {
+    private long getMinNonZeroMfuPresentationTimestampForAnchor(int packet_id) {
         long minNonZeroMfuPresentationTimestampForAnchor = Long.MAX_VALUE;
 
+        Long audioMfuPresentationTimestampUs = audioMfuPresentationTimestampMap.get(packet_id);
         if (videoMfuPresentationTimestampUs != Long.MAX_VALUE) {
             minNonZeroMfuPresentationTimestampForAnchor = videoMfuPresentationTimestampUs;
-            if (audioMfuPresentationTimestampUs != Long.MAX_VALUE) {
+            if (audioMfuPresentationTimestampUs != null) {
                 minNonZeroMfuPresentationTimestampForAnchor = Math.min(minNonZeroMfuPresentationTimestampForAnchor, audioMfuPresentationTimestampUs);
                 if (stppMfuPresentationTimestampUs != Long.MAX_VALUE) {
                     minNonZeroMfuPresentationTimestampForAnchor = Math.min(minNonZeroMfuPresentationTimestampForAnchor, stppMfuPresentationTimestampUs);
                 }
             }
-        } else if (audioMfuPresentationTimestampUs != Long.MAX_VALUE) {
+        } else if (audioMfuPresentationTimestampUs != null) {
             minNonZeroMfuPresentationTimestampForAnchor = audioMfuPresentationTimestampUs;
             if (stppMfuPresentationTimestampUs != Long.MAX_VALUE) {
                 minNonZeroMfuPresentationTimestampForAnchor = Math.min(minNonZeroMfuPresentationTimestampForAnchor, stppMfuPresentationTimestampUs);
@@ -395,6 +436,8 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
         }*/
     }
 
+    private final byte[] header = {(byte) 0xAC, 0x40, (byte)0xFF, (byte)0xFF, 0x00, 0x00, 0x00 };
+
     public void PushMfuByteBufferFragment(MfuByteBufferFragment mfuByteBufferFragment) {
         if (!isActive) return;
 
@@ -405,24 +448,55 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
             mfuBufferQueue.clear();
         }
 
-        if (isVideoSample(mfuByteBufferFragment)
-                || isAudioSample(mfuByteBufferFragment)
-                || isTextSample(mfuByteBufferFragment))
-        {
+        // Temporary solution to fix AC-4 header for alternative audio tracks
+        boolean isVideo = isVideoSample(mfuByteBufferFragment);
+        boolean isAudio = isAudioSample(mfuByteBufferFragment);
+        boolean isText = isTextSample(mfuByteBufferFragment);
+        if (isVideo || isAudio || isText) {
+            // hack that fixes alternative to MmtPacketIdContext.audio_packet_id audio tracks
+            final ByteBuffer buffer;
+            if (isAudio) {
+                int length = mfuByteBufferFragment.myByteBuffer.remaining();
+                int id = mfuByteBufferFragment.myByteBuffer.getInt(mfuByteBufferFragment.myByteBuffer.position());
+                if (id != 0xAC40FFFF) {
+                    header[4] = (byte) (length >> 16 & 0xFF);
+                    header[5] = (byte) (length >> 8 & 0xFF);
+                    header[6] = (byte) (length & 0xFF);
+
+                    length += 7;
+                    buffer = ByteBuffer.allocate(length);
+                    buffer.put(header);
+                    buffer.put(mfuByteBufferFragment.myByteBuffer);
+                    buffer.rewind();
+
+                    mfuByteBufferFragment.bytebuffer_length = length;
+                } else {
+                    buffer = mfuByteBufferFragment.myByteBuffer.duplicate();
+                }
+            } else {
+                buffer = mfuByteBufferFragment.myByteBuffer.duplicate();
+            }
+
+            if (mfuByteBufferFragment.mfu_presentation_time_uS_computed == null) {
+                if (mfuByteBufferFragment.mpu_presentation_time_uS_from_SI != null && mfuByteBufferFragment.mpu_presentation_time_uS_from_SI > 0) {
+                    if (isVideo && MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us > 0) {
+                        mfuByteBufferFragment.mfu_presentation_time_uS_computed = mfuByteBufferFragment.mpu_presentation_time_uS_from_SI + (mfuByteBufferFragment.sample_number - 1) * MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us;
+                    } else if (isAudio && MmtPacketIdContext.audio_packet_statistics.extracted_sample_duration_us > 0) {
+                        mfuByteBufferFragment.mfu_presentation_time_uS_computed = mfuByteBufferFragment.mpu_presentation_time_uS_from_SI + (mfuByteBufferFragment.sample_number - 1) * MmtPacketIdContext.audio_packet_statistics.extracted_sample_duration_us;
+                    } else if (isText && MmtPacketIdContext.stpp_packet_statistics.extracted_sample_duration_us > 0) {
+                        mfuByteBufferFragment.mfu_presentation_time_uS_computed = mfuByteBufferFragment.mpu_presentation_time_uS_from_SI + (mfuByteBufferFragment.sample_number - 1) * MmtPacketIdContext.stpp_packet_statistics.extracted_sample_duration_us;
+                    }
+                }
+            }
+
             mfuBufferQueue.add(
-                    Pair.create(mfuByteBufferFragment, mfuByteBufferFragment.myByteBuffer.duplicate())
+                    Pair.create(mfuByteBufferFragment, buffer)
             );
         }
     }
 
     public void pushAudioDecoderConfigurationRecord(MMTAudioDecoderConfigurationRecord mmtAudioDecoderConfigurationRecord) {
-        //TODO: remove audioConfigurationMap.isEmpty()
-        //if (audioConfigurationMap.isEmpty()) {
-        //    audioConfigurationMap.put(mmtAudioDecoderConfigurationRecord, false);
-        //}
-
-        audioChannelCount = mmtAudioDecoderConfigurationRecord.channel_count;
-        audioSampleRate = mmtAudioDecoderConfigurationRecord.sample_rate;
+        audioConfigurationMap.put(mmtAudioDecoderConfigurationRecord.packet_id, mmtAudioDecoderConfigurationRecord);
     }
 
     public int getQueueSize() {
