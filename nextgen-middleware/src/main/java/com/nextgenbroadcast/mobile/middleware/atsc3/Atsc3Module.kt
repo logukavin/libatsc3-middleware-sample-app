@@ -199,7 +199,7 @@ internal class Atsc3Module(
     private var tmpAdditionalServiceOpened = false
 
     override fun selectService(bsid: Int, serviceId: Int): Boolean {
-        if (selectedServiceBsid == bsid && selectedServiceId == serviceId) return false
+        if (selectedServiceBsid == bsid && selectedServiceId == serviceId) return true
 
         clearHeld()
         selectedServiceSLSProtocol = -1
