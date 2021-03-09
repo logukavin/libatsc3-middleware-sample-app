@@ -20,7 +20,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTClockAnchor;
-import com.nextgenbroadcast.mobile.core.atsc3.mmt.MMTConstants;
+import com.nextgenbroadcast.mobile.player.MMTConstants;
 import com.nextgenbroadcast.mobile.core.model.AVService;
 import com.nextgenbroadcast.mobile.middleware.atsc3.core.Atsc3ReceiverCore;
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.SLTConstants;
