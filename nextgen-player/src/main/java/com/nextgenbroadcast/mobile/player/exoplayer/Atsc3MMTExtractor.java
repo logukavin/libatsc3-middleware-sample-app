@@ -4,6 +4,7 @@ import android.util.Log;
 import android.util.SparseArray;
 
 import com.google.android.exoplayer2.C;
+import com.google.android.exoplayer2.Format;
 import com.google.android.exoplayer2.ParserException;
 import com.google.android.exoplayer2.extractor.Extractor;
 import com.google.android.exoplayer2.extractor.ExtractorInput;
@@ -13,7 +14,7 @@ import com.google.android.exoplayer2.extractor.SeekMap;
 import com.google.android.exoplayer2.extractor.TrackOutput;
 import com.google.android.exoplayer2.util.ParsableByteArray;
 import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTMediaTrackUtils;
-import com.nextgenbroadcast.mobile.core.atsc3.mmt.MMTConstants;
+import com.nextgenbroadcast.mobile.player.MMTConstants;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -24,6 +25,7 @@ public class Atsc3MMTExtractor implements Extractor {
 
     private int currentSampleBytesRemaining;
     private int currentSampleSize;
+    private int currentSampleId;
     private long currentSampleTimeUs;
     private byte currentSampleType;
     private boolean currentSampleIsKey;
@@ -96,10 +98,11 @@ public class Atsc3MMTExtractor implements Extractor {
 
                 currentSampleType = (byte) buffer.readUnsignedByte();
                 currentSampleSize = buffer.readInt();
+                currentSampleId = buffer.readInt();
                 currentSampleTimeUs = buffer.readLong();
                 currentSampleIsKey = buffer.readUnsignedByte() == 1;
                 currentSampleBytesRemaining = currentSampleSize;
-                //Log.d("!!!", "sample Type: " + currentSampleType + ", sample TimeUs: " + currentSampleTimeUs + ",  sample size: " + currentSampleSize);
+                //Log.d("!!!", "sid: " + currentSampleId + ", sample Type: " + currentSampleType + ", sample TimeUs: " + currentSampleTimeUs + ",  sample size: " + currentSampleSize);
             } else if (buffer.bytesLeft() == 0) {
                 extractorInput.readFully(buffer.data, /* offset= */ 0, /* length= */ buffer.limit());
                 buffer.setPosition(0);
@@ -110,7 +113,7 @@ public class Atsc3MMTExtractor implements Extractor {
             return Extractor.RESULT_END_OF_INPUT;
         }
 
-        MmtTrack track = tracks.get(currentSampleType);
+        MmtTrack track = tracks.get(currentSampleId);
         if (track == null) {
             if (currentSampleBytesRemaining > 0) {
                 int skipped = 0;
@@ -172,42 +175,67 @@ public class Atsc3MMTExtractor implements Extractor {
         if (!hasOutputFormat) {
             hasOutputFormat = true;
 
-            ByteBuffer buffer = ByteBuffer.allocate(MMTConstants.SIZE_HEADER);
-
-            input.readFully(buffer.array(), /* offset= */ 0, /* length= */ MMTConstants.SIZE_HEADER);
-
+            ByteBuffer buffer = ByteBuffer.allocate(MMTConstants.HEADER_SIZE);
+            input.readFully(buffer.array(), /* offset= */ 0, /* length= */ MMTConstants.HEADER_SIZE);
             buffer.rewind();
 
-            int videoType = buffer.getInt();
-            int audioType = buffer.getInt();
-            int textType = buffer.getInt();
-
-            int videoWidth = buffer.getInt();
-            int videoHeight = buffer.getInt();
-            float videoFrameRate = buffer.getFloat();
-            int initialDataSize = buffer.getInt();
-
-            int audioChannelCount = buffer.getInt();
-            int audioSampleRate = buffer.getInt();
-
+            int mediaHeaderSize = buffer.getInt() - MMTConstants.HEADER_SIZE;
             long defaultSampleDurationUs = buffer.getLong();
 
-            byte[] data = new byte[initialDataSize];
-            input.readFully(data, /* offset= */ 0, /* length= */ initialDataSize);
+            buffer = ByteBuffer.allocate(mediaHeaderSize);
+            input.readFully(buffer.array(), /* offset= */ 0, /* length= */ mediaHeaderSize);
+            buffer.rewind();
 
-            TrackOutput videoOutput = MMTMediaTrackUtils.createVideoOutput(extractorOutput, /* id */1, videoType, videoWidth, videoHeight, videoFrameRate, data);
-            if (videoOutput != null) {
-                tracks.put(C.TRACK_TYPE_VIDEO, new MmtTrack(videoOutput, defaultSampleDurationUs));
-            }
+            while (buffer.remaining() > 0) {
+                int headerSize = buffer.getInt();
+                int trackType = buffer.get();
 
-            TrackOutput audioOutput = MMTMediaTrackUtils.createAudioOutput(extractorOutput, /* id */2, audioType, audioChannelCount, audioSampleRate);
-            if (audioOutput != null) {
-                tracks.put(C.TRACK_TYPE_AUDIO, new MmtTrack(audioOutput, defaultSampleDurationUs));
-            }
+                switch (trackType) {
+                    case MMTConstants.TRACK_TYPE_VIDEO: {
+                        int videoType = buffer.getInt();
+                        int packetId = buffer.getInt();
+                        int videoWidth = buffer.getInt();
+                        int videoHeight = buffer.getInt();
+                        float videoFrameRate = buffer.getFloat();
+                        int initialDataSize = buffer.getInt();
 
-            TrackOutput textOutput = MMTMediaTrackUtils.createTextOutput(extractorOutput, /* id */3, textType);
-            if (textOutput != null) {
-                tracks.put(C.TRACK_TYPE_TEXT, new MmtTrack(textOutput, 0));
+                        byte[] data = new byte[initialDataSize];
+                        buffer.get(data, 0, initialDataSize);
+
+                        TrackOutput videoOutput = MMTMediaTrackUtils.createVideoOutput(extractorOutput, packetId, videoType, videoWidth, videoHeight, videoFrameRate, data);
+                        if (videoOutput != null) {
+                            tracks.put(packetId, new MmtTrack(videoOutput, defaultSampleDurationUs));
+                        }
+                    }
+                    break;
+
+                    case MMTConstants.TRACK_TYPE_AUDIO: {
+                        int audioType = buffer.getInt();
+                        int packetId = buffer.getInt();
+                        int audioChannelCount = buffer.getInt();
+                        int audioSampleRate = buffer.getInt();
+
+                        Format audioFormat = MMTMediaTrackUtils.createAudioFormat(Integer.toString(packetId),
+                                audioType, audioChannelCount, audioSampleRate, 0, null);
+                        if (audioFormat != null) {
+                            TrackOutput audioOutput = extractorOutput.track(packetId, C.TRACK_TYPE_AUDIO);
+                            audioOutput.format(audioFormat);
+                            tracks.put(packetId, new MmtTrack(audioOutput, defaultSampleDurationUs));
+                        }
+                    }
+                    break;
+
+                    case MMTConstants.TRACK_TYPE_TEXT: {
+                        int textType = buffer.getInt();
+                        int packetId = buffer.getInt();
+
+                        TrackOutput textOutput = MMTMediaTrackUtils.createTextOutput(extractorOutput, packetId, textType, "us");
+                        if (textOutput != null) {
+                            tracks.put(packetId, new MmtTrack(textOutput, 0));
+                        }
+                    }
+                    break;
+                }
             }
 
             extractorOutput.endTracks();
