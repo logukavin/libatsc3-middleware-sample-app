@@ -148,9 +148,9 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
                     )
                 }
                 mediaSession.setQueue(queue)
-            }
-            serviceController.sltServices.mapWith(playbackState) { it }.observe(this@Atsc3ForegroundService) { (services, currentPlaybackState) ->
+
                 // Automatically start playing the first service in list
+                val currentPlaybackState = playbackState.value
                 if (currentPlaybackState == null || currentPlaybackState == PlaybackState.IDLE) {
                     services?.firstOrNull()?.let { service ->
                         selectMediaService(service)
