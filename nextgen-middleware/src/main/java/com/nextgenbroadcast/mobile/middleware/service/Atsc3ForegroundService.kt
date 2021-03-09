@@ -6,9 +6,6 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
-import android.media.AudioAttributes
-import android.media.AudioFocusRequest
-import android.media.AudioManager
 import android.net.Uri
 import android.os.Bundle
 import android.os.IBinder
@@ -28,6 +25,7 @@ import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.distinctUntilChanged
 import androidx.media.session.MediaButtonReceiver
+import com.nextgenbroadcast.mobile.core.mapWith
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
@@ -152,7 +150,8 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
                 mediaSession.setQueue(queue)
 
                 // Automatically start playing the first service in list
-                if (playbackState.value == PlaybackState.IDLE) {
+                val currentPlaybackState = playbackState.value
+                if (currentPlaybackState == null || currentPlaybackState == PlaybackState.IDLE) {
                     services?.firstOrNull()?.let { service ->
                         selectMediaService(service)
                     }
