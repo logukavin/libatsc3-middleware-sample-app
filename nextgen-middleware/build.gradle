@@ -108,7 +108,7 @@ def lifecycleVersion = rootProject.ext.lifecycleVersion
 def libatsc3Version = rootProject.ext.libatsc3Version
 def coreKtxVersion = rootProject.ext.coreKtxVersion
 def coroutinesVersion = rootProject.ext.coroutinesVersion
-def jettyVersion = '9.4.32.v20200930'
+def jettyVersion = '9.4.38.v20210224'
 def powermock_version = "2.0.9"
 def startupRuntime = rootProject.ext.startupRuntime
 
