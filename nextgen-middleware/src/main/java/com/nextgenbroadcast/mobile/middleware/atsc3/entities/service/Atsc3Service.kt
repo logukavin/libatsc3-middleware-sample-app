@@ -11,6 +11,7 @@ data class Atsc3Service(
         var minorChannelNo: Int = 0,
         var serviceCategory: Int = 0,
         var shortServiceName: String? = null,
+        var hidden: Boolean = false,
         var broadcastSvcSignalingCollection: ArrayList<BroadcastSvcSignaling> = ArrayList()
 ) {
     override fun toString(): String {
