@@ -170,9 +170,6 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
 //                    audioFormat = Util.getIntegerCodeForString("mp4a");
 //                    /* jjustman-2020-11-30 - needs special audio codec specific metadata */
 //                }
-            List<MMTAudioDecoderConfigurationRecord> list = new ArrayList<>(audioConfigurationMap.values());
-            //for (int i = list.size() - 1; i >=0; i--) {
-              //  MMTAudioDecoderConfigurationRecord info = list.get(i);
             for (MMTAudioDecoderConfigurationRecord info : audioConfigurationMap.values()) {
                 fileHeaderBuffer
                         .putInt(MMTConstants.AUDIO_TRACK_HEADER_SIZE)
