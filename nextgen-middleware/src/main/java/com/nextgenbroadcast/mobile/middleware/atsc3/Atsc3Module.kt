@@ -108,12 +108,13 @@ internal class Atsc3Module(
         log("Connecting to: $source")
 
         close()
-
         this.source = source
 
         return withStateLock {
             val result = source.open()
-            if (result != IAtsc3Source.RESULT_ERROR) {
+            if (result == IAtsc3Source.RESULT_ERROR) {
+                this.source = null
+            } else {
                 setSourceConfig(result)
                 setState(
                         if (result > 0) Atsc3ModuleState.SCANNING else Atsc3ModuleState.OPENED
@@ -170,7 +171,7 @@ internal class Atsc3Module(
         }
     }
 
-    private fun getState(): Atsc3ModuleState {
+    fun getState(): Atsc3ModuleState {
         return withStateLock {
             state
         }
@@ -198,7 +199,7 @@ internal class Atsc3Module(
     private var tmpAdditionalServiceOpened = false
 
     override fun selectService(bsid: Int, serviceId: Int): Boolean {
-        if (selectedServiceBsid == bsid && selectedServiceId == serviceId) return false
+        if (selectedServiceBsid == bsid && selectedServiceId == serviceId) return true
 
         clearHeld()
         selectedServiceSLSProtocol = -1
