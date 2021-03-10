@@ -43,6 +43,14 @@ dependencies {
 
     implementation project(':nextgen-core')
 
+    if (project.hasProperty('org.gradle.project.use_local_src_exoplayer_folder') && project.property('org.gradle.project.use_local_src_exoplayer_folder').toString().toBoolean()) {
+        implementation project(':exoplayer-library-core')
+        implementation project(':exoplayer-library-ui')
+    } else {
+        compileOnly "com.google.android.exoplayer:exoplayer-core:$exoplayerVersion"
+        compileOnly "com.google.android.exoplayer:exoplayer-ui:$exoplayerVersion"
+    }
+
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
     implementation "androidx.core:core-ktx:$coreKtxVersion"
     implementation 'androidx.appcompat:appcompat:1.2.0'
