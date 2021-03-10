@@ -276,6 +276,8 @@ class TrackSelectionDialog : DialogFragment() {
                         } else if (selectedRendererIndex != renderIndex) {
                             disabledRendersSet.add(renderIndex)
                         }
+                    } else {
+                        disabledRendersSet.remove(renderIndex)
                     }
                 }
             }
