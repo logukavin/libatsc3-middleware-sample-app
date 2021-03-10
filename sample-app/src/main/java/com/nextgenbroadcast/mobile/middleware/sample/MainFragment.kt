@@ -215,25 +215,26 @@ class MainFragment : Fragment() {
     }
 
     private fun showPopupSettingsMenu(v: View) {
-        val popupMenu = PopupMenu(context, v)
-        popupMenu.inflate(R.menu.settings_menu)
-        popupMenu
-                .setOnMenuItemClickListener { item ->
-                    when (item.itemId) {
-                        R.id.menu_settings -> {
-                            openSettingsDialog(receiverViewModel?.getFrequency())
-                            true
-                        }
-                        R.id.menu_select_tracks -> {
-                            openSelectTracksDialog()
-                            true
-                        }
-
-                        else -> false
+        PopupMenu(context, v).apply {
+            inflate(R.menu.settings_menu)
+            if (receiver_player.player == null) {
+                menu.findItem(R.id.menu_select_tracks)?.isEnabled = false
+            }
+            setOnMenuItemClickListener { item ->
+                when (item.itemId) {
+                    R.id.menu_settings -> {
+                        openSettingsDialog(receiverViewModel?.getFrequency())
+                        true
                     }
+                    R.id.menu_select_tracks -> {
+                        openSelectTracksDialog()
+                        true
+                    }
+
+                    else -> false
                 }
-        popupMenu.setOnDismissListener { }
-        popupMenu.show()
+            }
+        }.show()
     }
 
     private fun openSelectTracksDialog() {
@@ -244,6 +245,7 @@ class MainFragment : Fragment() {
                 && TrackSelectionDialog.willHaveContent(trackSelection)) {
             isShowingTrackSelectionDialog = true
             val trackSelectionDialog = TrackSelectionDialog.createForTrackSelector(
+                    getString(R.string.track_selection_title),
                     currentTrackSelection,
                     trackSelection
             ) { _ -> isShowingTrackSelectionDialog = false }
