@@ -175,9 +175,7 @@ class MainFragment : Fragment() {
         }
 
         settings_button.setOnClickListener {
-            settings_button.setOnClickListener {
-                showPopupSettingsMenu(settings_button)
-            }
+            showPopupSettingsMenu(settings_button)
         }
 
         viewViewModel.showPhyInfo.mapWith(viewViewModel.showDebugInfo) { (showPhy, showInfo) ->
