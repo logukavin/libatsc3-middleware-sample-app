@@ -260,6 +260,7 @@ class TrackSelectionDialog : DialogFragment() {
             var selectedRendererIndex = -1
 
             val isNoneSelected = (radioGroup[0] as RadioButton).isChecked
+            val hasSelection = radioGroup.checkedRadioButtonId >= 0
             for (i in 1 until radioGroup.size) {
                 val radioButton = radioGroup[i] as RadioButton
 
@@ -267,7 +268,7 @@ class TrackSelectionDialog : DialogFragment() {
                     val (renderIndex, groupIndex, trackIndex) = radioButton.tag as Triple<Int, Int, Int>
                     if (isNoneSelected) {
                         disabledRendersSet.add(renderIndex)
-                    } else {
+                    } else if (hasSelection) {
                         if (radioButton.isChecked) {
                             selectedRendererIndex = renderIndex
                             disabledRendersSet.remove(renderIndex)
