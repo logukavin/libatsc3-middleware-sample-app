@@ -379,6 +379,7 @@ class MainFragment : Fragment() {
                     receiver_player.play(mediaUri)
                 } else {
                     receiver_player.stop()
+                    receiver_player.clearState()
                 }
             })
             playWhenReady.observe(this@MainFragment, { playWhenReady ->
