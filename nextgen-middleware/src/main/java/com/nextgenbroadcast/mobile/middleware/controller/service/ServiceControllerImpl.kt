@@ -171,6 +171,8 @@ internal class ServiceControllerImpl (
         cancelMediaUrlAssignment()
         repository.setMediaUrl(null)
 
+        if (atsc3Module.isServiceSelected(service.bsid, service.id)) return true
+
         val res = atsc3Module.selectService(service.bsid, service.id)
         if (res) {
             atsc3Analytics.startSession(service.bsid, service.id, service.globalId, service.category)
