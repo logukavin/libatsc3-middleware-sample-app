@@ -252,6 +252,8 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
         if (intent != null) {
             when (intent.action) {
+                ACTION_START_FOREGROUND -> startForeground()
+
                 ACTION_DEVICE_ATTACHED -> onDeviceAttached(intent.getParcelableExtra(UsbManager.EXTRA_DEVICE))
 
                 ACTION_DEVICE_DETACHED -> onDeviceDetached(intent.getParcelableExtra(UsbManager.EXTRA_DEVICE))
@@ -310,7 +312,9 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         isInitialized = true
 
         try {
-            atsc3Receiver.initialize(MetadataReader.discoverMetadata(this))
+            atsc3Receiver.initialize(MetadataReader.discoverMetadata(this)) {
+                startForeground(applicationContext)
+            }
         } catch (e: Exception) {
             Log.d(TAG, "Can't initialize, something is wrong in metadata", e)
         }
@@ -585,6 +589,8 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
         private const val SERVICE_ACTION = "${BuildConfig.LIBRARY_PACKAGE_NAME}.intent.action"
 
+        internal const val ACTION_START_FOREGROUND = "$SERVICE_ACTION.START_FOREGROUND"
+
         const val ACTION_DEVICE_ATTACHED = "$SERVICE_ACTION.USB_ATTACHED"
         const val ACTION_DEVICE_DETACHED = "$SERVICE_ACTION.USB_DETACHED"
         const val ACTION_USB_PERMISSION = "$SERVICE_ACTION.USB_PERMISSION"
@@ -611,6 +617,12 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         )
 
         internal lateinit var clazz: Class<out Atsc3ForegroundService>
+
+        internal fun startForeground(context: Context) {
+            newIntent(context, ACTION_START_FOREGROUND).let { serviceIntent ->
+                ContextCompat.startForegroundService(context, serviceIntent)
+            }
+        }
 
         fun startForDevice(context: Context, device: UsbDevice) {
             newIntent(context, ACTION_DEVICE_ATTACHED).let { serviceIntent ->
