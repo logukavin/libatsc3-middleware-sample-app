@@ -98,8 +98,6 @@ class TrackSelectionDialog : DialogFragment() {
                     radioGroupMap[trackType] = radioButtonGroup
                 }
 
-                val override: SelectionOverride? = initialParameters?.getSelectionOverride(i, trackGroupArray)
-
                 trackGroupArray?.let {
                     for (m in 0 until trackGroupArray.length) {
                         val trackGroup = trackGroupArray[m]
