@@ -35,6 +35,7 @@ import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.UserAgentViewMode
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.ViewViewModel
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.factory.UserAgentViewModelFactory
 import com.nextgenbroadcast.mobile.middleware.sample.useragent.ServiceAdapter
+import com.nextgenbroadcast.mobile.view.TrackSelectionDialog
 import com.nextgenbroadcast.mobile.view.UserAgentView
 import kotlinx.android.synthetic.main.fragment_main.*
 import kotlinx.coroutines.GlobalScope
@@ -214,37 +215,41 @@ class MainFragment : Fragment() {
     }
 
     private fun showPopupSettingsMenu(v: View) {
-        val popupMenu = PopupMenu(context, v)
-        popupMenu.inflate(R.menu.settings_menu)
-        popupMenu
-                .setOnMenuItemClickListener { item ->
-                    when (item.itemId) {
-                        R.id.menu_settings -> {
-                            openSettingsDialog(receiverViewModel?.getFrequency())
-                            true
-                        }
-                        R.id.menu_select_tracks -> {
-                            openSelectTracksDialog()
-                            true
-                        }
-
-                        else -> false
+        PopupMenu(context, v).apply {
+            inflate(R.menu.settings_menu)
+            if (receiver_player.player == null) {
+                menu.findItem(R.id.menu_select_tracks)?.isEnabled = false
+            }
+            setOnMenuItemClickListener { item ->
+                when (item.itemId) {
+                    R.id.menu_settings -> {
+                        openSettingsDialog(receiverViewModel?.getFrequency())
+                        true
                     }
+                    R.id.menu_select_tracks -> {
+                        openSelectTracksDialog()
+                        true
+                    }
+
+                    else -> false
                 }
-        popupMenu.setOnDismissListener { }
-        popupMenu.show()
+            }
+        }.show()
     }
 
     private fun openSelectTracksDialog() {
         val trackSelection = receiver_player.getTrackSelector()
+        val currentTrackSelection = receiver_player.player.currentTrackSelections
         if (!isShowingTrackSelectionDialog
                 && trackSelection != null
                 && TrackSelectionDialog.willHaveContent(trackSelection)) {
             isShowingTrackSelectionDialog = true
             val trackSelectionDialog = TrackSelectionDialog.createForTrackSelector(
-                    trackSelection /* onDismissListener= */
+                    getString(R.string.track_selection_title),
+                    currentTrackSelection,
+                    trackSelection
             ) { _ -> isShowingTrackSelectionDialog = false }
-            trackSelectionDialog.show(parentFragmentManager,  /* tag= */null)
+            trackSelectionDialog.show(parentFragmentManager, null)
         }
     }
 

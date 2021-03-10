@@ -11,5 +11,5 @@
     <string name="settings_apply_btn">Tune</string>
     <string name="settings_enable_debug_info">Enable Debug Information</string>
     <string name="settings_enable_phy_info">Enable Phy Information</string>
-    <string name="track_selection_title">Select tracks</string>
+    <string name="track_selection_title">Select media tracks</string>
 </resources>
