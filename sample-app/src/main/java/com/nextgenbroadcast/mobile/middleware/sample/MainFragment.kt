@@ -237,12 +237,13 @@ class MainFragment : Fragment() {
 
     private fun openSelectTracksDialog() {
         val trackSelection = receiver_player.getTrackSelector()
-
+        val currentTrackSelection = receiver_player.player.currentTrackSelections
         if (!isShowingTrackSelectionDialog
                 && trackSelection != null
                 && TrackSelectionDialog.willHaveContent(trackSelection)) {
             isShowingTrackSelectionDialog = true
             val trackSelectionDialog = TrackSelectionDialog.createForTrackSelector(
+                    currentTrackSelection,
                     trackSelection
             ) { _ -> isShowingTrackSelectionDialog = false }
             trackSelectionDialog.show(parentFragmentManager, null)
