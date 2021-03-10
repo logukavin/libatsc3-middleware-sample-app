@@ -15,11 +15,9 @@
     </data>
 
     <androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
-        xmlns:tools="http://schemas.android.com/tools"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="@color/black"
-        tools:context=".useragent.UserAgentActivity">
+        android:background="@color/black">
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/user_agent_root"
@@ -50,8 +48,7 @@
             <com.nextgenbroadcast.mobile.view.UserAgentView
                 android:id="@+id/user_agent_web_view"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:focusedByDefault="true" />
+                android:layout_height="match_parent"/>
 
             <TextView
                 android:id="@+id/atsc3_data_log"
@@ -86,7 +83,7 @@
                 app:layout_constraintStart_toStartOf="@+id/receiver_player"
                 app:layout_constraintTop_toBottomOf="@+id/atsc3_data_log" />
 
-            <ImageButton
+            <androidx.appcompat.widget.AppCompatImageButton
                 android:id="@+id/settings_button"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -115,7 +112,6 @@
                 android:layout_gravity="end"
                 android:background="@color/semi_transparent"
                 android:defaultFocusHighlightEnabled="true"
-                android:focusableInTouchMode="true"
                 android:focusedByDefault="true"
                 android:gravity="center"
                 android:paddingStart="10dp"
