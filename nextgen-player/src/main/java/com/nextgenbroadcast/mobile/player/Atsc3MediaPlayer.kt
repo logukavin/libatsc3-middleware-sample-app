@@ -148,6 +148,10 @@ class Atsc3MediaPlayer(
         audioFocusRequest = null
     }
 
+    fun clearSavedState() {
+        lastMediaUri = null
+    }
+
     fun getSubtitleFormats(): List<Triple<Format, Boolean, Int>> {
         val rendererType = C.TRACK_TYPE_AUDIO
 
