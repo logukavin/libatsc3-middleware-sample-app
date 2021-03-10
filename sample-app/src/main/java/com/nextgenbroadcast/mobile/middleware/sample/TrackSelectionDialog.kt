@@ -88,7 +88,7 @@ class TrackSelectionDialog : DialogFragment() {
                 val trackGroupArray = trackInfo.getTrackGroups(i)
 
                 val titleTextView = layoutInflater.inflate(R.layout.track_text_view, llTrackSelectionContainer, false) as TextView
-                val currentSelectedFormatId = currentTrackSelection?.get(i)?.selectedFormat?.id
+                val currentSelectedFormat = currentTrackSelection?.get(i)?.selectedFormat
                 var radioButtonGroup = radioGroupMap[trackType]
                 if (radioButtonGroup == null) {
                     titleTextView.text = getTrackTypeString(resources, trackType)
@@ -110,8 +110,7 @@ class TrackSelectionDialog : DialogFragment() {
 
                         /** set selection in radioButton  */
                         if (!disabledRendersSet.contains(i)
-                                &&
-                                (currentSelectedFormatId==trackFormat.id)) {
+                                && currentSelectedFormat == trackFormat) {
                             radioButtonGroup.check(radioButton.id)
                         }
                     }
