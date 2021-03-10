@@ -4,7 +4,6 @@ import android.app.Dialog
 import android.content.DialogInterface
 import android.content.res.Resources
 import android.os.Bundle
-import android.util.SparseArray
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -23,14 +22,11 @@ import com.google.android.exoplayer2.trackselection.MappingTrackSelector.MappedT
 import com.google.android.exoplayer2.trackselection.TrackSelectionArray
 import com.google.android.exoplayer2.ui.DefaultTrackNameProvider
 import com.google.android.exoplayer2.ui.TrackNameProvider
-import com.google.android.exoplayer2.ui.TrackSelectionView
 import com.google.android.exoplayer2.util.Assertions
 import kotlinx.android.synthetic.main.track_selection_dialog.*
 
 class TrackSelectionDialog : DialogFragment() {
-    private var trackSelectionViewsArray: SparseArray<TrackSelectionView> = SparseArray()
-
-    private var titleId = 0
+    private var titleStr = ""
     private var onClickListener: DialogInterface.OnClickListener? = null
     private var onDismissListener: DialogInterface.OnDismissListener? = null
 
@@ -44,13 +40,13 @@ class TrackSelectionDialog : DialogFragment() {
     private var currentTrackSelection: TrackSelectionArray? = null
 
     private fun init(
-            titleId: Int,
+            titleStr: String,
             mappedTrackInfo: MappedTrackInfo,
             initialParameters: DefaultTrackSelector.Parameters,
             onClickListener: DialogInterface.OnClickListener,
             onDismissListener: DialogInterface.OnDismissListener,
             currentTrackSelection: TrackSelectionArray) {
-        this.titleId = titleId
+        this.titleStr = titleStr
         this.onClickListener = onClickListener
         this.onDismissListener = onDismissListener
         this.mappedTrackInfo = mappedTrackInfo
@@ -68,13 +64,12 @@ class TrackSelectionDialog : DialogFragment() {
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         val dialog = AppCompatDialog(activity, R.style.TrackSelectionDialogThemeOverlay)
-        dialog.setTitle(titleId)
+        dialog.setTitle(titleStr)
         return dialog
     }
 
     override fun onDismiss(dialog: DialogInterface) {
         super.onDismiss(dialog)
-        trackSelectionViewsArray.clear()
         onDismissListener?.onDismiss(dialog)
     }
 
@@ -171,7 +166,7 @@ class TrackSelectionDialog : DialogFragment() {
             return false
         }
 
-        fun createForTrackSelector(currentTrackSelection: TrackSelectionArray,
+        fun createForTrackSelector(title: String, currentTrackSelection: TrackSelectionArray,
                 trackSelector: DefaultTrackSelector, onDismissListener: DialogInterface.OnDismissListener): TrackSelectionDialog {
 
             val mappedTrackInfo = Assertions.checkNotNull(trackSelector.currentMappedTrackInfo)
@@ -179,7 +174,7 @@ class TrackSelectionDialog : DialogFragment() {
             val trackSelectionDialog = TrackSelectionDialog()
             val parameters = trackSelector.parameters
             trackSelectionDialog.init(
-                    R.string.track_selection_title,
+                    title,
                     mappedTrackInfo,
                     parameters,
                     onClickListener = { _, _ ->

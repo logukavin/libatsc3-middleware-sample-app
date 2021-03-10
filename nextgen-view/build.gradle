@@ -45,12 +45,10 @@ dependencies {
 
     if (project.hasProperty('org.gradle.project.use_local_src_exoplayer_folder') && project.property('org.gradle.project.use_local_src_exoplayer_folder').toString().toBoolean()) {
         implementation project(':exoplayer-library-core')
-        implementation project(':exoplayer-extension-mmt')
         implementation project(':exoplayer-library-ui')
     } else {
-        implementation "com.google.android.exoplayer:exoplayer-core:$exoplayerVersion"
-        compileOnly "com.google.android.exoplayer:exoplayer-mmt:$exoplayerVersion"
-        implementation "com.google.android.exoplayer:exoplayer-ui:$exoplayerVersion"
+        compileOnly "com.google.android.exoplayer:exoplayer-core:$exoplayerVersion"
+        compileOnly "com.google.android.exoplayer:exoplayer-ui:$exoplayerVersion"
     }
 
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
