@@ -87,7 +87,7 @@ internal class Atsc3ReceiverCore private constructor(
         atsc3Module.close()
     }
 
-    fun initialize(components: Map<Class<*>, Pair<Int, String>>) {
+    fun initialize(components: Map<Class<*>, Pair<Int, String>>, requestForeground: () -> Unit) {
         try {
             FrequencyInitializer(settings, this).also {
                 initializer.add(WeakReference(it))
@@ -100,7 +100,9 @@ internal class Atsc3ReceiverCore private constructor(
                 initializer.add(WeakReference(it))
             }
 
-            if (!phyInitializer.initialize(context, components)) {
+            if (phyInitializer.initialize(context, components)) {
+                requestForeground()
+            } else {
                 UsbPhyInitializer().also {
                     initializer.add(WeakReference(it))
                 }.initialize(context, components)
