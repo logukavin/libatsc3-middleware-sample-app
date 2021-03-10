@@ -4,7 +4,6 @@ import android.app.Dialog
 import android.content.DialogInterface
 import android.content.res.Resources
 import android.os.Bundle
-import android.util.Log
 import android.util.SparseArray
 import android.view.LayoutInflater
 import android.view.View
@@ -22,8 +21,6 @@ import com.google.android.exoplayer2.Format
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector.SelectionOverride
 import com.google.android.exoplayer2.trackselection.MappingTrackSelector.MappedTrackInfo
-import com.google.android.exoplayer2.trackselection.TrackSelection
-import com.google.android.exoplayer2.trackselection.TrackSelectionArray
 import com.google.android.exoplayer2.ui.DefaultTrackNameProvider
 import com.google.android.exoplayer2.ui.TrackNameProvider
 import com.google.android.exoplayer2.ui.TrackSelectionView
@@ -78,58 +75,51 @@ class TrackSelectionDialog : DialogFragment() {
     }
 
     private fun showTrackSelections() {
-        mappedTrackInfo?.rendererCount?.let { it ->
-            for (i in 0 until it) {
-                if (showTracksForRenderer(mappedTrackInfo, i)) {
-                    val trackType = mappedTrackInfo?.getRendererType(i)
+        val trackInfo = mappedTrackInfo ?: return
+        val layoutInflater = LayoutInflater.from(context)
 
-                    val trackGroupArray = mappedTrackInfo?.getTrackGroups(i)
+        for (i in 0 until trackInfo.rendererCount) {
+            if (showTracksForRenderer(trackInfo, i)) {
+                val trackType = trackInfo.getRendererType(i)
+                val trackGroupArray = trackInfo.getTrackGroups(i)
 
-                    val titleTextView = LayoutInflater.from(context).inflate(R.layout.track_text_view, null, false) as TextView
-                    trackType?.let {
+                val titleTextView = layoutInflater.inflate(R.layout.track_text_view, llTrackSelectionContainer, false) as TextView
 
-                        var radioButtonGroup = radioGroupMap[trackType]
+                var radioButtonGroup = radioGroupMap[trackType]
+                if (radioButtonGroup == null) {
+                    titleTextView.text = getTrackTypeString(resources, trackType)
+                    llTrackSelectionContainer.addView(titleTextView)
+                    radioButtonGroup = layoutInflater.inflate(R.layout.track_radio_group, llTrackSelectionContainer, false) as RadioGroup
+                    addNoneValueInGroup(radioButtonGroup, i, llTrackSelectionContainer, layoutInflater)
+                    radioGroupMap[trackType] = radioButtonGroup
+                }
 
-                        if (radioButtonGroup == null) {
-                            titleTextView.text = getTrackTypeString(resources, trackType)
-                            llTrackSelectionContainer.addView(titleTextView)
-                            radioButtonGroup = LayoutInflater.from(context).inflate(R.layout.track_radio_group, null, false) as RadioGroup
-                            setNoneValueInGroup(radioButtonGroup, i)
-                            radioGroupMap[trackType] = radioButtonGroup
-                        }
+                val override: SelectionOverride? = initialParameters?.getSelectionOverride(i, trackGroupArray)
 
-                        val override: SelectionOverride? = (initialParameters?.getSelectionOverride(i, trackGroupArray)?.let { listOf(it) })?.get(0)
+                trackGroupArray?.let {
+                    for (m in 0 until trackGroupArray.length) {
+                        val trackGroup = trackGroupArray[m]
+                        val trackFormat = trackGroup.getFormat(0)
+                        val radioButton: RadioButton = layoutInflater.inflate(R.layout.track_radio_button, llTrackSelectionContainer, false) as RadioButton
+                        radioButton.text = trackNameProvider?.getTrackName(trackFormat)
 
+                        radioButton.tag = Triple(i, m, 0)
+                        radioButtonGroup.addView(radioButton)
 
-                        trackGroupArray?.let {
-                            for (m in 0 until trackGroupArray.length) {
-                                val trackGroup = trackGroupArray[m]
-                                val trackFormat = trackGroup.getFormat(0)
-                                val radioButton: RadioButton = LayoutInflater.from(context).inflate(R.layout.track_radio_button, null, false) as RadioButton
-                                radioButton.text = trackNameProvider?.getTrackName(trackFormat)
-
-                                radioButton.tag = Triple(i, m, 0)
-                                radioButtonGroup.addView(radioButton)
-
-                                /** set selection in radioButton  */
-
-                                if (!disabledRendersSet.contains(i)
-                                        &&
-                                        (isDefaultSelection(trackFormat)
-                                                || isGroupOverride(override, m))) {
-                                    radioButtonGroup.check(radioButton.id)
-                                }
-                            }
-                        }
-                        if (radioButtonGroup.parent == null) {
-                            llTrackSelectionContainer.addView(radioButtonGroup)
+                        /** set selection in radioButton  */
+                        if (!disabledRendersSet.contains(i)
+                                &&
+                                (isDefaultSelection(trackFormat)
+                                        || isGroupOverride(override, m))) {
+                            radioButtonGroup.check(radioButton.id)
                         }
                     }
-
+                }
+                if (radioButtonGroup.parent == null) {
+                    llTrackSelectionContainer.addView(radioButtonGroup)
                 }
             }
         }
-
     }
 
     private fun isGroupOverride(override: SelectionOverride?, m: Int) =
@@ -138,8 +128,8 @@ class TrackSelectionDialog : DialogFragment() {
     private fun isDefaultSelection(trackFormat: Format) =
             trackFormat.selectionFlags == C.SELECTION_FLAG_DEFAULT
 
-    private fun setNoneValueInGroup(radioButtonGroup: RadioGroup, renderNum: Int) {
-        val radioButton: RadioButton = LayoutInflater.from(context).inflate(R.layout.track_radio_button, null, false) as RadioButton
+    private fun addNoneValueInGroup(radioButtonGroup: RadioGroup, renderNum: Int, root: ViewGroup, inflater: LayoutInflater) {
+        val radioButton: RadioButton = inflater.inflate(R.layout.track_radio_button, root, false) as RadioButton
         radioButton.text = getString(R.string.exo_track_selection_none)
         radioButton.tag = Triple(renderNum, -1, -1)
         radioButtonGroup.addView(radioButton)
@@ -151,7 +141,6 @@ class TrackSelectionDialog : DialogFragment() {
         }
 
     }
-
 
     override fun onCreateView(
             inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
@@ -200,7 +189,7 @@ class TrackSelectionDialog : DialogFragment() {
                     R.string.track_selection_title,
                     mappedTrackInfo,
                     parameters,
-                    onClickListener = { dialog: DialogInterface?, which: Int ->
+                    onClickListener = { _, _ ->
                         positiveOnClickListener(parameters, mappedTrackInfo, trackSelectionDialog, trackSelector)
                     },
                     onDismissListener = onDismissListener)
@@ -267,33 +256,26 @@ class TrackSelectionDialog : DialogFragment() {
     private fun updateOverrides() {
         overridesMap.clear()
 
-        radioGroupMap.forEach { (key, radioGroup) ->
-            var radioGroupRenderSet: MutableSet<Int> = mutableSetOf()
-            var isHasSelection = false
-            for (i in 0 until radioGroup.size) {
+        radioGroupMap.values.forEach { radioGroup ->
+            var selectedRendererIndex = -1
+
+            val isNoneSelected = (radioGroup[0] as RadioButton).isChecked
+            for (i in 1 until radioGroup.size) {
                 val radioButton = radioGroup[i] as RadioButton
 
                 if (radioButton.tag is Triple<*, *, *>) {
                     val (renderIndex, groupIndex, trackIndex) = radioButton.tag as Triple<Int, Int, Int>
-                    radioGroupRenderSet.add(renderIndex)
-                    if (radioButton.isChecked) {
-                        isHasSelection = true
-                        if (trackIndex == -1 && groupIndex == -1) {
-                            disabledRendersSet.add(renderIndex)
-                            removeOverrides(renderIndex)
-                        } else {
-                            removeDisabledRender(renderIndex)
+                    if (isNoneSelected) {
+                        disabledRendersSet.add(renderIndex)
+                    } else {
+                        if (radioButton.isChecked) {
+                            selectedRendererIndex = renderIndex
+                            disabledRendersSet.remove(renderIndex)
                             overridesMap[renderIndex] = Pair(groupIndex, trackIndex)
-                            radioGroupRenderSet.remove(renderIndex)
+                        } else if (selectedRendererIndex != renderIndex) {
+                            disabledRendersSet.add(renderIndex)
                         }
                     }
-                }
-            }
-
-            if (isHasSelection && radioGroupRenderSet.size > 0) {
-                for (k in 0 until radioGroupRenderSet.size) {
-                    var element = radioGroupRenderSet.elementAt(k)
-                    disabledRendersSet.add(element)
                 }
             }
         }
@@ -302,18 +284,5 @@ class TrackSelectionDialog : DialogFragment() {
     init {
         // Retain instance across activity re-creation to prevent losing access to init data.
         retainInstance = true
-    }
-
-
-    private fun removeDisabledRender(renderIndex: Int) {
-        if (disabledRendersSet.contains(renderIndex)) {
-            disabledRendersSet.remove(renderIndex)
-        }
-    }
-
-    private fun removeOverrides(renderIndex: Int) {
-        if (overridesMap.containsKey(renderIndex)) {
-            overridesMap.remove(renderIndex)
-        }
     }
 }
