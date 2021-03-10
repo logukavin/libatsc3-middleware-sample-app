@@ -88,11 +88,11 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
 
                         return 0;
                     }
+                }
 
-                    //TODO: we need better criteria
-                    if (audioConfigurationMap.isEmpty()) {
-                        return 0;
-                    }
+                //TODO: we need better criteria
+                if (audioConfigurationMap.isEmpty()) {
+                    return 0;
                 }
 
                 if (headerBuffer == null) {
@@ -128,7 +128,7 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
     private ByteBuffer createFileHeader() {
         byte videoTrackCount = (byte) (audioOnly ? 0 : 1);
         byte audioTrackCount = (byte) audioConfigurationMap.size();
-        byte textTrackCount = (byte) 1;
+        byte textTrackCount = (byte) (audioOnly ? 0 : 1);
 
         int mpuMetadataSize = getMpuMetadataSize();
         int videoHeaderSize = MMTConstants.VIDEO_TRACK_HEADER_SIZE * videoTrackCount + mpuMetadataSize;
