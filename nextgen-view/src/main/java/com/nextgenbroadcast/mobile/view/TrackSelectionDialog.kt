@@ -1,4 +1,4 @@
-package com.nextgenbroadcast.mobile.middleware.sample
+package com.nextgenbroadcast.mobile.view
 
 import android.app.Dialog
 import android.content.DialogInterface
