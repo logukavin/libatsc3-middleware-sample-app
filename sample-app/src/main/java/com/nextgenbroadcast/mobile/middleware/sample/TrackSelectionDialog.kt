@@ -17,10 +17,10 @@ import androidx.core.view.get
 import androidx.core.view.size
 import androidx.fragment.app.DialogFragment
 import com.google.android.exoplayer2.C
-import com.google.android.exoplayer2.Format
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector.SelectionOverride
 import com.google.android.exoplayer2.trackselection.MappingTrackSelector.MappedTrackInfo
+import com.google.android.exoplayer2.trackselection.TrackSelectionArray
 import com.google.android.exoplayer2.ui.DefaultTrackNameProvider
 import com.google.android.exoplayer2.ui.TrackNameProvider
 import com.google.android.exoplayer2.ui.TrackSelectionView
@@ -41,17 +41,21 @@ class TrackSelectionDialog : DialogFragment() {
     private var radioGroupMap = mutableMapOf<Int, RadioGroup>()
     private var overridesMap: MutableMap<Int, Pair<Int, Int>?> = mutableMapOf()
     private var disabledRendersSet: MutableSet<Int> = mutableSetOf()
+    private var currentTrackSelection: TrackSelectionArray? = null
+
     private fun init(
             titleId: Int,
             mappedTrackInfo: MappedTrackInfo,
             initialParameters: DefaultTrackSelector.Parameters,
             onClickListener: DialogInterface.OnClickListener,
-            onDismissListener: DialogInterface.OnDismissListener) {
+            onDismissListener: DialogInterface.OnDismissListener,
+            currentTrackSelection: TrackSelectionArray) {
         this.titleId = titleId
         this.onClickListener = onClickListener
         this.onDismissListener = onDismissListener
         this.mappedTrackInfo = mappedTrackInfo
         this.initialParameters = initialParameters
+        this.currentTrackSelection = currentTrackSelection
     }
 
     fun getIsDisabled(rendererIndex: Int): Boolean {
@@ -84,7 +88,7 @@ class TrackSelectionDialog : DialogFragment() {
                 val trackGroupArray = trackInfo.getTrackGroups(i)
 
                 val titleTextView = layoutInflater.inflate(R.layout.track_text_view, llTrackSelectionContainer, false) as TextView
-
+                val currentSelectedFormatId = currentTrackSelection?.get(i)?.selectedFormat?.id
                 var radioButtonGroup = radioGroupMap[trackType]
                 if (radioButtonGroup == null) {
                     titleTextView.text = getTrackTypeString(resources, trackType)
@@ -109,8 +113,7 @@ class TrackSelectionDialog : DialogFragment() {
                         /** set selection in radioButton  */
                         if (!disabledRendersSet.contains(i)
                                 &&
-                                (isDefaultSelection(trackFormat)
-                                        || isGroupOverride(override, m))) {
+                                (currentSelectedFormatId==trackFormat.id)) {
                             radioButtonGroup.check(radioButton.id)
                         }
                     }
@@ -121,13 +124,6 @@ class TrackSelectionDialog : DialogFragment() {
             }
         }
     }
-
-    private fun isGroupOverride(override: SelectionOverride?, m: Int) =
-            (override != null && override.groupIndex == m)
-
-    private fun isDefaultSelection(trackFormat: Format) =
-            trackFormat.selectionFlags == C.SELECTION_FLAG_DEFAULT
-
     private fun addNoneValueInGroup(radioButtonGroup: RadioGroup, renderNum: Int, root: ViewGroup, inflater: LayoutInflater) {
         val radioButton: RadioButton = inflater.inflate(R.layout.track_radio_button, root, false) as RadioButton
         radioButton.text = getString(R.string.exo_track_selection_none)
@@ -178,7 +174,7 @@ class TrackSelectionDialog : DialogFragment() {
             return false
         }
 
-        fun createForTrackSelector(
+        fun createForTrackSelector(currentTrackSelection: TrackSelectionArray,
                 trackSelector: DefaultTrackSelector, onDismissListener: DialogInterface.OnDismissListener): TrackSelectionDialog {
 
             val mappedTrackInfo = Assertions.checkNotNull(trackSelector.currentMappedTrackInfo)
@@ -192,7 +188,7 @@ class TrackSelectionDialog : DialogFragment() {
                     onClickListener = { _, _ ->
                         positiveOnClickListener(parameters, mappedTrackInfo, trackSelectionDialog, trackSelector)
                     },
-                    onDismissListener = onDismissListener)
+                    onDismissListener = onDismissListener, currentTrackSelection)
             return trackSelectionDialog
         }
 
