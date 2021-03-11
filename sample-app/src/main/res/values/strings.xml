@@ -1,15 +1,17 @@
 <resources>
-    <string name="no_service_available">No service available</string>
+    <string name="no_service_available">Select a source</string>
     <string name="select_source">Select Atsc3 source</string>
     <string name="ba_loading_problem">Failed to load the media application</string>
     <string name="shortcut_preview_mode">Preview - %s</string>
     <string name="warning_external_stortage_permission">External storage permission is required</string>
     <string name="warning_access_background_location_permission">Location permission is necessary to tune the receiver</string>
-    <string name="source_loading">Loading %s…</string>
     <string name="settings_title">Settings</string>
     <string name="settings_frequency_hint">Receiver frequency in MHz</string>
     <string name="settings_apply_btn">Tune</string>
     <string name="settings_enable_debug_info">Enable Debug Information</string>
     <string name="settings_enable_phy_info">Enable Phy Information</string>
     <string name="track_selection_title">Select media tracks</string>
+    <string name="receiver_status_idle">Source not selected</string>
+    <string name="receiver_status_scanning">Scanning %d/%d…</string>
+    <string name="receiver_status_tuning">Tuning…</string>
 </resources>

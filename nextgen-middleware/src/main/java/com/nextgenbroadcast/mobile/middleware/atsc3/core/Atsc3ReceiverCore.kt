@@ -195,7 +195,7 @@ internal class Atsc3ReceiverCore private constructor(
     }
 
     override fun getReceiverState(): ReceiverState {
-        return serviceController.receiverState.value ?: ReceiverState.IDLE
+        return serviceController.receiverState.value ?: ReceiverState.idle()
     }
 
     private fun onError(message: String) {

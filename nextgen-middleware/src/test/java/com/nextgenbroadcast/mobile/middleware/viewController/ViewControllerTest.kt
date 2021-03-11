@@ -61,7 +61,7 @@ class ViewControllerTest {
     private val mockUrl = "testMediaUrl"
     private val bsid = 1
     private val serviceId = 5003
-    private val mockedAVService: AVService = AVService(bsid, serviceId, "WZTV", "tag:sinclairplatform.com,2020:WZTV:2727", 22, 1, 0)
+    private val mockedAVService: AVService = AVService(bsid, serviceId, "WZTV", "tag:sinclairplatform.com,2020:WZTV:2727", 22, 1, 0, false)
     private val mockedMediaUrl = MediaUrl(mockUrl, bsid, serviceId)
     private var mockRouteMediaUrl: MutableLiveData<MediaUrl?> = MutableLiveData()
     private val heldPackage: LiveData<Atsc3HeldPackage?> = MutableLiveData()
