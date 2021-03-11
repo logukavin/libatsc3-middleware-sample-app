@@ -15,5 +15,10 @@ data class AlertingRpcResponse(
         data class FilteredEventList(
                 var aeaId: String? = null
         )
+
+        companion object {
+            const val AEAT = "AEAT"
+            const val OSN = "OSN"
+        }
     }
 }

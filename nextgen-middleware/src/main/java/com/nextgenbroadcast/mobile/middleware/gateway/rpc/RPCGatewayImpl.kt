@@ -88,7 +88,11 @@ internal class RPCGatewayImpl(
         }
 
         serviceController.alertList.observe(lifecycleOwner) { list ->
-            onAlertingChanged(list)
+            if (list.isNotEmpty()) {
+                val alertingFragment = list.joinToString(separator = "", prefix = "<AEAT>", postfix = "</AEAT>") { it.xml }
+                val alertingList = listOf(AlertingRpcResponse.Alert(AlertingRpcResponse.Alert.AEAT, alertingFragment))
+                onAlertingChanged(alertingList)
+            }
         }
     }
 
@@ -188,19 +192,16 @@ internal class RPCGatewayImpl(
     }
 
     override fun getAlertChangingData(alertingTypes: List<String>): List<AlertingRpcResponse.Alert> {
-        //TODO: add implementation
         val alertList = mutableListOf<AlertingRpcResponse.Alert>()
-        val list = serviceController.alertList.value
 
-        if (alertingTypes.isEmpty()) {
-            list?.let {
-                alertList.addAll(list)
-            }
-        }
+        val alertingFragment = serviceController.storedAlerts.joinToString(separator = "", prefix = "<AEAT>", postfix = "</AEAT>") { it.xml }
+        val storedAlerts = listOf(AlertingRpcResponse.Alert(AlertingRpcResponse.Alert.AEAT, alertingFragment))
+
+        if (alertingTypes.isEmpty()) alertList.addAll(storedAlerts)
 
         alertingTypes.forEach { type ->
-            list?.filter { it.alertingType == type}?.let {
-                alertList.addAll(it)
+            storedAlerts.filter { it.alertingType == type}.apply {
+                alertList.addAll(this)
             }
         }
 

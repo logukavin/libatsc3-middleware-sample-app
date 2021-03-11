@@ -8,6 +8,7 @@ import com.nextgenbroadcast.mobile.core.atsc3.phy.PHYStatistics
 import com.nextgenbroadcast.mobile.core.isEquals
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.Atsc3ServiceLocationTable
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.SLTConstants
+import com.nextgenbroadcast.mobile.middleware.atsc3.entities.alerts.LLSParserAEAT
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3ApplicationFile
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3Held
@@ -196,7 +197,6 @@ internal class Atsc3Module(
     }
 
     private var tmpAdditionalESGServiceOpened = false
-    private var tmpAdditionalEASServiceOpened = false
 
     override fun selectService(bsid: Int, serviceId: Int): Boolean {
         if (selectedServiceBsid == bsid && selectedServiceId == serviceId) return false
@@ -233,14 +233,6 @@ internal class Atsc3Module(
                 it.serviceCategory == SLTConstants.SERVICE_CATEGORY_ESG
             }?.let { service ->
                 tmpAdditionalESGServiceOpened = atsc3NdkApplicationBridge.atsc3_slt_alc_select_additional_service(service.serviceId) > 0
-            }
-        }
-
-        if (!tmpAdditionalEASServiceOpened) {
-            serviceLocationTable[bsid]?.services?.firstOrNull {
-                        it.serviceCategory == SLTConstants.SERVICE_CATEGORY_EAS
-            }?.let { service ->
-                tmpAdditionalEASServiceOpened = atsc3NdkApplicationBridge.atsc3_slt_alc_select_additional_service(service.serviceId) > 0
             }
         }
 
@@ -304,10 +296,9 @@ internal class Atsc3Module(
         serviceToSourceConfig.clear()
 
         //TODO: temporary test solution
-        if (tmpAdditionalESGServiceOpened || tmpAdditionalEASServiceOpened) {
+        if (tmpAdditionalESGServiceOpened) {
             atsc3NdkApplicationBridge.atsc3_slt_alc_clear_additional_service_selections()
             tmpAdditionalESGServiceOpened = false
-            tmpAdditionalEASServiceOpened = false
         }
     }
 
@@ -369,7 +360,7 @@ internal class Atsc3Module(
     }
 
     override fun onAeatTablePresent(aeatPayloadXML: String) {
-        //TODO("Not yet implemented")
+        listener?.onAeatTableChanged(LLSParserAEAT().parseAeaTable(aeatPayloadXML))
     }
 
     override fun onSlsHeldEmissionPresent(serviceId: Int, heldPayloadXML: String) {
