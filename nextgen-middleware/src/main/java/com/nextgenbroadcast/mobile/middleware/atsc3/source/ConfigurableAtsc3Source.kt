@@ -34,6 +34,10 @@ abstract class ConfigurableAtsc3Source<T>(
         return result
     }
 
+    fun getConfigCount(): Int {
+        return configList.size
+    }
+
     fun getAllConfigs(): List<T> {
         return Collections.unmodifiableList(configList)
     }

@@ -1,5 +1,6 @@
 package com.nextgenbroadcast.mobile.middleware.sample.lifecycle.factory
 
+import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.nextgenbroadcast.mobile.core.presentation.IMediaPlayerPresenter
@@ -11,6 +12,7 @@ import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.UserAgentViewMode
 import javax.inject.Inject
 
 class UserAgentViewModelFactory @Inject constructor(
+        private val application: Application,
         private val agentPresenter: IUserAgentPresenter,
         private val playerPresenter: IMediaPlayerPresenter,
         private val receiverPresenter: IReceiverPresenter
@@ -23,7 +25,7 @@ class UserAgentViewModelFactory @Inject constructor(
         } else if (modelClass.isAssignableFrom(UserAgentViewModel::class.java)) {
             return UserAgentViewModel(agentPresenter) as T
         } else if (modelClass.isAssignableFrom(ReceiverViewModel::class.java)) {
-            return ReceiverViewModel(receiverPresenter, agentPresenter, playerPresenter) as T
+            return ReceiverViewModel(application, receiverPresenter, agentPresenter, playerPresenter) as T
         }
 
         throw ClassNotFoundException()

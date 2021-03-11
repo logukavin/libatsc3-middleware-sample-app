@@ -117,7 +117,7 @@ internal class Atsc3Module(
             } else {
                 setSourceConfig(result)
                 setState(
-                        if (result > 0) Atsc3ModuleState.SCANNING else Atsc3ModuleState.OPENED
+                        if (result > 0) Atsc3ModuleState.SCANNING else Atsc3ModuleState.TUNED
                 )
                 return@withStateLock true
             }
@@ -163,7 +163,7 @@ internal class Atsc3Module(
             if (result != IAtsc3Source.RESULT_ERROR) {
                 setSourceConfig(result)
                 setState(
-                        if (result > 0 && config == IAtsc3Source.CONFIG_DEFAULT) Atsc3ModuleState.SCANNING else Atsc3ModuleState.OPENED
+                        if (result > 0 && config == IAtsc3Source.CONFIG_DEFAULT) Atsc3ModuleState.SCANNING else Atsc3ModuleState.TUNED
                 )
             }
 
@@ -194,6 +194,14 @@ internal class Atsc3Module(
         withStateLock {
             currentSourceConfiguration = config
         }
+
+        val src = source
+        val configCount = if (src is ConfigurableAtsc3Source<*>) {
+            src.getConfigCount()
+        } else {
+            1
+        }
+        listener?.onConfigurationChanged(config, configCount)
     }
 
     override fun isServiceSelected(bsid: Int, serviceId: Int): Boolean {
@@ -203,7 +211,7 @@ internal class Atsc3Module(
     private var tmpAdditionalServiceOpened = false
 
     override fun selectService(bsid: Int, serviceId: Int): Boolean {
-        if (selectedServiceBsid == bsid && selectedServiceId == serviceId) return false
+        if (state != Atsc3ModuleState.TUNED || (selectedServiceBsid == bsid && selectedServiceId == serviceId)) return false
 
         clearHeld()
         selectedServiceSLSProtocol = -1
@@ -258,7 +266,7 @@ internal class Atsc3Module(
     override fun stop() {
         source?.stop()
 
-        setState(Atsc3ModuleState.PAUSED)
+        setState(Atsc3ModuleState.STOPPED)
     }
 
     override fun close() {
