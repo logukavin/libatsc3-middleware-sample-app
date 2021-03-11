@@ -24,26 +24,30 @@ class AboutDialog : DialogFragment() {
         view.but_ok_about.setOnClickListener {
             dismiss()
         }
-        val doubleNewLine = getString(R.string.line_break)
+        view.tv_about_content.text = getInfo()
+        return view
+    }
 
+    private fun getInfo(): Spanned {
         val stringBuilder = StringBuilder()
-        context?.let { it ->
+        val doubleNewLine = "<br><br>"
+        requireContext().let { it ->
             val packageInfo = it.packageManager?.getPackageInfo(it.packageName, 0)
             packageInfo?.applicationInfo?.uid
 
             packageInfo?.versionName?.let {
+                addBoldTitle(stringBuilder, getString(R.string.version_name))
                 stringBuilder
-                        .append(getString(R.string.version_name))
                         .append(it)
 
             }
-
 
             packageInfo?.longVersionCode?.let {
                 if (stringBuilder.isNotEmpty()) {
                     stringBuilder.append(doubleNewLine)
                 }
-                stringBuilder.append(getString(R.string.version_code))
+                addBoldTitle(stringBuilder, getString(R.string.version_code))
+                stringBuilder
                         .append(it)
             }
 
@@ -51,14 +55,20 @@ class AboutDialog : DialogFragment() {
                 if (stringBuilder.isNotEmpty()) {
                     stringBuilder.append(doubleNewLine)
                 }
+                addBoldTitle(stringBuilder, getString(R.string.android_id))
                 stringBuilder
-                        .append(getString(R.string.android_id))
                         .append(it)
             }
         }
-
-        view.tv_about_content.text = Html.fromHtml(stringBuilder.toString()) as Spanned
-
-        return view
+        return Html.fromHtml(stringBuilder.toString()) as Spanned
     }
+
+    private fun addBoldTitle(stringBuilder: StringBuilder, title: String) {
+        stringBuilder.append("<b>")
+                .append(title)
+                .append(" ")
+                .append("</b>")
+    }
+
+
 }
