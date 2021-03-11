@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="about">About</string>
-    <string name="version_name"> <![CDATA[<b>Version Name: </b>]]> </string>
-    <string name="version_code"> <![CDATA[<b>Version Code: </b>]]> </string>
-    <string name="android_id"><![CDATA[<b>AndroidId: </b>]]> </string>
-    <string name="line_break"><![CDATA[<br><br>]]></string>
+    <string name="menu_about">About</string>
+    <string name="version_name">Version Name:  </string>
+    <string name="version_code"> Version Code:</string>
+    <string name="android_id">AndroidId: </string>
+    <string name="ok">OK</string>
 </resources>

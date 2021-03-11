@@ -8,5 +8,5 @@
         android:title="@string/track_selection_title" />
     <item
         android:id="@+id/menu_dialog_about"
-        android:title="@string/about" />
+        android:title="@string/menu_about" />
 </menu>
