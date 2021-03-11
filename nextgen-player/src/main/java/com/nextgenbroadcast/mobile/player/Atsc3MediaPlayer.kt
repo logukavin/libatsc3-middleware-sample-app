@@ -18,7 +18,6 @@ import com.google.android.exoplayer2.util.Util
 import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTLoadControl
 import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTMediaSource
 import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTRenderersFactory
-import com.nextgenbroadcast.mobile.core.atsc3.mmt.MMTConstants
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.player.exoplayer.Atsc3ContentDataSource
 import com.nextgenbroadcast.mobile.player.exoplayer.Atsc3MMTExtractor
@@ -147,6 +146,10 @@ class Atsc3MediaPlayer(
             audioManager.abandonAudioFocusRequest(it)
         }
         audioFocusRequest = null
+    }
+
+    fun clearSavedState() {
+        lastMediaUri = null
     }
 
     fun getSubtitleFormats(): List<Triple<Format, Boolean, Int>> {

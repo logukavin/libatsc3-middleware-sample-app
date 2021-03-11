@@ -15,6 +15,7 @@ import com.nextgenbroadcast.mobile.core.presentation.*
 import com.nextgenbroadcast.mobile.middleware.analytics.Atsc3Analytics
 import com.nextgenbroadcast.mobile.middleware.analytics.IAtsc3Analytics
 import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3Module
+import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3ModuleState
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.IServiceGuideStore
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.ServiceGuideDeliveryUnitReader
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.db.RoomServiceGuideStore
@@ -86,17 +87,22 @@ internal class Atsc3ReceiverCore private constructor(
         atsc3Module.close()
     }
 
-    fun initialize(components: Map<Class<*>, Pair<Int, String>>) {
+    fun initialize(components: Map<Class<*>, Pair<Int, String>>, requestForeground: () -> Unit) {
         try {
             FrequencyInitializer(settings, this).also {
                 initializer.add(WeakReference(it))
             }.initialize(context, components)
 
+            // Do not re-open the libatsc3 if it's already opened
+            if (atsc3Module.getState() != Atsc3ModuleState.IDLE) return
+
             val phyInitializer = OnboardPhyInitializer(this).also {
                 initializer.add(WeakReference(it))
             }
 
-            if (!phyInitializer.initialize(context, components)) {
+            if (phyInitializer.initialize(context, components)) {
+                requestForeground()
+            } else {
                 UsbPhyInitializer().also {
                     initializer.add(WeakReference(it))
                 }.initialize(context, components)

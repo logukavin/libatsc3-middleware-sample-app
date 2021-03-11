@@ -109,12 +109,13 @@ internal class Atsc3Module(
         log("Connecting to: $source")
 
         close()
-
         this.source = source
 
         return withStateLock {
             val result = source.open()
-            if (result != IAtsc3Source.RESULT_ERROR) {
+            if (result == IAtsc3Source.RESULT_ERROR) {
+                this.source = null
+            } else {
                 setSourceConfig(result)
                 setState(
                         if (result > 0) Atsc3ModuleState.SCANNING else Atsc3ModuleState.OPENED
@@ -171,7 +172,7 @@ internal class Atsc3Module(
         }
     }
 
-    private fun getState(): Atsc3ModuleState {
+    fun getState(): Atsc3ModuleState {
         return withStateLock {
             state
         }
@@ -196,7 +197,11 @@ internal class Atsc3Module(
         }
     }
 
-    private var tmpAdditionalESGServiceOpened = false
+    override fun isServiceSelected(bsid: Int, serviceId: Int): Boolean {
+        return selectedServiceBsid == bsid && selectedServiceId == serviceId
+    }
+
+    private var tmpAdditionalServiceOpened = false
 
     override fun selectService(bsid: Int, serviceId: Int): Boolean {
         if (selectedServiceBsid == bsid && selectedServiceId == serviceId) return false
@@ -228,11 +233,11 @@ internal class Atsc3Module(
         selectedServiceSLSProtocol = atsc3NdkApplicationBridge.atsc3_slt_selectService(serviceId)
 
         //TODO: temporary test solution
-        if (!tmpAdditionalESGServiceOpened) {
+        if (!tmpAdditionalServiceOpened) {
             serviceLocationTable[bsid]?.services?.firstOrNull {
                 it.serviceCategory == SLTConstants.SERVICE_CATEGORY_ESG
             }?.let { service ->
-                tmpAdditionalESGServiceOpened = atsc3NdkApplicationBridge.atsc3_slt_alc_select_additional_service(service.serviceId) > 0
+                tmpAdditionalServiceOpened = atsc3NdkApplicationBridge.atsc3_slt_alc_select_additional_service(service.serviceId) > 0
             }
         }
 
@@ -296,9 +301,9 @@ internal class Atsc3Module(
         serviceToSourceConfig.clear()
 
         //TODO: temporary test solution
-        if (tmpAdditionalESGServiceOpened) {
+        if (tmpAdditionalServiceOpened) {
             atsc3NdkApplicationBridge.atsc3_slt_alc_clear_additional_service_selections()
-            tmpAdditionalESGServiceOpened = false
+            tmpAdditionalServiceOpened = false
         }
     }
 
