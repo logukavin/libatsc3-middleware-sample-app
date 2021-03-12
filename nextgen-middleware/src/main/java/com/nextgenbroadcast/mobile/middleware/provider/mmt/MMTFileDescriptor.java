@@ -390,7 +390,7 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
     }
 
     private boolean isAudioSample(int packet_id) {
-        return audioConfigurationMap.containsKey(packet_id);
+        return MmtPacketIdContext.isAudioPacket(packet_id) && audioConfigurationMap.containsKey(packet_id);
     }
 
     @Deprecated
@@ -444,11 +444,11 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
     private long getPresentationTimestampUs(int packet_id, int sample_number, long mpu_presentation_time_uS_from_SI) {
         if (mpu_presentation_time_uS_from_SI > 0) {
             long mfu_presentation_time_uS_computed = 0;
+            long extracted_sample_duration_us;
             if (packet_id == MmtPacketIdContext.video_packet_id && MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us > 0) {
                 mfu_presentation_time_uS_computed = mpu_presentation_time_uS_from_SI + (sample_number - 1) * MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us;
-            } else if (isAudioSample(packet_id) && MmtPacketIdContext.audio_packet_statistics.extracted_sample_duration_us > 0) {
-                //TODO: we should have statistic per-packet
-                mfu_presentation_time_uS_computed = mpu_presentation_time_uS_from_SI + (sample_number - 1) * MmtPacketIdContext.audio_packet_statistics.extracted_sample_duration_us;
+            } else if (isAudioSample(packet_id) && (extracted_sample_duration_us = MmtPacketIdContext.getAudioPacketStatistic(packet_id).extracted_sample_duration_us) > 0) {
+                mfu_presentation_time_uS_computed = mpu_presentation_time_uS_from_SI + (sample_number - 1) * extracted_sample_duration_us;
             } else if (packet_id == MmtPacketIdContext.stpp_packet_id && MmtPacketIdContext.stpp_packet_statistics.extracted_sample_duration_us > 0) {
                 mfu_presentation_time_uS_computed = mpu_presentation_time_uS_from_SI + (sample_number - 1) * MmtPacketIdContext.stpp_packet_statistics.extracted_sample_duration_us;
             }
