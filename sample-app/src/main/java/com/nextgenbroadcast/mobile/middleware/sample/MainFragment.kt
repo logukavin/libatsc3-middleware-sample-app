@@ -35,6 +35,7 @@ import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.UserAgentViewMode
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.ViewViewModel
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.factory.UserAgentViewModelFactory
 import com.nextgenbroadcast.mobile.middleware.sample.useragent.ServiceAdapter
+import com.nextgenbroadcast.mobile.view.AboutDialog
 import com.nextgenbroadcast.mobile.view.TrackSelectionDialog
 import com.nextgenbroadcast.mobile.view.UserAgentView
 import kotlinx.android.synthetic.main.fragment_main.*
@@ -228,11 +229,19 @@ class MainFragment : Fragment() {
                         openSelectTracksDialog()
                         true
                     }
+                    R.id.menu_dialog_about -> {
+                        openInfoDialog()
+                        true
+                    }
 
                     else -> false
                 }
             }
         }.show()
+    }
+
+    private fun openInfoDialog() {
+        AboutDialog().show(parentFragmentManager, null)
     }
 
     private fun openSelectTracksDialog() {

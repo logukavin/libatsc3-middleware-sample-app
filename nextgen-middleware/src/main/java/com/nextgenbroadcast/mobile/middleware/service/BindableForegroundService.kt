@@ -75,14 +75,15 @@ abstract class BindableForegroundService : LifecycleMediaBrowserService() {
         isForeground = false
     }
 
-    protected fun createNotificationBuilder(state: ReceiverState? = null, service: AVService? = null, playbackState: PlaybackState? = null, mediaSession: MediaSessionCompat? = null): NotificationCompat.Builder {
-        val title = if (state == null || state == ReceiverState.IDLE) {
+    protected fun createNotificationBuilder(receiverState: ReceiverState? = null, service: AVService? = null, playbackState: PlaybackState? = null, mediaSession: MediaSessionCompat? = null): NotificationCompat.Builder {
+        val state = receiverState?.state
+        val title = if (state == null || state == ReceiverState.State.IDLE) {
             getString(R.string.atsc3_source_is_not_initialized)
         } else {
             service?.shortName ?: getString(R.string.atsc3_no_service_available)
         }
 
-        val text = if (state == null || state == ReceiverState.IDLE) {
+        val text = if (state == null || state == ReceiverState.State.IDLE) {
             getString(R.string.atsc3_receiver_state_idle)
         } else if (playbackState != PlaybackState.IDLE) {
             if (playbackState == PlaybackState.PLAYING) {

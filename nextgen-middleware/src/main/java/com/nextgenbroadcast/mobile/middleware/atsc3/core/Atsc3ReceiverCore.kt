@@ -195,7 +195,7 @@ internal class Atsc3ReceiverCore private constructor(
     }
 
     override fun getReceiverState(): ReceiverState {
-        return serviceController.receiverState.value ?: ReceiverState.IDLE
+        return serviceController.receiverState.value ?: ReceiverState.idle()
     }
 
     private fun onError(message: String) {
@@ -216,16 +216,6 @@ internal class Atsc3ReceiverCore private constructor(
     fun findActiveServiceById(serviceId: Int): AVService? {
         return findServiceBy(atsc3Module.selectedServiceBsid, serviceId)
     }
-
-    fun getCurrentlyPlayingMediaUri(): Uri? {
-        getCurrentlyPlayingMediaUrl()?.let { mediaPath ->
-            return mediaFileProvider.getMediaFileUri(mediaPath.url)
-        }
-
-        return null
-    }
-
-    fun getCurrentlyPlayingMediaUrl() = repository.routeMediaUrl.value
 
     companion object {
         @Volatile

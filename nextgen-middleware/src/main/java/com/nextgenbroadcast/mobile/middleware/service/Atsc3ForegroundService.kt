@@ -187,8 +187,6 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
     override fun onBind(intent: Intent): IBinder? {
         if (intent.action == SERVICE_INTERFACE) {
-            tryStopPlaybackOnBoard()
-
             val playAudioOnBoard = intent.getBooleanExtra(EXTRA_PLAY_AUDIO_ON_BOARD, true)
 
             cancelPresentationDestroying()
@@ -206,8 +204,6 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
     override fun onRebind(intent: Intent) {
         if (intent.action == SERVICE_INTERFACE) {
-            tryStopPlaybackOnBoard()
-
             cancelPresentationDestroying()
         }
 
@@ -216,8 +212,6 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
     override fun onUnbind(intent: Intent): Boolean {
         if (intent.action == SERVICE_INTERFACE) {
-            tryRestorePlaybackOnBoard()
-
             cancelPresentationDestroying()
             if (isStartedAsForeground) {
                 startPresentationDestroying()
@@ -227,22 +221,6 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         }
 
         return super.onUnbind(intent)
-    }
-
-    private fun tryStopPlaybackOnBoard() {
-        atsc3Receiver.getCurrentlyPlayingMediaUrl()?.let { mediaUrl ->
-            val service = atsc3Receiver.findServiceBy(mediaUrl.bsid, mediaUrl.serviceId)
-            if (service?.category != SLTConstants.SERVICE_CATEGORY_AO) {
-                player.reset()
-            }
-        } ?: player.reset()
-    }
-
-    private fun tryRestorePlaybackOnBoard() {
-        val currentMediaUri = atsc3Receiver.getCurrentlyPlayingMediaUri()
-        if (currentMediaUri != null && !player.isPlaying) {
-            player.play(currentMediaUri)
-        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
