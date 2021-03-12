@@ -32,8 +32,9 @@ class MainActivity : BaseActivity() {
     }
 
     override fun onBind(binder: IServiceBinder) {
-        binder.receiverPresenter.receiverState.observe(this, { state ->
-            if (state == null || state == ReceiverState.IDLE) {
+        binder.receiverPresenter.receiverState.observe(this, { receiverState ->
+            val state = receiverState?.state
+            if (state == null || state == ReceiverState.State.IDLE) {
                 if (isInPictureInPictureMode) {
                     startActivity(Intent(this, MainActivity::class.java).apply {
                         flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
@@ -43,6 +44,7 @@ class MainActivity : BaseActivity() {
         })
 
         val factory = UserAgentViewModelFactory(
+                application,
                 binder.userAgentPresenter,
                 binder.mediaPlayerPresenter,
                 binder.receiverPresenter
