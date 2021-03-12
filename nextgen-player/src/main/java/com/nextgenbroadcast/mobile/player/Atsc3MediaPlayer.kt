@@ -23,6 +23,7 @@ import com.nextgenbroadcast.mobile.player.exoplayer.Atsc3ContentDataSource
 import com.nextgenbroadcast.mobile.player.exoplayer.Atsc3MMTExtractor
 import com.nextgenbroadcast.mobile.player.exoplayer.RouteDASHLoadControl
 import kotlinx.coroutines.*
+import java.io.FileNotFoundException
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 
@@ -91,7 +92,7 @@ class Atsc3MediaPlayer(
             }, {
                 arrayOf(Atsc3MMTExtractor())
             }).apply {
-                setLoadErrorHandlingPolicy(createDefaultLoadErrorHandlingPolicy())
+                setLoadErrorHandlingPolicy(createMMTLoadErrorHandlingPolicy())
             }.createMediaSource(mediaUri)
 
             createMMTExoPlayer(selector).apply {
@@ -210,7 +211,7 @@ class Atsc3MediaPlayer(
                 DefaultDashChunkSource.Factory(mediaDataSourceFactory),
                 manifestDataSourceFactory
         ).apply {
-            setLoadErrorHandlingPolicy(createDefaultLoadErrorHandlingPolicy())
+            setLoadErrorHandlingPolicy(createDASHLoadErrorHandlingPolicy())
         }
     }
 
@@ -236,6 +237,11 @@ class Atsc3MediaPlayer(
                 override fun onPlayerError(error: ExoPlaybackException) {
                     listener?.onPlayerError(error)
 
+                    // Do not retry if source media file not found
+                    if (isAtsc3ContentDataSourceFileNotFoundException(error.cause)) {
+                        return
+                    }
+
                     if (isMMTPlayback) {
                         seekToDefaultPosition()
                     }
@@ -250,7 +256,7 @@ class Atsc3MediaPlayer(
         }
     }
 
-    private fun createDefaultLoadErrorHandlingPolicy(): DefaultLoadErrorHandlingPolicy {
+    private fun createDASHLoadErrorHandlingPolicy(): DefaultLoadErrorHandlingPolicy {
         return object : DefaultLoadErrorHandlingPolicy() {
             override fun getRetryDelayMsFor(dataType: Int, loadDurationMs: Long, exception: IOException?, errorCount: Int): Long {
                 Log.w("ExoPlayerCustomLoadErrorHandlingPolicy", "dataType: $dataType, loadDurationMs: $loadDurationMs, exception ex: $exception, errorCount: $errorCount")
@@ -263,6 +269,30 @@ class Atsc3MediaPlayer(
                 return 1
             }
         }
+    }
+
+    private fun createMMTLoadErrorHandlingPolicy(): DefaultLoadErrorHandlingPolicy {
+        return object : DefaultLoadErrorHandlingPolicy() {
+            override fun getRetryDelayMsFor(dataType: Int, loadDurationMs: Long, exception: IOException?, errorCount: Int): Long {
+                Log.w("ExoPlayerMMTLoadErrorHandlingPolicy", "dataType: $dataType, loadDurationMs: $loadDurationMs, exception ex: $exception, errorCount: $errorCount")
+
+                if (isAtsc3ContentDataSourceFileNotFoundException(exception)) {
+                    return C.TIME_UNSET
+                }
+
+                return super.getRetryDelayMsFor(dataType, loadDurationMs, exception, errorCount)
+            }
+        }
+    }
+
+    private fun isAtsc3ContentDataSourceFileNotFoundException(exception: Throwable?): Boolean {
+        if (exception is Atsc3ContentDataSource.Atsc3ContentDataSourceException) {
+            if (exception.cause is FileNotFoundException) {
+                return true
+            }
+        }
+
+        return false
     }
 
     private fun playbackState(playbackState: Int, playWhenReady: Boolean): PlaybackState? {

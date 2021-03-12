@@ -6,4 +6,7 @@
     <item
         android:id="@+id/menu_select_tracks"
         android:title="@string/track_selection_title" />
+    <item
+        android:id="@+id/menu_dialog_about"
+        android:title="@string/menu_about" />
 </menu>
