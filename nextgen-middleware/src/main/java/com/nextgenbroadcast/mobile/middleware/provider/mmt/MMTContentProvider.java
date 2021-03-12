@@ -25,7 +25,6 @@ import com.nextgenbroadcast.mobile.player.MMTConstants;
 import com.nextgenbroadcast.mobile.core.model.AVService;
 import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverCore;
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.SLTConstants;
-import com.nextgenbroadcast.mobile.core.atsc3.mmt.MMTConstants;
 import com.nextgenbroadcast.mobile.middleware.atsc3.buffer.Atsc3RingBuffer;
 
 import org.ngbp.libatsc3.middleware.Atsc3NdkMediaMMTBridge;
