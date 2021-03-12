@@ -1,23 +1,40 @@
 package com.nextgenbroadcast.mobile.middleware.sample.lifecycle
 
+import android.app.Application
 import android.text.Html
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MediatorLiveData
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.*
 import com.nextgenbroadcast.mobile.core.presentation.IMediaPlayerPresenter
 import com.nextgenbroadcast.mobile.core.presentation.IUserAgentPresenter
 import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.model.PhyFrequency
+import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.presentation.IReceiverPresenter
+import com.nextgenbroadcast.mobile.middleware.sample.R
 
 class ReceiverViewModel(
+        application: Application,
         private val presenter: IReceiverPresenter,
         private val agentPresenter: IUserAgentPresenter,
         private val playerPresenter: IMediaPlayerPresenter
-) : ViewModel() {
+) : AndroidViewModel(application) {
     private val _appDataLog = MediatorLiveData<CharSequence>()
 
     val appDataLog: LiveData<CharSequence> = _appDataLog
+    val stateDescription = presenter.receiverState.map { receiverState ->
+        when(receiverState.state) {
+            ReceiverState.State.IDLE -> {
+                application.getString(R.string.receiver_status_idle)
+            }
+            ReceiverState.State.SCANNING -> {
+                val num = receiverState.configCount - receiverState.configIndex
+                application.getString(R.string.receiver_status_scanning, num, receiverState.configCount)
+            }
+            ReceiverState.State.TUNING -> {
+                application.getString(R.string.receiver_status_tuning)
+            }
+            else -> ""
+        }
+    }
 
     init {
         _appDataLog.addSource(agentPresenter.appData) { data ->

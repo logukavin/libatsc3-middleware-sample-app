@@ -1,9 +1,11 @@
 package com.nextgenbroadcast.mobile.middleware.controller.service
 
 import android.util.Log
+import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.map
 import com.nextgenbroadcast.mobile.core.atsc3.MediaUrl
+import com.nextgenbroadcast.mobile.core.mapWith
 import com.nextgenbroadcast.mobile.core.model.PhyFrequency
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.model.AVService
@@ -37,12 +39,26 @@ internal class ServiceControllerImpl (
     private var heldResetJob: Job? = null
     private var mediaUrlAssignmentJob: Job? = null
 
-    override val receiverState = MutableLiveData(ReceiverState.IDLE)
+    private val atsc3State = MutableLiveData(Atsc3ModuleState.IDLE)
+    private val atsc3Configuration = MutableLiveData<Pair<Int, Int>>()
 
     override val selectedService = repository.selectedService
     override val serviceGuideUrls = repository.serviceGuideUrls
     override val applications = repository.applications
     override val routeMediaUrl = repository.routeMediaUrl
+
+    override val receiverState: LiveData<ReceiverState> = atsc3State.mapWith(selectedService, atsc3Configuration) { (state, service, config) ->
+        val (configIndex, configCount) = config ?: Pair(-1, -1)
+        if (state == null || state == Atsc3ModuleState.IDLE) {
+            ReceiverState.idle()
+        } else if (state == Atsc3ModuleState.SCANNING) {
+            ReceiverState.scanning(configIndex, configCount)
+        } else if (service == null) {
+            ReceiverState.tuning(configIndex, configCount)
+        } else {
+            ReceiverState.connected(configIndex, configCount)
+        }
+    }
 
     override val sltServices = repository.services.map { services -> services.filter { !it.hidden } }
 
@@ -53,14 +69,14 @@ internal class ServiceControllerImpl (
     }
 
     override fun onStateChanged(state: Atsc3ModuleState) {
-        //TODO: rewrite this mapping
-        val newState = ReceiverState.valueOf(state.name)
-
-        receiverState.postValue(newState)
-
-        if (newState == ReceiverState.IDLE) {
+        atsc3State.postValue(state)
+        if (state == Atsc3ModuleState.IDLE) {
             repository.reset()
         }
+    }
+
+    override fun onConfigurationChanged(index: Int, count: Int) {
+        atsc3Configuration.postValue(Pair(index, count))
     }
 
     override fun onApplicationPackageReceived(appPackage: Atsc3Application) {

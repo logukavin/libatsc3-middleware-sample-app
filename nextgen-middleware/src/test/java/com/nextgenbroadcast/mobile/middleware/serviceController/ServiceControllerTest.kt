@@ -1,15 +1,12 @@
 package com.nextgenbroadcast.mobile.middleware.serviceController
 
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
-import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import com.nextgenbroadcast.mobile.core.atsc3.MediaUrl
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.PhyFrequency
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
-import com.nextgenbroadcast.mobile.core.presentation.IReceiverPresenter
 import com.nextgenbroadcast.mobile.middleware.analytics.IAtsc3Analytics
-import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3Module
 import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3ModuleState
 import com.nextgenbroadcast.mobile.middleware.atsc3.IAtsc3Module
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.SLTConstants
@@ -17,18 +14,11 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Applicatio
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPackage
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.service.Atsc3Service
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.IServiceGuideDeliveryUnitReader
-import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.IServiceGuideStore
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.SGUrl
-import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.ServiceGuideDeliveryUnitReader
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.*
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
 import com.nextgenbroadcast.mobile.middleware.controller.service.ServiceControllerImpl
-import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
-import com.nextgenbroadcast.mobile.middleware.controller.view.ViewControllerImpl
-import com.nextgenbroadcast.mobile.middleware.gateway.rpc.RPCGatewayImpl
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
-import com.nextgenbroadcast.mobile.middleware.server.web.MiddlewareWebServer
-import com.nextgenbroadcast.mobile.middleware.server.ws.MiddlewareWebSocket
 import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -42,13 +32,9 @@ import org.junit.*
 import org.junit.rules.TestRule
 import org.junit.runner.RunWith
 import org.mockito.Mock
-import org.mockito.Mockito
 import org.mockito.Mockito.*
-import org.mockito.Spy
-import org.powermock.api.mockito.PowerMockito
 import org.powermock.core.classloader.annotations.PrepareForTest
 import org.powermock.modules.junit4.PowerMockRunner
-import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
 
@@ -112,7 +98,7 @@ class ServiceControllerTest {
     @Test
     fun testOnStateChangedSCANNING() {
         val state = Atsc3ModuleState.SCANNING
-        val newState = ReceiverState.valueOf(state.name)
+        val newState = ReceiverState.scanning(-1, -1)
 
         serviceController.onStateChanged(state)
 
@@ -122,8 +108,8 @@ class ServiceControllerTest {
 
     @Test
     fun testOnStateChangedOPENED() {
-        val state = Atsc3ModuleState.OPENED
-        val newState = ReceiverState.valueOf(state.name)
+        val state = Atsc3ModuleState.TUNED
+        val newState = ReceiverState.tuning(-1, -1)
 
         serviceController.onStateChanged(state)
 
@@ -132,9 +118,9 @@ class ServiceControllerTest {
     }
 
     @Test
-    fun testOnStateChangedPAUSED() {
-        val state = Atsc3ModuleState.PAUSED
-        val newState = ReceiverState.valueOf(state.name)
+    fun testOnStateChangedSTOPPED() {
+        val state = Atsc3ModuleState.STOPPED
+        val newState = ReceiverState.tuning(-1, -1)
 
         serviceController.onStateChanged(state)
 
@@ -145,7 +131,7 @@ class ServiceControllerTest {
     @Test
     fun testOnStateChangedIDLE() {
         val state = Atsc3ModuleState.IDLE
-        val newState = ReceiverState.valueOf(state.name)
+        val newState = ReceiverState.idle()
 
         serviceController.onStateChanged(state)
 

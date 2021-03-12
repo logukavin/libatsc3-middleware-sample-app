@@ -35,6 +35,19 @@
                 app:resize_mode="fit"
                 app:use_controller="false"/>
 
+            <TextView
+                android:id="@+id/state_description"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@{receiverModel.stateDescription}"
+                android:textColor="@color/white"
+                android:layout_marginBottom="20dp"
+                app:layout_constraintBottom_toTopOf="@+id/progress_bar"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintVertical_chainStyle="packed" />
+
             <ProgressBar
                 android:id="@+id/progress_bar"
                 android:layout_width="wrap_content"
@@ -43,7 +56,7 @@
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
+                app:layout_constraintTop_toBottomOf="@+id/state_description" />
 
             <com.nextgenbroadcast.mobile.view.UserAgentView
                 android:id="@+id/user_agent_web_view"
