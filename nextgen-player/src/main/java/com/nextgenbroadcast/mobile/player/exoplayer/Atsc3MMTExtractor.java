@@ -145,7 +145,8 @@ public class Atsc3MMTExtractor implements Extractor {
             // Empty sample means we don't have more samples in buffer. Wait for data to come before next iteration.
             if (currentSampleType == MMTConstants.TRACK_TYPE_EMPTY) {
                 //jjustman-2021-02-18 - don't sleep here, let the ExoPlayerImpl eventloop doSomeWork() be responsible for timing
-                // Thread.sleep(50);
+                //vmatiash-2021-03-12 - this sleep is important for read optimization. It helps to minimize an amount of "placeholder" read from File Buffer.
+                Thread.sleep(50);
             }
 
             if(((ReadSample_TrackIsNull_counter++) % 1000) == 0) {

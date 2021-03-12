@@ -170,7 +170,7 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
         Atsc3RingBuffer fragmentBuff = new Atsc3RingBuffer(buffer, FRAGMENT_BUFFER_PAGE_SIZE, pageNumber);
 
         //MMTFileDescriptor descriptor = new MMTFileDescriptor(fragmentBuff, audioOnly) {
-        
+
         boolean audioOnly = service.getCategory() == SLTConstants.SERVICE_CATEGORY_AO;
 
         try {
