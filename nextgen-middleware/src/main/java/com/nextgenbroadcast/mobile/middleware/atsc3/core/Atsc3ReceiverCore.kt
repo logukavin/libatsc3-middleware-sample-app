@@ -217,16 +217,6 @@ internal class Atsc3ReceiverCore private constructor(
         return findServiceBy(atsc3Module.selectedServiceBsid, serviceId)
     }
 
-    fun getCurrentlyPlayingMediaUri(): Uri? {
-        getCurrentlyPlayingMediaUrl()?.let { mediaPath ->
-            return mediaFileProvider.getMediaFileUri(mediaPath.url)
-        }
-
-        return null
-    }
-
-    fun getCurrentlyPlayingMediaUrl() = repository.routeMediaUrl.value
-
     companion object {
         @Volatile
         private var INSTANCE: Atsc3ReceiverCore? = null
