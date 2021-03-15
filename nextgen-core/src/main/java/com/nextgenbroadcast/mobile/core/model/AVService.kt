@@ -13,7 +13,7 @@ data class AVService(
         val majorChannelNo: Int,
         val minorChannelNo: Int,
         val category: Int,
-        val hidden: Boolean
+        val hidden: Boolean = false
 ) : Parcelable {
 
     fun toBundle(): Bundle {
