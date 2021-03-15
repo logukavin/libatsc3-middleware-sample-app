@@ -4,7 +4,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
 public class Atsc3RingBuffer {
-    public static final int RING_BUFFER_PAGE_HEADER_SIZE = 33; // sizeof(RingBufferPageHeader)
+    public static final int RING_BUFFER_PAGE_HEADER_SIZE = 37; // sizeof(RingBufferPageHeader)
 
     private final int pageSize;
     private final byte[] data = new byte[Long.BYTES];

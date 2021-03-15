@@ -28,6 +28,7 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
 
     private final Boolean audioOnly;
 
+    private final int serviceId;
     private final Atsc3RingBuffer fragmentBuffer;
     private final ByteBuffer pageBuffer = ByteBuffer.allocate(150 * 1024);
     private final byte[] header = {(byte) 0xAC, 0x40, (byte) 0xFF, (byte) 0xFF, 0x00, 0x00, 0x00};
@@ -48,7 +49,8 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
     private long mpuWaitingStartTime;
     private long keyFrameWaitingStartTime;
 
-    public MMTFileDescriptor(Atsc3RingBuffer fragmentBuffer, boolean audioOnly) {
+    public MMTFileDescriptor(int serviceId, Atsc3RingBuffer fragmentBuffer, boolean audioOnly) {
+        this.serviceId = serviceId;
         this.fragmentBuffer = fragmentBuffer;
         this.audioOnly = audioOnly;
 
@@ -263,6 +265,12 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
             int pageType = buffer.get();
             if (pageType != RING_BUFFER_PAGE_INIT) continue;
 
+            int service_id = fragmentBuffer.getInt(buffer);
+            if (service_id != serviceId) {
+                // we read a fragment from the previous session, skip it
+                continue;
+            }
+
             if (InitMpuMetadata_HEVC_NAL_Payload == null) {
                 ByteBuffer init = ByteBuffer.allocate(bufferLen);
                 //TODO: rewrite offset
@@ -284,6 +292,12 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
 
             int pageType = buffer.get();
             if (pageType != RING_BUFFER_PAGE_FRAGMENT) continue;
+
+            int service_id = fragmentBuffer.getInt(buffer);
+            if (service_id != serviceId) {
+                // it's a bad sign, probably receiver switched to another Service or we read a fragment from the previous session
+                return;
+            }
 
             int packet_id = fragmentBuffer.getInt(buffer);
             int sample_number = fragmentBuffer.getInt(buffer);
