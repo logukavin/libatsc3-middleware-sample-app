@@ -10,7 +10,6 @@ import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTClockAnchor;
 import com.nextgenbroadcast.mobile.player.MMTConstants;
 import com.nextgenbroadcast.mobile.middleware.atsc3.buffer.Atsc3RingBuffer;
 
-import org.ngbp.libatsc3.middleware.android.mmt.MfuByteBufferFragment;
 import org.ngbp.libatsc3.middleware.android.mmt.MmtPacketIdContext;
 import org.ngbp.libatsc3.middleware.android.mmt.models.MMTAudioDecoderConfigurationRecord;
 
@@ -94,7 +93,7 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
                         keyFrameWaitingStartTime = System.currentTimeMillis();
                     }
 
-                    if (!skipUntilKeyFrame() && (System.currentTimeMillis() - keyFrameWaitingStartTime) < MAX_KEY_FRAME_WAIT_TIME) {
+                    if (!skipUntilKeyFrame(pageBuffer) && (System.currentTimeMillis() - keyFrameWaitingStartTime) < MAX_KEY_FRAME_WAIT_TIME) {
                         return 0;
                     }
                 }
@@ -266,10 +265,8 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
             if (pageType != RING_BUFFER_PAGE_INIT) continue;
 
             int service_id = fragmentBuffer.getInt(buffer);
-            if (service_id != serviceId) {
-                // we read a fragment from the previous session, skip it
-                continue;
-            }
+            // we read a fragment from the previous session, skip it
+            if (service_id != serviceId) continue;
 
             if (InitMpuMetadata_HEVC_NAL_Payload == null) {
                 ByteBuffer init = ByteBuffer.allocate(bufferLen);
@@ -296,6 +293,7 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
             int service_id = fragmentBuffer.getInt(buffer);
             if (service_id != serviceId) {
                 // it's a bad sign, probably receiver switched to another Service or we read a fragment from the previous session
+                buffer.limit(0);
                 return;
             }
 
@@ -356,19 +354,30 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
         return InitMpuMetadata_HEVC_NAL_Payload != null;
     }
 
-    //TODO: implement
-    private boolean skipUntilKeyFrame() {
-//        Pair<MfuByteBufferFragment, ByteBuffer> fragment;
-//        while ((fragment = mfuBufferQueue.peek()) != null) {
-//            if (isKeySample(fragment.first) && !isTextSample(fragment.first)) {
-//                return true;
-//            } else {
-//                mfuBufferQueue.remove();
-//            }
-//        }
-//
-//        return false;
-        return true;
+    private boolean skipUntilKeyFrame(ByteBuffer buffer) {
+        while (true) {
+            int bufferLen = fragmentBuffer.readNextPage(buffer);
+            if (bufferLen <= 0) {
+                buffer.limit(0);
+                return false;
+            }
+
+            int pageType = buffer.get();
+            if (pageType != RING_BUFFER_PAGE_FRAGMENT) continue;
+
+            int service_id = fragmentBuffer.getInt(buffer);
+            // seems it's a fragment from the previous session, skip it
+            if (service_id != serviceId) continue;
+
+            int packet_id = fragmentBuffer.getInt(buffer);
+            int sample_number = fragmentBuffer.getInt(buffer);
+
+            if (isKeySample(sample_number) && !isTextSample(packet_id)) {
+                fragmentBuffer.gotoPreviousPage();
+                buffer.limit(0);
+                return true;
+            }
+        }
     }
 
     private int getVideoWidth() {
@@ -384,36 +393,16 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
         return (float) 1000000.0 / MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us;
     }
 
-    @Deprecated
-    private boolean isVideoSample(MfuByteBufferFragment sample) {
-        return MmtPacketIdContext.video_packet_id == sample.packet_id;
-    }
-
     private boolean isVideoSample(int packet_id) {
         return MmtPacketIdContext.video_packet_id == packet_id;
-    }
-
-    @Deprecated
-    private boolean isAudioSample(MfuByteBufferFragment sample) {
-        return audioConfigurationMap.containsKey(sample.packet_id);
     }
 
     private boolean isAudioSample(int packet_id) {
         return MmtPacketIdContext.isAudioPacket(packet_id) && audioConfigurationMap.containsKey(packet_id);
     }
 
-    @Deprecated
-    private boolean isTextSample(MfuByteBufferFragment sample) {
-        return MmtPacketIdContext.stpp_packet_id == sample.packet_id;
-    }
-
     private boolean isTextSample(int packet_id) {
         return MmtPacketIdContext.stpp_packet_id == packet_id;
-    }
-
-    @Deprecated
-    private boolean isKeySample(MfuByteBufferFragment fragment) {
-        return fragment.sample_number == 1;
     }
 
     private boolean isKeySample(int sample_number) {
@@ -425,40 +414,15 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
         return InitMpuMetadata_HEVC_NAL_Payload.limit();
     }
 
-    //jjustman-2020-12-22 - TODO: handle when mfu_presentation_time_uS_computed - push last value?
-    private long getPresentationTimestampUs(MfuByteBufferFragment toProcessMfuByteBufferFragment) {
-        if (toProcessMfuByteBufferFragment.mfu_presentation_time_uS_computed != null && toProcessMfuByteBufferFragment.mfu_presentation_time_uS_computed > 0) {
-            //todo: expand size as needed, every ~ mfu_presentation_time_uS_computed 1000000uS
-            if (isVideoSample(toProcessMfuByteBufferFragment)) {
-                if (videoMfuPresentationTimestampUs == Long.MAX_VALUE) {
-                    videoMfuPresentationTimestampUs = toProcessMfuByteBufferFragment.mfu_presentation_time_uS_computed;
-                }
-            } else if (isAudioSample(toProcessMfuByteBufferFragment)) {
-                if (!audioMfuPresentationTimestampMap.containsKey(toProcessMfuByteBufferFragment.packet_id)) {
-                    audioMfuPresentationTimestampMap.put(toProcessMfuByteBufferFragment.packet_id, toProcessMfuByteBufferFragment.mfu_presentation_time_uS_computed);
-                }
-            } else if (isTextSample(toProcessMfuByteBufferFragment)) {
-                if (stppMfuPresentationTimestampUs == Long.MAX_VALUE) {
-                    stppMfuPresentationTimestampUs = toProcessMfuByteBufferFragment.mfu_presentation_time_uS_computed;
-                }
-            }
-            long anchorMfuPresentationTimestampUs = getMinNonZeroMfuPresentationTimestampForAnchor(toProcessMfuByteBufferFragment.packet_id);
-            long mpuPresentationTimestampDeltaUs = toProcessMfuByteBufferFragment.mfu_presentation_time_uS_computed - anchorMfuPresentationTimestampUs;
-            return mpuPresentationTimestampDeltaUs + MMTContentProvider.PTS_OFFSET_US;
-        }
-
-        return 0;
-    }
-
     private long getPresentationTimestampUs(int packet_id, int sample_number, long mpu_presentation_time_uS_from_SI) {
         if (mpu_presentation_time_uS_from_SI > 0) {
             long mfu_presentation_time_uS_computed = 0;
             long extracted_sample_duration_us;
-            if (packet_id == MmtPacketIdContext.video_packet_id && MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us > 0) {
+            if (isVideoSample(packet_id) && MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us > 0) {
                 mfu_presentation_time_uS_computed = mpu_presentation_time_uS_from_SI + (sample_number - 1) * MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us;
             } else if (isAudioSample(packet_id) && (extracted_sample_duration_us = MmtPacketIdContext.getAudioPacketStatistic(packet_id).extracted_sample_duration_us) > 0) {
                 mfu_presentation_time_uS_computed = mpu_presentation_time_uS_from_SI + (sample_number - 1) * extracted_sample_duration_us;
-            } else if (packet_id == MmtPacketIdContext.stpp_packet_id && MmtPacketIdContext.stpp_packet_statistics.extracted_sample_duration_us > 0) {
+            } else if (isTextSample(packet_id) && MmtPacketIdContext.stpp_packet_statistics.extracted_sample_duration_us > 0) {
                 mfu_presentation_time_uS_computed = mpu_presentation_time_uS_from_SI + (sample_number - 1) * MmtPacketIdContext.stpp_packet_statistics.extracted_sample_duration_us;
             }
 

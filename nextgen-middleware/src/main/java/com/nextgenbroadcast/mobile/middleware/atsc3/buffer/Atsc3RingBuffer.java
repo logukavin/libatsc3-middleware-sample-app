@@ -12,23 +12,26 @@ public class Atsc3RingBuffer {
     private final boolean invertByteOrder;
 
     private int currentPageNumber;
+    private int lastPageNumber;
+    private int lastBufferPosition;
 
-    public Atsc3RingBuffer(ByteBuffer buffer, int pageSize, int pageNumber) {
+    public Atsc3RingBuffer(ByteBuffer buffer, int pageSize) {
         this.buffer = buffer;
         this.pageSize = pageSize;
 
         invertByteOrder = buffer.order() != ByteOrder.nativeOrder();
-
-        currentPageNumber = pageNumber;
     }
 
     public int readNextPage(ByteBuffer outBuffer) {
+        // Go to head if we at the tail of buffer
         if (buffer.remaining() < pageSize) {
             buffer.position(0);
         }
 
         int ringPosition = buffer.position();
+        int saveRingPosition = ringPosition;
 
+        // Peek the current segment lock state and number
         boolean earlyIsLocked = buffer.get() != 0;
         int earlyPageNum = getInt(buffer);
         if (earlyIsLocked || earlyPageNum <= currentPageNumber) {
@@ -37,26 +40,28 @@ public class Atsc3RingBuffer {
             return -1;
         }
 
+        // Calculate fragment size
         int earlyBufferLen = getInt(buffer);
         int fullPacketSize = RING_BUFFER_PAGE_HEADER_SIZE + earlyBufferLen;
         int remaining = fullPacketSize;
         int segmentsInFragment = (int) Math.ceil((float) fullPacketSize / pageSize);
 
+        // Skip fragment if it's bigger that the out buffer
         if (remaining > outBuffer.capacity()) {
-            buffer.position(ringPosition + pageSize);
+            setBufferPosition(ringPosition + pageSize * segmentsInFragment);
             outBuffer.limit(0);
             return -2;
         }
 
+        // read fragment from current segment
         buffer.position(ringPosition);
-
         int bytesToRead = Math.min(remaining, pageSize);
-
         outBuffer.clear();
         buffer.get(outBuffer.array(), 0, bytesToRead);
 
         remaining -= bytesToRead;
 
+        // If fragment bigger then one segment then read all related segments or skip fragment if something went wrong
         int segmentNum = 1;
         while (remaining > 0) {
             buffer.position(ringPosition + pageSize);
@@ -69,22 +74,20 @@ public class Atsc3RingBuffer {
             boolean nextIsLocked = buffer.get() != 0;
             int nextPageNum = getInt(buffer);
             if (nextIsLocked || earlyPageNum != nextPageNum) {
-                buffer.position(ringPosition + pageSize * (segmentsInFragment - segmentNum));
+                setBufferPosition(ringPosition + pageSize * (segmentsInFragment - segmentNum));
                 outBuffer.limit(0);
                 return -1;
             }
 
-            // Skip page outBuffer
+            // Read next segment payload
             int segmentOffset = ringPosition + RING_BUFFER_PAGE_HEADER_SIZE;
             buffer.position(segmentOffset);
-
             int segmentBytesToRead = Math.min(remaining, pageSize - RING_BUFFER_PAGE_HEADER_SIZE);
-
             buffer.get(outBuffer.array(), fullPacketSize - remaining, segmentBytesToRead);
 
             byte nextSegmentNum = buffer.get(segmentOffset - 7 /* reserved part 7 bytes */);
             if (segmentNum != nextSegmentNum) {
-                buffer.position(ringPosition + pageSize * (segmentsInFragment - segmentNum));
+                setBufferPosition(ringPosition + pageSize * (segmentsInFragment - segmentNum));
                 outBuffer.limit(0);
                 return -1;
             }
@@ -93,11 +96,15 @@ public class Atsc3RingBuffer {
             remaining -= segmentBytesToRead;
         }
 
+        // Check lock state and segment number in fragment was read.
+        // Skip the fragment if it's locked or segment number differs from that was peeked out
         outBuffer.rewind();
         boolean isLocked = outBuffer.get() != 0;
         int pageNum = getInt(outBuffer);
         if (!isLocked && pageNum == earlyPageNum) {
-            buffer.position(ringPosition + pageSize);
+            lastPageNumber = currentPageNumber;
+            lastBufferPosition = saveRingPosition;
+            setBufferPosition(ringPosition + pageSize);
             currentPageNumber = pageNum;
 
             return getInt(outBuffer); // length
@@ -107,6 +114,19 @@ public class Atsc3RingBuffer {
 
             return -1;
         }
+    }
+
+    private void setBufferPosition(int newPosition) {
+        if (newPosition < buffer.limit()) {
+            buffer.position(newPosition);
+        } else {
+            buffer.position(newPosition - buffer.limit());
+        }
+    }
+
+    public void gotoPreviousPage() {
+        buffer.position(lastBufferPosition);
+        currentPageNumber = lastPageNumber;
     }
 
     public int getInt(ByteBuffer buffer) {
