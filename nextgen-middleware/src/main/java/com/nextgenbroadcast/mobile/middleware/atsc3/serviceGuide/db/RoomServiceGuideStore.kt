@@ -7,6 +7,7 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.unit.SGContent
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.unit.SGSchedule
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.unit.SGScheduleContent
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.unit.SGService
+import java.util.concurrent.ConcurrentHashMap
 
 internal class RoomServiceGuideStore(
         private val db: SGDataBase
@@ -112,16 +113,16 @@ internal class RoomServiceGuideStore(
         )
     }
 
-    override fun storeContent(contentMap: Map<String, SGContent>) {
-        val contacts = contentMap.values
+    override fun storeContent(contentMap: ConcurrentHashMap<String, SGContent>) {
+        val contents = contentMap.values
 
-        storeContentList(contacts)
+        storeContentList(contents)
 
         val contentNameDAO = db.contentNameDAO()
         val contentDescriptionDAO = db.contentDescriptionDAO()
         val contentServiceIdDAO = db.contentServiceIdDAO()
 
-        contacts.forEach { content ->
+        contents.forEach { content ->
 
             content.id?.let { contentId ->
 
