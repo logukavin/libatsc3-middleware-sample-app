@@ -99,22 +99,18 @@ public class Atsc3MMTExtractor implements Extractor {
     private int readSample(ExtractorInput extractorInput) throws IOException, InterruptedException {
         try {
             if (currentSampleBytesRemaining == 0) {
-                if (sampleBuffer.bytesLeft() < MMTConstants.SIZE_SAMPLE_HEADER) {
-                    int offset = 0;
-                    if (sampleBuffer.bytesLeft() > 0) {
-                        offset = sampleBuffer.bytesLeft();
-                        System.arraycopy(sampleBuffer.data, sampleBuffer.getPosition(), sampleBuffer.data, 0, sampleBuffer.bytesLeft());
-                    }
-
-                    extractorInput.readFully(sampleBuffer.data, /* offset= */ offset, /* length= */ /*MMTConstants.SIZE_SAMPLE_HEADER*/ sampleBuffer.limit() - offset);
-                    sampleBuffer.setPosition(0);
-                }
+                ensureBufferSize(extractorInput, MMTConstants.SIZE_SAMPLE_HEADER);
 
                 currentSampleType = (byte) sampleBuffer.readUnsignedByte();
                 currentSampleSize = sampleBuffer.readInt();
                 currentSampleId = sampleBuffer.readInt();
                 currentSampleTimeUs = sampleBuffer.readLong();
                 currentSampleIsKey = sampleBuffer.readUnsignedByte() == 1;
+
+                int payloadOffset = buffer.readUnsignedByte();
+                ensureBufferSize(extractorInput, payloadOffset);
+                buffer.skipBytes(payloadOffset);
+
                 currentSampleBytesRemaining = currentSampleSize;
                 //Log.d("!!!", "sid: " + currentSampleId + ", sample Type: " + currentSampleType + ", sample TimeUs: " + currentSampleTimeUs + ",  sample size: " + currentSampleSize);
                 if((ReadSample_ExtractSampleHeader_counter++ % 1000) == 0) {
@@ -205,6 +201,19 @@ public class Atsc3MMTExtractor implements Extractor {
         Log.d(TAG, String.format("readSample: packet_id: %d, returning after trackOutput.sampleMetadata, currentSampleTimeUs: %d, currentSampleSize: %d", currentSampleId, currentSampleTimeUs, currentSampleSize));
 
         return Extractor.RESULT_CONTINUE;
+    }
+
+    private void ensureBufferSize(ExtractorInput extractorInput, int size) throws IOException, InterruptedException {
+        if (buffer.bytesLeft() < size) {
+            int offset = 0;
+            if (buffer.bytesLeft() > 0) {
+                offset = buffer.bytesLeft();
+                System.arraycopy(buffer.data, buffer.getPosition(), buffer.data, 0, buffer.bytesLeft());
+            }
+
+            extractorInput.readFully(buffer.data, /* offset= */ offset, /* length= */ /*MMTConstants.SIZE_SAMPLE_HEADER*/ buffer.limit() - offset);
+            buffer.setPosition(0);
+        }
     }
 
     private void maybeOutputFormat(ExtractorInput input) throws IOException, InterruptedException {

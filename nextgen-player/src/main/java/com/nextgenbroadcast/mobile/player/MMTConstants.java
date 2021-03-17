@@ -11,7 +11,8 @@ public final class MMTConstants {
             + Integer.BYTES     /* sample size */
             + Integer.BYTES     /* sample id */
             + Long.BYTES        /* sample presentation time */
-            + Byte.BYTES;       /* is key frame */
+            + Byte.BYTES        /* is key frame */
+            + Byte.BYTES;       /* payload offset */
 
     public static final int HEADER_SIZE =
             Integer.BYTES       /* full header size */

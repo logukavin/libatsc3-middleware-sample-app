@@ -33,7 +33,7 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
     private final Boolean audioOnly;
 
     private final int serviceId;
-    private final Atsc3RingBuffer fragmentBuffer;
+    private final Atsc3RingBuffer ringBuffer;
     private final ByteBuffer pageBuffer = ByteBuffer.allocate(150 * 1024);
     private final byte[] header = {(byte) 0xAC, 0x40, (byte) 0xFF, (byte) 0xFF, 0x00, 0x00, 0x00};
     private final ByteBuffer sampleHeaderBuffer = ByteBuffer.allocate(MMTConstants.SIZE_SAMPLE_HEADER);
@@ -55,7 +55,7 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
 
     public MMTFileDescriptor(int serviceId, Atsc3RingBuffer fragmentBuffer, boolean audioOnly) {
         this.serviceId = serviceId;
-        this.fragmentBuffer = fragmentBuffer;
+        this.ringBuffer = fragmentBuffer;
         this.audioOnly = audioOnly;
 
         pageBuffer.limit(0);
@@ -227,7 +227,8 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
                         .putInt(bytesRead - sampleHeaderBuffer.limit())
                         .putInt(0) // sample id = 0
                         .putLong(0) // PresentationTimestampUs = 0
-                        .put((byte) 0); // isKeyFrame = false
+                        .put((byte) 0) // isKeyFrame = false
+                        .put((byte) 0); // payload offset
                 sampleHeaderBuffer.rewind();
 
                 readSampleHeader(offset + bytesAlreadyRead, readLength - bytesAlreadyRead, buffer);
@@ -244,7 +245,7 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
         }
 
         if (pageBuffer.remaining() == 0) {
-            readFragment(pageBuffer);
+            return readFragment(offset, readLength, buffer, pageBuffer);
         }
 
         // read the sample buffer
@@ -260,7 +261,7 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
 
     private void scanMpuMetadata(ByteBuffer buffer) {
         while (true) {
-            int bufferLen = fragmentBuffer.readNextPage(buffer);
+            int bufferLen = ringBuffer.readNextPage(buffer);
             if (bufferLen <= 0) {
                 buffer.limit(0);
                 return;
@@ -269,15 +270,13 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
             int pageType = buffer.get();
             if (pageType != RING_BUFFER_PAGE_INIT) continue;
 
-            int service_id = fragmentBuffer.getInt(buffer);
+            int service_id = ringBuffer.getInt(buffer);
             // we read a fragment from the previous session, skip it
             if (service_id != serviceId) continue;
 
             if (InitMpuMetadata_HEVC_NAL_Payload == null) {
                 ByteBuffer init = ByteBuffer.allocate(bufferLen);
-                //TODO: rewrite offset
-                int offset = 4 /*packet_id*/ + 4 /*sample_number*/ + 8 /*mpu_presentation_time_uS_from_SI*/ + 7 /*reserved*/;
-                init.put(buffer.array(), buffer.position() + offset /* reserved bytes */, bufferLen);
+                init.put(buffer.array(), buffer.position() + Atsc3RingBuffer.RING_BUFFER_PAGE_HEADER_FRAGMENT, bufferLen);
                 InitMpuMetadata_HEVC_NAL_Payload = init;
             }
 
@@ -287,24 +286,37 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
         }
     }
 
-    private void readFragment(ByteBuffer buffer) {
-        while (true) {
-            int bufferLen = fragmentBuffer.readNextPage(buffer);
-            if (bufferLen <= 0) return;
+    private int readFragment(int offset, int readLength, byte[] buffer, ByteBuffer tailBuffer) {
+        // we must read at leas page header
+        if (readLength < Atsc3RingBuffer.RING_BUFFER_PAGE_HEADER_SIZE) return 0;
 
-            int pageType = buffer.get();
+        while (true) {
+            // read next fragment
+            final int pageSize = ringBuffer.readNextPage(offset, readLength, buffer, tailBuffer);
+            if (pageSize == -2) continue; // we skipped page in some reason, let's try again
+            if (pageSize <= 0) return 0;
+
+            int position = offset + Atsc3RingBuffer.RING_BUFFER_PAGE_HEADER_OFFSET;
+
+            // skip if it's not a media fragment
+            int pageType = buffer[position];
+            position++;
             if (pageType != RING_BUFFER_PAGE_FRAGMENT) continue;
 
-            int service_id = fragmentBuffer.getInt(buffer);
+            int service_id = ringBuffer.getInt(position, buffer);
+            position += Integer.BYTES;
             if (service_id != serviceId) {
-                // it's a bad sign, probably receiver switched to another Service or we read a fragment from the previous session
-                buffer.limit(0);
-                return;
+                // it's a bad sign, probably receiver switched to an another Service or we read a fragment from the previous session
+                return 0;
             }
 
-            int packet_id = fragmentBuffer.getInt(buffer);
-            int sample_number = fragmentBuffer.getInt(buffer);
-            long mpu_presentation_time_uS_from_SI = fragmentBuffer.getLong(buffer);
+            // read fragment data
+            int packet_id = ringBuffer.getInt(position, buffer);
+            position += Integer.BYTES;
+            int sample_number = ringBuffer.getInt(position, buffer);
+            position += Integer.BYTES;
+            long mpu_presentation_time_uS_from_SI = ringBuffer.getLong(position, buffer);
+            //position += Long.BYTES;
 
             byte sampleType = MMTConstants.TRACK_TYPE_UNKNOWN;
             if (isVideoSample(packet_id)) {
@@ -317,34 +329,37 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
 
             long computedPresentationTimestampUs = getPresentationTimestampUs(packet_id, sample_number, mpu_presentation_time_uS_from_SI);
 
+            int payloadLength = pageSize - Atsc3RingBuffer.RING_BUFFER_PAGE_HEADER_SIZE;
             int headerDiff = Atsc3RingBuffer.RING_BUFFER_PAGE_HEADER_SIZE - MMTConstants.SIZE_SAMPLE_HEADER;
 
             if (sampleType == MMTConstants.TRACK_TYPE_AUDIO) {
                 headerDiff -= header.length;
 
-                header[4] = (byte) (bufferLen >> 16 & 0xFF);
-                header[5] = (byte) (bufferLen >> 8 & 0xFF);
-                header[6] = (byte) (bufferLen & 0xFF);
+                header[4] = (byte) (payloadLength >> 16 & 0xFF);
+                header[5] = (byte) (payloadLength >> 8 & 0xFF);
+                header[6] = (byte) (payloadLength & 0xFF);
 
-                buffer.position(headerDiff + MMTConstants.SIZE_SAMPLE_HEADER);
-                buffer.put(header);
+                position = offset + headerDiff + MMTConstants.SIZE_SAMPLE_HEADER;
+                System.arraycopy(header, 0, buffer, position, header.length);
 
-                bufferLen += header.length;
+                payloadLength += header.length;
             }
 
-            buffer.position(headerDiff);
-            buffer.put(sampleType)
-                    .putInt(bufferLen/*fragment.bytebuffer_length*/)
-                    .putInt(packet_id)
-                    .putLong(computedPresentationTimestampUs)
-                    .put(isKeySample(sample_number) ? (byte) 1 : (byte) 0);
+            position = offset;
+            buffer[position] = sampleType;
+            position++;
+            ringBuffer.setInt(position, buffer, payloadLength);
+            position += Integer.BYTES;
+            ringBuffer.setInt(position, buffer, packet_id);
+            position += Integer.BYTES;
+            ringBuffer.setLong(position, buffer, computedPresentationTimestampUs);
+            position += Long.BYTES;
+            buffer[position] = isKeySample(sample_number) ? (byte) 1 : (byte) 0;
+            position++;
+            buffer[position] = (byte) headerDiff;
+            //position++;
 
-            int sampleRemaining = bufferLen + MMTConstants.SIZE_SAMPLE_HEADER + headerDiff;
-            int limit = Math.max(sampleRemaining, 0);
-            buffer.limit(limit);
-            buffer.position(headerDiff);
-
-            return;
+            return pageSize;
         }
     }
 
@@ -361,7 +376,7 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
 
     private boolean skipUntilKeyFrame(ByteBuffer buffer) {
         while (true) {
-            int bufferLen = fragmentBuffer.readNextPage(buffer);
+            int bufferLen = ringBuffer.readNextPage(buffer);
             if (bufferLen <= 0) {
                 buffer.limit(0);
                 return false;
@@ -370,15 +385,15 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
             int pageType = buffer.get();
             if (pageType != RING_BUFFER_PAGE_FRAGMENT) continue;
 
-            int service_id = fragmentBuffer.getInt(buffer);
+            int service_id = ringBuffer.getInt(buffer);
             // seems it's a fragment from the previous session, skip it
             if (service_id != serviceId) continue;
 
-            int packet_id = fragmentBuffer.getInt(buffer);
-            int sample_number = fragmentBuffer.getInt(buffer);
+            int packet_id = ringBuffer.getInt(buffer);
+            int sample_number = ringBuffer.getInt(buffer);
 
             if (isKeySample(sample_number) && !isTextSample(packet_id)) {
-                fragmentBuffer.gotoPreviousPage();
+                ringBuffer.gotoPreviousPage();
                 buffer.limit(0);
                 return true;
             }
