@@ -22,7 +22,7 @@ internal class RepositoryImpl : IRepository {
     override val services = MutableLiveData<List<AVService>>()
     override val heldPackage = MutableLiveData<Atsc3HeldPackage?>()
     override val alertsForNotify = MutableLiveData<List<AeaTable>>()
-    override val storedAlerts = mutableListOf<AeaTable>()
+    override val mergedAlerts = mutableListOf<AeaTable>()
 
     override fun addOrUpdateApplication(application: Atsc3Application) {
         _applications[application.uid] = application
@@ -69,7 +69,7 @@ internal class RepositoryImpl : IRepository {
         list.forEach { aea ->
             when (aea.type) {
                 AeaTable.CANCEL_ALERT -> {
-                    val removed = storedAlerts.removeIf { it.id == aea.refId }
+                    val removed = mergedAlerts.removeIf { it.id == aea.refId }
                     if (!removed) notifyAlerts.add(aea)
                 }
                 else -> {
@@ -80,8 +80,7 @@ internal class RepositoryImpl : IRepository {
         }
 
         alertsForNotify.postValue(notifyAlerts)
-        storedAlerts.addAll(notifyAlerts)
-        //TODO storedAlerts.removeIf { it.expires < currentDate }
+        mergedAlerts.addAll(notifyAlerts)
     }
 
     override fun reset() {

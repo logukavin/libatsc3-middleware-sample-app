@@ -9,6 +9,7 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.entities.alerts.AeaTable
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.IAtsc3Source
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.SGUrl
+import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.AlertingRpcResponse
 
 interface IServiceController : IReceiverPresenter, ISelectorPresenter {
     val serviceGuideUrls: LiveData<List<SGUrl>?>
@@ -16,11 +17,12 @@ interface IServiceController : IReceiverPresenter, ISelectorPresenter {
     //TODO: hmm, this is not good
     val routeMediaUrl: LiveData<MediaUrl?>
     val alertList: LiveData<List<AeaTable>>
-    val storedAlerts: List<AeaTable>
+    val mergedAlerts: List<AeaTable>
 
     fun openRoute(source: IAtsc3Source): Boolean
     fun stopRoute()
 
     fun findServiceById(globalServiceId: String): AVService?
     fun getNearbyService(offset: Int): AVService?
+    fun convertAeaListToRPCAlertList(list: List<AeaTable>): List<AlertingRpcResponse.Alert>
 }
