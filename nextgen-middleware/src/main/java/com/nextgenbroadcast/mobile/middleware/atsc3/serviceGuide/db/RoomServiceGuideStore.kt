@@ -113,7 +113,7 @@ internal class RoomServiceGuideStore(
         )
     }
 
-    override fun storeContent(contentMap: ConcurrentHashMap<String, SGContent>) {
+    override fun storeContent(contentMap: Map<String, SGContent>) {
         val contents = contentMap.values
 
         storeContentList(contents)
