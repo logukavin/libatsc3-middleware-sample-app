@@ -21,6 +21,7 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.entities.service.Atsc3Servic
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.IServiceGuideDeliveryUnitReader
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.*
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
+import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.AlertingRpcResponse
 import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
 import kotlinx.coroutines.*
 
@@ -66,7 +67,7 @@ internal class ServiceControllerImpl (
     override val freqKhz = MutableLiveData(0)
 
     override val alertList = repository.alertsForNotify
-    override val storedAlerts = repository.storedAlerts
+    override val mergedAlerts = repository.mergedAlerts
 
     init {
         atsc3Module.setListener(this)
@@ -252,9 +253,7 @@ internal class ServiceControllerImpl (
                 retuneOnDemod = frequency.source == PhyFrequency.Source.USER
         )
 
-        //TODO: remove all alerts
-//        repository.alertsForNotify.value?.toMutableList()?.clear()
-        repository.storedAlerts.clear()
+        repository.mergedAlerts.clear()
     }
 
     override fun findServiceById(globalServiceId: String): AVService? {
@@ -268,6 +267,11 @@ internal class ServiceControllerImpl (
                 services.getOrNull(activeServiceIndex + offset)
             }
         }
+    }
+
+    override fun convertAeaListToRPCAlertList(list: List<AeaTable>): List<AlertingRpcResponse.Alert> {
+        val alertingFragment = list.joinToString(separator = "", prefix = "<AEAT>", postfix = "</AEAT>") { it.xml }
+        return listOf(AlertingRpcResponse.Alert(AlertingRpcResponse.Alert.AEAT, alertingFragment))
     }
 
     private fun resetHeldWithDelay() {

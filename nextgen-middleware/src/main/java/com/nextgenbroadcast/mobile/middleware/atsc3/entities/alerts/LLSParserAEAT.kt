@@ -1,7 +1,7 @@
 package com.nextgenbroadcast.mobile.middleware.atsc3.entities.alerts
 
 import android.util.Log
-import com.nextgenbroadcast.mobile.middleware.atsc3.utils.XmlUtils
+import com.nextgenbroadcast.mobile.middleware.atsc3.utils.*
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserException
 import java.io.IOException
@@ -17,14 +17,10 @@ class LLSParserAEAT {
             parser.nextTag()
             parser.require(XmlPullParser.START_TAG, null, "AEAT")
 
-            while (parser.next() != XmlPullParser.END_DOCUMENT) {
-                if (parser.eventType != XmlPullParser.START_TAG) {
-                    continue
-                }
-
-                when (parser.name) {
+            parser.iterateDocument { tagName ->
+                when (tagName) {
                     "AEA" -> aeaList.add(readAEA(parser))
-                    else -> XmlUtils.skip(parser)
+                    else -> parser.skipTag()
                 }
             }
         } catch (e: XmlPullParserException) {
@@ -33,6 +29,7 @@ class LLSParserAEAT {
             Log.e("LLSParserAEAT", "exception in parsing: $e")
         }
 
+        //TODO: This is temporary solutions, it should be reworked
         val startIndxs = getAEATagsIdx(xmlPayload, "<AEA ")
         val endIndxs = getAEATagsIdx(xmlPayload, "</AEA>")
 
@@ -47,31 +44,26 @@ class LLSParserAEAT {
     private fun readAEA(parser: XmlPullParser): AeaTable {
         val aea = AeaTable()
 
-        val attrCount = parser.attributeCount
-        for (i in 0 until attrCount) {
-            when (parser.getAttributeName(i)) {
-                "aeaId" -> aea.id = parser.getAttributeValue(i)
-                "aeaType" -> aea.type = parser.getAttributeValue(i)
-                "refAEAid" -> aea.refId = parser.getAttributeValue(i)
+        parser.iterateAttrs { attrName, attrValue ->
+            when (attrName) {
+                "aeaId" -> aea.id = attrValue
+                "aeaType" -> aea.type = attrValue
+                "refAEAid" -> aea.refId = attrValue
                 else -> {
                     // skip attribute
                 }
             }
         }
 
-        while (parser.next() != XmlPullParser.END_DOCUMENT && parser.name != "AEA") {
-            if (parser.eventType != XmlPullParser.START_TAG) {
-                continue
-            }
-
-            when (parser.name) {
+        parser.iterateSubTags { tagName ->
+            when (tagName) {
                 "Header" -> {
                     val header = readHeader(parser)
                     aea.effective = header.effective
                     aea.expires = header.expires
                 }
                 "AEAText" -> aea.messages?.add(readAEAText(parser).message)
-                else -> XmlUtils.skip(parser)
+                else -> parser.skipTag()
             }
         }
 
@@ -82,16 +74,17 @@ class LLSParserAEAT {
     private fun readHeader(parser: XmlPullParser): Header {
         val header = Header()
 
-        val attrCount = parser.attributeCount
-        for (i in 0 until attrCount) {
-            when (parser.getAttributeName(i)) {
-                "effective" -> header.effective = parser.getAttributeValue(i)
-                "expires" -> header.expires = parser.getAttributeValue(i)
+        parser.iterateAttrs { attrName, attrValue ->
+            when (attrName) {
+                "effective" -> header.effective = attrValue
+                "expires" -> header.expires = attrValue
                 else -> {
                     // skip attribute
                 }
             }
         }
+
+        parser.iterateSubTags { parser.skipTag() }
 
         return header
     }
@@ -109,23 +102,16 @@ class LLSParserAEAT {
     private fun readAEAText(parser: XmlPullParser): AeaText {
         val aeaText = AeaText()
 
-        val attrCount = parser.attributeCount
-        for (i in 0 until attrCount) {
-            when (parser.getAttributeName(i)) {
-                "xml:lang" -> aeaText.lang = parser.getAttributeValue(i)
+        parser.iterateAttrs { attrName, attrValue ->
+            when (attrName) {
+                "xml:lang" -> aeaText.lang = attrValue
                 else -> {
                     // skip attribute
                 }
             }
         }
 
-        while (parser.next() != XmlPullParser.END_DOCUMENT && parser.name != "AEAText") {
-            if (parser.eventType == XmlPullParser.TEXT) {
-                aeaText.message = parser.text
-            } else {
-                XmlUtils.skip(parser)
-            }
-        }
+        parser.readTextTag()?.let { aeaText.message = it }
 
         return aeaText
     }
