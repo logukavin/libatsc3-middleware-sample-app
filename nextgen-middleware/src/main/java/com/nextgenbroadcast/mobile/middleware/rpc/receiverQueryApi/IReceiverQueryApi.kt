@@ -32,7 +32,7 @@ interface IReceiverQueryApi {
     fun queryReceiverWebServerURI(): BaseURIRpcResponse
 
     @JsonRpcMethod("org.atsc.query.alerting")
-    fun queryAlertingSignaling(): AlertingRpcResponse
+    fun queryAlertingSignaling(@JsonRpcParam("alertingTypes") alertingTypes: List<String>): AlertingRpcResponse
 
     @JsonRpcMethod("org.atsc.query.serviceGuideUrls")
     fun queryServiceGuideURLs(@JsonRpcParam("service", nullable = true) service: String?): ServiceGuideUrlsRpcResponse

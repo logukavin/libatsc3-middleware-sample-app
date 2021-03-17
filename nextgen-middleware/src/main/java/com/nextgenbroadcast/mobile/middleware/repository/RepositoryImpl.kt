@@ -3,6 +3,7 @@ package com.nextgenbroadcast.mobile.middleware.repository
 import androidx.lifecycle.MutableLiveData
 import com.nextgenbroadcast.mobile.core.atsc3.MediaUrl
 import com.nextgenbroadcast.mobile.core.model.AVService
+import com.nextgenbroadcast.mobile.middleware.atsc3.entities.alerts.AeaTable
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPackage
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.SGUrl
@@ -20,6 +21,8 @@ internal class RepositoryImpl : IRepository {
     override val applications = MutableLiveData<List<Atsc3Application>?>()
     override val services = MutableLiveData<List<AVService>>()
     override val heldPackage = MutableLiveData<Atsc3HeldPackage?>()
+    override val alertsForNotify = MutableLiveData<List<AeaTable>>()
+    override val mergedAlerts = mutableListOf<AeaTable>()
 
     override fun addOrUpdateApplication(application: Atsc3Application) {
         _applications[application.uid] = application
@@ -58,6 +61,26 @@ internal class RepositoryImpl : IRepository {
 
     override fun setMediaUrl(mediaUrl: MediaUrl?) {
         routeMediaUrl.postValue(mediaUrl)
+    }
+
+    override fun storeAlertsAndNotify(list: List<AeaTable>) {
+        val notifyAlerts = mutableListOf<AeaTable>()
+
+        list.forEach { aea ->
+            when (aea.type) {
+                AeaTable.CANCEL_ALERT -> {
+                    val removed = mergedAlerts.removeIf { it.id == aea.refId }
+                    if (!removed) notifyAlerts.add(aea)
+                }
+                else -> {
+                    //TODO filter aea by expires date
+                    notifyAlerts.add(aea)
+                }
+            }
+        }
+
+        alertsForNotify.postValue(notifyAlerts)
+        mergedAlerts.addAll(notifyAlerts)
     }
 
     override fun reset() {

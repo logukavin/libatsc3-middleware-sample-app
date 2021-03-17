@@ -8,6 +8,7 @@ import com.nextgenbroadcast.mobile.core.atsc3.phy.PHYStatistics
 import com.nextgenbroadcast.mobile.core.isEquals
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.Atsc3ServiceLocationTable
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.SLTConstants
+import com.nextgenbroadcast.mobile.middleware.atsc3.entities.alerts.LLSParserAEAT
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3ApplicationFile
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3Held
@@ -372,7 +373,7 @@ internal class Atsc3Module(
     }
 
     override fun onAeatTablePresent(aeatPayloadXML: String) {
-        //TODO("Not yet implemented")
+        listener?.onAeatTableChanged(LLSParserAEAT().parseAeaTable(aeatPayloadXML))
     }
 
     override fun onSlsHeldEmissionPresent(serviceId: Int, heldPayloadXML: String) {

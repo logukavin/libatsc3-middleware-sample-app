@@ -7,9 +7,7 @@ import android.content.IntentFilter
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import android.net.Uri
-import android.os.Bundle
-import android.os.IBinder
-import android.os.PowerManager
+import android.os.*
 import android.os.PowerManager.WakeLock
 import android.support.v4.media.MediaBrowserCompat
 import android.support.v4.media.MediaDescriptionCompat
@@ -17,6 +15,7 @@ import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
 import android.util.Log
+import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
@@ -32,6 +31,7 @@ import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.middleware.BuildConfig
 import com.nextgenbroadcast.mobile.middleware.atsc3.core.Atsc3ReceiverCore
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.SLTConstants
+import com.nextgenbroadcast.mobile.middleware.atsc3.entities.alerts.AeaTable
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.UsbAtsc3Source
 import com.nextgenbroadcast.mobile.middleware.cache.DownloadManager
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
@@ -168,6 +168,15 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
                     mediaPath?.let {
                         player.play(mediaFileProvider.getMediaFileUri(mediaPath.url))
                     }
+                }
+            }
+        }
+
+        //TODO: This is temporary solution
+        atsc3Receiver.serviceController.alertList.observe(this@Atsc3ForegroundService) { alerts ->
+            alerts.forEach { alert ->
+                alert.messages?.forEach { msg ->
+                    Toast.makeText(applicationContext, msg, Toast.LENGTH_SHORT).show()
                 }
             }
         }
