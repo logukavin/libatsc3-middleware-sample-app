@@ -15,6 +15,7 @@ import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
 import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
 import com.nextgenbroadcast.mobile.middleware.rpc.notification.NotificationType
 import com.nextgenbroadcast.mobile.middleware.rpc.notification.RPCNotificationHelper
+import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.AlertingRpcResponse
 import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.ServiceGuideUrlsRpcResponse
 import com.nextgenbroadcast.mobile.middleware.server.ServerUtils
 import com.nextgenbroadcast.mobile.middleware.server.ws.MiddlewareWebSocket
@@ -84,6 +85,12 @@ internal class RPCGatewayImpl(
 
         viewController.rmpPlaybackRate.distinctUntilChanged().observe(lifecycleOwner) { playbackRate ->
             onRMPPlaybackRateChanged(playbackRate)
+        }
+
+        serviceController.alertList.observe(lifecycleOwner) { list ->
+            if (list.isNotEmpty()) {
+                onAlertingChanged(serviceController.convertAeaListToRPCAlertList(list))
+            }
         }
     }
 
@@ -182,6 +189,22 @@ internal class RPCGatewayImpl(
         } ?: false
     }
 
+    override fun getAlertChangingData(alertingTypes: List<String>): List<AlertingRpcResponse.Alert> {
+        val alertList = mutableListOf<AlertingRpcResponse.Alert>()
+
+        val rpcAlerts = serviceController.convertAeaListToRPCAlertList(serviceController.mergedAlerts)
+
+        if (alertingTypes.isEmpty()) alertList.addAll(rpcAlerts)
+
+        alertingTypes.forEach { type ->
+            rpcAlerts.filter { it.alertingType == type}.apply {
+                alertList.addAll(this)
+            }
+        }
+
+        return alertList
+    }
+
     /**
     Shall be issued by the Receiver to the currently executing
     Broadcaster Application if the user changes to another service also associated with the same
@@ -252,6 +275,12 @@ internal class RPCGatewayImpl(
         }
     }
 
+    private fun onAlertingChanged(alertList: List<AlertingRpcResponse.Alert>) {
+        if (subscribedNotifications.contains(NotificationType.ALERT_CHANGE)) {
+            rpcNotifier.notifyAlertingChange(alertList)
+        }
+    }
+
     private fun startMediaTimeUpdateJob() {
         cancelMediaTimeUpdateJob()
 
@@ -292,7 +321,8 @@ internal class RPCGatewayImpl(
                 NotificationType.RMP_PLAYBACK_STATE_CHANGE,
                 NotificationType.RMP_PLAYBACK_RATE_CHANGE,
                 NotificationType.RMP_MEDIA_TIME_CHANGE,
-                NotificationType.CONTENT_CHANGE
+                NotificationType.CONTENT_CHANGE,
+                NotificationType.ALERT_CHANGE
         )
 
         private const val MEDIA_TIME_UPDATE_DELAY = 500L

@@ -1,6 +1,7 @@
 package com.nextgenbroadcast.mobile.middleware.atsc3
 
 import com.nextgenbroadcast.mobile.core.atsc3.MediaUrl
+import com.nextgenbroadcast.mobile.middleware.atsc3.entities.alerts.AeaTable
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPackage
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.service.Atsc3Service
@@ -17,4 +18,5 @@ interface Atsc3ModuleListener {
     fun onServiceGuideUnitReceived(filePath: String)
 
     fun onError(message: String)
+    fun onAeatTableChanged(list: List<AeaTable>)
 }

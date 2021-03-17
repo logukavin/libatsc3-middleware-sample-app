@@ -14,12 +14,14 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3ModuleListener
 import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3ModuleState
 import com.nextgenbroadcast.mobile.middleware.atsc3.IAtsc3Module
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.SLTConstants
+import com.nextgenbroadcast.mobile.middleware.atsc3.entities.alerts.AeaTable
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPackage
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.service.Atsc3Service
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.IServiceGuideDeliveryUnitReader
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.*
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
+import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.AlertingRpcResponse
 import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
 import kotlinx.coroutines.*
 
@@ -63,6 +65,9 @@ internal class ServiceControllerImpl (
     override val sltServices = repository.services.map { services -> services.filter { !it.hidden } }
 
     override val freqKhz = MutableLiveData(0)
+
+    override val alertList = repository.alertsForNotify
+    override val mergedAlerts = repository.mergedAlerts
 
     init {
         atsc3Module.setListener(this)
@@ -135,6 +140,10 @@ internal class ServiceControllerImpl (
 
     override fun onError(message: String) {
         onError?.invoke(message)
+    }
+
+    override fun onAeatTableChanged(list: List<AeaTable>) {
+        repository.storeAlertsAndNotify(list)
     }
 
     override fun openRoute(path: String): Boolean {
@@ -243,6 +252,8 @@ internal class ServiceControllerImpl (
                 frequencies = frequencyList,
                 retuneOnDemod = frequency.source == PhyFrequency.Source.USER
         )
+
+        repository.mergedAlerts.clear()
     }
 
     override fun findServiceById(globalServiceId: String): AVService? {
@@ -256,6 +267,11 @@ internal class ServiceControllerImpl (
                 services.getOrNull(activeServiceIndex + offset)
             }
         }
+    }
+
+    override fun convertAeaListToRPCAlertList(list: List<AeaTable>): List<AlertingRpcResponse.Alert> {
+        val alertingFragment = list.joinToString(separator = "", prefix = "<AEAT>", postfix = "</AEAT>") { it.xml }
+        return listOf(AlertingRpcResponse.Alert(AlertingRpcResponse.Alert.AEAT, alertingFragment))
     }
 
     private fun resetHeldWithDelay() {

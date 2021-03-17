@@ -2,6 +2,7 @@ package com.nextgenbroadcast.mobile.middleware.gateway.rpc
 
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.middleware.rpc.notification.NotificationType
+import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.AlertingRpcResponse
 import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.ServiceGuideUrlsRpcResponse
 import com.nextgenbroadcast.mobile.middleware.server.ws.MiddlewareWebSocket
 
@@ -31,4 +32,6 @@ interface IRPCGateway {
     fun getServiceGuideUrls(service: String?): List<ServiceGuideUrlsRpcResponse.Url>
 
     fun requestServiceChange(globalServiceId: String): Boolean
+
+    fun getAlertChangingData(alertingTypes: List<String>): List<AlertingRpcResponse.Alert>
 }

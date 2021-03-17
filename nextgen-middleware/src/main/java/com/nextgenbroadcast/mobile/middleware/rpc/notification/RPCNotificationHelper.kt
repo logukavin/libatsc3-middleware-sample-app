@@ -4,6 +4,7 @@ import com.github.nmuzhichin.jsonrpc.model.request.Notification
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.middleware.rpc.notification.model.*
 import com.nextgenbroadcast.mobile.middleware.rpc.processor.RPCObjectMapper
+import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.AlertingRpcResponse
 import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.ServiceGuideUrlsRpcResponse
 
 class RPCNotificationHelper(
@@ -35,6 +36,10 @@ class RPCNotificationHelper(
 
     fun notifyRmpPlaybackRateChange(playbackRate: Float) {
         sendNotification(RmpPlaybackRateChangeNotification(playbackRate))
+    }
+
+    fun notifyAlertingChange(alertList: List<AlertingRpcResponse.Alert>) {
+        sendNotification(AlertingChangeNotification(alertList))
     }
 
     private fun sendNotification(rpcNotification: RPCNotification) {
