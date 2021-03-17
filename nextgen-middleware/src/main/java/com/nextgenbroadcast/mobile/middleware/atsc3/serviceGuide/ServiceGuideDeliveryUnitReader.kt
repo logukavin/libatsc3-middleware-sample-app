@@ -5,6 +5,7 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.unit.SGContent
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.unit.SGService
 import kotlinx.coroutines.*
 import java.io.File
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 
 internal class ServiceGuideDeliveryUnitReader(
@@ -14,7 +15,7 @@ internal class ServiceGuideDeliveryUnitReader(
     private var READER_IO: CoroutineDispatcher? = null
 
     private val serviceMap = mutableMapOf<Int, SGService>()
-    private val contentMap = mutableMapOf<String, SGContent>()
+    private val contentMap = ConcurrentHashMap<String, SGContent>()
     private val guideUrlsMap = mutableMapOf<String, SGUrl>()
 
     @Synchronized
