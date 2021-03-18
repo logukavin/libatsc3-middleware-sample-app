@@ -12,6 +12,7 @@ import com.google.android.exoplayer2.ui.PlayerView
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.RMPViewModel
 import com.nextgenbroadcast.mobile.player.Atsc3MediaPlayer
+import com.nextgenbroadcast.mobile.player.MMTConstants
 
 class ReceiverPlayerView @JvmOverloads constructor(
         context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
@@ -73,7 +74,15 @@ class ReceiverPlayerView @JvmOverloads constructor(
     }
 
     fun play(mediaUri: Uri) {
-        atsc3Player.play(mediaUri)
+        val mimeType = context.contentResolver.getType(mediaUri)
+        if (mimeType == MMTConstants.MIME_MMT_AUDIO) {
+            stop()
+            atsc3Player.clearSavedState()
+            return
+        }
+
+        atsc3Player.play(mediaUri, mimeType)
+
         player = atsc3Player.player?.also {
             it.addListener(object : Player.EventListener {
                 override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
@@ -94,10 +103,6 @@ class ReceiverPlayerView @JvmOverloads constructor(
     fun stop() {
         atsc3Player.reset()
         player = null
-    }
-
-    fun clearState() {
-        atsc3Player.clearSavedState()
     }
 
     private fun updateBufferingState(isBuffering: Boolean) {

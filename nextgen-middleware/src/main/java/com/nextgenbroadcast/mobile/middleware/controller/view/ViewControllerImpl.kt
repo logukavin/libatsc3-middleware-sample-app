@@ -63,13 +63,6 @@ internal class ViewControllerImpl(
             repository.routeMediaUrl.map { input ->
                 if (input == null) return@map null
 
-                if (ignoreAudioServiceMedia) {
-                    val service = repository.findServiceBy(input.bsid, input.serviceId)
-                    if (service?.category == SLTConstants.SERVICE_CATEGORY_AO) {
-                        return@map null
-                    }
-                }
-
                 fileProvider.getMediaFileUri(input.url)
             }
         } else {
