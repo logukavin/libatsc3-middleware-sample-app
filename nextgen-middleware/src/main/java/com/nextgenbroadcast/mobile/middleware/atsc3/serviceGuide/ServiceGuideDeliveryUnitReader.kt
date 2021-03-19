@@ -33,13 +33,13 @@ internal class ServiceGuideDeliveryUnitReader(
     }
 
     @Synchronized
-    override fun readDeliveryUnit(filePath: String) {
+    override fun readDeliveryUnit(filePath: String, serviceBsid: Int) {
         val file = File(filePath)
 
         if (file.exists() && file.isFile) {
             CoroutineScope(getContext()).launch {
                 try {
-                    SGDUReader(serviceMap, contentMap).readFromFile(file, this::isActive)
+                    SGDUReader(serviceMap, contentMap).readFromFile(file, this::isActive, serviceBsid)
                 } catch (e: Exception) {
                     Log.d(TAG, "Error when reading SGDU file: $filePath", e)
                 }
