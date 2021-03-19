@@ -7,6 +7,7 @@ import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.unite
+import com.nextgenbroadcast.mobile.middleware.atsc3.entities.alerts.AeaTable
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3ApplicationFile
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.SGUrl
 import com.nextgenbroadcast.mobile.middleware.cache.IApplicationCache
@@ -36,6 +37,7 @@ internal class RPCGatewayImpl(
 
     private val sessions: CopyOnWriteArrayList<MiddlewareWebSocket> = CopyOnWriteArrayList()
     private val subscribedNotifications: MutableSet<NotificationType> = mutableSetOf()
+    private val mergedAlerts = mutableListOf<AeaTable>()
 
     override val deviceId = settings.deviceId
     override val advertisingId = settings.advertisingId
@@ -89,7 +91,21 @@ internal class RPCGatewayImpl(
 
         serviceController.alertList.observe(lifecycleOwner) { list ->
             if (list.isNotEmpty()) {
-                onAlertingChanged(serviceController.convertAeaListToRPCAlertList(list))
+
+                list.forEach { aea ->
+                    when (aea.type) {
+                        AeaTable.CANCEL_ALERT -> {
+                            val removed = mergedAlerts.removeIf { it.id == aea.refId }
+                            if (!removed) mergedAlerts.add(aea)
+                        }
+                        else -> {
+                            //TODO filter aea by expires date
+                            mergedAlerts.add(aea)
+                        }
+                    }
+                }
+
+                onAlertingChanged(list.mapToRpcAlertList())
             }
         }
     }
@@ -190,19 +206,12 @@ internal class RPCGatewayImpl(
     }
 
     override fun getAlertChangingData(alertingTypes: List<String>): List<AlertingRpcResponse.Alert> {
-        val alertList = mutableListOf<AlertingRpcResponse.Alert>()
+        val rpcAlertList = mergedAlerts.mapToRpcAlertList()
 
-        val rpcAlerts = serviceController.convertAeaListToRPCAlertList(serviceController.mergedAlerts)
-
-        if (alertingTypes.isEmpty()) alertList.addAll(rpcAlerts)
-
-        alertingTypes.forEach { type ->
-            rpcAlerts.filter { it.alertingType == type}.apply {
-                alertList.addAll(this)
-            }
-        }
-
-        return alertList
+        return if (alertingTypes.isEmpty())
+            rpcAlertList
+        else
+            alertingTypes.flatMap { type -> rpcAlertList.filter { type == it.alertingType }}
     }
 
     /**
@@ -313,6 +322,12 @@ internal class RPCGatewayImpl(
             )
         }
     }
+
+    private fun List<AeaTable>.mapToRpcAlertList() =
+            map {
+                AlertingRpcResponse.Alert(AlertingRpcResponse.Alert.AEAT,
+                        joinToString(separator = "", prefix = "<AEAT>", postfix = "</AEAT>") { it.xml })
+            }
 
     companion object {
         val SUPPORTED_NOTIFICATIONS = setOf(
