@@ -74,7 +74,7 @@ internal class RoomServiceGuideStore(
                             service.minorChannelNo,
                             service.shortServiceName,
                             service.version,
-                            service.bsId
+                            service.bsid
                     )
                 }
         )
