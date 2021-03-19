@@ -21,7 +21,7 @@ internal class RepositoryImpl : IRepository {
     override val applications = MutableLiveData<List<Atsc3Application>?>()
     override val services = MutableLiveData<List<AVService>>()
     override val heldPackage = MutableLiveData<Atsc3HeldPackage?>()
-    override val alertsForNotify = MutableLiveData<List<AeaTable>>()
+    override val alertsForNotify = MutableLiveData<MutableList<AeaTable>>()
 
     override fun addOrUpdateApplication(application: Atsc3Application) {
         _applications[application.uid] = application
@@ -62,8 +62,27 @@ internal class RepositoryImpl : IRepository {
         routeMediaUrl.postValue(mediaUrl)
     }
 
-    override fun setAlertList(list: List<AeaTable>) {
-        alertsForNotify.postValue(list)
+    override fun setAlertList(newAlerts: List<AeaTable>) {
+        val currentAlerts = alertsForNotify.value
+
+        if (currentAlerts != null) {
+            newAlerts.forEach { aea ->
+                when (aea.type) {
+                    AeaTable.CANCEL_ALERT -> {
+                        val removed = currentAlerts.removeIf { it.id == aea.refId }
+                        if (!removed) currentAlerts.add(aea)
+                    }
+                    else -> {
+                        //TODO filter aea by expires date
+                        currentAlerts.add(aea)
+                    }
+                }
+            }
+            alertsForNotify.postValue(currentAlerts)
+        } else {
+            alertsForNotify.postValue(newAlerts.toMutableList())
+        }
+
     }
 
     override fun reset() {
