@@ -370,7 +370,8 @@ internal class SGService(
         var minorChannelNo: Int = 0,
         var shortServiceName: String? = null,
         // links
-        var scheduleMap: MutableMap<String, SGSchedule>? = null
+        var scheduleMap: MutableMap<String, SGSchedule>? = null,
+        var bsid: Int = 0
 ) : SGUnit() {
     fun addSchedule(schedule: SGSchedule) {
         val scheduleId = schedule.id ?: return

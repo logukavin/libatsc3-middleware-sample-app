@@ -417,7 +417,7 @@ internal class Atsc3Module(
             CONTENT_TYPE_SGDU -> {
                 //TODO: check that data from an actual source configuration or share current bsid/serviceId with SGDU
                 cache_file_path?.let {
-                    listener?.onServiceGuideUnitReceived(getFullPath(cache_file_path))
+                    listener?.onServiceGuideUnitReceived(getFullPath(cache_file_path), selectedServiceBsid)
                 }
             }
         }
