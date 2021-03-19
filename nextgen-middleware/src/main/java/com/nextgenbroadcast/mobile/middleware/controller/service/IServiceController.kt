@@ -17,12 +17,10 @@ interface IServiceController : IReceiverPresenter, ISelectorPresenter {
     //TODO: hmm, this is not good
     val routeMediaUrl: LiveData<MediaUrl?>
     val alertList: LiveData<List<AeaTable>>
-    val mergedAlerts: List<AeaTable>
 
     fun openRoute(source: IAtsc3Source): Boolean
     fun stopRoute()
 
     fun findServiceById(globalServiceId: String): AVService?
     fun getNearbyService(offset: Int): AVService?
-    fun convertAeaListToRPCAlertList(list: List<AeaTable>): List<AlertingRpcResponse.Alert>
 }
