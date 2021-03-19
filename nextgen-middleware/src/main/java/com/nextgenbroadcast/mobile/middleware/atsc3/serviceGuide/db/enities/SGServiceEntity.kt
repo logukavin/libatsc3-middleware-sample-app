@@ -12,5 +12,5 @@ data class SGServiceEntity(
         val minorChannelNo: Int,
         val shortServiceName: String?,
         val version: Long,
-        val bsId: Int
+        val bsid: Int
 )
