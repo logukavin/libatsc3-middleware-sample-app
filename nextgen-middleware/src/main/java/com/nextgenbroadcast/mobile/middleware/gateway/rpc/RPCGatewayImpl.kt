@@ -37,7 +37,7 @@ internal class RPCGatewayImpl(
 
     private val sessions: CopyOnWriteArrayList<MiddlewareWebSocket> = CopyOnWriteArrayList()
     private val subscribedNotifications: MutableSet<NotificationType> = mutableSetOf()
-    private val mergedAlerts = mutableListOf<AeaTable>()
+    private var mergedAlerts = mutableListOf<AeaTable>()
 
     override val deviceId = settings.deviceId
     override val advertisingId = settings.advertisingId
@@ -91,21 +91,9 @@ internal class RPCGatewayImpl(
 
         serviceController.alertList.observe(lifecycleOwner) { list ->
             if (list.isNotEmpty()) {
-
-                list.forEach { aea ->
-                    when (aea.type) {
-                        AeaTable.CANCEL_ALERT -> {
-                            val removed = mergedAlerts.removeIf { it.id == aea.refId }
-                            if (!removed) mergedAlerts.add(aea)
-                        }
-                        else -> {
-                            //TODO filter aea by expires date
-                            mergedAlerts.add(aea)
-                        }
-                    }
-                }
-
-                onAlertingChanged(list.mapToRpcAlertList())
+                val result = list.subtract(mergedAlerts).toList()
+                onAlertingChanged(result.mapToRpcAlertList())
+                mergedAlerts = list
             }
         }
     }
@@ -208,10 +196,11 @@ internal class RPCGatewayImpl(
     override fun getAlertChangingData(alertingTypes: List<String>): List<AlertingRpcResponse.Alert> {
         val rpcAlertList = mergedAlerts.mapToRpcAlertList()
 
-        return if (alertingTypes.isEmpty())
+        return if (alertingTypes.isEmpty()) {
             rpcAlertList
-        else
+        } else {
             alertingTypes.flatMap { type -> rpcAlertList.filter { type == it.alertingType }}
+        }
     }
 
     /**

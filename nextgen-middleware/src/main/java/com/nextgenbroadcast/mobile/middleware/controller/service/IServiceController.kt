@@ -16,7 +16,7 @@ interface IServiceController : IReceiverPresenter, ISelectorPresenter {
     val applications: LiveData<List<Atsc3Application>?>
     //TODO: hmm, this is not good
     val routeMediaUrl: LiveData<MediaUrl?>
-    val alertList: LiveData<List<AeaTable>>
+    val alertList: LiveData<MutableList<AeaTable>>
 
     fun openRoute(source: IAtsc3Source): Boolean
     fun stopRoute()

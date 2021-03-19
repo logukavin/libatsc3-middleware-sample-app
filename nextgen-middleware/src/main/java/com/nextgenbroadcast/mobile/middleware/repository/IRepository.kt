@@ -22,7 +22,7 @@ internal interface IRepository {
     val services: LiveData<List<AVService>>
     val heldPackage: LiveData<Atsc3HeldPackage?>
 
-    val alertsForNotify: LiveData<List<AeaTable>>
+    val alertsForNotify: LiveData<MutableList<AeaTable>>
 
     fun addOrUpdateApplication(application: Atsc3Application)
     fun findApplication(appContextId: String): Atsc3Application?
@@ -35,7 +35,7 @@ internal interface IRepository {
     fun setHeldPackage(data: Atsc3HeldPackage?)
     fun setMediaUrl(mediaUrl: MediaUrl?)
 
-    fun setAlertList(list: List<AeaTable>)
+    fun setAlertList(newAlerts: List<AeaTable>)
 
     fun reset()
 }
