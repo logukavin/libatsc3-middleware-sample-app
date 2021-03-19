@@ -16,7 +16,7 @@ internal class SGDUReader(
         private val contents: MutableMap<String, SGContent>
 ) {
 
-    fun readFromFile(file: File, isActive: () -> Boolean) {
+    fun readFromFile(file: File, isActive: () -> Boolean, serviceBsId: Int) {
         val fileName = file.name
 
         SGDUFile.open(file).use { reader ->
@@ -25,6 +25,7 @@ internal class SGDUReader(
                 reader.next()?.let { (fragmentType, xml) ->
                     when (fragmentType) {
                         SGFragmentType.SERVICE -> parseServiceXML(xml)?.let { service ->
+                            service.bsId = serviceBsId
                             service.duFileName = fileName
                             service.duIndex = index
                         }

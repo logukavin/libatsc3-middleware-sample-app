@@ -15,7 +15,7 @@ interface Atsc3ModuleListener {
     fun onServiceLocationTableChanged(services: List<Atsc3Service>, reportServerUrl: String?)
     fun onServicePackageChanged(pkg: Atsc3HeldPackage?)
     fun onServiceMediaReady(mediaUrl: MediaUrl, delayBeforePlayMs: Long)
-    fun onServiceGuideUnitReceived(filePath: String)
+    fun onServiceGuideUnitReceived(filePath: String, selectedServiceBsid: Int)
 
     fun onError(message: String)
     fun onAeatTableChanged(list: List<AeaTable>)

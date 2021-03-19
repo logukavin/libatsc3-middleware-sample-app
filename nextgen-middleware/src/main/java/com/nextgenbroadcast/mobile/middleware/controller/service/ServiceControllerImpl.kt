@@ -134,8 +134,8 @@ internal class ServiceControllerImpl (
         }
     }
 
-    override fun onServiceGuideUnitReceived(filePath: String) {
-        serviceGuideReader.readDeliveryUnit(filePath)
+    override fun onServiceGuideUnitReceived(filePath: String, serviceBsid: Int) {
+        serviceGuideReader.readDeliveryUnit(filePath, serviceBsid)
     }
 
     override fun onError(message: String) {
