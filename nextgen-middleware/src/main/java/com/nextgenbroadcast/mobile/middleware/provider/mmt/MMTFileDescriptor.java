@@ -81,11 +81,11 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
                         }
                     }
 
-                    if (!skipUntilKeyFrame() && (System.currentTimeMillis() - keyFrameWaitingStartTime) < MAX_KEY_FRAME_WAIT_TIME) {
-                        if (keyFrameWaitingStartTime == 0) {
-                            keyFrameWaitingStartTime = System.currentTimeMillis();
-                        }
+                    if (keyFrameWaitingStartTime == 0) {
+                        keyFrameWaitingStartTime = System.currentTimeMillis();
+                    }
 
+                    if (!skipUntilKeyFrame() && (System.currentTimeMillis() - keyFrameWaitingStartTime) < MAX_KEY_FRAME_WAIT_TIME) {
                         return 0;
                     }
                 }
