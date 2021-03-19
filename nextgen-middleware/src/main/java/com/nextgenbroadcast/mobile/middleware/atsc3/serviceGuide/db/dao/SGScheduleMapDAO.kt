@@ -11,11 +11,11 @@ import androidx.sqlite.db.SupportSQLiteQuery
 @Dao
 interface SGScheduleMapDAO {
 
-    @Query("SELECT *, :bsid AS bsid, :category AS category FROM sg_service")
-    fun getAllService(bsid: Int, category: Int): Cursor
+    @Query("SELECT *, :category AS category FROM sg_service")
+    fun getAllService(category: Int): Cursor
 
-    @Query("SELECT *, :bsid AS bsid, :category AS category FROM sg_service WHERE serviceId = :id")
-    fun getServiceById(id: Int, bsid: Int, category: Int): Cursor
+    @Query("SELECT *, :category AS category FROM sg_service WHERE serviceId = :id")
+    fun getServiceById(id: Int, category: Int): Cursor
 
     @RawQuery
     fun getContentBy(query: SupportSQLiteQuery): Cursor

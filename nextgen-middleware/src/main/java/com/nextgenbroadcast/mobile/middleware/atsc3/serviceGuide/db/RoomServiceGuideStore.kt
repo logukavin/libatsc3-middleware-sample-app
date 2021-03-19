@@ -7,7 +7,6 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.unit.SGContent
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.unit.SGSchedule
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.unit.SGScheduleContent
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.unit.SGService
-import java.util.concurrent.ConcurrentHashMap
 
 internal class RoomServiceGuideStore(
         private val db: SGDataBase
@@ -74,7 +73,8 @@ internal class RoomServiceGuideStore(
                             service.majorChannelNo,
                             service.minorChannelNo,
                             service.shortServiceName,
-                            service.version
+                            service.version,
+                            service.bsid
                     )
                 }
         )

@@ -90,7 +90,7 @@ class ESGContentProvider : ContentProvider(), LifecycleOwner {
 
         when (uriMatcher.match(uri)) {
             URI_ALL_SERVICES -> {
-                return db.sgScheduleMapDAO().getAllService(0, 1)
+                return db.sgScheduleMapDAO().getAllService(1)
             }
 
             URI_SERVICE_BY_ID -> {
@@ -98,7 +98,7 @@ class ESGContentProvider : ContentProvider(), LifecycleOwner {
                 uri.lastPathSegment?.let {
                     id = parseInt(it)
                 }
-                return db.sgScheduleMapDAO().getServiceById(id, 0, 1)
+                return db.sgScheduleMapDAO().getServiceById(id, 1)
             }
 
             URI_ALL_PROGRAMS -> {
