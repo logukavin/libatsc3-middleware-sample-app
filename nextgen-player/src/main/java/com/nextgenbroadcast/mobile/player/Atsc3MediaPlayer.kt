@@ -44,10 +44,12 @@ class Atsc3MediaPlayer(
     private var listener: EventListener? = null
     private var _player: SimpleExoPlayer? = null
     private var _trackSelector: DefaultTrackSelector? = null
-    private var lastMediaUri: Uri? = null
     private var isMMTPlayback = false
     private var rmpState: PlaybackState? = null
     private var resetPlayerJob: Job? = null
+
+    private var lastMediaUri: Uri? = null
+    private var lastMimeType: String? = null
 
     val player: Player?
         get() = _player
@@ -75,15 +77,19 @@ class Atsc3MediaPlayer(
     }
 
     fun play(mediaUri: Uri, requestAudioFocus: Boolean = true) {
+        play(mediaUri, context.contentResolver.getType(mediaUri), requestAudioFocus)
+    }
+
+    fun play(mediaUri: Uri, mimeType: String? = null, requestAudioFocus: Boolean = true) {
         reset()
 
         lastMediaUri = mediaUri
+        lastMimeType = mimeType
 
         val selector = DefaultTrackSelector().also {
             _trackSelector = it
         }
 
-        val mimeType = context.contentResolver.getType(mediaUri)
         _player = (if (mimeType == MMTConstants.MIME_MMT_VIDEO || mimeType == MMTConstants.MIME_MMT_AUDIO) {
             isMMTPlayback = true
 
@@ -123,7 +129,7 @@ class Atsc3MediaPlayer(
 
         if (playbackState == PlaybackState.IDLE) {
             lastMediaUri?.let { uri ->
-                play(uri, false)
+                play(uri, lastMimeType, false)
             }
         }
     }
