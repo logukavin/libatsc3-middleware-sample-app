@@ -354,7 +354,7 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
             buffer[position] = (byte) headerDiff;
             //position++;
 
-            return pageSize;
+            return Math.min(pageSize, readLength);
         }
     }
 
@@ -433,12 +433,18 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
         if (mpu_presentation_time_uS_from_SI > 0) {
             long mfu_presentation_time_uS_computed = 0;
             long extracted_sample_duration_us;
-            if (isVideoSample(packet_id) && MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us > 0) {
-                mfu_presentation_time_uS_computed = mpu_presentation_time_uS_from_SI + (sample_number - 1) * MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us;
-            } else if (isAudioSample(packet_id) && (extracted_sample_duration_us = MmtPacketIdContext.getAudioPacketStatistic(packet_id).extracted_sample_duration_us) > 0) {
-                mfu_presentation_time_uS_computed = mpu_presentation_time_uS_from_SI + (sample_number - 1) * extracted_sample_duration_us;
-            } else if (isTextSample(packet_id) && MmtPacketIdContext.stpp_packet_statistics.extracted_sample_duration_us > 0) {
-                mfu_presentation_time_uS_computed = mpu_presentation_time_uS_from_SI + (sample_number - 1) * MmtPacketIdContext.stpp_packet_statistics.extracted_sample_duration_us;
+            if (isVideoSample(packet_id)) {
+                if (MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us > 0) {
+                    mfu_presentation_time_uS_computed = mpu_presentation_time_uS_from_SI + (sample_number - 1) * MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us;
+                }
+            } else if (isAudioSample(packet_id)) {
+                if ((extracted_sample_duration_us = MmtPacketIdContext.getAudioPacketStatistic(packet_id).extracted_sample_duration_us) > 0) {
+                    mfu_presentation_time_uS_computed = mpu_presentation_time_uS_from_SI + (sample_number - 1) * extracted_sample_duration_us;
+                }
+            } else if (isTextSample(packet_id)) {
+                if (MmtPacketIdContext.stpp_packet_statistics.extracted_sample_duration_us > 0) {
+                    mfu_presentation_time_uS_computed = mpu_presentation_time_uS_from_SI + (sample_number - 1) * MmtPacketIdContext.stpp_packet_statistics.extracted_sample_duration_us;
+                }
             }
 
             if (mfu_presentation_time_uS_computed > 0) {
