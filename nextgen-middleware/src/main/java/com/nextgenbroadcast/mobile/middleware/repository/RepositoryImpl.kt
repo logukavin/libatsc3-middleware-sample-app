@@ -68,10 +68,7 @@ internal class RepositoryImpl : IRepository {
         if (currentAlerts != null) {
             newAlerts.forEach { aea ->
                 when (aea.type) {
-                    AeaTable.CANCEL_ALERT -> {
-                        val removed = currentAlerts.removeIf { it.id == aea.refId }
-                        if (!removed) currentAlerts.add(aea)
-                    }
+                    AeaTable.CANCEL_ALERT -> currentAlerts.removeIf { it.id == aea.refId }
                     else -> {
                         //TODO filter aea by expires date
                         currentAlerts.add(aea)
