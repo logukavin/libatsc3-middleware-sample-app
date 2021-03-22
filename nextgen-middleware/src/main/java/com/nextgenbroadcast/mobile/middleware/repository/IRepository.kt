@@ -22,7 +22,7 @@ internal interface IRepository {
     val services: LiveData<List<AVService>>
     val heldPackage: LiveData<Atsc3HeldPackage?>
 
-    val alertsForNotify: LiveData<MutableList<AeaTable>>
+    val alertsForNotify: LiveData<List<AeaTable>>
 
     fun addOrUpdateApplication(application: Atsc3Application)
     fun findApplication(appContextId: String): Atsc3Application?
