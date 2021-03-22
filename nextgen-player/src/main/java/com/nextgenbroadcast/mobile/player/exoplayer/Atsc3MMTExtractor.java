@@ -108,6 +108,22 @@ public class Atsc3MMTExtractor implements Extractor {
                 currentSampleIsKey = sampleBuffer.readUnsignedByte() == 1;
 
                 int payloadOffset = buffer.readUnsignedByte();
+
+                if (currentSampleType == MMTConstants.TRACK_TYPE_EMPTY) {
+                    int skipped = 0;
+                    if (buffer.bytesLeft() > 0) {
+                        skipped = Math.min(currentSampleSize, buffer.bytesLeft());
+                        buffer.skipBytes(skipped);
+                    }
+
+                    if (skipped < currentSampleSize) {
+                        extractorInput.skipFully(currentSampleSize - skipped);
+                    }
+
+                    // RESULT_SEEK will postpone loading in MMTMediaPeriod
+                    return Extractor.RESULT_SEEK;
+                }
+
                 ensureBufferSize(extractorInput, payloadOffset);
                 buffer.skipBytes(payloadOffset);
 
@@ -120,6 +136,7 @@ public class Atsc3MMTExtractor implements Extractor {
             } else if (sampleBuffer.bytesLeft() == 0) {
                 extractorInput.readFully(sampleBuffer.data, /* offset= */ 0, /* length= */ sampleBuffer.limit());
                 sampleBuffer.setPosition(0);
+                sampleBuffer.setLimit(buffer.capacity());
             }
         } catch (Exception ex) {
             Log.w("MMTExtractor", "readSample - packet_id: " + currentSampleId + ", Exception, returning END_OF_INPUT - causing ExoPlayer DataSource teardown/unwind, ex: " + ex + ", messgae: " + ex.getMessage() + ",  Type: " + currentSampleType + ", sample TimeUs: " + currentSampleTimeUs + ",  sample size: " + currentSampleSize);
@@ -211,8 +228,9 @@ public class Atsc3MMTExtractor implements Extractor {
                 System.arraycopy(buffer.data, buffer.getPosition(), buffer.data, 0, buffer.bytesLeft());
             }
 
-            extractorInput.readFully(buffer.data, /* offset= */ offset, /* length= */ /*MMTConstants.SIZE_SAMPLE_HEADER*/ buffer.limit() - offset);
+            extractorInput.readFully(buffer.data, /* offset= */ offset, /* length= */ buffer.capacity() - offset);
             buffer.setPosition(0);
+            buffer.setLimit(buffer.capacity());
         }
     }
 
