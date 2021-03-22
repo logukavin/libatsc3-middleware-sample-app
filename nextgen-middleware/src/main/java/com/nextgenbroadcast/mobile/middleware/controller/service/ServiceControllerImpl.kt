@@ -67,7 +67,6 @@ internal class ServiceControllerImpl (
     override val freqKhz = MutableLiveData(0)
 
     override val alertList = repository.alertsForNotify
-    override val mergedAlerts = repository.mergedAlerts
 
     init {
         atsc3Module.setListener(this)
@@ -143,7 +142,7 @@ internal class ServiceControllerImpl (
     }
 
     override fun onAeatTableChanged(list: List<AeaTable>) {
-        repository.storeAlertsAndNotify(list)
+        repository.setAlertList(list)
     }
 
     override fun openRoute(path: String): Boolean {
@@ -252,8 +251,6 @@ internal class ServiceControllerImpl (
                 frequencies = frequencyList,
                 retuneOnDemod = frequency.source == PhyFrequency.Source.USER
         )
-
-        repository.mergedAlerts.clear()
     }
 
     override fun findServiceById(globalServiceId: String): AVService? {
@@ -267,11 +264,6 @@ internal class ServiceControllerImpl (
                 services.getOrNull(activeServiceIndex + offset)
             }
         }
-    }
-
-    override fun convertAeaListToRPCAlertList(list: List<AeaTable>): List<AlertingRpcResponse.Alert> {
-        val alertingFragment = list.joinToString(separator = "", prefix = "<AEAT>", postfix = "</AEAT>") { it.xml }
-        return listOf(AlertingRpcResponse.Alert(AlertingRpcResponse.Alert.AEAT, alertingFragment))
     }
 
     private fun resetHeldWithDelay() {

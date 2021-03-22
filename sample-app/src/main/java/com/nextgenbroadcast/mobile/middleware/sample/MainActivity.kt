@@ -9,7 +9,9 @@ import android.content.res.Configuration
 import android.media.session.MediaController
 import android.media.session.MediaSession
 import android.media.session.PlaybackState
+import android.net.Uri
 import android.os.Bundle
+import android.provider.Settings
 import android.support.v4.media.MediaBrowserCompat
 import android.view.View
 import android.widget.Toast
@@ -22,7 +24,7 @@ import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.ViewViewModel
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.factory.UserAgentViewModelFactory
 import dagger.android.AndroidInjection
-import java.util.*
+
 
 class MainActivity : BaseActivity() {
     private val viewViewModel: ViewViewModel by viewModels()
