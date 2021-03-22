@@ -96,14 +96,31 @@ public class Atsc3MMTExtractor implements Extractor {
                 currentSampleIsKey = buffer.readUnsignedByte() == 1;
 
                 int payloadOffset = buffer.readUnsignedByte();
+
+                if (currentSampleType == MMTConstants.TRACK_TYPE_EMPTY) {
+                    int skipped = 0;
+                    if (buffer.bytesLeft() > 0) {
+                        skipped = Math.min(currentSampleSize, buffer.bytesLeft());
+                        buffer.skipBytes(skipped);
+                    }
+
+                    if (skipped < currentSampleSize) {
+                        extractorInput.skipFully(currentSampleSize - skipped);
+                    }
+
+                    // RESULT_SEEK will postpone loading in MMTMediaPeriod
+                    return Extractor.RESULT_SEEK;
+                }
+
                 ensureBufferSize(extractorInput, payloadOffset);
                 buffer.skipBytes(payloadOffset);
 
                 currentSampleBytesRemaining = currentSampleSize;
                 //Log.d("!!!", "sid: " + currentSampleId + ", sample Type: " + currentSampleType + ", sample TimeUs: " + currentSampleTimeUs + ",  sample size: " + currentSampleSize);
             } else if (buffer.bytesLeft() == 0) {
-                extractorInput.readFully(buffer.data, /* offset= */ 0, /* length= */ buffer.limit());
+                extractorInput.readFully(buffer.data, /* offset= */ 0, /* length= */ buffer.capacity());
                 buffer.setPosition(0);
+                buffer.setLimit(buffer.capacity());
             }
         } catch (Exception ex) {
             Log.e(TAG, "readSample - Exception, returning END_OF_INPUT - causing ExoPlayer DataSource teardown/unwind,  Type: " + currentSampleType + ", sample TimeUs: " + currentSampleTimeUs + ",  sample size: " + currentSampleSize, ex);
@@ -120,13 +137,6 @@ public class Atsc3MMTExtractor implements Extractor {
                     buffer.skipBytes(skipped);
                 }
                 currentSampleBytesRemaining -= skipped;
-            }
-
-            // Empty sample means we don't have more samples in buffer. Wait for data to come before next iteration.
-            if (currentSampleType == MMTConstants.TRACK_TYPE_EMPTY) {
-                //jjustman-2021-02-18 - don't sleep here, let the ExoPlayerImpl eventloop doSomeWork() be responsible for timing
-                //vmatiash-2021-03-12 - this sleep is important for read optimization. It helps to minimize an amount of "placeholder" read from File Buffer.
-                Thread.sleep(50);
             }
 
             return Extractor.RESULT_CONTINUE;
@@ -187,8 +197,9 @@ public class Atsc3MMTExtractor implements Extractor {
                 System.arraycopy(buffer.data, buffer.getPosition(), buffer.data, 0, buffer.bytesLeft());
             }
 
-            extractorInput.readFully(buffer.data, /* offset= */ offset, /* length= */ /*MMTConstants.SIZE_SAMPLE_HEADER*/ buffer.limit() - offset);
+            extractorInput.readFully(buffer.data, /* offset= */ offset, /* length= */ buffer.capacity() - offset);
             buffer.setPosition(0);
+            buffer.setLimit(buffer.capacity());
         }
     }
 
