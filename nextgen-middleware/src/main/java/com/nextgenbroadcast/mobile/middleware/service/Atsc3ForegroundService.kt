@@ -1,5 +1,7 @@
 package com.nextgenbroadcast.mobile.middleware.service
 
+import android.R
+import android.app.AlertDialog
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
@@ -15,6 +17,7 @@ import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
 import android.util.Log
+import android.view.WindowManager
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
@@ -24,20 +27,18 @@ import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.distinctUntilChanged
 import androidx.media.session.MediaButtonReceiver
-import com.nextgenbroadcast.mobile.core.mapWith
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.middleware.BuildConfig
 import com.nextgenbroadcast.mobile.middleware.atsc3.core.Atsc3ReceiverCore
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.SLTConstants
-import com.nextgenbroadcast.mobile.middleware.atsc3.entities.alerts.AeaTable
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.UsbAtsc3Source
 import com.nextgenbroadcast.mobile.middleware.cache.DownloadManager
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
 import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
 import com.nextgenbroadcast.mobile.middleware.phy.Atsc3DeviceReceiver
-import com.nextgenbroadcast.mobile.middleware.service.init.*
+import com.nextgenbroadcast.mobile.middleware.service.init.MetadataReader
 import com.nextgenbroadcast.mobile.player.Atsc3MediaPlayer
 import kotlinx.coroutines.*
 
@@ -176,7 +177,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         atsc3Receiver.serviceController.alertList.observe(this@Atsc3ForegroundService) { alerts ->
             alerts.forEach { alert ->
                 alert.messages?.forEach { msg ->
-                    Toast.makeText(applicationContext, msg, Toast.LENGTH_SHORT).show()
+                    Toast.makeText(applicationContext, msg, Toast.LENGTH_LONG).show()
                 }
             }
         }
