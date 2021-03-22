@@ -11,6 +11,7 @@ import com.google.android.exoplayer2.C;
 import com.google.android.exoplayer2.upstream.BaseDataSource;
 import com.google.android.exoplayer2.upstream.DataSpec;
 import com.google.android.exoplayer2.upstream.TransferListener;
+import com.nextgenbroadcast.mmt.exoplayer2.ext.DataSource2;
 
 import java.io.EOFException;
 import java.io.FileInputStream;
@@ -23,7 +24,7 @@ import java.nio.channels.FileChannel;
     deprecated because of Pipe based FileDescriptor usage in MMTContentProvider. See MMTFragmentWriter
  */
 @Deprecated
-public class Atsc3ContentDataSource extends BaseDataSource {
+public class Atsc3ContentDataSource extends BaseDataSource implements DataSource2 {
 
     /**
      * Thrown when an {@link IOException} is encountered reading from a content URI.
@@ -150,6 +151,15 @@ public class Atsc3ContentDataSource extends BaseDataSource {
         //Log.d("Atsc3ContentDataSource",String.format("read: exit with bytesRead: %d", bytesRead));
 
         return bytesRead;
+    }
+
+    @Override
+    public int skip(int length) throws Atsc3ContentDataSource.Atsc3ContentDataSourceException {
+        try {
+            return (int) inputStream.skip(length);
+        } catch (IOException e) {
+            throw new Atsc3ContentDataSource.Atsc3ContentDataSourceException(e);
+        }
     }
 
     @Override
