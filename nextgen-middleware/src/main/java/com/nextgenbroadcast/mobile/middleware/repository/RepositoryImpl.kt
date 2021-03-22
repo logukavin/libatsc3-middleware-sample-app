@@ -77,7 +77,7 @@ internal class RepositoryImpl : IRepository {
             }
             alertsForNotify.postValue(currentAlerts)
         } else {
-            alertsForNotify.postValue(newAlerts.toMutableList())
+            alertsForNotify.postValue(newAlerts)
         }
 
     }
