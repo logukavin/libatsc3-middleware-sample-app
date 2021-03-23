@@ -3,28 +3,25 @@ package com.nextgenbroadcast.mobile.middleware.sample
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.PictureInPictureParams
-import android.content.Context
 import android.content.Intent
-import android.content.IntentSender
 import android.content.pm.PackageManager
 import android.content.res.Configuration
-import android.hardware.Sensor
-import android.hardware.SensorEvent
-import android.hardware.SensorEventListener
-import android.hardware.SensorManager
-import android.hardware.SensorManager.SENSOR_DELAY_UI
-import android.location.Location
 import android.media.session.MediaController
 import android.media.session.MediaSession
 import android.media.session.PlaybackState
 import android.os.Bundle
 import android.support.v4.media.MediaBrowserCompat
-import android.util.Log
 import android.view.View
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.google.android.play.core.appupdate.AppUpdateInfo
+import com.google.android.play.core.appupdate.AppUpdateManager
+import com.google.android.play.core.appupdate.AppUpdateManagerFactory
+import com.google.android.play.core.install.model.AppUpdateType
+import com.google.android.play.core.install.model.UpdateAvailability
+import com.google.android.play.core.tasks.Task
 import androidx.lifecycle.asLiveData
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
@@ -101,11 +98,10 @@ class MainActivity : BaseActivity() {
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
-        Log.d("MainActivty","onCreate")
-        appUpdateManager = AppUpdateManagerFactory.create(baseContext)
-
         AndroidInjection.inject(this)
         super.onCreate(savedInstanceState)
+
+        appUpdateManager = AppUpdateManagerFactory.create(baseContext)
 
         supportFragmentManager
                 .beginTransaction()
@@ -119,23 +115,11 @@ class MainActivity : BaseActivity() {
     override fun onStart() {
         super.onStart()
 
-        checkForAppUpdates();
+        checkForAppUpdates()
+
         //make sure we can read from device pcap files and get location
         if (checkSelfPermission()) {
             bindService()
-        }
-    }
-
-    override fun onResume() {
-        super.onResume()
-
-        //from: https://developer.android.com/guide/playcore/in-app-updates#kotlin
-
-        appUpdateManager.appUpdateInfo.addOnSuccessListener { appUpdateInfo ->
-            if (appUpdateInfo.updateAvailability() == UpdateAvailability.DEVELOPER_TRIGGERED_UPDATE_IN_PROGRESS) {
-                // If an in-app update is already running, resume the update.
-                appUpdateManager.startUpdateFlowForResult(appUpdateInfo, AppUpdateType.IMMEDIATE, this, APP_UPDATE_REQUEST_CODE);
-            }
         }
     }
 
@@ -253,13 +237,13 @@ class MainActivity : BaseActivity() {
 
     private fun checkForAppUpdates() {
         // Creates instance of the manager, returns an intent object that you use to check for an update.
-        val appUpdateInfoTask: Task<AppUpdateInfo> = appUpdateManager.getAppUpdateInfo() as Task<AppUpdateInfo>
+        val appUpdateInfoTask: Task<AppUpdateInfo> = appUpdateManager.appUpdateInfo as Task<AppUpdateInfo>
 
         // Checks that the platform will allow the specified type of update. // For a flexible update, use AppUpdateType.FLEXIBLE
         appUpdateInfoTask.addOnSuccessListener { appUpdateInfo ->
-            if (appUpdateInfo.updateAvailability() === UpdateAvailability.UPDATE_AVAILABLE && appUpdateInfo.isUpdateTypeAllowed(AppUpdateType.IMMEDIATE)) {
+            if (appUpdateInfo.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE && appUpdateInfo.isUpdateTypeAllowed(AppUpdateType.IMMEDIATE)) {
                 // Request the update.
-                appUpdateManager.startUpdateFlowForResult(appUpdateInfo, AppUpdateType.IMMEDIATE,this, APP_UPDATE_REQUEST_CODE);
+                appUpdateManager.startUpdateFlowForResult(appUpdateInfo, AppUpdateType.IMMEDIATE,this, APP_UPDATE_REQUEST_CODE)
             }
         }
     }
@@ -267,7 +251,6 @@ class MainActivity : BaseActivity() {
     companion object {
         private const val PERMISSION_REQUEST = 1000
         private const val APP_UPDATE_REQUEST_CODE = 31337
-        private const val REQUEST_CHECK_SETTINGS = 31338
 
         val necessaryPermissions = listOf(
                 Manifest.permission.WRITE_EXTERNAL_STORAGE,
