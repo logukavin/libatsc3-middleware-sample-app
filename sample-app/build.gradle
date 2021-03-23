@@ -61,13 +61,6 @@ android {
         }
     }
 
-    lintOptions {
-        checkReleaseBuilds false
-        // Or, if you prefer, you can continue to check for errors in release builds,
-        // but continue the build even when errors are found:
-        abortOnError false
-    }
-
     flavorDimensions "service_type"
     productFlavors {
         embedded {
@@ -144,8 +137,6 @@ dependencies {
     implementation project(":nextgen-view")
     implementation project(":nextgen-player")
 
-    implementation 'com.google.android.play:core-ktx:1.7.0'
-
     embeddedImplementation project(":nextgen-middleware")
 
     standaloneImplementation project(":nextgen-middleware")
@@ -195,6 +186,8 @@ dependencies {
     implementation 'com.google.firebase:firebase-crashlytics-ktx:17.4.0'
     //jjustman-2021-01-14 - adding firebase performance
     implementation 'com.google.firebase:firebase-perf:19.1.1'
+
+    implementation 'com.google.android.play:core-ktx:1.7.0'
 
     implementation 'org.slf4j:slf4j-nop:1.7.25'
 
