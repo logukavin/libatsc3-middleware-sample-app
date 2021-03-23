@@ -37,7 +37,7 @@ internal class RPCGatewayImpl(
 
     private val sessions: CopyOnWriteArrayList<MiddlewareWebSocket> = CopyOnWriteArrayList()
     private val subscribedNotifications: MutableSet<NotificationType> = mutableSetOf()
-    private var mergedAlerts = mutableListOf<AeaTable>()
+    private var mergedAlerts: List<AeaTable> = emptyList()
 
     override val deviceId = settings.deviceId
     override val advertisingId = settings.advertisingId
