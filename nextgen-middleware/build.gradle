@@ -187,10 +187,9 @@ dependencies {
 
     implementation "com.squareup.tape2:tape:2.0.0-beta1"
 
-    implementation "androidx.work:work-runtime-ktx:2.4.0"
+    implementation "androidx.work:work-runtime-ktx:2.5.0"
 
     implementation "androidx.room:room-runtime:2.2.6"
-    implementation "androidx.work:work-runtime:2.4.0"
     implementation "androidx.room:room-ktx:2.2.6"
     kapt "androidx.room:room-compiler:2.2.6"
 
