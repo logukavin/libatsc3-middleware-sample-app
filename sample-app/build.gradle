@@ -126,10 +126,10 @@ dependencies {
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:$coroutinesVersion"
 
     implementation 'androidx.appcompat:appcompat:1.2.0'
-    implementation 'androidx.constraintlayout:constraintlayout:2.0.2'
+    implementation 'androidx.constraintlayout:constraintlayout:2.0.4'
 
-    implementation 'androidx.activity:activity-ktx:1.2.0-beta01'
-    implementation 'androidx.fragment:fragment-ktx:1.3.0-beta01'
+    implementation 'androidx.activity:activity-ktx:1.2.1'
+    implementation 'androidx.fragment:fragment-ktx:1.3.1'
 
     implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:$lifecycleVersion"
     implementation "androidx.lifecycle:lifecycle-livedata-ktx:$lifecycleVersion"
@@ -142,10 +142,10 @@ dependencies {
     kapt "com.google.dagger:dagger-android-processor:$daggerVersion"
 
     implementation "androidx.coordinatorlayout:coordinatorlayout:1.1.0"
-    implementation 'com.google.android.material:material:1.2.1'
+    implementation 'com.google.android.material:material:1.3.0'
 
     standaloneImplementation "androidx.startup:startup-runtime:$startupRuntime"
-    standaloneImplementation "androidx.work:work-multiprocess:2.5.0-rc01"
+    standaloneImplementation "androidx.work:work-multiprocess:2.5.0"
 
     if (project.hasProperty('org.gradle.project.use_local_src_exoplayer_folder') && project.property('org.gradle.project.use_local_src_exoplayer_folder').toString().toBoolean()) {
         implementation project(':exoplayer-library-core')
@@ -161,18 +161,13 @@ dependencies {
         implementation "com.google.android.exoplayer:exoplayer-mmt:$exoplayerVersion"
     }
 
-    implementation 'com.google.android.gms:play-services-basement:17.4.0'
-    implementation 'com.google.firebase:firebase-analytics-ktx:17.6.0'
-    implementation 'com.google.firebase:firebase-crashlytics-ktx:17.2.2'
-
+    implementation 'com.google.android.gms:play-services-basement:17.6.0'
+    implementation 'com.google.firebase:firebase-analytics-ktx:18.0.2'
+    implementation 'com.google.firebase:firebase-crashlytics-ktx:17.4.0'
     //jjustman-2021-01-14 - adding firebase performance
-    implementation 'com.google.firebase:firebase-perf:19.1.0'
+    implementation 'com.google.firebase:firebase-perf:19.1.1'
 
     implementation 'org.slf4j:slf4j-nop:1.7.25'
 
     implementation "androidx.media:media:1.2.1"
-
-    androidTestImplementation 'androidx.test.ext:junit:1.1.2'
-    testImplementation 'junit:junit:4.12'
-    testImplementation 'androidx.test:core:1.3.0'
 }
