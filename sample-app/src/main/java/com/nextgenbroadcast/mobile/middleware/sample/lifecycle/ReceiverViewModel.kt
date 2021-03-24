@@ -3,12 +3,12 @@ package com.nextgenbroadcast.mobile.middleware.sample.lifecycle
 import android.app.Application
 import android.text.Html
 import androidx.lifecycle.*
-import com.nextgenbroadcast.mobile.core.presentation.IMediaPlayerPresenter
-import com.nextgenbroadcast.mobile.core.presentation.IUserAgentPresenter
 import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.model.PhyFrequency
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
+import com.nextgenbroadcast.mobile.core.presentation.IMediaPlayerPresenter
 import com.nextgenbroadcast.mobile.core.presentation.IReceiverPresenter
+import com.nextgenbroadcast.mobile.core.presentation.IUserAgentPresenter
 import com.nextgenbroadcast.mobile.middleware.sample.R
 
 class ReceiverViewModel(
@@ -18,7 +18,7 @@ class ReceiverViewModel(
         private val playerPresenter: IMediaPlayerPresenter
 ) : AndroidViewModel(application) {
     private val _appDataLog = MediatorLiveData<CharSequence>()
-
+    private var appData: MutableLiveData<AppData> = MutableLiveData()
     val appDataLog: LiveData<CharSequence> = _appDataLog
     val stateDescription = presenter.receiverState.asLiveData().map { receiverState ->
         when(receiverState.state) {
@@ -59,5 +59,9 @@ class ReceiverViewModel(
         val cachePath = data?.cachePath ?: "<b>NO Application available</b>"
         val mediaUrl = rpmMediaUri ?: "<b>NO Media Url</b>"
         return Html.fromHtml("> $contextId<br>> $entryPoint<br>> $cachePath<br>> $mediaUrl", Html.FROM_HTML_MODE_LEGACY)
+    }
+
+    fun setAppData(appData: AppData) {
+        this.appData.postValue(appData)
     }
 }

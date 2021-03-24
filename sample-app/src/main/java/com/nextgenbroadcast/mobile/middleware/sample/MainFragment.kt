@@ -1,9 +1,13 @@
 package com.nextgenbroadcast.mobile.middleware.sample
 
 import android.annotation.SuppressLint
+import android.content.ContentResolver
+import android.content.ContentValues
 import android.content.Context
 import android.net.Uri
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.GestureDetector
 import android.view.LayoutInflater
 import android.view.View
@@ -25,6 +29,11 @@ import com.nextgenbroadcast.mobile.core.atsc3.phy.PHYStatistics
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.presentation.ApplicationState
+import com.nextgenbroadcast.mobile.middleware.provider.appData.AppDataProvider
+import com.nextgenbroadcast.mobile.middleware.provider.appData.AppDataProvider.Companion.APP_DATA_URI
+import com.nextgenbroadcast.mobile.middleware.provider.appData.AppDataProvider.Companion.APP_STATE_URI
+import com.nextgenbroadcast.mobile.middleware.provider.appData.AppDataProvider.Companion.APP_STATE_VALUE
+import com.nextgenbroadcast.mobile.middleware.provider.appData.ListConverter
 import com.nextgenbroadcast.mobile.middleware.sample.SettingsDialog.Companion.REQUEST_KEY_FREQUENCY
 import com.nextgenbroadcast.mobile.middleware.sample.core.SwipeGestureDetector
 import com.nextgenbroadcast.mobile.middleware.sample.core.mapWith
@@ -63,6 +72,11 @@ class MainFragment : Fragment() {
 
     private var phyLoggingJob: Job? = null
 
+    private val listConverter = ListConverter()
+    private var appDataContentResolver: ContentResolver? = null
+    private lateinit var appContentObserver: AppDataContentObserver
+    private var cv = ContentValues()
+
     private val getContent = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         val path = uri?.let { FileUtils.getPath(requireContext(), uri) }
         path?.let { openRoute(requireContext(), path) }
@@ -92,7 +106,43 @@ class MainFragment : Fragment() {
             viewModel = viewViewModel
         }
 
+        appContentObserver = AppDataContentObserver(Handler(Looper.getMainLooper()), viewViewModel.isAppDataUpdated)
+
+        context?.applicationContext?.contentResolver?.registerContentObserver(
+                APP_DATA_URI, false,
+                appContentObserver)
+
+        viewViewModel.isAppDataUpdated.observe(viewLifecycleOwner, {
+            getAppData()
+        })
+
+        appDataContentResolver = context?.applicationContext?.contentResolver
+
         return binding.root
+    }
+
+    private fun getAppData() {
+
+        val cpClient = context?.contentResolver?.acquireContentProviderClient(APP_DATA_URI)
+        val appDataCursor = cpClient?.query(APP_DATA_URI, null, null, null)
+        var appData: AppData?
+
+        appDataCursor?.let { _ ->
+            if (appDataCursor.moveToFirst()) {
+                val appContextID = appDataCursor.getColumnIndexOrThrow(AppDataProvider.APP_CONTEXT_ID).let { appDataCursor.getString(it) }
+                val appEntryPage = appDataCursor.getColumnIndexOrThrow(AppDataProvider.APP_ENTRY_PAGE).let { appDataCursor.getString(it) }
+                val appServiceIds = appDataCursor.getColumnIndexOrThrow(AppDataProvider.COMPATIBLE_SERVICE_IDS).let { appDataCursor.getString(it) }
+                val appCachePath = appDataCursor.getColumnIndexOrThrow(AppDataProvider.CACHE_PATH).let { appDataCursor.getString(it) }
+                appData = AppData(
+                        appContextID,
+                        appEntryPage,
+                        listConverter.fromString(appServiceIds),
+                        appCachePath
+                )
+                switchApplication(appData)
+            }
+        }
+        appDataCursor?.close()
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -117,11 +167,11 @@ class MainFragment : Fragment() {
         user_agent_web_view.setOnTouchListener { _, motionEvent -> swipeGD.onTouchEvent(motionEvent) }
         user_agent_web_view.setListener(object : UserAgentView.IListener {
             override fun onOpen() {
-                userAgentViewModel?.setApplicationState(ApplicationState.OPENED)
+                insertStateIntoContentProvider(ApplicationState.OPENED.name)
             }
 
             override fun onClose() {
-                userAgentViewModel?.setApplicationState(ApplicationState.LOADED)
+                insertStateIntoContentProvider(ApplicationState.LOADED.name)
             }
 
             override fun onLoadingError() {
@@ -292,6 +342,7 @@ class MainFragment : Fragment() {
 
         phyLoggingJob?.cancel()
         phyLoggingJob = null
+        context?.applicationContext?.contentResolver?.unregisterContentObserver(appContentObserver);
     }
 
     override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean) {
@@ -312,7 +363,6 @@ class MainFragment : Fragment() {
     fun onBind(factory: UserAgentViewModelFactory) {
         val provider = ViewModelProvider(viewModelStore, factory)
         bindViewModels(provider).let { (rmp, userAgent) ->
-            bindUserAgent(userAgent)
             bindMediaPlayer(rmp)
         }
     }
@@ -371,12 +421,6 @@ class MainFragment : Fragment() {
         Toast.makeText(requireContext(), getText(R.string.ba_loading_problem), Toast.LENGTH_SHORT).show()
     }
 
-    private fun bindUserAgent(userAgentViewModel: UserAgentViewModel) {
-        userAgentViewModel.appData.observe(this, { appData ->
-            switchApplication(appData)
-        })
-    }
-
     private fun bindMediaPlayer(rmpViewModel: RMPViewModel) {
         with(rmpViewModel) {
             reset()
@@ -427,6 +471,7 @@ class MainFragment : Fragment() {
             unloadBroadcasterApplication()
         }
         currentAppData = appData
+        currentAppData?.let { receiverViewModel?.setAppData(it) }
     }
 
     private fun isBAvailable() = currentAppData?.isAvailable() ?: false
@@ -446,12 +491,18 @@ class MainFragment : Fragment() {
             user_agent_web_view.serverCertificateHash = userAgentViewModel?.getServerCertificateHash()
         }
         user_agent_web_view.loadBAContent(appData.appEntryPage)
-        userAgentViewModel?.setApplicationState(ApplicationState.LOADED)
+        insertStateIntoContentProvider(ApplicationState.LOADED.name)
+    }
+
+    private fun insertStateIntoContentProvider(state: String) {
+        cv.clear()
+        cv.put(APP_STATE_VALUE, state)
+        appDataContentResolver?.insert(APP_STATE_URI, cv)
     }
 
     private fun unloadBroadcasterApplication() {
         user_agent_web_view.unloadBAContent()
-        userAgentViewModel?.setApplicationState(ApplicationState.UNAVAILABLE)
+        insertStateIntoContentProvider(ApplicationState.UNAVAILABLE.name)
     }
 
     companion object {
