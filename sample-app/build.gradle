@@ -6,8 +6,17 @@ apply plugin: 'com.google.gms.google-services'
 apply plugin: 'com.google.firebase.crashlytics'
 apply plugin: 'com.google.firebase.firebase-perf'
 
-def appVersionCode = project.hasProperty('versionCode') ? versionCode.toInteger() : 1
-def appVersion = "1.0"
+def appVersionCode = project.hasProperty('versionCode') ? versionCode.toInteger() : 4
+def appVersion = "1.0.3"
+
+def getCertPropertyCode(propertyName) {
+    if (!ext.hasProperty('keystoreProperties')) {
+        ext.keystoreProperties = new Properties()
+        ext.keystoreProperties.load(new FileInputStream(rootProject.file("keystore.properties")))
+    }
+
+    return project.hasProperty(propertyName) ? project.property(propertyName) : keystoreProperties[propertyName]
+}
 
 android {
     compileSdkVersion rootProject.compileSdkVersion
@@ -32,14 +41,31 @@ android {
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        release {
+            storeFile file(getCertPropertyCode('storeFile'))
+            storePassword getCertPropertyCode('password')
+            keyAlias getCertPropertyCode('keyAlias')
+            keyPassword getCertPropertyCode('keyPassword')
+        }
+    }
+
     buildTypes {
         debug {
             versionNameSuffix ".${appVersionCode}"
         }
         release {
             minifyEnabled false
+            signingConfig signingConfigs.release
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
+    }
+
+    lintOptions {
+        checkReleaseBuilds false
+        // Or, if you prefer, you can continue to check for errors in release builds,
+        // but continue the build even when errors are found:
+        abortOnError false
     }
 
     flavorDimensions "service_type"
