@@ -18,6 +18,7 @@ class ReceiverViewModel(
         private val playerPresenter: IMediaPlayerPresenter
 ) : AndroidViewModel(application) {
     private val _appDataLog = MediatorLiveData<CharSequence>()
+
     private var appData: MutableLiveData<AppData> = MutableLiveData()
     val appDataLog: LiveData<CharSequence> = _appDataLog
     val stateDescription = presenter.receiverState.asLiveData().map { receiverState ->

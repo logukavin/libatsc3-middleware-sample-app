@@ -66,9 +66,10 @@
             android:exported="false"
             android:grantUriPermissions="true"
             android:initOrder="1" />
+
         <provider
-            android:name=".provider.appData.AppDataProvider"
-            android:authorities="com.nextgenbroadcast.mobile.middleware.provider.appData"
+            android:name=".provider.appData.ReceiverContentProvider"
+            android:authorities="@string/receiverContentProvider"
             android:exported="false"
             android:grantUriPermissions="true"
             android:initOrder="0" />

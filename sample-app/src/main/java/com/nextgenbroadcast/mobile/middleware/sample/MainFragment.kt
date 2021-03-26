@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.ContentResolver
 import android.content.ContentValues
 import android.content.Context
+import android.database.ContentObserver
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
@@ -22,6 +23,7 @@ import androidx.databinding.DataBindingUtil
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.setFragmentResultListener
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModelProvider
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.nextgenbroadcast.mobile.core.FileUtils
@@ -29,10 +31,10 @@ import com.nextgenbroadcast.mobile.core.atsc3.phy.PHYStatistics
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.presentation.ApplicationState
-import com.nextgenbroadcast.mobile.middleware.provider.appData.AppDataProvider
-import com.nextgenbroadcast.mobile.middleware.provider.appData.AppDataProvider.Companion.APP_DATA_URI
-import com.nextgenbroadcast.mobile.middleware.provider.appData.AppDataProvider.Companion.APP_STATE_URI
-import com.nextgenbroadcast.mobile.middleware.provider.appData.AppDataProvider.Companion.APP_STATE_VALUE
+import com.nextgenbroadcast.mobile.middleware.provider.appData.ReceiverContentProvider
+import com.nextgenbroadcast.mobile.middleware.provider.appData.ReceiverContentProvider.Companion.APP_DATA_URI
+import com.nextgenbroadcast.mobile.middleware.provider.appData.ReceiverContentProvider.Companion.APP_STATE_URI
+import com.nextgenbroadcast.mobile.middleware.provider.appData.ReceiverContentProvider.Companion.APP_STATE_VALUE
 import com.nextgenbroadcast.mobile.middleware.provider.appData.ListConverter
 import com.nextgenbroadcast.mobile.middleware.sample.SettingsDialog.Companion.REQUEST_KEY_FREQUENCY
 import com.nextgenbroadcast.mobile.middleware.sample.core.SwipeGestureDetector
@@ -74,8 +76,7 @@ class MainFragment : Fragment() {
 
     private val listConverter = ListConverter()
     private var appDataContentResolver: ContentResolver? = null
-    private lateinit var appContentObserver: AppDataContentObserver
-    private var cv = ContentValues()
+    private var appContentObserver = AppDataContentObserver(Handler(Looper.getMainLooper()))
 
     private val getContent = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         val path = uri?.let { FileUtils.getPath(requireContext(), uri) }
@@ -106,8 +107,6 @@ class MainFragment : Fragment() {
             viewModel = viewViewModel
         }
 
-        appContentObserver = AppDataContentObserver(Handler(Looper.getMainLooper()), viewViewModel.isAppDataUpdated)
-
         context?.applicationContext?.contentResolver?.registerContentObserver(
                 APP_DATA_URI, false,
                 appContentObserver)
@@ -129,10 +128,10 @@ class MainFragment : Fragment() {
 
         appDataCursor?.let { _ ->
             if (appDataCursor.moveToFirst()) {
-                val appContextID = appDataCursor.getColumnIndexOrThrow(AppDataProvider.APP_CONTEXT_ID).let { appDataCursor.getString(it) }
-                val appEntryPage = appDataCursor.getColumnIndexOrThrow(AppDataProvider.APP_ENTRY_PAGE).let { appDataCursor.getString(it) }
-                val appServiceIds = appDataCursor.getColumnIndexOrThrow(AppDataProvider.COMPATIBLE_SERVICE_IDS).let { appDataCursor.getString(it) }
-                val appCachePath = appDataCursor.getColumnIndexOrThrow(AppDataProvider.CACHE_PATH).let { appDataCursor.getString(it) }
+                val appContextID = appDataCursor.getColumnIndexOrThrow(ReceiverContentProvider.APP_CONTEXT_ID).let { appDataCursor.getString(it) }
+                val appEntryPage = appDataCursor.getColumnIndexOrThrow(ReceiverContentProvider.APP_ENTRY_PAGE).let { appDataCursor.getString(it) }
+                val appServiceIds = appDataCursor.getColumnIndexOrThrow(ReceiverContentProvider.COMPATIBLE_SERVICE_IDS).let { appDataCursor.getString(it) }
+                val appCachePath = appDataCursor.getColumnIndexOrThrow(ReceiverContentProvider.CACHE_PATH).let { appDataCursor.getString(it) }
                 appData = AppData(
                         appContextID,
                         appEntryPage,
@@ -167,11 +166,11 @@ class MainFragment : Fragment() {
         user_agent_web_view.setOnTouchListener { _, motionEvent -> swipeGD.onTouchEvent(motionEvent) }
         user_agent_web_view.setListener(object : UserAgentView.IListener {
             override fun onOpen() {
-                insertStateIntoContentProvider(ApplicationState.OPENED.name)
+                insertStateIntoContentProvider(getStateName(ApplicationState.OPENED))
             }
 
             override fun onClose() {
-                insertStateIntoContentProvider(ApplicationState.LOADED.name)
+                insertStateIntoContentProvider(getStateName(ApplicationState.LOADED))
             }
 
             override fun onLoadingError() {
@@ -491,18 +490,21 @@ class MainFragment : Fragment() {
             user_agent_web_view.serverCertificateHash = userAgentViewModel?.getServerCertificateHash()
         }
         user_agent_web_view.loadBAContent(appData.appEntryPage)
-        insertStateIntoContentProvider(ApplicationState.LOADED.name)
+        insertStateIntoContentProvider(getStateName(ApplicationState.LOADED))
     }
 
     private fun insertStateIntoContentProvider(state: String) {
-        cv.clear()
-        cv.put(APP_STATE_VALUE, state)
+        val cv = ContentValues().also { it.put(APP_STATE_VALUE, state) }
         appDataContentResolver?.insert(APP_STATE_URI, cv)
     }
 
     private fun unloadBroadcasterApplication() {
         user_agent_web_view.unloadBAContent()
-        insertStateIntoContentProvider(ApplicationState.UNAVAILABLE.name)
+        insertStateIntoContentProvider(getStateName(ApplicationState.UNAVAILABLE))
+    }
+
+    private fun getStateName(state: ApplicationState): String {
+        return state.name
     }
 
     companion object {
@@ -510,6 +512,13 @@ class MainFragment : Fragment() {
 
         fun newInstance(): MainFragment {
             return MainFragment()
+        }
+    }
+
+    inner class AppDataContentObserver(handler: Handler) : ContentObserver(handler) {
+        override fun onChange(selfChange: Boolean, uri: Uri?) {
+            super.onChange(selfChange, uri)
+            getAppData()
         }
     }
 }
