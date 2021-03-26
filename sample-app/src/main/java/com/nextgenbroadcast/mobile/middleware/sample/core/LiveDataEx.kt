@@ -1,4 +1,4 @@
-package com.nextgenbroadcast.mobile.core
+package com.nextgenbroadcast.mobile.middleware.sample.core
 
 import androidx.annotation.MainThread
 import androidx.lifecycle.*

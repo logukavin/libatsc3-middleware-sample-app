@@ -2,6 +2,7 @@ package com.nextgenbroadcast.mobile.middleware.service
 
 import android.content.Intent
 import android.os.*
+import com.nextgenbroadcast.mobile.core.asReadOnly
 import com.nextgenbroadcast.mobile.core.model.PhyFrequency
 import com.nextgenbroadcast.mobile.middleware.service.handler.StandaloneServiceHandler
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
@@ -14,10 +15,9 @@ class StandaloneAtsc3Service : Atsc3ForegroundService() {
     override fun createServiceBinder(serviceController: IServiceController): IBinder {
         return Messenger(
                 StandaloneServiceHandler(
-                        lifecycleOwner = this@StandaloneAtsc3Service,
                         receiverPresenter = object : IReceiverPresenter {
-                            override val receiverState = serviceController.receiverState
-                            override val freqKhz = serviceController.freqKhz
+                            override val receiverState = serviceController.receiverState.asReadOnly()
+                            override val freqKhz = serviceController.receiverFrequency.asReadOnly()
 
                             override fun openRoute(path: String): Boolean {
                                 openRoute(this@StandaloneAtsc3Service, path)

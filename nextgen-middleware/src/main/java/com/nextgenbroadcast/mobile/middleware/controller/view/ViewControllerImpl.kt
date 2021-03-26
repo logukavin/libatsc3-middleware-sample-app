@@ -1,13 +1,7 @@
 package com.nextgenbroadcast.mobile.middleware.controller.view
 
+import android.net.Uri
 import androidx.core.net.toUri
-import androidx.lifecycle.LifecycleOwner
-import androidx.lifecycle.distinctUntilChanged
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.switchMap
-import androidx.lifecycle.map
-import com.nextgenbroadcast.mobile.core.mapWith
 import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.RPMParams
@@ -15,35 +9,42 @@ import com.nextgenbroadcast.mobile.core.presentation.ApplicationState
 import com.nextgenbroadcast.mobile.core.presentation.media.IObservablePlayer
 import com.nextgenbroadcast.mobile.core.presentation.media.PlayerStateRegistry
 import com.nextgenbroadcast.mobile.middleware.analytics.IAtsc3Analytics
-import com.nextgenbroadcast.mobile.middleware.atsc3.entities.SLTConstants
 import com.nextgenbroadcast.mobile.middleware.service.provider.IMediaFileProvider
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
 import com.nextgenbroadcast.mobile.middleware.server.ServerUtils
 import com.nextgenbroadcast.mobile.middleware.settings.IClientSettings
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
 
 internal class ViewControllerImpl(
         private val repository: IRepository,
         private val settings: IClientSettings,
         private val fileProvider: IMediaFileProvider,
         private val atsc3Analytics: IAtsc3Analytics,
-        private val ignoreAudioServiceMedia: Boolean
+        private val stateScope: CoroutineScope = CoroutineScope(Dispatchers.Default),
+        private val mainScope: CoroutineScope = CoroutineScope(Dispatchers.Main)
 ) : IViewController {
 
     private enum class PlaybackSource {
         BROADCAST, BROADBAND
     }
-    private val rmpListeners: PlayerStateRegistry = PlayerStateRegistry()
-    private val playbackSource = MutableLiveData(PlaybackSource.BROADCAST)
-    private val externalMediaUrl = MutableLiveData<String?>()
 
-    override val appData: LiveData<AppData?> = repository.heldPackage.mapWith(repository.applications) { (held, applications) ->
+    private val rmpListeners: PlayerStateRegistry = PlayerStateRegistry()
+    private val playbackSource = MutableStateFlow(PlaybackSource.BROADCAST)
+    private val externalMediaUrl = MutableStateFlow<String?>(null)
+
+    override val sessionNum = MutableStateFlow(0)
+
+    override val appData: StateFlow<AppData?> = combine(repository.heldPackage, repository.applications, sessionNum) { held, applications, sNum ->
         held?.let {
             val appContextId = held.appContextId ?: return@let null
             val appUrl = held.bcastEntryPageUrl?.let { entryPageUrl ->
                 ServerUtils.createEntryPoint(entryPageUrl, appContextId, settings)
             } ?: held.bbandEntryPageUrl ?: return@let null
             val compatibleServiceIds = held.coupledServices ?: emptyList()
-            val application = applications?.firstOrNull { app ->
+            val application = applications.firstOrNull { app ->
                 app.appContextIdList.contains(appContextId) && app.packageName == held.bcastEntryPackageUrl
             }
 
@@ -53,45 +54,50 @@ internal class ViewControllerImpl(
                     compatibleServiceIds,
                     application?.cachePath
             )
+
         }
-    }
+    }.stateIn(stateScope, SharingStarted.Eagerly, null)
 
-    override val appState = MutableLiveData(ApplicationState.UNAVAILABLE)
-    override val rmpLayoutParams = MutableLiveData(RPMParams())
-    override val rmpMediaUri = playbackSource.switchMap { source ->
+    override val appState = MutableStateFlow(ApplicationState.UNAVAILABLE)
+
+    override val rmpLayoutParams = MutableStateFlow(RPMParams())
+    override val rmpMediaUri: StateFlow<Uri?> = combine(playbackSource, repository.routeMediaUrl, externalMediaUrl) { source, routeMediaUrl, externalMediaUrl ->
         if (source == PlaybackSource.BROADCAST) {
-            repository.routeMediaUrl.map { input ->
-                if (input == null) return@map null
-
-                fileProvider.getMediaFileUri(input.url)
+            routeMediaUrl?.let {
+                fileProvider.getMediaFileUri(routeMediaUrl.url)
             }
         } else {
-            externalMediaUrl.map { input -> input?.toUri() }
+            externalMediaUrl?.toUri()
         }
-    }
+    }.stateIn(stateScope, SharingStarted.Eagerly, null)
 
-    override val rmpState = MutableLiveData(PlaybackState.IDLE)
-    override val rmpMediaTime = MutableLiveData<Long>()
-    override val rmpPlaybackRate = MutableLiveData<Float>()
+    override val rmpState = MutableStateFlow(PlaybackState.IDLE)
+    override val rmpMediaTime = MutableStateFlow(0L)
+    override val rmpPlaybackRate = MutableStateFlow(0f)
 
-    fun start(lifecycleOwner: LifecycleOwner) {
-        repository.selectedService.distinctUntilChanged().observe(lifecycleOwner) {
-            rmpLayoutReset()
+    init {
+        stateScope.launch {
+            repository.selectedService.collect {
+                rmpLayoutReset()
+            }
         }
-        repository.heldPackage.distinctUntilChanged().observe(lifecycleOwner) {
-            rmpLayoutReset()
-            if (rmpState.value == PlaybackState.PAUSED) {
-                rmpResume()
+
+        stateScope.launch {
+            repository.heldPackage.collect {
+                rmpLayoutReset()
+                if (rmpState.value == PlaybackState.PAUSED) {
+                    rmpResume()
+                }
             }
         }
     }
 
     override fun setApplicationState(state: ApplicationState) {
-        appState.postValue(state)
+        appState.value = state
     }
 
     override fun rmpLayoutReset() {
-        rmpLayoutParams.postValue(RPMParams())
+        rmpLayoutParams.value = RPMParams()
     }
 
     override fun rmpPlaybackChanged(state: PlaybackState) {
@@ -100,11 +106,15 @@ internal class ViewControllerImpl(
     }
 
     override fun rmpPause() {
-        rmpListeners.notifyPause(this)
+        mainScope.launch {
+            rmpListeners.notifyPause(null)
+        }
     }
 
     override fun rmpResume() {
-        rmpListeners.notifyResume(this)
+        mainScope.launch {
+            rmpListeners.notifyResume(null)
+        }
     }
 
     override fun addOnPlayerSateChangedCallback(callback: IObservablePlayer.IPlayerStateListener) {
@@ -116,32 +126,40 @@ internal class ViewControllerImpl(
     }
 
     override fun updateRMPPosition(scaleFactor: Double, xPos: Double, yPos: Double) {
-        rmpLayoutParams.postValue(RPMParams(scaleFactor, xPos.toInt(), yPos.toInt()))
+        rmpLayoutParams.value = RPMParams(scaleFactor, xPos.toInt(), yPos.toInt())
     }
 
     override fun rmpPlaybackRateChanged(speed: Float) {
-        rmpPlaybackRate.postValue(speed)
+        rmpPlaybackRate.value = speed
     }
 
     override fun rmpMediaTimeChanged(currentTime: Long) {
-        rmpMediaTime.postValue(currentTime)
+        rmpMediaTime.value = currentTime
     }
 
     //TODO: currently delay not supported and blocked on RPC level
     override fun requestMediaPlay(mediaUrl: String?, delay: Long) {
-        rmpPause()
-        if (mediaUrl != null) {
-            playbackSource.value = PlaybackSource.BROADBAND
-        } else {
-            playbackSource.value = PlaybackSource.BROADCAST
+        mainScope.launch {
+            rmpPause()
+            if (mediaUrl != null) {
+                playbackSource.value = PlaybackSource.BROADBAND
+            } else {
+                playbackSource.value = PlaybackSource.BROADCAST
+            }
+            externalMediaUrl.value = mediaUrl
+            rmpResume()
         }
-        externalMediaUrl.value = mediaUrl
-        rmpResume()
     }
 
     //TODO: currently delay not supported and blocked on RPC level
     override fun requestMediaStop(delay: Long) {
-        rmpPause()
+        mainScope.launch {
+            rmpPause()
+        }
+    }
+
+    override fun onNewSessionStarted() {
+        sessionNum.value++
     }
 
     private fun reportPlaybackState(state: PlaybackState) {

@@ -1,9 +1,6 @@
 package com.nextgenbroadcast.mobile.middleware.server.web
 
 import android.util.Log
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleOwner
-import androidx.lifecycle.LifecycleRegistry
 import com.nextgenbroadcast.mobile.core.cert.CertificateUtils
 import com.nextgenbroadcast.mobile.core.cert.IUserAgentSSLContext
 import com.nextgenbroadcast.mobile.core.md5
@@ -14,6 +11,7 @@ import com.nextgenbroadcast.mobile.middleware.gateway.web.IWebGateway
 import com.nextgenbroadcast.mobile.middleware.server.ServerConstants.ATSC_CMD_PATH
 import com.nextgenbroadcast.mobile.middleware.server.ws.MiddlewareWebSocket
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.collect
 import org.eclipse.jetty.http.HttpVersion
 import org.eclipse.jetty.server.*
 import org.eclipse.jetty.server.handler.HandlerCollection
@@ -36,75 +34,65 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
 
-class MiddlewareWebServer constructor(
+internal class MiddlewareWebServer constructor(
         private val server: Server,
         private val webGateway: IWebGateway?,
-        private val globalScope: CoroutineScope
-) : AutoCloseable, LifecycleOwner {
+        private val stateScope: CoroutineScope?
+) : AutoCloseable {
 
-    private val lifecycleRegistry = LifecycleRegistry(this)
     private val availResources = arrayListOf<AppResource>()
 
     init {
-        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
-
-        webGateway?.appCache?.observe(this, { applications ->
-            onCacheChanged(applications)
-        })
+        stateScope?.launch {
+            webGateway?.appCache?.collect { applications ->
+                onCacheChanged(applications)
+            }
+        }
     }
 
     fun isRunning() = server.isRunning
 
     @Throws(MiddlewareWebServerError::class)
-    fun start(generatedSSLContext: IUserAgentSSLContext?) {
-        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_START)
+    suspend fun start(generatedSSLContext: IUserAgentSSLContext?) {
+        webGateway?.let { gateway ->
+            server.connectors = gateway.hostName.let { hostName ->
+                ArrayList<Connector>().apply {
+                    add(getServerConnector(ConnectionType.HTTP, server, hostName, gateway.httpPort))
+                    add(getServerConnector(ConnectionType.WS, server, hostName, gateway.wsPort))
 
-        globalScope.launch {
-            webGateway?.let { gateway ->
-                server.connectors = gateway.hostName.let { hostName ->
-                    ArrayList<Connector>().apply {
-                        add(getServerConnector(ConnectionType.HTTP, server, hostName, gateway.httpPort))
-                        add(getServerConnector(ConnectionType.WS, server, hostName, gateway.wsPort))
-
-                        generatedSSLContext?.let { generatedSSLContext ->
-                            val sslContextFactory = suspendCoroutine<SslContextFactory> { cor ->
-                                CoroutineScope(Executors.newSingleThreadExecutor().asCoroutineDispatcher()).launch {
-                                    @Suppress("BlockingMethodInNonBlockingContext")
-                                    cor.resume(configureSSLFactory(generatedSSLContext))
-                                }
+                    generatedSSLContext?.let { generatedSSLContext ->
+                        val sslContextFactory = suspendCoroutine<SslContextFactory> { cor ->
+                            CoroutineScope(Executors.newSingleThreadExecutor().asCoroutineDispatcher()).launch {
+                                @Suppress("BlockingMethodInNonBlockingContext")
+                                cor.resume(configureSSLFactory(generatedSSLContext))
                             }
-                            add(getSecureServerConnector(ConnectionType.HTTPS, server, hostName, gateway.httpsPort, sslContextFactory))
-                            add(getSecureServerConnector(ConnectionType.WSS, server, hostName, gateway.wssPort, sslContextFactory))
                         }
-                    }.toTypedArray()
-                }
+                        add(getSecureServerConnector(ConnectionType.HTTPS, server, hostName, gateway.httpsPort, sslContextFactory))
+                        add(getSecureServerConnector(ConnectionType.WSS, server, hostName, gateway.wssPort, sslContextFactory))
+                    }
+                }.toTypedArray()
             }
+        }
 
-            retry(RETRY_COUNT, "Can't start web server") {
-                server.start()
-            }
+        retry(RETRY_COUNT, "Can't start web server") {
+            server.start()
+        }
 
-            val connectors = server.connectors.asList()
-            withContext(Dispatchers.Main) {
-                setSelectedPorts(connectors)
-            }
+        val connectors = server.connectors.asList()
+        withContext(Dispatchers.Main) {
+            setSelectedPorts(connectors)
         }
     }
 
     @Throws(Exception::class)
     fun stop() {
-        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
-
-        globalScope.launch {
-            retry(RETRY_COUNT, "Can't stop web server") {
-                server.stop()
-            }
+        retry(RETRY_COUNT, "Can't stop web server") {
+            server.stop()
         }
     }
 
     @Throws(Exception::class)
     override fun close() {
-        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
         stop()
     }
 
@@ -120,8 +108,6 @@ class MiddlewareWebServer constructor(
             attempts--
         }
     }
-
-    override fun getLifecycle() = lifecycleRegistry
 
     private fun onCacheChanged(applications: List<Atsc3Application>) {
         val handler = server.handler
@@ -173,8 +159,11 @@ class MiddlewareWebServer constructor(
     )
 
     class Builder {
+        private var stateScope: CoroutineScope? = null
         private var rpcGateway: IRPCGateway? = null
         private var webGateway: IWebGateway? = null
+
+        fun stateScope(value: CoroutineScope) = apply { stateScope = value }
 
         fun rpcGateway(value: IRPCGateway) = apply { rpcGateway = value }
 
@@ -201,7 +190,7 @@ class MiddlewareWebServer constructor(
                 }
             }
 
-            return MiddlewareWebServer(server, webGateway, GlobalScope)
+            return MiddlewareWebServer(server, webGateway, stateScope)
         }
     }
 
