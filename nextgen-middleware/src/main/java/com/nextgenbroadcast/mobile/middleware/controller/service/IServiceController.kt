@@ -1,26 +1,35 @@
 package com.nextgenbroadcast.mobile.middleware.controller.service
 
-import androidx.lifecycle.LiveData
 import com.nextgenbroadcast.mobile.core.atsc3.MediaUrl
 import com.nextgenbroadcast.mobile.core.model.AVService
-import com.nextgenbroadcast.mobile.core.presentation.ISelectorPresenter
-import com.nextgenbroadcast.mobile.core.presentation.IReceiverPresenter
+import com.nextgenbroadcast.mobile.core.model.PhyFrequency
+import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.alerts.AeaTable
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.IAtsc3Source
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.SGUrl
-import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.AlertingRpcResponse
+import kotlinx.coroutines.flow.StateFlow
 
-interface IServiceController : IReceiverPresenter, ISelectorPresenter {
-    val serviceGuideUrls: LiveData<List<SGUrl>?>
-    val applications: LiveData<List<Atsc3Application>?>
-    //TODO: hmm, this is not good
-    val routeMediaUrl: LiveData<MediaUrl?>
-    val alertList: LiveData<List<AeaTable>>
+internal interface IServiceController {
+    val receiverState: StateFlow<ReceiverState>
+    val receiverFrequency: StateFlow<Int>
+    val routeServices: StateFlow<List<AVService>>
+    val selectedService: StateFlow<AVService?>
+    val serviceGuideUrls: StateFlow<List<SGUrl>>
+    val applications: StateFlow<List<Atsc3Application>>
+    val alertList: StateFlow<List<AeaTable>>
 
+    fun openRoute(path: String): Boolean
     fun openRoute(source: IAtsc3Source): Boolean
     fun stopRoute()
+    fun closeRoute()
+
+    fun tune(frequency: PhyFrequency)
+    fun selectService(service: AVService): Boolean
 
     fun findServiceById(globalServiceId: String): AVService?
     fun getNearbyService(offset: Int): AVService?
+
+    fun getCurrentService(): AVService?
+    fun getCurrentRouteMediaUrl(): MediaUrl?
 }

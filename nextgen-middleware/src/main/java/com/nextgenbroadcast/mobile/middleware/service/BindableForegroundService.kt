@@ -5,13 +5,14 @@ import android.content.Intent
 import android.os.IBinder
 import android.support.v4.media.session.MediaSessionCompat
 import androidx.core.app.NotificationCompat
+import androidx.media.MediaBrowserServiceCompat
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.middleware.R
 import com.nextgenbroadcast.mobile.middleware.notification.NotificationHelper
 
-abstract class BindableForegroundService : LifecycleMediaBrowserService() {
+abstract class BindableForegroundService : MediaBrowserServiceCompat() {
     private lateinit var notificationHelper: NotificationHelper
 
     protected var isForeground = false
@@ -59,7 +60,7 @@ abstract class BindableForegroundService : LifecycleMediaBrowserService() {
     override fun onUnbind(intent: Intent): Boolean {
         super.onUnbind(intent)
         isBinded = false
-        return true
+        return false
     }
 
     protected fun startForeground() {

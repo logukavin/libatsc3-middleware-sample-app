@@ -105,6 +105,10 @@ class ReceiverPlayerView @JvmOverloads constructor(
         player = null
     }
 
+    fun clearState() {
+        atsc3Player.clearSavedState()
+    }
+
     private fun updateBufferingState(isBuffering: Boolean) {
         if (isBuffering) {
             if (!buffering) {

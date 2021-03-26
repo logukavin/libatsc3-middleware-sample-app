@@ -1,11 +1,7 @@
 package com.nextgenbroadcast.mobile.middleware.controller.service
 
 import android.util.Log
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.map
 import com.nextgenbroadcast.mobile.core.atsc3.MediaUrl
-import com.nextgenbroadcast.mobile.core.mapWith
 import com.nextgenbroadcast.mobile.core.model.PhyFrequency
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.model.AVService
@@ -21,9 +17,9 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.entities.service.Atsc3Servic
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.IServiceGuideDeliveryUnitReader
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.*
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
-import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.AlertingRpcResponse
 import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.*
 
 
 internal class ServiceControllerImpl (
@@ -32,24 +28,20 @@ internal class ServiceControllerImpl (
         private val atsc3Module: IAtsc3Module,
         private val atsc3Analytics: IAtsc3Analytics,
         private val serviceGuideReader: IServiceGuideDeliveryUnitReader,
-        private val ioDispatcher: CoroutineDispatcher,
+        private val stateScope: CoroutineScope = CoroutineScope(Dispatchers.IO),
         private val onError: ((message: String) -> Unit)? = null
 ) : IServiceController, Atsc3ModuleListener {
-
-    private val ioScope = CoroutineScope(ioDispatcher)
-
     private var heldResetJob: Job? = null
     private var mediaUrlAssignmentJob: Job? = null
 
-    private val atsc3State = MutableLiveData(Atsc3ModuleState.IDLE)
-    private val atsc3Configuration = MutableLiveData<Pair<Int, Int>>()
+    private val atsc3State = MutableStateFlow<Atsc3ModuleState?>(Atsc3ModuleState.IDLE)
+    private val atsc3Configuration = MutableStateFlow<Pair<Int, Int>?>(null)
 
     override val selectedService = repository.selectedService
     override val serviceGuideUrls = repository.serviceGuideUrls
     override val applications = repository.applications
-    override val routeMediaUrl = repository.routeMediaUrl
 
-    override val receiverState: LiveData<ReceiverState> = atsc3State.mapWith(selectedService, atsc3Configuration) { (state, service, config) ->
+    override val receiverState: StateFlow<ReceiverState> = combine(atsc3State, repository.selectedService, atsc3Configuration) { state, service, config ->
         val (configIndex, configCount) = config ?: Pair(-1, -1)
         if (state == null || state == Atsc3ModuleState.IDLE) {
             ReceiverState.idle()
@@ -60,11 +52,13 @@ internal class ServiceControllerImpl (
         } else {
             ReceiverState.connected(configIndex, configCount)
         }
-    }
+    }.stateIn(stateScope, SharingStarted.Eagerly, ReceiverState.idle())
 
-    override val sltServices = repository.services.map { services -> services.filter { !it.hidden } }
+    override val receiverFrequency = MutableStateFlow(0)
 
-    override val freqKhz = MutableLiveData(0)
+    override val routeServices: StateFlow<List<AVService>> = repository.services.map { services ->
+        services.filter { !it.hidden }
+    }.stateIn(stateScope, SharingStarted.Eagerly, emptyList())
 
     override val alertList = repository.alertsForNotify
 
@@ -73,14 +67,14 @@ internal class ServiceControllerImpl (
     }
 
     override fun onStateChanged(state: Atsc3ModuleState) {
-        atsc3State.postValue(state)
+        atsc3State.value = state
         if (state == Atsc3ModuleState.IDLE) {
             repository.reset()
         }
     }
 
     override fun onConfigurationChanged(index: Int, count: Int) {
-        atsc3Configuration.postValue(Pair(index, count))
+        atsc3Configuration.value = Pair(index, count)
     }
 
     override fun onApplicationPackageReceived(appPackage: Atsc3Application) {
@@ -244,7 +238,7 @@ internal class ServiceControllerImpl (
 
         val freqKhz = frequencyList.firstOrNull() ?: return
 
-        this.freqKhz.postValue(freqKhz)
+        receiverFrequency.value = freqKhz
         settings.lastFrequency = freqKhz
         atsc3Module.tune(
                 freqKhz = freqKhz,
@@ -258,17 +252,25 @@ internal class ServiceControllerImpl (
     }
 
     override fun getNearbyService(offset: Int): AVService? {
-        return selectedService.value?.let { activeService ->
-            sltServices.value?.let { services ->
+        return repository.selectedService.value?.let { activeService ->
+            routeServices.value.let { services ->
                 val activeServiceIndex = services.indexOf(activeService)
                 services.getOrNull(activeServiceIndex + offset)
             }
         }
     }
 
+    override fun getCurrentService(): AVService? {
+        return repository.selectedService.value
+    }
+
+    override fun getCurrentRouteMediaUrl(): MediaUrl? {
+        return repository.routeMediaUrl.value
+    }
+
     private fun resetHeldWithDelay() {
         cancelHeldReset()
-        heldResetJob = ioScope.launch {
+        heldResetJob = stateScope.launch {
             delay(BA_LOADING_TIMEOUT)
             withContext(Dispatchers.Main) {
                 repository.setHeldPackage(null)
@@ -286,7 +288,7 @@ internal class ServiceControllerImpl (
 
     private fun setMediaUrlWithDelay(mediaUrl: MediaUrl, delayMs: Long) {
         cancelMediaUrlAssignment()
-        mediaUrlAssignmentJob = ioScope.launch {
+        mediaUrlAssignmentJob = stateScope.launch {
             delay(delayMs)
             withContext(Dispatchers.Main) {
                 repository.setMediaUrl(mediaUrl)

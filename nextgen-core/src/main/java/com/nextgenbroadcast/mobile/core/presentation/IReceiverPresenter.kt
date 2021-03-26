@@ -1,12 +1,12 @@
 package com.nextgenbroadcast.mobile.core.presentation
 
-import androidx.lifecycle.LiveData
 import com.nextgenbroadcast.mobile.core.model.PhyFrequency
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
+import kotlinx.coroutines.flow.StateFlow
 
 interface IReceiverPresenter {
-    val receiverState: LiveData<ReceiverState>
-    val freqKhz: LiveData<Int>
+    val receiverState: StateFlow<ReceiverState>
+    val freqKhz: StateFlow<Int>
 
     fun openRoute(path: String): Boolean
     fun closeRoute()

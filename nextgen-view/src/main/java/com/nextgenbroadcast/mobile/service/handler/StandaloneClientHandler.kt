@@ -20,37 +20,37 @@ internal class StandaloneClientHandler(
     override fun handleMessage(msg: Message) {
         when (msg.what) {
 
-            IServiceBinder.LIVEDATA_RECEIVER_STATE -> {
+            IServiceBinder.TYPE_RECEIVER_STATE -> {
                 msg.data.getParcelable(ReceiverState::class.java, IServiceBinder.PARAM_RECEIVER_STATE)?.let {
-                    receiverPresenter.receiverState.postValue(it)
+                    receiverPresenter.receiverState.value = it
                 }
             }
 
-            IServiceBinder.LIVEDATA_SERVICE_LIST -> {
+            IServiceBinder.TYPE_SERVICE_LIST -> {
                 msg.data.getParcelableArrayList(AVService::class.java, IServiceBinder.PARAM_SERVICE_LIST)?.let {
-                    selectorPresenter.sltServices.postValue(it)
+                    selectorPresenter.sltServices.value = it
                 }
             }
 
-            IServiceBinder.LIVEDATA_SERVICE_SELECTED -> {
+            IServiceBinder.TYPE_SERVICE_SELECTED -> {
                 val selectedService = msg.data.getParcelable(AVService::class.java, IServiceBinder.PARAM_SERVICE_SELECTED)
-                selectorPresenter.selectedService.postValue(selectedService)
+                selectorPresenter.selectedService.value = selectedService
             }
 
-            IServiceBinder.LIVEDATA_APPDATA -> {
+            IServiceBinder.TYPE_APPDATA -> {
                 val appData = msg.data.getParcelable(AppData::class.java, IServiceBinder.PARAM_APPDATA)
-                userAgentPresenter.appData.postValue(appData)
+                userAgentPresenter.appData.value = appData
             }
 
-            IServiceBinder.LIVEDATA_RMP_LAYOUT_PARAMS -> {
+            IServiceBinder.TYPE_RMP_LAYOUT_PARAMS -> {
                 msg.data.getParcelable(RPMParams::class.java, IServiceBinder.PARAM_RMP_LAYOUT_PARAMS)?.let {
-                    mediaPlayerPresenter.rmpLayoutParams.postValue(it)
+                    mediaPlayerPresenter.rmpLayoutParams.value = (it)
                 }
             }
 
-            IServiceBinder.LIVEDATA_RMP_MEDIA_URI -> {
+            IServiceBinder.TYPE_RMP_MEDIA_URI -> {
                 val uri = msg.data.getParcelable(Uri::class.java, IServiceBinder.PARAM_RMP_MEDIA_URI)
-                mediaPlayerPresenter.rmpMediaUri.postValue(uri)
+                mediaPlayerPresenter.rmpMediaUri.value = uri
             }
 
             IServiceBinder.ACTION_PLAYER_STATE_CHANGE_PAUSE -> {
@@ -62,7 +62,7 @@ internal class StandaloneClientHandler(
             }
 
             IServiceBinder.ACTION_TYNE_FREQUENCY -> {
-                receiverPresenter.freqKhz.postValue(msg.data.getInt(IServiceBinder.PARAM_FREQUENCY_KHZ))
+                receiverPresenter.freqKhz.value = msg.data.getInt(IServiceBinder.PARAM_FREQUENCY_KHZ)
             }
         }
     }
