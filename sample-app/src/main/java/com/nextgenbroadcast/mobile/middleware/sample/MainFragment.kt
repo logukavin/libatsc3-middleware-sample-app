@@ -23,7 +23,6 @@ import androidx.databinding.DataBindingUtil
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.setFragmentResultListener
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModelProvider
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.nextgenbroadcast.mobile.core.FileUtils
@@ -31,11 +30,11 @@ import com.nextgenbroadcast.mobile.core.atsc3.phy.PHYStatistics
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.presentation.ApplicationState
-import com.nextgenbroadcast.mobile.middleware.provider.appData.ReceiverContentProvider
-import com.nextgenbroadcast.mobile.middleware.provider.appData.ReceiverContentProvider.Companion.APP_DATA_URI
-import com.nextgenbroadcast.mobile.middleware.provider.appData.ReceiverContentProvider.Companion.APP_STATE_URI
-import com.nextgenbroadcast.mobile.middleware.provider.appData.ReceiverContentProvider.Companion.APP_STATE_VALUE
 import com.nextgenbroadcast.mobile.middleware.provider.appData.ListConverter
+import com.nextgenbroadcast.mobile.middleware.provider.appData.ReceiverContentProvider
+import com.nextgenbroadcast.mobile.middleware.provider.appData.ReceiverContentProvider.Companion.APP_STATE_VALUE
+import com.nextgenbroadcast.mobile.middleware.provider.appData.ReceiverContentProvider.Companion.getAppDataUri
+import com.nextgenbroadcast.mobile.middleware.provider.appData.ReceiverContentProvider.Companion.getAppStateUri
 import com.nextgenbroadcast.mobile.middleware.sample.SettingsDialog.Companion.REQUEST_KEY_FREQUENCY
 import com.nextgenbroadcast.mobile.middleware.sample.core.SwipeGestureDetector
 import com.nextgenbroadcast.mobile.middleware.sample.core.mapWith
@@ -108,7 +107,7 @@ class MainFragment : Fragment() {
         }
 
         context?.applicationContext?.contentResolver?.registerContentObserver(
-                APP_DATA_URI, false,
+                getAppDataUri(getString(R.string.receiverContentProvider)), false,
                 appContentObserver)
 
         viewViewModel.isAppDataUpdated.observe(viewLifecycleOwner, {
@@ -122,8 +121,8 @@ class MainFragment : Fragment() {
 
     private fun getAppData() {
 
-        val cpClient = context?.contentResolver?.acquireContentProviderClient(APP_DATA_URI)
-        val appDataCursor = cpClient?.query(APP_DATA_URI, null, null, null)
+        val cpClient = context?.contentResolver?.acquireContentProviderClient(getAppDataUri(getString(R.string.receiverContentProvider)))
+        val appDataCursor = cpClient?.query(getAppDataUri(getString(R.string.receiverContentProvider)), null, null, null)
         var appData: AppData?
 
         appDataCursor?.let { _ ->
@@ -495,7 +494,7 @@ class MainFragment : Fragment() {
 
     private fun insertStateIntoContentProvider(state: String) {
         val cv = ContentValues().also { it.put(APP_STATE_VALUE, state) }
-        appDataContentResolver?.insert(APP_STATE_URI, cv)
+        appDataContentResolver?.insert(getAppStateUri(getString(R.string.receiverContentProvider)), cv)
     }
 
     private fun unloadBroadcasterApplication() {
