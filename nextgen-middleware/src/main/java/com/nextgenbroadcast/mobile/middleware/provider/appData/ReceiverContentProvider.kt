@@ -10,6 +10,7 @@ import androidx.lifecycle.*
 import com.nextgenbroadcast.mobile.core.mapWith
 import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.presentation.ApplicationState
+import com.nextgenbroadcast.mobile.middleware.R
 import com.nextgenbroadcast.mobile.middleware.atsc3.core.Atsc3ReceiverCore
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
 import com.nextgenbroadcast.mobile.middleware.server.ServerUtils
@@ -24,9 +25,12 @@ class ReceiverContentProvider : ContentProvider(), LifecycleOwner {
     private var listConverter = ListConverter()
     private lateinit var atsc3ReceiverCore: Atsc3ReceiverCore
     var appData: LiveData<AppData?> = MutableLiveData()
+    lateinit var RECEIVER_CONTENT_PROVIDER_NAME:String
 
     override fun onCreate(): Boolean {
         val appContext = context?.applicationContext ?: return false
+        RECEIVER_CONTENT_PROVIDER_NAME = appContext.getString(R.string.receiverContentProvider)
+
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_START)
         atsc3ReceiverCore = Atsc3ReceiverCore.getInstance(appContext)
@@ -55,14 +59,14 @@ class ReceiverContentProvider : ContentProvider(), LifecycleOwner {
             }
         }
         appData.distinctUntilChanged().observe(this) {
-            context?.applicationContext?.contentResolver?.notifyChange(APP_DATA_URI, null)
+            context?.applicationContext?.contentResolver?.notifyChange(getAppDataUri(RECEIVER_CONTENT_PROVIDER_NAME), null)
         }
         return true
     }
 
     private fun initializeUriMatching() {
-        uriMatcher.addURI(PROVIDER_NAME, APP_DATA, APP_DATA_CODE)
-        uriMatcher.addURI(PROVIDER_NAME, APP_STATE, APP_STATE_CODE)
+        uriMatcher.addURI(RECEIVER_CONTENT_PROVIDER_NAME, APP_DATA, APP_DATA_CODE)
+        uriMatcher.addURI(RECEIVER_CONTENT_PROVIDER_NAME, APP_STATE, APP_STATE_CODE)
     }
 
     override fun query(uri: Uri, projection: Array<String>?, selection: String?, selectionArgs: Array<String>?, sortOrder: String?): Cursor? {
@@ -129,19 +133,22 @@ class ReceiverContentProvider : ContentProvider(), LifecycleOwner {
     }
 
     companion object {
-        const val PROVIDER_NAME = "com.nextgenbroadcast.mobile.middleware.provider.appData"
         const val APP_DATA = "appData"
         const val APP_STATE = "appState"
-        private const val APP_DATA_URL = "content://$PROVIDER_NAME/$APP_DATA"
-        private const val APP_STATE_URL = "content://$PROVIDER_NAME/$APP_STATE"
         const val APP_DATA_CODE = 1
         const val APP_STATE_CODE = 2
-        val APP_DATA_URI: Uri = Uri.parse(APP_DATA_URL)
-        val APP_STATE_URI: Uri = Uri.parse(APP_STATE_URL)
         const val APP_CONTEXT_ID = "appContextId"
         const val APP_ENTRY_PAGE = "appEntryPage"
         const val COMPATIBLE_SERVICE_IDS = "compatibleServiceIds"
         const val CACHE_PATH = "cachePath"
         const val APP_STATE_VALUE = "appStateValue"
+
+        fun getAppDataUri(providerName:String):Uri{
+            return Uri.parse("content://$providerName/$APP_DATA")
+        }
+
+        fun getAppStateUri(providerName:String):Uri{
+            return Uri.parse("content://$providerName/$APP_STATE")
+        }
     }
 }
