@@ -4,6 +4,7 @@ import com.nextgenbroadcast.mobile.core.cert.UserAgentSSLContext
 import com.nextgenbroadcast.mobile.middleware.server.web.MiddlewareWebServer
 import com.nextgenbroadcast.mobile.middleware.server.web.MiddlewareWebServerError
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestCoroutineDispatcher
 import kotlinx.coroutines.test.TestCoroutineScope
 import okhttp3.ConnectionSpec
@@ -28,11 +29,13 @@ import javax.servlet.http.HttpServletRequest
 import javax.servlet.http.HttpServletResponse
 
 
+@ExperimentalCoroutinesApi
 @RunWith(PowerMockRunner::class)
 class WebServerTests : ServerTest() {
-    private lateinit var webServer: MiddlewareWebServer
-    @ExperimentalCoroutinesApi
     private val testDispatcher = TestCoroutineDispatcher()
+    private val testScope = TestCoroutineScope()
+
+    private lateinit var webServer: MiddlewareWebServer
 
     @ExperimentalCoroutinesApi
     @Before
@@ -41,9 +44,17 @@ class WebServerTests : ServerTest() {
             addServlet(ServletHolder(MiddlewareWebServerTestServlet()), "/index.html")
         }
 
-        webServer = MiddlewareWebServer(server, webGateway = null, globalScope = TestCoroutineScope(testDispatcher)).also {
-            it.start(null)
+        webServer = MiddlewareWebServer(server, webGateway = null, stateScope = testScope).also {
+            TestCoroutineScope(testDispatcher).launch {
+                it.start(null)
+            }
         }
+    }
+
+    @After
+    fun cleanUp() {
+        testDispatcher.cleanupTestCoroutines()
+        testScope.cleanupTestCoroutines()
     }
 
     @Test
@@ -120,12 +131,6 @@ class WebServerTests : ServerTest() {
 
     companion object {
         const val SERVER_MESSAGE = "Hello World"
-    }
-
-    @ExperimentalCoroutinesApi
-    @After
-    fun cleanUp() {
-        testDispatcher.cleanupTestCoroutines()
     }
 }
 
