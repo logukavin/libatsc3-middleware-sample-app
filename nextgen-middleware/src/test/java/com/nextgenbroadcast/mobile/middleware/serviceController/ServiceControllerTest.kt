@@ -1,7 +1,6 @@
 package com.nextgenbroadcast.mobile.middleware.serviceController
 
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
-import androidx.lifecycle.MutableLiveData
 import com.nextgenbroadcast.mobile.core.atsc3.MediaUrl
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.PhyFrequency
@@ -10,6 +9,7 @@ import com.nextgenbroadcast.mobile.middleware.analytics.IAtsc3Analytics
 import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3ModuleState
 import com.nextgenbroadcast.mobile.middleware.atsc3.IAtsc3Module
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.SLTConstants
+import com.nextgenbroadcast.mobile.middleware.atsc3.entities.alerts.AeaTable
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPackage
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.service.Atsc3Service
@@ -20,13 +20,10 @@ import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceControl
 import com.nextgenbroadcast.mobile.middleware.controller.service.ServiceControllerImpl
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
 import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.test.TestCoroutineDispatcher
-import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.runBlockingTest
-import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.test.*
 import org.hamcrest.CoreMatchers
 import org.junit.*
 import org.junit.rules.TestRule
@@ -35,12 +32,14 @@ import org.mockito.Mock
 import org.mockito.Mockito.*
 import org.powermock.core.classloader.annotations.PrepareForTest
 import org.powermock.modules.junit4.PowerMockRunner
-import java.util.concurrent.ConcurrentHashMap
 
 
+@ExperimentalCoroutinesApi
 @RunWith(PowerMockRunner::class)
 @PrepareForTest(IServiceController::class, ServiceControllerImpl::class, IRepository::class, IMiddlewareSettings::class, IAtsc3Analytics::class, IAtsc3Module::class, IServiceGuideDeliveryUnitReader::class)
 class ServiceControllerTest {
+    private val testDispatcher = TestCoroutineDispatcher()
+    private val testScope = TestCoroutineScope()
 
     @JvmField
     @Rule
@@ -70,24 +69,29 @@ class ServiceControllerTest {
     @Mock
     private lateinit var mockErrorFun: (message: String) -> Unit
 
-    @ExperimentalCoroutinesApi
-    private val testDispatcher = TestCoroutineDispatcher()
-
     private val previousService = AVService(0, 0, "short_name", "globalServiceId", 1, 1, 0, false)
     private val selectedService = AVService(0, 1, "short_name", "globalServiceId", 1, 1, 0, false)
     private val nextService = AVService(0, 2, "short_name", "globalServiceId", 1, 1, 0, false)
     private val services = listOf(previousService, selectedService, nextService)
 
-    private var selectedServiceLV: MutableLiveData<AVService?> = MutableLiveData()
-    private var sltServicesLV: MutableLiveData<List<AVService>> = MutableLiveData()
+    private var selectedServiceLV = MutableStateFlow<AVService?>(null)
+    private var sltServicesLV = MutableStateFlow<List<AVService>>(emptyList())
 
-
-    @ExperimentalCoroutinesApi
     @Before
     fun initController() {
-        serviceController = ServiceControllerImpl(repository, settings, atsc3Module, atsc3Analytics, serviceGuideReader, testDispatcher, mockErrorFun)
+        `when`(repository.selectedService).thenReturn(selectedServiceLV)
+        `when`(repository.services).thenReturn(sltServicesLV)
+
+        serviceController = ServiceControllerImpl(repository, settings, atsc3Module, atsc3Analytics, serviceGuideReader, testScope, mockErrorFun)
 
         Dispatchers.setMain(testDispatcher)
+    }
+
+    @After
+    fun cleanUp() {
+        Dispatchers.resetMain()
+        testDispatcher.cleanupTestCoroutines()
+        testScope.cleanupTestCoroutines()
     }
 
     @Test
@@ -96,44 +100,52 @@ class ServiceControllerTest {
     }
 
     @Test
-    fun testOnStateChangedSCANNING() {
+    fun testOnStateChangedSCANNING() = testScope.runBlockingTest {
         val state = Atsc3ModuleState.SCANNING
         val newState = ReceiverState.scanning(-1, -1)
 
         serviceController.onStateChanged(state)
 
+        delay(1) // interrupt current execution to get a chance the ServiceController internals process change
+
         Assert.assertEquals(newState, serviceController.receiverState.value)
         verify(repository, never()).reset()
     }
 
     @Test
-    fun testOnStateChangedOPENED() {
+    fun testOnStateChangedOPENED() = testScope.runBlockingTest {
         val state = Atsc3ModuleState.TUNED
         val newState = ReceiverState.tuning(-1, -1)
 
         serviceController.onStateChanged(state)
 
+        delay(1) // interrupt current execution to get a chance the ServiceController internals process change
+
         Assert.assertEquals(newState, serviceController.receiverState.value)
         verify(repository, never()).reset()
     }
 
     @Test
-    fun testOnStateChangedSTOPPED() {
+    fun testOnStateChangedSTOPPED() = testScope.runBlockingTest {
         val state = Atsc3ModuleState.STOPPED
         val newState = ReceiverState.tuning(-1, -1)
 
         serviceController.onStateChanged(state)
 
+        delay(1) // interrupt current execution to get a chance the ServiceController internals process change
+
         Assert.assertEquals(newState, serviceController.receiverState.value)
         verify(repository, never()).reset()
     }
 
     @Test
-    fun testOnStateChangedIDLE() {
+    fun testOnStateChangedIDLE() = testScope.runBlockingTest {
         val state = Atsc3ModuleState.IDLE
         val newState = ReceiverState.idle()
 
         serviceController.onStateChanged(state)
+
+        delay(1) // interrupt current execution to get a chance the ServiceController internals process change
 
         Assert.assertEquals(newState, serviceController.receiverState.value)
         verify(repository).reset()
@@ -189,9 +201,8 @@ class ServiceControllerTest {
         verify(repository).setMediaUrl(mediaUrl)
     }
 
-    @ExperimentalCoroutinesApi
     @Test
-    fun testOnServiceMediaReadyWithDelay() = testDispatcher.runBlockingTest {
+    fun testOnServiceMediaReadyWithDelay() = testScope.runBlockingTest {
         val mediaUrl = MediaUrl("path", 0, 0)
         val delayMS = 1000L
         serviceController.onServiceMediaReady(mediaUrl, delayMS)
@@ -201,9 +212,9 @@ class ServiceControllerTest {
 
     @Test
     fun testOnServiceGuideUnitReceived() {
-        serviceController.onServiceGuideUnitReceived("filePath")
+        serviceController.onServiceGuideUnitReceived("filePath", 1717)
 
-        verify(serviceGuideReader).readDeliveryUnit("filePath")
+        verify(serviceGuideReader).readDeliveryUnit("filePath", 1717)
     }
 
     @Test
@@ -446,22 +457,20 @@ class ServiceControllerTest {
         verify(repository).reset()
     }
 
-    @ExperimentalCoroutinesApi
     @Test
-    fun testSelectServiceAlreadySelectedReturnTrue() {
+    fun testSelectServiceAlreadySelectedReturnTrue() = testScope.runBlockingTest {
         val mockRepository = MockRepository()
-        serviceController = ServiceControllerImpl(mockRepository, settings, atsc3Module, atsc3Analytics, serviceGuideReader, testDispatcher)
+        serviceController = ServiceControllerImpl(mockRepository, settings, atsc3Module, atsc3Analytics, serviceGuideReader, testScope)
 
-        mockRepository.selectedService.postValue(selectedService)
+        mockRepository.selectedService.value = selectedService
 
         Assert.assertTrue(serviceController.selectService(selectedService))
     }
 
-    @ExperimentalCoroutinesApi
     @Test
-    fun testSelectServiceReturnFalse() {
+    fun testSelectServiceReturnFalse() = testScope.runBlockingTest {
         val mockRepository = spy(MockRepository())
-        serviceController = ServiceControllerImpl(mockRepository, settings, atsc3Module, atsc3Analytics, serviceGuideReader, testDispatcher)
+        serviceController = ServiceControllerImpl(mockRepository, settings, atsc3Module, atsc3Analytics, serviceGuideReader, testScope)
 
         `when`(atsc3Module.selectService(selectedService.bsid, selectedService.id)).thenReturn(false)
 
@@ -474,11 +483,10 @@ class ServiceControllerTest {
         Assert.assertFalse(result)
     }
 
-    @ExperimentalCoroutinesApi
     @Test
-    fun testSelectServiceHeldPackageIsNullReturnTrue() {
+    fun testSelectServiceHeldPackageIsNullReturnTrue() = testScope.runBlockingTest {
         val mockRepository = spy(MockRepository())
-        serviceController = ServiceControllerImpl(mockRepository, settings, atsc3Module, atsc3Analytics, serviceGuideReader, testDispatcher)
+        serviceController = ServiceControllerImpl(mockRepository, settings, atsc3Module, atsc3Analytics, serviceGuideReader, testScope)
 
         `when`(atsc3Module.selectService(selectedService.bsid, selectedService.id)).thenReturn(true)
 
@@ -491,11 +499,10 @@ class ServiceControllerTest {
         Assert.assertTrue(result)
     }
 
-    @ExperimentalCoroutinesApi
     @Test
-    fun testSelectServiceHeldPackageNotNullResetHeldWithoutDelayReturnTrue() {
+    fun testSelectServiceHeldPackageNotNullResetHeldWithoutDelayReturnTrue() = testScope.runBlockingTest {
         val mockRepository = spy(MockRepository())
-        serviceController = ServiceControllerImpl(mockRepository, settings, atsc3Module, atsc3Analytics, serviceGuideReader, testDispatcher)
+        serviceController = ServiceControllerImpl(mockRepository, settings, atsc3Module, atsc3Analytics, serviceGuideReader, testScope)
         mockRepository.setHeldPackage(Atsc3HeldPackage())
 
         `when`(atsc3Module.selectService(selectedService.bsid, selectedService.id)).thenReturn(true)
@@ -510,11 +517,10 @@ class ServiceControllerTest {
         Assert.assertTrue(result)
     }
 
-    @ExperimentalCoroutinesApi
     @Test
-    fun testSelectServiceHeldPackageNotNullResetHeldWithDelayReturnTrue() = testDispatcher.runBlockingTest {
+    fun testSelectServiceHeldPackageNotNullResetHeldWithDelayReturnTrue() = testScope.runBlockingTest {
         val mockRepository = spy(MockRepository())
-        serviceController = ServiceControllerImpl(mockRepository, settings, atsc3Module, atsc3Analytics, serviceGuideReader, testDispatcher)
+        serviceController = ServiceControllerImpl(mockRepository, settings, atsc3Module, atsc3Analytics, serviceGuideReader, testScope)
         mockRepository.setHeldPackage(Atsc3HeldPackage(coupledServices = listOf(123)))
 
         `when`(atsc3Module.selectService(selectedService.bsid, selectedService.id)).thenReturn(true)
@@ -575,17 +581,20 @@ class ServiceControllerTest {
     }
 
     @Test
-    fun testGetNearbyServiceReturnNext() {
+    fun testGetNearbyServiceReturnNext() = testScope.runBlockingTest {
         val offset = 1
         val selectedServiceIndex = services.indexOf(selectedService)
 
         selectedServiceLV.value = selectedService
         sltServicesLV.value = services
 
-        val mock = spy(serviceController)
+        val mockRepository = spy(MockRepository())
+        `when`(mockRepository.selectedService).thenReturn(selectedServiceLV)
 
-        `when`(mock.selectedService).thenReturn(selectedServiceLV)
-        `when`(mock.sltServices).thenReturn(sltServicesLV)
+        serviceController = ServiceControllerImpl(mockRepository, settings, atsc3Module, atsc3Analytics, serviceGuideReader, testScope)
+
+        val mock = spy(serviceController)
+        `when`(mock.routeServices).thenReturn(sltServicesLV.asStateFlow())
 
         val result = mock.getNearbyService(offset)
 
@@ -593,17 +602,20 @@ class ServiceControllerTest {
     }
 
     @Test
-    fun testGetNearbyServiceReturnPrevious() {
+    fun testGetNearbyServiceReturnPrevious() = testScope.runBlockingTest {
         val offset = -1
         val selectedServiceIndex = services.indexOf(selectedService)
 
         selectedServiceLV.value = selectedService
         sltServicesLV.value = services
 
-        val mock = spy(serviceController)
+        val mockRepository = spy(MockRepository())
+        `when`(mockRepository.selectedService).thenReturn(selectedServiceLV)
 
-        `when`(mock.selectedService).thenReturn(selectedServiceLV)
-        `when`(mock.sltServices).thenReturn(sltServicesLV)
+        serviceController = ServiceControllerImpl(mockRepository, settings, atsc3Module, atsc3Analytics, serviceGuideReader, testScope)
+
+        val mock = spy(serviceController)
+        `when`(mock.routeServices).thenReturn(sltServicesLV.asStateFlow())
 
         val result = mock.getNearbyService(offset)
 
@@ -611,44 +623,38 @@ class ServiceControllerTest {
     }
 
     @Test
-    fun testGetNearbyServiceReturnNull() {
+    fun testGetNearbyServiceReturnNull() = testScope.runBlockingTest {
         val offset = 1
-        val selectedServiceIndex = services.indexOf(selectedService)
 
         selectedServiceLV.value = null
-        sltServicesLV.value = null
+        sltServicesLV.value = emptyList()
+
+        val mockRepository = spy(MockRepository())
+        `when`(mockRepository.selectedService).thenReturn(selectedServiceLV)
+
+        serviceController = ServiceControllerImpl(mockRepository, settings, atsc3Module, atsc3Analytics, serviceGuideReader, testScope)
 
         val mock = spy(serviceController)
-
-        `when`(mock.selectedService).thenReturn(selectedServiceLV)
-        `when`(mock.sltServices).thenReturn(sltServicesLV)
+        `when`(mock.routeServices).thenReturn(sltServicesLV.asStateFlow())
 
         val result = mock.getNearbyService(offset)
 
         Assert.assertEquals(null, result)
     }
 
-    @ExperimentalCoroutinesApi
-    @After
-    fun cleanUp() {
-        Dispatchers.resetMain()
-        testDispatcher.cleanupTestCoroutines()
-    }
-
     abstract class MockTunableAtsc3Source : IAtsc3Source, ITunableSource
     abstract class MockAtsc3Source : IAtsc3Source
 
     open class MockRepository : IRepository {
-        private val _applications = ConcurrentHashMap<String, Atsc3Application>()
+        override val selectedService = MutableStateFlow<AVService?>(null)
+        override val serviceGuideUrls = MutableStateFlow<List<SGUrl>>(emptyList())
 
-        override val selectedService = MutableLiveData<AVService>()
-        override val serviceGuideUrls = MutableLiveData<List<SGUrl>>()
+        override val routeMediaUrl = MutableStateFlow<MediaUrl?>(null)
 
-        override val routeMediaUrl = MutableLiveData<MediaUrl?>()
-
-        override val applications = MutableLiveData<List<Atsc3Application>?>()
-        override val services = MutableLiveData<List<AVService>>()
-        override val heldPackage = MutableLiveData<Atsc3HeldPackage?>()
+        override val applications = MutableStateFlow<List<Atsc3Application>>(emptyList())
+        override val services = MutableStateFlow<List<AVService>>(emptyList())
+        override val heldPackage = MutableStateFlow<Atsc3HeldPackage?>(null)
+        override val alertsForNotify = MutableStateFlow<List<AeaTable>>(emptyList())
 
         override fun addOrUpdateApplication(application: Atsc3Application) {
         }
@@ -675,10 +681,13 @@ class ServiceControllerTest {
         }
 
         override fun setHeldPackage(data: Atsc3HeldPackage?) {
-            heldPackage.postValue(data)
+            heldPackage.value = data
         }
 
         override fun reset() {
+        }
+
+        override fun setAlertList(newAlerts: List<AeaTable>) {
         }
     }
 }

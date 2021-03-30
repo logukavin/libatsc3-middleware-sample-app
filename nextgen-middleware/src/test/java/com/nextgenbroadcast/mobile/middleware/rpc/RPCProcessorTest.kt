@@ -10,6 +10,7 @@ import com.nextgenbroadcast.mobile.middleware.gateway.rpc.IRPCGateway
 import com.nextgenbroadcast.mobile.middleware.rpc.notification.NotificationType
 import com.nextgenbroadcast.mobile.middleware.rpc.processor.IRPCProcessor
 import com.nextgenbroadcast.mobile.middleware.rpc.processor.RPCProcessor
+import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.AlertingRpcResponse
 import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.ServiceGuideUrlsRpcResponse
 import com.nextgenbroadcast.mobile.middleware.server.ws.MiddlewareWebSocket
 import org.junit.Assert.*
@@ -83,6 +84,10 @@ class RPCProcessorTest {
             }
 
             override fun requestServiceChange(globalServiceId: String): Boolean {
+                TODO("Not yet implemented")
+            }
+
+            override fun getAlertChangingData(alertingTypes: List<String>): List<AlertingRpcResponse.Alert> {
                 TODO("Not yet implemented")
             }
         })

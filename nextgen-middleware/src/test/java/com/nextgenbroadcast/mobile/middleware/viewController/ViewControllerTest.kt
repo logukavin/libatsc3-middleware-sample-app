@@ -2,7 +2,6 @@ package com.nextgenbroadcast.mobile.middleware.viewController
 
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import androidx.core.net.toUri
-import androidx.lifecycle.*
 import com.nextgenbroadcast.mobile.core.atsc3.MediaUrl
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
@@ -18,21 +17,29 @@ import com.nextgenbroadcast.mobile.middleware.repository.IRepository
 import com.nextgenbroadcast.mobile.middleware.service.provider.IMediaFileProvider
 import com.nextgenbroadcast.mobile.middleware.settings.IClientSettings
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.test.TestCoroutineDispatcher
+import kotlinx.coroutines.test.TestCoroutineScope
+import kotlinx.coroutines.test.runBlockingTest
+import kotlinx.coroutines.test.setMain
 import org.junit.*
 import org.junit.rules.TestRule
 import org.junit.runner.RunWith
 import org.mockito.Mock
 import org.mockito.Mockito
-import org.mockito.Mockito.mock
 import org.mockito.Mockito.verify
 import org.powermock.core.classloader.annotations.PrepareForTest
 import org.powermock.modules.junit4.PowerMockRunner
-import java.util.*
 
+@ExperimentalCoroutinesApi
 @RunWith(PowerMockRunner::class)
 @PrepareForTest(ViewControllerImpl::class, IRepository::class, IClientSettings::class, IMediaFileProvider::class, IAtsc3Analytics::class, PlayerStateRegistry::class, IObservablePlayer.IPlayerStateListener::class)
 class ViewControllerTest {
+
+    private val testDispatcher = TestCoroutineDispatcher()
+    private val testScope = TestCoroutineScope()
 
     private lateinit var viewController: ViewControllerImpl
 
@@ -63,18 +70,16 @@ class ViewControllerTest {
     private val serviceId = 5003
     private val mockedAVService: AVService = AVService(bsid, serviceId, "WZTV", "tag:sinclairplatform.com,2020:WZTV:2727", 22, 1, 0, false)
     private val mockedMediaUrl = MediaUrl(mockUrl, bsid, serviceId)
-    private var mockRouteMediaUrl: MutableLiveData<MediaUrl?> = MutableLiveData()
-    private val heldPackage: LiveData<Atsc3HeldPackage?> = MutableLiveData()
-    private val applications: LiveData<List<Atsc3Application>?> = MutableLiveData()
-    private var selectedService: MutableLiveData<AVService?> = MutableLiveData()
+    private var mockRouteMediaUrl: StateFlow<MediaUrl?> = MutableStateFlow(mockedMediaUrl)
+    private val heldPackage: StateFlow<Atsc3HeldPackage?> = MutableStateFlow(null)
+    private val applications: StateFlow<List<Atsc3Application>> = MutableStateFlow(emptyList())
+    private var selectedService: StateFlow<AVService?> = MutableStateFlow(null)
 
     @Mock
     private lateinit var callback: IObservablePlayer.IPlayerStateListener
 
     @Before
     fun initController() {
-        mockRouteMediaUrl.value = mockedMediaUrl
-
         Mockito.`when`(repository.heldPackage).thenReturn(heldPackage)
         Mockito.`when`(repository.applications).thenReturn(applications)
         Mockito.`when`(repository.selectedService).thenReturn(selectedService)
@@ -83,19 +88,18 @@ class ViewControllerTest {
         Mockito.`when`(repository.findServiceBy(bsid, serviceId)).thenReturn(mockedAVService)
         Mockito.`when`(mediaFileProvider.getMediaFileUri(mockUrl)).thenReturn(mockUrl.toUri())
 
-        viewController = ViewControllerImpl(repository, settings, mediaFileProvider, analytics, true).apply {
-            start(mockLifecycleOwner())
+        viewController = ViewControllerImpl(repository, settings, mediaFileProvider, analytics, testScope, TestCoroutineScope(testDispatcher)).apply {
+            addOnPlayerSateChangedCallback(callback)
         }
 
-        viewController.addOnPlayerSateChangedCallback(callback)
+        Dispatchers.setMain(testDispatcher)
     }
 
-    private fun mockLifecycleOwner(): LifecycleOwner {
-        val ownerMock: LifecycleOwner = mock(LifecycleOwner::class.java)
-        val lifecycle = LifecycleRegistry(ownerMock)
-        lifecycle.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
-        Mockito.`when`(ownerMock.lifecycle).thenReturn(lifecycle)
-        return ownerMock
+    @After
+    fun cleanUp() {
+        viewController.removeOnPlayerSateChangedCallback(callback)
+        testDispatcher.cleanupTestCoroutines()
+        testScope.cleanupTestCoroutines()
     }
 
     @Test
@@ -104,21 +108,21 @@ class ViewControllerTest {
     }
 
     @Test
-    fun testSetApplicationState() {
+    fun testSetApplicationState() = testScope.runBlockingTest {
         viewController.setApplicationState(ApplicationState.LOADED)
 
         Assert.assertEquals(ApplicationState.LOADED, viewController.appState.value)
     }
 
     @Test
-    fun testRmpLayoutReset() {
+    fun testRmpLayoutReset() = testScope.runBlockingTest {
         viewController.rmpLayoutReset()
 
         Assert.assertEquals(RPMParams(), viewController.rmpLayoutParams.value)
     }
 
     @Test
-    fun testRmpPlaybackChangedToPlaying() {
+    fun testRmpPlaybackChangedToPlaying() = testScope.runBlockingTest {
         viewController.rmpPlaybackChanged(PlaybackState.PLAYING)
 
         Assert.assertEquals(PlaybackState.PLAYING, viewController.rmpState.value)
@@ -127,7 +131,7 @@ class ViewControllerTest {
     }
 
     @Test
-    fun testRmpPlaybackChangedToIdle() {
+    fun testRmpPlaybackChangedToIdle() = testScope.runBlockingTest {
         viewController.rmpPlaybackChanged(PlaybackState.IDLE)
 
         Assert.assertEquals(PlaybackState.IDLE, viewController.rmpState.value)
@@ -136,7 +140,7 @@ class ViewControllerTest {
     }
 
     @Test
-    fun testRmpPlaybackChangedToPaused() {
+    fun testRmpPlaybackChangedToPaused() = testScope.runBlockingTest {
         viewController.rmpPlaybackChanged(PlaybackState.PAUSED)
 
         Assert.assertEquals(PlaybackState.PAUSED, viewController.rmpState.value)
@@ -148,14 +152,14 @@ class ViewControllerTest {
     fun testNotifyPause() {
         viewController.rmpPause()
 
-        verify(callback).onPause(viewController)
+        verify(callback).onPause(null)
     }
 
     @Test
     fun testNotifyResume() {
         viewController.rmpResume()
 
-        verify(callback).onResume(viewController)
+        verify(callback).onResume(null)
     }
 
     @Test
@@ -174,7 +178,7 @@ class ViewControllerTest {
     }
 
     @Test
-    fun testRmpMediaTimeChanged() {
+    fun testRmpMediaTimeChanged() = testScope.runBlockingTest {
         val currentTime = 1000L
         viewController.rmpMediaTimeChanged(currentTime)
 
@@ -185,22 +189,17 @@ class ViewControllerTest {
     fun testRequestMediaPlayMediaUrlNotNull() {
         viewController.requestMediaPlay(mockUrl, 1000L)
 
-        verify(callback).onPause(viewController)
+        verify(callback).onPause(null)
 
         //TODO: Should I check rmpMediaUri here?
 
-        verify(callback).onResume(viewController)
+        verify(callback).onResume(null)
     }
 
     @Test
     fun testRequestMediaStop() {
         viewController.requestMediaStop(1000L)
 
-        verify(callback).onPause(viewController)
-    }
-
-    @After
-    fun cleanUp() {
-        viewController.removeOnPlayerSateChangedCallback(callback)
+        verify(callback).onPause(null)
     }
 }
