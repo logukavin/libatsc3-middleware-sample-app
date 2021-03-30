@@ -13,7 +13,7 @@ enum class PlaybackState(
     IDLE(2);
 
     companion object {
-        fun valueOf(state: Int): PlaybackState? {
+        fun valueOf(state: Int): PlaybackState {
             return values().first { it.state == state }
         }
     }

@@ -1,24 +1,16 @@
-package com.nextgenbroadcast.mobile.middleware.atsc3.core
+package com.nextgenbroadcast.mobile.middleware
 
-import android.annotation.SuppressLint
-import android.content.Context
-import android.os.Handler
-import android.os.Looper
-import android.util.Log
 import android.widget.Toast
-import com.nextgenbroadcast.mobile.core.cert.UserAgentSSLContext
+import com.nextgenbroadcast.mobile.core.cert.IUserAgentSSLContext
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.PhyFrequency
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.presentation.*
-import com.nextgenbroadcast.mobile.middleware.analytics.Atsc3Analytics
 import com.nextgenbroadcast.mobile.middleware.analytics.IAtsc3Analytics
 import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3Module
 import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3ModuleState
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.IServiceGuideStore
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.ServiceGuideDeliveryUnitReader
-import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.db.RoomServiceGuideStore
-import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.db.SGDataBase
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.IAtsc3Source
 import com.nextgenbroadcast.mobile.middleware.cache.ApplicationCache
 import com.nextgenbroadcast.mobile.middleware.cache.IDownloadManager
@@ -31,28 +23,21 @@ import com.nextgenbroadcast.mobile.middleware.gateway.rpc.RPCGatewayImpl
 import com.nextgenbroadcast.mobile.middleware.gateway.web.IWebGateway
 import com.nextgenbroadcast.mobile.middleware.gateway.web.WebGatewayImpl
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
-import com.nextgenbroadcast.mobile.middleware.repository.RepositoryImpl
 import com.nextgenbroadcast.mobile.middleware.server.web.MiddlewareWebServer
-import com.nextgenbroadcast.mobile.middleware.service.init.FrequencyInitializer
-import com.nextgenbroadcast.mobile.middleware.service.init.IServiceInitializer
-import com.nextgenbroadcast.mobile.middleware.service.init.OnboardPhyInitializer
-import com.nextgenbroadcast.mobile.middleware.service.init.UsbPhyInitializer
 import com.nextgenbroadcast.mobile.middleware.service.provider.IMediaFileProvider
-import com.nextgenbroadcast.mobile.middleware.service.provider.MediaFileProvider
-import com.nextgenbroadcast.mobile.middleware.service.provider.esgProvider.ESGContentAuthority
 import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
-import com.nextgenbroadcast.mobile.middleware.settings.MiddlewareSettingsImpl
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collect
-import java.lang.ref.WeakReference
 
-internal class Atsc3ReceiverCore private constructor(
-        private val context: Context,
+internal class Atsc3ReceiverCore(
         private val atsc3Module: Atsc3Module,
-        private val settings: IMiddlewareSettings,
+        val settings: IMiddlewareSettings,
         val repository: IRepository,
         private val serviceGuideStore: IServiceGuideStore,
-        private val analytics: IAtsc3Analytics
+        val mediaFileProvider: IMediaFileProvider,
+        private val sslContext: IUserAgentSSLContext,
+        private val analytics: IAtsc3Analytics,
+        private val onError: ((message: String) -> Unit)? = null
 ) : IAtsc3ServiceCore {
     //TODO: create own scope?
     private val coreScope: CoroutineScope = CoroutineScope(Dispatchers.Default)
@@ -60,7 +45,7 @@ internal class Atsc3ReceiverCore private constructor(
 
     //TODO: we should close this instances
     private val serviceGuideReader = ServiceGuideDeliveryUnitReader(serviceGuideStore)
-    val serviceController: IServiceController = ServiceControllerImpl(repository, settings, atsc3Module, analytics, serviceGuideReader, coreScope, ::onError)
+    val serviceController: IServiceController = ServiceControllerImpl(repository, settings, atsc3Module, analytics, serviceGuideReader, coreScope, onError)
     var viewController: IViewController? = null
         private set
     var ignoreAudioServiceMedia: Boolean = true
@@ -69,23 +54,8 @@ internal class Atsc3ReceiverCore private constructor(
     private var webGateway: IWebGateway? = null
     private var rpcGateway: IRPCGateway? = null
     private var webServer: MiddlewareWebServer? = null
-    val mediaFileProvider: IMediaFileProvider by lazy {
-        MediaFileProvider(context)
-    }
-
-    private val initializer = ArrayList<WeakReference<IServiceInitializer>>()
-
-    init {
-        serviceGuideStore.subscribe {
-            context.contentResolver.notifyChange(ESGContentAuthority.getServiceContentUri(context), null)
-        }
-    }
 
     fun deInitialize() {
-        initializer.forEach { ref ->
-            ref.get()?.cancel()
-        }
-
         stopAndDestroyViewPresentation()
         atsc3Module.close()
 
@@ -93,29 +63,8 @@ internal class Atsc3ReceiverCore private constructor(
         // coreScope.cancel()
     }
 
-    fun initialize(components: Map<Class<*>, Pair<Int, String>>, requestForeground: () -> Unit) {
-        try {
-            FrequencyInitializer(settings, this).also {
-                initializer.add(WeakReference(it))
-            }.initialize(context, components)
-
-            // Do not re-open the libatsc3 if it's already opened
-            if (atsc3Module.getState() != Atsc3ModuleState.IDLE) return
-
-            val phyInitializer = OnboardPhyInitializer(this).also {
-                initializer.add(WeakReference(it))
-            }
-
-            if (phyInitializer.initialize(context, components)) {
-                requestForeground()
-            } else {
-                UsbPhyInitializer().also {
-                    initializer.add(WeakReference(it))
-                }.initialize(context, components)
-            }
-        } catch (e: Exception) {
-            Log.d(TAG, "Can't initialize, something is wrong in metadata", e)
-        }
+    fun isIdle(): Boolean {
+        return atsc3Module.getState() == Atsc3ModuleState.IDLE
     }
 
     fun createAndStartViewPresentation(downloadManager: IDownloadManager, ignoreAudioServiceMedia: Boolean,
@@ -200,7 +149,7 @@ internal class Atsc3ReceiverCore private constructor(
                 .webGateway(web)
                 .build().also { server ->
                     GlobalScope.launch {
-                        server.start(UserAgentSSLContext(context))
+                        server.start(sslContext)
                         viewController?.onNewSessionStarted() // used to rebuild data related to server
                     }
                 }
@@ -242,13 +191,6 @@ internal class Atsc3ReceiverCore private constructor(
         return serviceController.receiverState.value
     }
 
-    private fun onError(message: String) {
-        //super hack activity.runOnUiThread() {
-        Handler(Looper.getMainLooper()).post {
-            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-        }
-    }
-
     fun getNextService() = serviceController.getNearbyService(1)
 
     fun getPreviousService() = serviceController.getNearbyService(-1)
@@ -259,34 +201,5 @@ internal class Atsc3ReceiverCore private constructor(
 
     fun findActiveServiceById(serviceId: Int): AVService? {
         return findServiceBy(atsc3Module.selectedServiceBsid, serviceId)
-    }
-
-    companion object {
-        val TAG: String = Atsc3ReceiverCore::class.java.simpleName
-
-        @SuppressLint("StaticFieldLeak")
-        @Volatile
-        private var INSTANCE: Atsc3ReceiverCore? = null
-
-        @JvmStatic
-        fun getInstance(context: Context): Atsc3ReceiverCore {
-            val appContext = context.applicationContext
-
-            val instance = INSTANCE
-            return instance ?: synchronized(this) {
-                val instance2 = INSTANCE
-                instance2 ?: let {
-                    val settings = MiddlewareSettingsImpl.getInstance(appContext)
-                    val repository = RepositoryImpl()
-                    val serviceGuideStore = RoomServiceGuideStore(SGDataBase.getDatabase(appContext))
-                    val atsc3Module = Atsc3Module(appContext.cacheDir)
-                    val analytics = Atsc3Analytics.getInstance(appContext, settings)
-
-                    Atsc3ReceiverCore(appContext, atsc3Module, settings, repository, serviceGuideStore, analytics).also {
-                        INSTANCE = it
-                    }
-                }
-            }
-        }
     }
 }
