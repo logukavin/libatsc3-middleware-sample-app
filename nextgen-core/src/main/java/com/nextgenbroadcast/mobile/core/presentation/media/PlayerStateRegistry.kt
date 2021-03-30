@@ -1,6 +1,5 @@
 package com.nextgenbroadcast.mobile.core.presentation.media
 
-import androidx.databinding.CallbackRegistry
 import com.nextgenbroadcast.mobile.core.presentation.IMediaPlayerPresenter
 
 class PlayerStateRegistry : CallbackRegistry<IObservablePlayer.IPlayerStateListener, IMediaPlayerPresenter, Any>(

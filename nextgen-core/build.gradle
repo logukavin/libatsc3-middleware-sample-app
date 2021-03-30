@@ -31,11 +31,6 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
-
-    //TODO: refactor PlayerStateRegistry to remove
-    buildFeatures {
-        dataBinding = true
-    }
 }
 
 def coroutinesVersion = rootProject.ext.coroutinesVersion
