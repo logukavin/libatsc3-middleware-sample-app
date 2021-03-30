@@ -32,6 +32,18 @@ abstract class BaseActivity : AppCompatActivity() {
         )
     }
 
+    override fun onStart() {
+        super.onStart()
+
+        mediaBrowser.connect()
+    }
+
+    override fun onStop() {
+        super.onStop()
+
+        mediaBrowser.disconnect()
+    }
+
     fun bindService() {
         if (isBound) return
 
@@ -41,14 +53,10 @@ abstract class BaseActivity : AppCompatActivity() {
         }.also { intent ->
             bindService(intent, connection, BIND_AUTO_CREATE)
         }
-
-        mediaBrowser.connect()
     }
 
     fun unbindService() {
         if (!isBound) return
-
-        mediaBrowser.disconnect()
 
         unbindService(connection)
 
