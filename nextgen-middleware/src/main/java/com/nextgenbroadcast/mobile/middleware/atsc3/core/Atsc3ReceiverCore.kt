@@ -1,12 +1,11 @@
 package com.nextgenbroadcast.mobile.middleware.atsc3.core
 
+import android.annotation.SuppressLint
 import android.content.Context
-import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import android.widget.Toast
-import androidx.lifecycle.LifecycleOwner
 import com.nextgenbroadcast.mobile.core.cert.UserAgentSSLContext
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.PhyFrequency
@@ -34,7 +33,6 @@ import com.nextgenbroadcast.mobile.middleware.gateway.web.WebGatewayImpl
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
 import com.nextgenbroadcast.mobile.middleware.repository.RepositoryImpl
 import com.nextgenbroadcast.mobile.middleware.server.web.MiddlewareWebServer
-import com.nextgenbroadcast.mobile.middleware.service.Atsc3ForegroundService
 import com.nextgenbroadcast.mobile.middleware.service.init.FrequencyInitializer
 import com.nextgenbroadcast.mobile.middleware.service.init.IServiceInitializer
 import com.nextgenbroadcast.mobile.middleware.service.init.OnboardPhyInitializer
@@ -44,20 +42,25 @@ import com.nextgenbroadcast.mobile.middleware.service.provider.MediaFileProvider
 import com.nextgenbroadcast.mobile.middleware.service.provider.esgProvider.ESGContentAuthority
 import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
 import com.nextgenbroadcast.mobile.middleware.settings.MiddlewareSettingsImpl
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.collect
 import java.lang.ref.WeakReference
 
 internal class Atsc3ReceiverCore private constructor(
         private val context: Context,
         private val atsc3Module: Atsc3Module,
         private val settings: IMiddlewareSettings,
-        private val repository: IRepository,
+        val repository: IRepository,
         private val serviceGuideStore: IServiceGuideStore,
         private val analytics: IAtsc3Analytics
 ) : IAtsc3ServiceCore {
+    //TODO: create own scope?
+    private val coreScope: CoroutineScope = CoroutineScope(Dispatchers.Default)
+    private var viewScope: CoroutineScope? = null
+
     //TODO: we should close this instances
     private val serviceGuideReader = ServiceGuideDeliveryUnitReader(serviceGuideStore)
-    val serviceController: IServiceController = ServiceControllerImpl(repository, settings, atsc3Module, analytics, serviceGuideReader, Dispatchers.IO, ::onError)
+    val serviceController: IServiceController = ServiceControllerImpl(repository, settings, atsc3Module, analytics, serviceGuideReader, coreScope, ::onError)
     var viewController: IViewController? = null
         private set
     var ignoreAudioServiceMedia: Boolean = true
@@ -85,6 +88,9 @@ internal class Atsc3ReceiverCore private constructor(
 
         stopAndDestroyViewPresentation()
         atsc3Module.close()
+
+        // this instance wouldn't be destroyed so do not finish local scope
+        // coreScope.cancel()
     }
 
     fun initialize(components: Map<Class<*>, Pair<Int, String>>, requestForeground: () -> Unit) {
@@ -108,69 +114,107 @@ internal class Atsc3ReceiverCore private constructor(
                 }.initialize(context, components)
             }
         } catch (e: Exception) {
-            Log.d(Atsc3ForegroundService.TAG, "Can't initialize, something is wrong in metadata", e)
+            Log.d(TAG, "Can't initialize, something is wrong in metadata", e)
         }
     }
 
-    fun createAndStartViewPresentation(downloadManager: IDownloadManager, lifecycleOwner: LifecycleOwner, ignoreAudioServiceMedia: Boolean): IViewController {
+    fun createAndStartViewPresentation(downloadManager: IDownloadManager, ignoreAudioServiceMedia: Boolean,
+                                       onObserve: (view: IViewController, viewScope: CoroutineScope) -> Unit): IViewController {
         this.ignoreAudioServiceMedia = ignoreAudioServiceMedia
+
+        internalDestroyViewPresentation()
+
+        val stateScope = CoroutineScope(Dispatchers.Default).also {
+            viewScope = it
+        }
 
         val appCache = ApplicationCache(atsc3Module.jni_getCacheDir(), downloadManager)
 
-        val view = ViewControllerImpl(repository, settings, mediaFileProvider, analytics, ignoreAudioServiceMedia).apply {
-            start(lifecycleOwner)
-        }.also {
+        val view = ViewControllerImpl(repository, settings, mediaFileProvider, analytics, stateScope).also {
             viewController = it
         }
-        val web = WebGatewayImpl(serviceController, repository, settings).also {
+        val web = WebGatewayImpl(serviceController, settings).also {
             webGateway = it
         }
-        val rpc = RPCGatewayImpl(view, serviceController, appCache, settings).apply {
-            start(lifecycleOwner)
-        }.also {
+        val rpc = RPCGatewayImpl(view, serviceController, appCache, settings, stateScope).also {
             rpcGateway = it
         }
 
-        view.appState.observe(lifecycleOwner) { appState ->
-            when (appState) {
-                ApplicationState.OPENED -> analytics.startApplicationSession()
-                ApplicationState.LOADED,
-                ApplicationState.UNAVAILABLE -> analytics.finishApplicationSession()
-                else -> {
-                    // ignore
+        //TODO: Analytics should listen to ViewController and not vice versa
+        stateScope.launch {
+            view.appState.collect { appState ->
+                when (appState) {
+                    ApplicationState.OPENED -> analytics.startApplicationSession()
+                    ApplicationState.LOADED,
+                    ApplicationState.UNAVAILABLE -> analytics.finishApplicationSession()
+                    else -> {
+                        // ignore
+                    }
                 }
             }
         }
 
-        startWebServer(rpc, web)
+        onObserve(view, stateScope)
+
+        startWebServer(rpc, web, stateScope)
 
         return view
     }
 
-    fun stopAndDestroyViewPresentation() {
+    fun suspendViewPresentation() {
         stopWebServer()
+    }
 
+    fun resumeViewPresentation() {
+        if (webServer != null) return
+
+        val rpc = rpcGateway ?: return
+        val web = webGateway ?: return
+        val stateScope = viewScope ?: return
+
+        stateScope.launch {
+            viewController?.appData?.collect()
+        }
+
+        startWebServer(rpc, web, stateScope)
+    }
+
+    private fun stopAndDestroyViewPresentation() {
+        suspendViewPresentation()
+        internalDestroyViewPresentation()
+    }
+
+    private fun internalDestroyViewPresentation() {
         webGateway = null
         rpcGateway = null
         viewController = null
+
+        viewScope?.cancel()
+        viewScope = null
     }
 
-    private fun startWebServer(rpc: IRPCGateway, web: IWebGateway) {
+    private fun startWebServer(rpc: IRPCGateway, web: IWebGateway, stateScope: CoroutineScope) {
         webServer = MiddlewareWebServer.Builder()
+                .stateScope(stateScope)
                 .rpcGateway(rpc)
                 .webGateway(web)
-                .build().also {
-                    it.start(UserAgentSSLContext(context))
+                .build().also { server ->
+                    GlobalScope.launch {
+                        server.start(UserAgentSSLContext(context))
+                        viewController?.onNewSessionStarted() // used to rebuild data related to server
+                    }
                 }
     }
 
     private fun stopWebServer() {
         webServer?.let { server ->
             if (server.isRunning()) {
-                try {
-                    server.stop()
-                } catch (e: Exception) {
-                    e.printStackTrace()
+                GlobalScope.launch {
+                    try {
+                        server.stop()
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
                 }
             }
         }
@@ -195,7 +239,7 @@ internal class Atsc3ReceiverCore private constructor(
     }
 
     override fun getReceiverState(): ReceiverState {
-        return serviceController.receiverState.value ?: ReceiverState.idle()
+        return serviceController.receiverState.value
     }
 
     private fun onError(message: String) {
@@ -218,6 +262,9 @@ internal class Atsc3ReceiverCore private constructor(
     }
 
     companion object {
+        val TAG: String = Atsc3ReceiverCore::class.java.simpleName
+
+        @SuppressLint("StaticFieldLeak")
         @Volatile
         private var INSTANCE: Atsc3ReceiverCore? = null
 

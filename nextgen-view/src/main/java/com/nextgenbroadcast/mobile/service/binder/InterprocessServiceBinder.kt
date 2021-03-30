@@ -3,7 +3,6 @@ package com.nextgenbroadcast.mobile.service.binder
 import android.net.Uri
 import android.os.*
 import androidx.core.os.bundleOf
-import androidx.lifecycle.MutableLiveData
 import com.nextgenbroadcast.mobile.core.model.*
 import com.nextgenbroadcast.mobile.core.presentation.*
 import com.nextgenbroadcast.mobile.core.presentation.media.IObservablePlayer
@@ -11,6 +10,7 @@ import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
 import com.nextgenbroadcast.mobile.core.presentation.IReceiverPresenter
 import com.nextgenbroadcast.mobile.service.handler.StandaloneClientHandler
 import com.nextgenbroadcast.mobile.service.handler.OnIncomingPlayerStateListener
+import kotlinx.coroutines.flow.MutableStateFlow
 
 class InterprocessServiceBinder(
         service: IBinder
@@ -19,8 +19,8 @@ class InterprocessServiceBinder(
     private var playerStateListener: IObservablePlayer.IPlayerStateListener? = null
 
     inner class SelectorPresenter : ISelectorPresenter {
-        override val sltServices = MutableLiveData<List<AVService>>()
-        override val selectedService = MutableLiveData<AVService?>()
+        override val sltServices = MutableStateFlow<List<AVService>>(emptyList())
+        override val selectedService = MutableStateFlow<AVService?>(null)
 
         override fun selectService(service: AVService): Boolean {
             sendAction(IServiceBinder.ACTION_SELECT_SERVICE, bundleOf(
@@ -31,8 +31,8 @@ class InterprocessServiceBinder(
     }
 
     inner class ReceiverPresenter : IReceiverPresenter {
-        override val receiverState = MutableLiveData<ReceiverState>()
-        override val freqKhz = MutableLiveData<Int>()
+        override val receiverState = MutableStateFlow(ReceiverState.idle())
+        override val freqKhz = MutableStateFlow(0)
 
         override fun openRoute(path: String): Boolean {
             sendAction(IServiceBinder.ACTION_OPEN_ROUTE, bundleOf(
@@ -53,8 +53,8 @@ class InterprocessServiceBinder(
     }
 
     inner class UserAgentPresenter : IUserAgentPresenter {
-        override val appData = MutableLiveData<AppData?>()
-        override val appState = MutableLiveData<ApplicationState>()
+        override val appData = MutableStateFlow<AppData?>(null)
+        override val appState = MutableStateFlow(ApplicationState.UNAVAILABLE)
 
         override fun setApplicationState(state: ApplicationState) {
             sendAction(IServiceBinder.ACTION_BA_STATE_CHANGED, bundleOf(
@@ -64,8 +64,8 @@ class InterprocessServiceBinder(
     }
 
     inner class MediaPlayerPresenter : IMediaPlayerPresenter {
-        override val rmpLayoutParams = MutableLiveData<RPMParams>()
-        override val rmpMediaUri = MutableLiveData<Uri?>()
+        override val rmpLayoutParams = MutableStateFlow(RPMParams())
+        override val rmpMediaUri = MutableStateFlow<Uri?>(null)
 
         override fun rmpLayoutReset() {
             sendAction(IServiceBinder.ACTION_RMP_LAYOUT_RESET)
@@ -127,7 +127,7 @@ class InterprocessServiceBinder(
     ))
 
     init {
-        sendAction(IServiceBinder.LIVEDATA_ALL)
+        sendAction(IServiceBinder.TYPE_ALL)
     }
 
     fun close() {

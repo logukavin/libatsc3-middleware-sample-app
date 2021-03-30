@@ -38,14 +38,13 @@ android {
     }
 }
 
-def coreKtxVersion = rootProject.ext.coreKtxVersion
+def coroutinesVersion = rootProject.ext.coroutinesVersion
 
 dependencies {
     implementation fileTree(dir: "libs", include: ["*.jar"])
 
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
-    implementation "androidx.core:core-ktx:$coreKtxVersion"
-    implementation 'androidx.appcompat:appcompat:1.2.0'
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:$coroutinesVersion"
 }
 
 apply from: '../publish.gradle'

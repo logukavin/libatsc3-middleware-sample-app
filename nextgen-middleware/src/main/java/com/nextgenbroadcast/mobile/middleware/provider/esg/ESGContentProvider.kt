@@ -5,16 +5,13 @@ import android.content.ContentValues
 import android.content.UriMatcher
 import android.database.Cursor
 import android.net.Uri
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleOwner
-import androidx.lifecycle.LifecycleRegistry
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.db.SGDataBase
 import com.nextgenbroadcast.mobile.middleware.service.provider.esgProvider.ESGContentAuthority
 import java.lang.Integer.parseInt
 import java.util.*
 
 
-class ESGContentProvider : ContentProvider(), LifecycleOwner {
+class ESGContentProvider : ContentProvider() {
 
     private lateinit var AUTHORITY: String
     private lateinit var SERVICE_CONTENT_URI: Uri
@@ -24,7 +21,6 @@ class ESGContentProvider : ContentProvider(), LifecycleOwner {
     private lateinit var PROGRAMS_CONTENT_TYPE: String
     private lateinit var PROGRAM_CONTENT_ITEM_TYPE: String
 
-    private val lifecycleRegistry = LifecycleRegistry(this)
     private val uriMatcher = UriMatcher(UriMatcher.NO_MATCH)
 
     private lateinit var db: SGDataBase
@@ -35,10 +31,6 @@ class ESGContentProvider : ContentProvider(), LifecycleOwner {
 
         uriMatcher.addURI(AUTHORITY, "$PROGRAM_CONTENT_PATH/#", URI_PROGRAM_BY_ID)
         uriMatcher.addURI(AUTHORITY, PROGRAM_CONTENT_PATH, URI_ALL_PROGRAMS)
-    }
-
-    override fun getLifecycle(): Lifecycle {
-        return lifecycleRegistry
     }
 
     override fun onCreate(): Boolean {
@@ -53,9 +45,6 @@ class ESGContentProvider : ContentProvider(), LifecycleOwner {
 
         PROGRAMS_CONTENT_TYPE = ("vnd.android.cursor.dir/vnd.$AUTHORITY.$PROGRAM_CONTENT_PATH")
         PROGRAM_CONTENT_ITEM_TYPE = ("vnd.android.cursor.item/vnd.$AUTHORITY.$PROGRAM_CONTENT_PATH")
-
-        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
-        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_START)
 
         initializeUriMatching()
 
@@ -131,13 +120,6 @@ class ESGContentProvider : ContentProvider(), LifecycleOwner {
 
     override fun delete(p0: Uri, p1: String?, p2: Array<out String>?): Int {
         throw UnsupportedOperationException()
-    }
-
-    override fun shutdown() {
-        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
-        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
-
-        super.shutdown()
     }
 
     companion object {

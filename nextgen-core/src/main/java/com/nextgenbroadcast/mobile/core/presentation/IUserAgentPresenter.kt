@@ -1,11 +1,11 @@
 package com.nextgenbroadcast.mobile.core.presentation
 
-import androidx.lifecycle.LiveData
 import com.nextgenbroadcast.mobile.core.model.AppData
+import kotlinx.coroutines.flow.StateFlow
 
 interface IUserAgentPresenter {
-    val appData: LiveData<AppData?>
-    val appState: LiveData<ApplicationState>
+    val appData: StateFlow<AppData?>
+    val appState: StateFlow<ApplicationState>
 
     fun setApplicationState(state: ApplicationState)
 }
