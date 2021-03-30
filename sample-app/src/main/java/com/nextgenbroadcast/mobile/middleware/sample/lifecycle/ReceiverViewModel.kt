@@ -20,7 +20,7 @@ class ReceiverViewModel(
     private val _appDataLog = MediatorLiveData<CharSequence>()
 
     val appDataLog: LiveData<CharSequence> = _appDataLog
-    val stateDescription = presenter.receiverState.map { receiverState ->
+    val stateDescription = presenter.receiverState.asLiveData().map { receiverState ->
         when(receiverState.state) {
             ReceiverState.State.IDLE -> {
                 application.getString(R.string.receiver_status_idle)
@@ -37,10 +37,10 @@ class ReceiverViewModel(
     }
 
     init {
-        _appDataLog.addSource(agentPresenter.appData) { data ->
+        _appDataLog.addSource(agentPresenter.appData.asLiveData()) { data ->
             _appDataLog.value = formatLog(data, playerPresenter.rmpMediaUri.value?.toString())
         }
-        _appDataLog.addSource(playerPresenter.rmpMediaUri) { uri ->
+        _appDataLog.addSource(playerPresenter.rmpMediaUri.asLiveData()) { uri ->
             _appDataLog.value = formatLog(agentPresenter.appData.value, uri?.toString())
         }
     }

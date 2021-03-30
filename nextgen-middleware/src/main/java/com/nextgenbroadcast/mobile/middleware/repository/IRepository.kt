@@ -1,28 +1,26 @@
 package com.nextgenbroadcast.mobile.middleware.repository
 
-import androidx.lifecycle.LiveData
 import com.nextgenbroadcast.mobile.core.atsc3.MediaUrl
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.alerts.AeaTable
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPackage
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.SGUrl
+import kotlinx.coroutines.flow.StateFlow
 
-//TODO: get rid of LiveData here
 internal interface IRepository {
     // Receiver
-    val selectedService: LiveData<AVService?>
-    val serviceGuideUrls: LiveData<List<SGUrl>?>
+    val selectedService: StateFlow<AVService?>
+    val serviceGuideUrls: StateFlow<List<SGUrl>>
+    val alertsForNotify: StateFlow<List<AeaTable>>
 
     // Media Player
-    val routeMediaUrl: LiveData<MediaUrl?>
+    val routeMediaUrl: StateFlow<MediaUrl?>
 
     // User Agent
-    val applications: LiveData<List<Atsc3Application>?>
-    val services: LiveData<List<AVService>>
-    val heldPackage: LiveData<Atsc3HeldPackage?>
-
-    val alertsForNotify: LiveData<List<AeaTable>>
+    val applications: StateFlow<List<Atsc3Application>>
+    val services: StateFlow<List<AVService>>
+    val heldPackage: StateFlow<Atsc3HeldPackage?>
 
     fun addOrUpdateApplication(application: Atsc3Application)
     fun findApplication(appContextId: String): Atsc3Application?

@@ -22,12 +22,12 @@ import androidx.lifecycle.ViewModelProvider
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.nextgenbroadcast.mobile.core.FileUtils
 import com.nextgenbroadcast.mobile.core.atsc3.phy.PHYStatistics
-import com.nextgenbroadcast.mobile.core.mapWith
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.presentation.ApplicationState
 import com.nextgenbroadcast.mobile.middleware.sample.SettingsDialog.Companion.REQUEST_KEY_FREQUENCY
 import com.nextgenbroadcast.mobile.middleware.sample.core.SwipeGestureDetector
+import com.nextgenbroadcast.mobile.middleware.sample.core.mapWith
 import com.nextgenbroadcast.mobile.middleware.sample.databinding.FragmentMainBinding
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.RMPViewModel
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.ReceiverViewModel
@@ -320,6 +320,7 @@ class MainFragment : Fragment() {
     fun onUnbind() {
         binding.receiverModel = null
         receiver_player.unbind()
+        unloadBroadcasterApplication()
 
         rmpViewModel = null
         userAgentViewModel = null
@@ -391,6 +392,7 @@ class MainFragment : Fragment() {
                     receiver_player.play(mediaUri)
                 } else {
                     receiver_player.stop()
+                    receiver_player.clearState()
                 }
             })
             playWhenReady.observe(this@MainFragment, { playWhenReady ->

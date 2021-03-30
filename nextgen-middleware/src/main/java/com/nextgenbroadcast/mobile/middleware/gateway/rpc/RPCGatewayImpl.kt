@@ -1,12 +1,8 @@
 package com.nextgenbroadcast.mobile.middleware.gateway.rpc
 
-import androidx.lifecycle.LifecycleOwner
-import androidx.lifecycle.distinctUntilChanged
-import com.nextgenbroadcast.mobile.core.mapWith
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
-import com.nextgenbroadcast.mobile.core.unite
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.alerts.AeaTable
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3ApplicationFile
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.SGUrl
@@ -21,6 +17,8 @@ import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.Service
 import com.nextgenbroadcast.mobile.middleware.server.ServerUtils
 import com.nextgenbroadcast.mobile.middleware.server.ws.MiddlewareWebSocket
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.combine
 import java.util.concurrent.CopyOnWriteArrayList
 
 internal class RPCGatewayImpl(
@@ -28,7 +26,7 @@ internal class RPCGatewayImpl(
         private val serviceController: IServiceController,
         private val applicationCache: IApplicationCache,
         private val settings: IMiddlewareSettings,
-        private val mainScope: CoroutineScope = CoroutineScope(Dispatchers.Main),
+        private val stateScope: CoroutineScope = CoroutineScope(Dispatchers.Default),
         private val ioScope: CoroutineScope = CoroutineScope(Dispatchers.IO)
 ) : IRPCGateway {
     private val rpcNotifier = RPCNotificationHelper(this::sendNotification)
@@ -43,57 +41,71 @@ internal class RPCGatewayImpl(
     override val advertisingId = settings.advertisingId
     override val language: String = settings.locale.language
     override val queryServiceId: String?
-        get() = serviceController.selectedService.value?.globalId
+        get() = serviceController.getCurrentService()?.globalId
     override val mediaUrl: String?
-        get() = serviceController.routeMediaUrl.value?.url
+        get() = serviceController.getCurrentRouteMediaUrl()?.url
     override val playbackState: PlaybackState
-        get() = viewController.rmpState.value ?: PlaybackState.IDLE
+        get() = viewController.rmpState.value
     private val rmpPlaybackTime: Long
-        get() = viewController.rmpMediaTime.value ?: 0
+        get() = viewController.rmpMediaTime.value
 
     private var currentAppContextId: String? = null
     private var currentServiceId: String? = null
     private var mediaTimeUpdateJob: Job? = null
 
-    fun start(lifecycleOwner: LifecycleOwner) {
-        viewController.appData.distinctUntilChanged().unite(serviceController.selectedService).observe(lifecycleOwner) { (appData, service) ->
-            if (appData != null && service != null) {
-                onAppDataUpdated(appData, service)
+    init {
+        stateScope.launch {
+            viewController.appData.combine(serviceController.selectedService) { appData, service ->
+                Pair(appData, service)
+            }.collect { (appData, service) ->
+                if (appData != null && service != null) {
+                    onAppDataUpdated(appData, service)
+                }
             }
         }
 
-        serviceController.serviceGuideUrls.observe(lifecycleOwner) { urls ->
-            if(!urls.isNullOrEmpty()) {
-                onServiceGuidUrls(urls)
-                serviceGuideUrls.addAll(urls)
+        stateScope.launch {
+            serviceController.serviceGuideUrls.collect { urls ->
+                if (!urls.isNullOrEmpty()) {
+                    onServiceGuidUrls(urls)
+                    serviceGuideUrls.addAll(urls)
+                }
             }
         }
 
-        viewController.appData.mapWith(serviceController.applications) { (appData, applications) ->
-            if (appData != null && applications != null) {
-                applications.filter { app ->
-                    app.cachePath == appData.cachePath
-                }.flatMap { it.files.values }
-            } else {
-                emptyList()
+        stateScope.launch {
+            viewController.appData.combine(serviceController.applications) { appData, applications ->
+                if (appData != null) {
+                    applications.filter { app ->
+                        app.cachePath == appData.cachePath
+                    }.flatMap { it.files.values }
+                } else {
+                    emptyList()
+                }
+            }.collect { applicationFiles ->
+                onApplicationContentChanged(applicationFiles)
             }
-        }.observe(lifecycleOwner) { applicationFiles ->
-            onApplicationContentChanged(applicationFiles)
         }
 
-        viewController.rmpState.distinctUntilChanged().observe(lifecycleOwner) { playbackState ->
-            onRMPPlaybackStateChanged(playbackState)
+        stateScope.launch {
+            viewController.rmpState.collect { playbackState ->
+                onRMPPlaybackStateChanged(playbackState)
+            }
         }
 
-        viewController.rmpPlaybackRate.distinctUntilChanged().observe(lifecycleOwner) { playbackRate ->
-            onRMPPlaybackRateChanged(playbackRate)
+        stateScope.launch {
+            viewController.rmpPlaybackRate.collect { playbackRate ->
+                onRMPPlaybackRateChanged(playbackRate)
+            }
         }
 
-        serviceController.alertList.observe(lifecycleOwner) { list ->
-            if (list.isNotEmpty()) {
-                val result = list.subtract(mergedAlerts).toList()
-                onAlertingChanged(result.mapToRpcAlertList())
-                mergedAlerts = list
+        stateScope.launch {
+            serviceController.alertList.collect { list ->
+                if (list.isNotEmpty()) {
+                    val result = list.subtract(mergedAlerts).toList()
+                    onAlertingChanged(result.mapToRpcAlertList())
+                    mergedAlerts = list
+                }
             }
         }
     }
@@ -117,21 +129,15 @@ internal class RPCGatewayImpl(
     }
 
     override fun updateRMPPosition(scaleFactor: Double, xPos: Double, yPos: Double) {
-        mainScope.launch {
-            viewController.updateRMPPosition(scaleFactor, xPos, yPos)
-        }
+        viewController.updateRMPPosition(scaleFactor, xPos, yPos)
     }
 
     override fun requestMediaPlay(mediaUrl: String?, delay: Long) {
-        mainScope.launch {
-            viewController.requestMediaPlay(mediaUrl, delay)
-        }
+        viewController.requestMediaPlay(mediaUrl, delay)
     }
 
     override fun requestMediaStop(delay: Long) {
-        mainScope.launch {
-            viewController.requestMediaStop(delay)
-        }
+        viewController.requestMediaStop(delay)
     }
 
     override fun subscribeNotifications(notifications: Set<NotificationType>): Set<NotificationType> {
@@ -194,8 +200,7 @@ internal class RPCGatewayImpl(
     }
 
     override fun getAlertChangingData(alertingTypes: List<String>): List<AlertingRpcResponse.Alert> {
-        val rpcAlertList = mergedAlerts.mapToRpcAlertList()
-
+        val rpcAlertList = serviceController.alertList.value.mapToRpcAlertList()
         return if (alertingTypes.isEmpty()) {
             rpcAlertList
         } else {

@@ -12,14 +12,14 @@ interface IServiceBinder {
     val mediaPlayerPresenter: IMediaPlayerPresenter
 
     companion object {
-        const val LIVEDATA_ALL = 1
+        const val TYPE_ALL = 1
 
-        const val LIVEDATA_RECEIVER_STATE = 2
-        const val LIVEDATA_SERVICE_LIST = 3
-        const val LIVEDATA_SERVICE_SELECTED = 4
-        const val LIVEDATA_APPDATA = 5
-        const val LIVEDATA_RMP_LAYOUT_PARAMS = 6
-        const val LIVEDATA_RMP_MEDIA_URI = 7
+        const val TYPE_RECEIVER_STATE = 2
+        const val TYPE_SERVICE_LIST = 3
+        const val TYPE_SERVICE_SELECTED = 4
+        const val TYPE_APPDATA = 5
+        const val TYPE_RMP_LAYOUT_PARAMS = 6
+        const val TYPE_RMP_MEDIA_URI = 7
 
         const val ACTION_OPEN_ROUTE = 8
         const val ACTION_CLOSE_ROUTE = 9

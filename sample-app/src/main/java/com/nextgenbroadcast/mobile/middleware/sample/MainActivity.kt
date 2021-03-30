@@ -9,20 +9,20 @@ import android.content.res.Configuration
 import android.media.session.MediaController
 import android.media.session.MediaSession
 import android.media.session.PlaybackState
-import android.net.Uri
 import android.os.Bundle
-import android.provider.Settings
 import android.support.v4.media.MediaBrowserCompat
 import android.view.View
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.asLiveData
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.ViewViewModel
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.factory.UserAgentViewModelFactory
+import com.nextgenbroadcast.mobile.middleware.service.media.MediaSessionConstants
 import dagger.android.AndroidInjection
 
 
@@ -34,7 +34,7 @@ class MainActivity : BaseActivity() {
     }
 
     override fun onBind(binder: IServiceBinder) {
-        binder.receiverPresenter.receiverState.observe(this, { receiverState ->
+        binder.receiverPresenter.receiverState.asLiveData().observe(this, { receiverState ->
             val state = receiverState?.state
             if (state == null || state == ReceiverState.State.IDLE) {
                 if (isInPictureInPictureMode) {
@@ -159,8 +159,11 @@ class MainActivity : BaseActivity() {
     }
 
     override fun onUserLeaveHint() {
-        if (hasFeaturePIP && (mediaController?.playbackState?.state == PlaybackState.STATE_PLAYING)) {
-            enterPictureInPictureMode(PictureInPictureParams.Builder().build())
+        mediaController?.playbackState?.let { playbackState ->
+            val embedded = playbackState.extras?.getBoolean(MediaSessionConstants.MEDIA_PLAYBACK_EXTRA_EMBEDDED)
+            if (hasFeaturePIP && playbackState.state == PlaybackState.STATE_PLAYING && embedded != true) {
+                enterPictureInPictureMode(PictureInPictureParams.Builder().build())
+            }
         }
     }
 
