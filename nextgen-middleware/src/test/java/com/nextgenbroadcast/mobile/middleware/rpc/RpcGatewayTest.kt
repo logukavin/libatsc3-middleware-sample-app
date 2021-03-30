@@ -1,6 +1,5 @@
 package com.nextgenbroadcast.mobile.middleware.rpc
 
-import android.net.Uri
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import androidx.lifecycle.*
 import com.nextgenbroadcast.mobile.core.model.AVService
@@ -11,7 +10,6 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.SGUrl
 import com.nextgenbroadcast.mobile.middleware.cache.IApplicationCache
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
 import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
-import com.nextgenbroadcast.mobile.middleware.controller.view.ViewControllerImpl
 import com.nextgenbroadcast.mobile.middleware.gateway.rpc.RPCGatewayImpl
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
 import com.nextgenbroadcast.mobile.middleware.rpc.notification.NotificationType
@@ -21,19 +19,19 @@ import com.nextgenbroadcast.mobile.middleware.server.ws.MiddlewareWebSocket
 import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.test.*
-import org.hamcrest.CoreMatchers
 import org.junit.*
 import org.junit.rules.TestRule
 import org.junit.runner.RunWith
-import org.mockito.ArgumentMatchers.anyString
 import org.mockito.Mock
 import org.mockito.Mockito.*
 import org.powermock.api.mockito.PowerMockito
 import org.powermock.core.classloader.annotations.PrepareForTest
 import org.powermock.modules.junit4.PowerMockRunner
 import java.util.*
-import java.util.concurrent.CopyOnWriteArrayList
 
 
 @RunWith(PowerMockRunner::class)
@@ -81,24 +79,20 @@ class RpcGatewayTest {
     private val hostName = "localhost"
     private val hostPost = 8888
 
-    private val applications: LiveData<List<Atsc3Application>?> = MutableLiveData()
-    private val appDataViewController: MutableLiveData<AppData?> = MutableLiveData()
-    private val serviceGuidUrls: MutableLiveData<List<SGUrl>?> = MutableLiveData()
-    private var selectedService: MutableLiveData<AVService?> = MutableLiveData()
-    private val rmpState: LiveData<PlaybackState> = MutableLiveData()
-    private val rmpPlaybackRate: LiveData<Float> = MutableLiveData()
+    private val applications: StateFlow<List<Atsc3Application>> = MutableStateFlow(emptyList())
+    private val appDataViewController: MutableStateFlow<AppData?> = MutableStateFlow(mockedAppData)
+    private val serviceGuidUrls: MutableStateFlow<List<SGUrl>> = MutableStateFlow(mockedServiceGuideUrls)
+    private var selectedService: MutableStateFlow<AVService?> = MutableStateFlow(mockedAVService)
+    private val rmpState: StateFlow<PlaybackState> = MutableStateFlow(PlaybackState.IDLE)
+    private val rmpPlaybackRate: StateFlow<Float> = MutableStateFlow(0f)
 
     @ExperimentalCoroutinesApi
     @Before
     fun initController() {
-        selectedService.value = mockedAVService
-        serviceGuidUrls.value = mockedServiceGuideUrls
-        appDataViewController.value = mockedAppData
-
         `when`(settings.locale).thenReturn(Locale.getDefault())
-        `when`(viewController.appData).thenReturn(appDataViewController)
-        `when`(serviceController.selectedService).thenReturn(selectedService)
-        `when`(serviceController.serviceGuideUrls).thenReturn(serviceGuidUrls)
+        `when`(viewController.appData).thenReturn(appDataViewController.asStateFlow())
+        `when`(serviceController.selectedService).thenReturn(selectedService.asStateFlow())
+        `when`(serviceController.serviceGuideUrls).thenReturn(serviceGuidUrls.asStateFlow())
         `when`(serviceController.applications).thenReturn(applications)
         `when`(viewController.rmpState).thenReturn(rmpState)
         `when`(viewController.rmpPlaybackRate).thenReturn(rmpPlaybackRate)
@@ -108,9 +102,7 @@ class RpcGatewayTest {
         `when`(settings.hostName).thenReturn(hostName)
         `when`(settings.httpsPort).thenReturn(hostPost)
 
-        rpcGateway = RPCGatewayImpl(viewController, serviceController, applicationCache, settings, TestCoroutineScope(testDispatcher), TestCoroutineScope(testDispatcher)).apply {
-            start(mockLifecycleOwner())
-        }
+        rpcGateway = RPCGatewayImpl(viewController, serviceController, applicationCache, settings, TestCoroutineScope(testDispatcher), TestCoroutineScope(testDispatcher))
 
         mockSocket = PowerMockito.spy(MiddlewareWebSocket(rpcGateway))
         rpcGateway.onSocketOpened(mockSocket)
@@ -206,17 +198,16 @@ class RpcGatewayTest {
         selectedService.value = mockedAVService
         serviceGuidUrls.value = mockedServiceGuideUrls
         appDataViewController.value = null
+
         `when`(settings.locale).thenReturn(Locale.getDefault())
-        `when`(viewController.appData).thenReturn(appDataViewController)
-        `when`(serviceController.selectedService).thenReturn(selectedService)
-        `when`(serviceController.serviceGuideUrls).thenReturn(serviceGuidUrls)
+        `when`(viewController.appData).thenReturn(appDataViewController.asStateFlow())
+        `when`(serviceController.selectedService).thenReturn(selectedService.asStateFlow())
+        `when`(serviceController.serviceGuideUrls).thenReturn(serviceGuidUrls.asStateFlow())
         `when`(serviceController.applications).thenReturn(applications)
         `when`(viewController.rmpState).thenReturn(rmpState)
         `when`(viewController.rmpPlaybackRate).thenReturn(rmpPlaybackRate)
 
-        val mockRpcGateway = RPCGatewayImpl(viewController, serviceController, applicationCache, settings, TestCoroutineScope(testDispatcher), TestCoroutineScope(testDispatcher)).apply {
-            start(mockLifecycleOwner())
-        }
+        val mockRpcGateway = RPCGatewayImpl(viewController, serviceController, applicationCache, settings, TestCoroutineScope(testDispatcher), TestCoroutineScope(testDispatcher))
 
         val result = mockRpcGateway.requestFileCache(null, null, listOf(), null)
         Assert.assertFalse(result)

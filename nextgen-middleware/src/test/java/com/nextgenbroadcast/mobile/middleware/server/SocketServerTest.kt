@@ -4,11 +4,13 @@ import com.nextgenbroadcast.mobile.core.cert.UserAgentSSLContext
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.middleware.gateway.rpc.IRPCGateway
 import com.nextgenbroadcast.mobile.middleware.rpc.notification.NotificationType
+import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.AlertingRpcResponse
 import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.ServiceGuideUrlsRpcResponse
 import com.nextgenbroadcast.mobile.middleware.server.web.MiddlewareWebServer
 import com.nextgenbroadcast.mobile.middleware.server.web.configureSSLFactory
 import com.nextgenbroadcast.mobile.middleware.server.ws.MiddlewareWebSocket
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestCoroutineDispatcher
 import kotlinx.coroutines.test.TestCoroutineScope
 import org.eclipse.jetty.client.HttpClient
@@ -25,16 +27,16 @@ import org.junit.runner.RunWith
 import org.powermock.modules.junit4.PowerMockRunner
 import java.net.URI
 
+@ExperimentalCoroutinesApi
 @RunWith(PowerMockRunner::class)
 class SocketServerTest : ServerTest() {
+    private val testDispatcher = TestCoroutineDispatcher()
+    private val testScope = TestCoroutineScope()
+
     private lateinit var rpcGateway: IRPCGateway
     private lateinit var webServer: MiddlewareWebServer
     private lateinit var webSocketClient: WebSocketClient
 
-    @ExperimentalCoroutinesApi
-    private val testDispatcher = TestCoroutineDispatcher()
-
-    @ExperimentalCoroutinesApi
     @Before
     fun setup() {
         rpcGateway = object : RPCGatewayAdapter() {
@@ -66,10 +68,18 @@ class SocketServerTest : ServerTest() {
             }
         }
 
-        webServer = MiddlewareWebServer(server, webGateway = null, globalScope = TestCoroutineScope(testDispatcher)).also {
-            it.start(null)
+        webServer = MiddlewareWebServer(server, webGateway = null, stateScope = testScope).also {
+            TestCoroutineScope(testDispatcher).launch {
+                it.start(null)
+            }
         }
         webSocketClient = WebSocketClient(HttpClient(configureSSLFactory(UserAgentSSLContext(mockApplicationContext))))
+    }
+
+    @After
+    fun cleanUp() {
+        testDispatcher.cleanupTestCoroutines()
+        testScope.cleanupTestCoroutines()
     }
 
     @Test
@@ -98,12 +108,6 @@ class SocketServerTest : ServerTest() {
         val session = webSocketClient.connect(WebSocketAdapter(), URI("wss://localhost:$WSS_PORT/")).get()
 
         Assert.assertTrue(session.isOpen)
-    }
-
-    @ExperimentalCoroutinesApi
-    @After
-    fun cleanUp() {
-        testDispatcher.cleanupTestCoroutines()
     }
 }
 
@@ -143,5 +147,9 @@ abstract class RPCGatewayAdapter : IRPCGateway {
     override fun requestFileCache(baseUrl: String?, rootPath: String?, paths: List<String>, filters: List<String>?): Boolean {
         Assert.assertNotNull(paths)
         return false
+    }
+
+    override fun getAlertChangingData(alertingTypes: List<String>): List<AlertingRpcResponse.Alert> {
+        TODO("Not yet implemented")
     }
 }
