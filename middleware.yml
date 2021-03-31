@@ -36,6 +36,7 @@ steps:
       javaHomeOption: 'JDKVersion'
       publishJUnitResults: true
       testResultsFiles: '**/TEST-*.xml'
+      options: '-PstoreFile=empty -Ppassword=empty -PkeyAlias=empty -PkeyPassword=empty'
       tasks: 'clean :nextgen-core:assembleRelease :nextgen-middleware:assembleRelease :nextgen-player:assembleRelease :nextgen-view:assembleRelease'
     displayName: gradlew clean and build
 
