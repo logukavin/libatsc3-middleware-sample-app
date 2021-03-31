@@ -12,6 +12,7 @@ pool:
   vmImage: 'ubuntu-latest'
 
 variables:
+  - group: keystore-properties
   - name: ARTIFACT_VERSION
     value: 0.0.0
 
@@ -36,6 +37,7 @@ steps:
       javaHomeOption: 'JDKVersion'
       publishJUnitResults: true
       testResultsFiles: '**/TEST-*.xml'
+      options: '-PstoreFile=$(storeFile) -Ppassword=$(password) -PkeyAlias=$(keyAlias) -PkeyPassword=$(keyPassword)'
       tasks: 'clean :nextgen-core:assembleRelease :nextgen-middleware:assembleRelease :nextgen-player:assembleRelease :nextgen-view:assembleRelease'
     displayName: gradlew clean and build
 
@@ -56,7 +58,8 @@ steps:
       javaHomeOption: 'JDKVersion'
       publishJUnitResults: true
       testResultsFiles: '**/TEST-*.xml'
-      tasks: ':nextgen-core:publish :nextgen-middleware:publish :nextgen-player:publish :nextgen-view:publish -PartifactVersion=$(ARTIFACT_VERSION)'
+      options: '-PartifactVersion=$(ARTIFACT_VERSION) -PstoreFile=$(storeFile) -Ppassword=$(password) -PkeyAlias=$(keyAlias) -PkeyPassword=$(keyPassword)'
+      tasks: ':nextgen-core:publish :nextgen-middleware:publish :nextgen-player:publish :nextgen-view:publish'
     displayName: gradlew publish
 
   - task: CopyFiles@2
