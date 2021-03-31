@@ -15,7 +15,9 @@ def getCertPropertyCode(propertyName) {
     } else {
         if (!ext.hasProperty('keystoreProperties')) {
             ext.keystoreProperties = new Properties()
-            ext.keystoreProperties.load(new FileInputStream(rootProject.file("keystore.properties")))
+            if (rootProject.file("keystore.properties").exists()) {
+                ext.keystoreProperties.load(new FileInputStream(rootProject.file("keystore.properties")))
+            }
         }
 
         return keystoreProperties[propertyName]
