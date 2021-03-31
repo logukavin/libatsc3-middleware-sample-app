@@ -101,7 +101,7 @@ class MainActivity : BaseActivity() {
         AndroidInjection.inject(this)
         super.onCreate(savedInstanceState)
 
-        appUpdateManager = AppUpdateManagerFactory.create(baseContext)
+        appUpdateManager = AppUpdateManagerFactory.create(applicationContext)
 
         supportFragmentManager
                 .beginTransaction()
@@ -120,6 +120,17 @@ class MainActivity : BaseActivity() {
         //make sure we can read from device pcap files and get location
         if (checkSelfPermission()) {
             bindService()
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+
+        appUpdateManager.appUpdateInfo.addOnSuccessListener { appUpdateInfo ->
+            if (appUpdateInfo.updateAvailability() == UpdateAvailability.DEVELOPER_TRIGGERED_UPDATE_IN_PROGRESS) {
+                // If an in-app update is already running, resume the update.
+                appUpdateManager.startUpdateFlowForResult(appUpdateInfo, AppUpdateType.IMMEDIATE, this, APP_UPDATE_REQUEST_CODE);
+            }
         }
     }
 
