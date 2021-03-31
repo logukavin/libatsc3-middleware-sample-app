@@ -15,7 +15,7 @@ import android.webkit.*
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.distinctUntilChanged
-import com.nextgenbroadcast.mobile.core.cert.CertificateUtils
+import com.nextgenbroadcast.mobile.core.cert.UserAgentSSLContext
 import kotlinx.coroutines.*
 
 class UserAgentView @JvmOverloads constructor(
@@ -169,9 +169,8 @@ class UserAgentView @JvmOverloads constructor(
         }
 
         override fun onReceivedClientCertRequest(view: WebView, request: ClientCertRequest) {
-            val certPair = CertificateUtils.loadCertificateAndPrivateKey(view.context)
-            certPair?.let {
-                request.proceed(certPair.first, arrayOf(certPair.second))
+            UserAgentSSLContext(view.context).loadCertificateAndPrivateKey()?.let { (privateKey, chain) ->
+                request.proceed(privateKey, arrayOf(chain))
             }
         }
     }

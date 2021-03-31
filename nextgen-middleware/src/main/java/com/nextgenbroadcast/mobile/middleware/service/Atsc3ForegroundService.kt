@@ -21,19 +21,25 @@ import androidx.media.session.MediaButtonReceiver
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
+import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverCore
 import com.nextgenbroadcast.mobile.middleware.BuildConfig
-import com.nextgenbroadcast.mobile.middleware.atsc3.core.Atsc3ReceiverCore
+import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverStandalone
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.SLTConstants
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.UsbAtsc3Source
 import com.nextgenbroadcast.mobile.middleware.cache.DownloadManager
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
 import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
 import com.nextgenbroadcast.mobile.middleware.phy.Atsc3DeviceReceiver
+import com.nextgenbroadcast.mobile.middleware.service.init.FrequencyInitializer
+import com.nextgenbroadcast.mobile.middleware.service.init.IServiceInitializer
 import com.nextgenbroadcast.mobile.middleware.service.init.MetadataReader
+import com.nextgenbroadcast.mobile.middleware.service.init.OnboardPhyInitializer
+import com.nextgenbroadcast.mobile.middleware.service.init.UsbPhyInitializer
 import com.nextgenbroadcast.mobile.middleware.service.media.MediaSessionConstants
 import com.nextgenbroadcast.mobile.player.Atsc3MediaPlayer
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
+import java.lang.ref.WeakReference
 
 abstract class Atsc3ForegroundService : BindableForegroundService() {
     private val usbManager: UsbManager by lazy {
@@ -62,6 +68,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     private var deviceReceiver: Atsc3DeviceReceiver? = null
     private var destroyPresentationLayerJob: Job? = null
 
+    private val initializer = ArrayList<WeakReference<IServiceInitializer>>()
     private var isInitialized = false
 
     override fun onCreate() {
@@ -74,7 +81,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     }
 
     private fun createReceiverCore() {
-        atsc3Receiver = Atsc3ReceiverCore.getInstance(applicationContext)
+        atsc3Receiver = Atsc3ReceiverStandalone.get(applicationContext)
         wakeLock = (getSystemService(POWER_SERVICE) as PowerManager).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Atsc3ForegroundService::lock")
     }
 
@@ -205,6 +212,10 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     override fun onDestroy() {
         super.onDestroy()
 
+        initializer.forEach { ref ->
+            ref.get()?.cancel()
+        }
+
         player.reset()
         destroyViewPresentation()
         mediaSession.release()
@@ -319,9 +330,28 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         if (isInitialized) return
         isInitialized = true
 
+        val context: Context = applicationContext
+
         try {
-            atsc3Receiver.initialize(MetadataReader.discoverMetadata(this)) {
+            val components = MetadataReader.discoverMetadata(this)
+
+            FrequencyInitializer(atsc3Receiver.settings, atsc3Receiver).also {
+                initializer.add(WeakReference(it))
+            }.initialize(context, components)
+
+            // Do not re-open the libatsc3 if it's already opened
+            if (!atsc3Receiver.isIdle()) return
+
+            val phyInitializer = OnboardPhyInitializer(atsc3Receiver).also {
+                initializer.add(WeakReference(it))
+            }
+
+            if (phyInitializer.initialize(context, components)) {
                 startForeground(applicationContext)
+            } else {
+                UsbPhyInitializer().also {
+                    initializer.add(WeakReference(it))
+                }.initialize(context, components)
             }
         } catch (e: Exception) {
             Log.d(TAG, "Can't initialize, something is wrong in metadata", e)
