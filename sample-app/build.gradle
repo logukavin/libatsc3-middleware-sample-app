@@ -61,6 +61,13 @@ android {
         }
     }
 
+    lintOptions {
+        checkReleaseBuilds false
+        // Or, if you prefer, you can continue to check for errors in release builds,
+        // but continue the build even when errors are found:
+        abortOnError false
+    }
+
     flavorDimensions "service_type"
     productFlavors {
         embedded {
@@ -138,7 +145,6 @@ dependencies {
     implementation project(":nextgen-player")
 
     embeddedImplementation project(":nextgen-middleware")
-
     standaloneImplementation project(":nextgen-middleware")
 
     implementation "androidx.core:core-ktx:$coreKtxVersion"
