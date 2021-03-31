@@ -3,8 +3,8 @@ package com.nextgenbroadcast.mobile.middleware.service.init
 import android.content.Context
 import android.util.Log
 import com.nextgenbroadcast.mobile.core.model.PhyFrequency
+import com.nextgenbroadcast.mobile.middleware.IAtsc3ServiceCore
 import com.nextgenbroadcast.mobile.middleware.location.IFrequencyLocator
-import com.nextgenbroadcast.mobile.middleware.atsc3.core.IAtsc3ServiceCore
 import com.nextgenbroadcast.mobile.middleware.settings.IReceiverSettings
 import kotlinx.coroutines.*
 import java.util.concurrent.TimeUnit

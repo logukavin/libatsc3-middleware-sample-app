@@ -1,4 +1,4 @@
-package com.nextgenbroadcast.mobile.middleware.atsc3.core
+package com.nextgenbroadcast.mobile.middleware
 
 import com.nextgenbroadcast.mobile.core.model.PhyFrequency
 import com.nextgenbroadcast.mobile.core.model.ReceiverState

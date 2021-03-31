@@ -20,9 +20,10 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTClockAnchor;
+import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverStandalone;
 import com.nextgenbroadcast.mobile.player.MMTConstants;
 import com.nextgenbroadcast.mobile.core.model.AVService;
-import com.nextgenbroadcast.mobile.middleware.atsc3.core.Atsc3ReceiverCore;
+import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverCore;
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.SLTConstants;
 
 import org.ngbp.libatsc3.middleware.Atsc3NdkMediaMMTBridge;
@@ -63,7 +64,7 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
     public boolean onCreate() {
         MmtPacketIdContext.Initialize();
 
-        atsc3ReceiverCore = Atsc3ReceiverCore.getInstance(getContext());
+        atsc3ReceiverCore = Atsc3ReceiverStandalone.get(getContext());
         atsc3NdkMediaMMTBridge = new Atsc3NdkMediaMMTBridge(this);
 
         mHandlerThread = new HandlerThread("mmt-content-provider");

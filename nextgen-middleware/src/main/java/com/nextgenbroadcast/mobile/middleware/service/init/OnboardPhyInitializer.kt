@@ -4,9 +4,9 @@ import android.content.Context
 import android.content.res.Resources
 import android.content.res.XmlResourceParser
 import android.util.Log
+import com.nextgenbroadcast.mobile.middleware.IAtsc3ServiceCore
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.PhyAtsc3Source
 import com.nextgenbroadcast.mobile.middleware.atsc3.utils.XmlUtils
-import com.nextgenbroadcast.mobile.middleware.atsc3.core.IAtsc3ServiceCore
 import org.ngbp.libatsc3.middleware.android.phy.Atsc3NdkPHYClientBase
 import org.xmlpull.v1.XmlPullParser
 import java.lang.Exception
