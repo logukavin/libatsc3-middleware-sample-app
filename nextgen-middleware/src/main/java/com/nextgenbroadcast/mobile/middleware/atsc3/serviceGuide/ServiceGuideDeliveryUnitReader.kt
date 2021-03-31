@@ -14,9 +14,8 @@ internal class ServiceGuideDeliveryUnitReader(
     @Volatile
     private var READER_IO: CoroutineDispatcher? = null
 
-    private val serviceMap = mutableMapOf<Int, SGService>()
+    private val serviceMap = ConcurrentHashMap<Int, SGService>()
     private val contentMap = ConcurrentHashMap<String, SGContent>()
-    private val guideUrlsMap = mutableMapOf<String, SGUrl>()
 
     @Synchronized
     override fun clearAll() {
@@ -25,7 +24,6 @@ internal class ServiceGuideDeliveryUnitReader(
 
         serviceMap.clear()
         contentMap.clear()
-        guideUrlsMap.clear()
 
         CoroutineScope(getContext()).launch {
             store.clearAll()
