@@ -193,6 +193,8 @@ dependencies {
     //jjustman-2021-01-14 - adding firebase performance
     implementation 'com.google.firebase:firebase-perf:19.1.1'
 
+    implementation 'com.google.android.play:core-ktx:1.7.0'
+
     implementation 'org.slf4j:slf4j-nop:1.7.25'
 
     implementation "androidx.media:media:1.2.1"

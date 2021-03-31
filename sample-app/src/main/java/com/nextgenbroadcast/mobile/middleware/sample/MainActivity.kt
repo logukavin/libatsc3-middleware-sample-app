@@ -16,6 +16,12 @@ import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.google.android.play.core.appupdate.AppUpdateInfo
+import com.google.android.play.core.appupdate.AppUpdateManager
+import com.google.android.play.core.appupdate.AppUpdateManagerFactory
+import com.google.android.play.core.install.model.AppUpdateType
+import com.google.android.play.core.install.model.UpdateAvailability
+import com.google.android.play.core.tasks.Task
 import androidx.lifecycle.asLiveData
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
@@ -28,6 +34,8 @@ import dagger.android.AndroidInjection
 
 class MainActivity : BaseActivity() {
     private val viewViewModel: ViewViewModel by viewModels()
+
+    private lateinit var appUpdateManager: AppUpdateManager
 
     private val hasFeaturePIP: Boolean by lazy {
         packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)
@@ -93,6 +101,8 @@ class MainActivity : BaseActivity() {
         AndroidInjection.inject(this)
         super.onCreate(savedInstanceState)
 
+        appUpdateManager = AppUpdateManagerFactory.create(applicationContext)
+
         supportFragmentManager
                 .beginTransaction()
                 .add(android.R.id.content,
@@ -105,9 +115,22 @@ class MainActivity : BaseActivity() {
     override fun onStart() {
         super.onStart()
 
+        checkForAppUpdates()
+
         //make sure we can read from device pcap files and get location
         if (checkSelfPermission()) {
             bindService()
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+
+        appUpdateManager.appUpdateInfo.addOnSuccessListener { appUpdateInfo ->
+            if (appUpdateInfo.updateAvailability() == UpdateAvailability.DEVELOPER_TRIGGERED_UPDATE_IN_PROGRESS) {
+                // If an in-app update is already running, resume the update.
+                appUpdateManager.startUpdateFlowForResult(appUpdateInfo, AppUpdateType.IMMEDIATE, this, APP_UPDATE_REQUEST_CODE);
+            }
         }
     }
 
@@ -223,8 +246,22 @@ class MainActivity : BaseActivity() {
         }
     }
 
+    private fun checkForAppUpdates() {
+        // Creates instance of the manager, returns an intent object that you use to check for an update.
+        val appUpdateInfoTask: Task<AppUpdateInfo> = appUpdateManager.appUpdateInfo as Task<AppUpdateInfo>
+
+        // Checks that the platform will allow the specified type of update. // For a flexible update, use AppUpdateType.FLEXIBLE
+        appUpdateInfoTask.addOnSuccessListener { appUpdateInfo ->
+            if (appUpdateInfo.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE && appUpdateInfo.isUpdateTypeAllowed(AppUpdateType.IMMEDIATE)) {
+                // Request the update.
+                appUpdateManager.startUpdateFlowForResult(appUpdateInfo, AppUpdateType.IMMEDIATE,this, APP_UPDATE_REQUEST_CODE)
+            }
+        }
+    }
+
     companion object {
         private const val PERMISSION_REQUEST = 1000
+        private const val APP_UPDATE_REQUEST_CODE = 31337
 
         val necessaryPermissions = listOf(
                 Manifest.permission.WRITE_EXTERNAL_STORAGE,
