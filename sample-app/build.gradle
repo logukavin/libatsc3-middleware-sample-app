@@ -1,3 +1,8 @@
+plugins {
+    id 'com.android.application'
+    id 'com.github.triplet.play' version '3.3.0'
+}
+
 apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-android-extensions'
@@ -5,6 +10,7 @@ apply plugin: 'kotlin-kapt'
 apply plugin: 'com.google.gms.google-services'
 apply plugin: 'com.google.firebase.crashlytics'
 apply plugin: 'com.google.firebase.firebase-perf'
+apply plugin: 'com.github.triplet.play'
 
 def appVersionCode = project.hasProperty('versionCode') ? versionCode.toInteger() : 4
 def appVersion = "1.0.3"
@@ -134,6 +140,17 @@ android {
             outputFileName = outputFileName.replace(".apk", "-${defaultConfig.versionName}.${appVersionCode}.apk")
         }
     }
+}
+
+def authJsonFile = project.hasProperty('authJsonFilePath') ? file(authJsonFilePath) : rootProject.file("middleware-service-connection.json")
+
+play {
+    serviceAccountCredentials.set(authJsonFile)
+    track.set("internal")
+    releaseName.set("$appVersion.$appVersionCode")
+    releaseStatus.set(com.github.triplet.gradle.androidpublisher.ReleaseStatus.DRAFT)
+    userFraction.set(1.0.toDouble())
+    resolutionStrategy.set(com.github.triplet.gradle.androidpublisher.ResolutionStrategy.IGNORE)
 }
 
 def coreKtxVersion = rootProject.ext.coreKtxVersion
