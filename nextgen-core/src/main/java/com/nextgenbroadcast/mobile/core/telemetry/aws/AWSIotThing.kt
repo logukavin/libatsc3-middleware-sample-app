@@ -22,6 +22,7 @@ import java.util.*
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
+//TODO: remove Context
 class AWSIotThing(
         context: Context
 ) {

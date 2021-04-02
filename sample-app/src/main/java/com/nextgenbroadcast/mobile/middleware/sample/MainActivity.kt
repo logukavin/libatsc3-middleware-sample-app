@@ -29,6 +29,7 @@ import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.ViewViewModel
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.factory.UserAgentViewModelFactory
 import com.nextgenbroadcast.mobile.middleware.service.media.MediaSessionConstants
+import com.nextgenbroadcast.mobile.view.telemetry.TelemetryBroker
 import dagger.android.AndroidInjection
 
 
@@ -36,6 +37,7 @@ class MainActivity : BaseActivity() {
     private val viewViewModel: ViewViewModel by viewModels()
 
     private lateinit var appUpdateManager: AppUpdateManager
+    private lateinit var telemetryBroker: TelemetryBroker
 
     private val hasFeaturePIP: Boolean by lazy {
         packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)
@@ -102,6 +104,7 @@ class MainActivity : BaseActivity() {
         super.onCreate(savedInstanceState)
 
         appUpdateManager = AppUpdateManagerFactory.create(applicationContext)
+        telemetryBroker = TelemetryBroker(applicationContext)
 
         supportFragmentManager
                 .beginTransaction()
@@ -114,6 +117,8 @@ class MainActivity : BaseActivity() {
 
     override fun onStart() {
         super.onStart()
+
+        telemetryBroker.start()
 
         checkForAppUpdates()
 
@@ -140,6 +145,8 @@ class MainActivity : BaseActivity() {
         mediaController?.unregisterCallback(mediaControllerCallback)
 
         unbindService()
+
+        telemetryBroker.stop()
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
