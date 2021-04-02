@@ -1,4 +1,4 @@
-package com.nextgenbroadcast.mobile.middleware.telemetry.reader;
+package com.nextgenbroadcast.mobile.core.telemetry.reader;
 
 import android.util.Base64;
 

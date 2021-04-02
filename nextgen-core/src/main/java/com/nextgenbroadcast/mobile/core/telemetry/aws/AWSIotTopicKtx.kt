@@ -1,4 +1,4 @@
-package com.nextgenbroadcast.mobile.middleware.telemetry.aws
+package com.nextgenbroadcast.mobile.core.telemetry.aws
 
 import com.amazonaws.services.iot.client.AWSIotException
 import com.amazonaws.services.iot.client.AWSIotMessage
