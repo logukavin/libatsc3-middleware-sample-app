@@ -1,10 +1,9 @@
 package com.nextgenbroadcast.mobile.view
 
+import android.annotation.SuppressLint
+import android.os.Build
 import android.os.Bundle
-import android.provider.Settings.Secure.ANDROID_ID
-import android.provider.Settings.Secure.getString
 import android.text.Html
-import android.text.Spanned
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -20,7 +19,7 @@ class AboutDialog : DialogFragment() {
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        val view = inflater.inflate(R.layout.dialog_about, null, false)
+        val view = inflater.inflate(R.layout.dialog_about, container, false)
         view.but_ok_about.setOnClickListener {
             dismiss()
         }
@@ -28,47 +27,40 @@ class AboutDialog : DialogFragment() {
         return view
     }
 
-    private fun getInfo(): Spanned {
-        val stringBuilder = StringBuilder()
-        val doubleNewLine = "<br><br>"
-        requireContext().let { it ->
-            val packageInfo = it.packageManager?.getPackageInfo(it.packageName, 0)
-            packageInfo?.applicationInfo?.uid
+    @SuppressLint("MissingPermission")
+    private fun getInfo(): CharSequence {
+        val context = requireContext()
+        val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
 
+        val stringBuilder = StringBuilder().apply {
             packageInfo?.versionName?.let {
-                addBoldTitle(stringBuilder, getString(R.string.version_name))
-                stringBuilder
-                        .append(it)
-
+                appendBoldTitle(getString(R.string.version_name)).append(it)
             }
 
             packageInfo?.longVersionCode?.let {
-                if (stringBuilder.isNotEmpty()) {
-                    stringBuilder.append(doubleNewLine)
+                if (isNotEmpty()) {
+                    append(DOUBLE_LINE_BREAK)
                 }
-                addBoldTitle(stringBuilder, getString(R.string.version_code))
-                stringBuilder
-                        .append(it)
+                appendBoldTitle(getString(R.string.version_code)).append(it)
             }
 
-            getString(it.contentResolver, ANDROID_ID)?.let {
-                if (stringBuilder.isNotEmpty()) {
-                    stringBuilder.append(doubleNewLine)
+            Build.getSerial()?.let {
+                if (isNotEmpty()) {
+                    append(DOUBLE_LINE_BREAK)
                 }
-                addBoldTitle(stringBuilder, getString(R.string.android_id))
-                stringBuilder
-                        .append(it)
+                appendBoldTitle(getString(R.string.android_id)).append(it)
             }
         }
-        return Html.fromHtml(stringBuilder.toString()) as Spanned
+
+        return Html.fromHtml(stringBuilder.toString(), Html.FROM_HTML_MODE_LEGACY)
     }
 
-    private fun addBoldTitle(stringBuilder: StringBuilder, title: String) {
-        stringBuilder.append("<b>")
-                .append(title)
-                .append(" ")
-                .append("</b>")
+    private fun StringBuilder.appendBoldTitle(title: String): StringBuilder {
+        append("<b>").append(title).append(" ").append("</b>")
+        return this
     }
 
-
+    companion object {
+        private const val DOUBLE_LINE_BREAK = "<br><br>"
+    }
 }
