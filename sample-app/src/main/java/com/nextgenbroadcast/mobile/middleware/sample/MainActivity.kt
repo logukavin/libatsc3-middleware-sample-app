@@ -37,7 +37,10 @@ class MainActivity : BaseActivity() {
     private val viewViewModel: ViewViewModel by viewModels()
 
     private lateinit var appUpdateManager: AppUpdateManager
-    private lateinit var telemetryBroker: TelemetryBroker
+
+    private val telemetryBroker by lazy {
+        TelemetryBroker(applicationContext)
+    }
 
     private val hasFeaturePIP: Boolean by lazy {
         packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)
@@ -104,7 +107,6 @@ class MainActivity : BaseActivity() {
         super.onCreate(savedInstanceState)
 
         appUpdateManager = AppUpdateManagerFactory.create(applicationContext)
-        telemetryBroker = TelemetryBroker(applicationContext)
 
         supportFragmentManager
                 .beginTransaction()
@@ -118,12 +120,11 @@ class MainActivity : BaseActivity() {
     override fun onStart() {
         super.onStart()
 
-        telemetryBroker.start()
-
         checkForAppUpdates()
 
         //make sure we can read from device pcap files and get location
         if (checkSelfPermission()) {
+            telemetryBroker.start()
             bindService()
         }
     }
@@ -183,6 +184,7 @@ class MainActivity : BaseActivity() {
 
                 requestPermissions(requiredPermissions)
             } else {
+                telemetryBroker.start()
                 bindService()
             }
         }
