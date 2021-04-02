@@ -10,24 +10,26 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 
 @ExperimentalCoroutinesApi
-class BatteryStatistics(var context: Context?) {
+class BatteryStatistics(val context: Context) {
 
-    companion object {
-        const val BATTERY_MEASURING_FREQUENCY = 250L
+    private val batteryStatus: Intent?
+    var isListening = false
+
+    init {
+        batteryStatus = IntentFilter(Intent.ACTION_BATTERY_CHANGED).let { intentFilter ->
+            context.registerReceiver(null, intentFilter)
+        }
     }
 
-    fun batteryStatisticsFlow(): Flow<BatteryStatisticsData?> = flow {
-        while (true) {
+    fun batteryStatisticsFlow(isStartListening: Boolean): Flow<BatteryStatisticsData?> = flow {
+        isListening = isStartListening
+        while (!isListening) {
             emit(getBatteryStatus())
             delay(BATTERY_MEASURING_FREQUENCY)
         }
-
     }
 
     private fun getBatteryStatus(): BatteryStatisticsData? {
-        val batteryStatus: Intent? = IntentFilter(Intent.ACTION_BATTERY_CHANGED).let { ifilter ->
-            context?.registerReceiver(null, ifilter)
-        }
 
         val batteryPct: Float? = batteryStatus?.let { intent ->
             val level: Int = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
@@ -41,9 +43,19 @@ class BatteryStatistics(var context: Context?) {
         val usbCharge: Boolean = chargePlug == BatteryManager.BATTERY_PLUGGED_USB
         val acCharge: Boolean = chargePlug == BatteryManager.BATTERY_PLUGGED_AC
 
-        return BatteryStatisticsData(batteryPct?.toInt(), status, isCharging, chargePlug, usbCharge, acCharge)
+        return BatteryStatisticsData(batteryPct?.toInt()?:0, status, isCharging, chargePlug, usbCharge, acCharge)
+    }
+
+    companion object {
+        const val BATTERY_MEASURING_FREQUENCY = 250L
     }
 
 }
 
-data class BatteryStatisticsData(val batteryPct: Int?, val status: Int, val isCharging: Boolean, val chargePlug: Int, val usbCharge: Boolean, val acCharge: Boolean)
+data class BatteryStatisticsData(
+        val batteryPct: Int,
+        val status: Int,
+        val isCharging: Boolean,
+        val chargePlug: Int,
+        val usbCharge: Boolean,
+        val acCharge: Boolean)
