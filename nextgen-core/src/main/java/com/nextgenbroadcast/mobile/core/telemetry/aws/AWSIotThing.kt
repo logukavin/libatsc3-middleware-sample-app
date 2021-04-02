@@ -1,4 +1,4 @@
-package com.nextgenbroadcast.mobile.middleware.telemetry.aws
+package com.nextgenbroadcast.mobile.core.telemetry.aws
 
 import android.annotation.SuppressLint
 import android.content.Context
@@ -8,9 +8,9 @@ import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import com.amazonaws.services.iot.client.*
 import com.google.gson.Gson
+import com.nextgenbroadcast.mobile.core.BuildConfig
 import com.nextgenbroadcast.mobile.core.LOG
-import com.nextgenbroadcast.mobile.middleware.BuildConfig
-import com.nextgenbroadcast.mobile.middleware.telemetry.reader.PrivateKeyReader
+import com.nextgenbroadcast.mobile.core.telemetry.reader.PrivateKeyReader
 import kotlinx.coroutines.*
 import java.io.*
 import java.math.BigInteger
