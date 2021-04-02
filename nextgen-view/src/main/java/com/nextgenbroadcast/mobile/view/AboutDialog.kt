@@ -44,11 +44,14 @@ class AboutDialog : DialogFragment() {
                 appendBoldTitle(getString(R.string.version_code)).append(it)
             }
 
-            Build.getSerial()?.let {
-                if (isNotEmpty()) {
-                    append(DOUBLE_LINE_BREAK)
+            try {
+                Build.getSerial()?.let {
+                    if (isNotEmpty()) {
+                        append(DOUBLE_LINE_BREAK)
+                    }
+                    appendBoldTitle(getString(R.string.android_id)).append(it)
                 }
-                appendBoldTitle(getString(R.string.android_id)).append(it)
+            } catch (e: SecurityException) {
             }
         }
 
