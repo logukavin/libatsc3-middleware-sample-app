@@ -3,6 +3,6 @@
     <string name="menu_about">About</string>
     <string name="version_name">Version Name:</string>
     <string name="version_code">Version Code:</string>
-    <string name="android_id">Android Id:</string>
+    <string name="android_id">Serial Number:</string>
     <string name="ok">OK</string>
 </resources>
