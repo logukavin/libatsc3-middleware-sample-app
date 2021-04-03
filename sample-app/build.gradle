@@ -149,7 +149,6 @@ play {
     track.set("internal")
     releaseName.set("$appVersion ($appVersionCode)")
     releaseStatus.set(com.github.triplet.gradle.androidpublisher.ReleaseStatus.DRAFT)
-    userFraction.set(1.0.toDouble())
     resolutionStrategy.set(com.github.triplet.gradle.androidpublisher.ResolutionStrategy.IGNORE)
 }
 
