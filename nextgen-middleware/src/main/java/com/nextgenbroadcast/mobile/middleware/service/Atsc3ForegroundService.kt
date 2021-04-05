@@ -79,9 +79,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     override fun onCreate() {
         super.onCreate()
 
-        telemetryBroker = TelemetryBroker(applicationContext) { action, arguments ->
-            LOG.d(TelemetryBroker.TAG, "AWS IoT command received: $action, args: $arguments")
-        }.also {
+        telemetryBroker = TelemetryBroker(applicationContext).also {
             it.start()
         }
 
