@@ -10,7 +10,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableSharedFlow
 import java.util.concurrent.TimeUnit
 
-class BatteryStatistics(
+class BatteryTelemetry(
         context: Context,
         private val updateInterval: Long = BATTERY_MEASURING_FREQUENCY
 ) {
