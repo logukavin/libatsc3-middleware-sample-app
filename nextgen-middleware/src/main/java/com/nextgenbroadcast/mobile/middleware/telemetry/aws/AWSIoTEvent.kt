@@ -1,4 +1,4 @@
-package com.nextgenbroadcast.mobile.core.telemetry.aws
+package com.nextgenbroadcast.mobile.middleware.telemetry.aws
 
 data class AWSIoTEvent(
      val topic: String,

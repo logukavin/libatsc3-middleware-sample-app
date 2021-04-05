@@ -18,6 +18,7 @@ import android.util.Log
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.media.session.MediaButtonReceiver
+import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
@@ -36,6 +37,7 @@ import com.nextgenbroadcast.mobile.middleware.service.init.MetadataReader
 import com.nextgenbroadcast.mobile.middleware.service.init.OnboardPhyInitializer
 import com.nextgenbroadcast.mobile.middleware.service.init.UsbPhyInitializer
 import com.nextgenbroadcast.mobile.middleware.service.media.MediaSessionConstants
+import com.nextgenbroadcast.mobile.middleware.telemetry.TelemetryBroker
 import com.nextgenbroadcast.mobile.player.Atsc3MediaPlayer
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -68,11 +70,20 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     private var deviceReceiver: Atsc3DeviceReceiver? = null
     private var destroyPresentationLayerJob: Job? = null
 
+    // Telemetry
+    private lateinit var telemetryBroker: TelemetryBroker
+
     private val initializer = ArrayList<WeakReference<IServiceInitializer>>()
     private var isInitialized = false
 
     override fun onCreate() {
         super.onCreate()
+
+        telemetryBroker = TelemetryBroker(applicationContext) { action, arguments ->
+            LOG.d(TelemetryBroker.TAG, "AWS IoT command received: $action, args: $arguments")
+        }.also {
+            it.start()
+        }
 
         createReceiverCore()
         createMediaSession()
@@ -221,6 +232,8 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         mediaSession.release()
         atsc3Receiver.deInitialize()
         serviceScope.cancel()
+
+        telemetryBroker.stop()
     }
 
     override fun onBind(intent: Intent): IBinder? {
