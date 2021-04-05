@@ -12,6 +12,7 @@ import com.nextgenbroadcast.mobile.middleware.service.provider.MediaFileProvider
 import com.nextgenbroadcast.mobile.middleware.service.provider.esgProvider.ESGContentAuthority
 import com.nextgenbroadcast.mobile.middleware.settings.MiddlewareSettingsImpl
 import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
 internal object Atsc3ReceiverStandalone {
@@ -46,9 +47,11 @@ internal object Atsc3ReceiverStandalone {
         val sslContext = UserAgentSSLContext(appContext)
         val analytics = Atsc3Analytics.getInstance(appContext, settings)
 
-        return Atsc3ReceiverCore(atsc3Module, settings, repository, serviceGuideStore, mediaFileProvider, sslContext, analytics) { message ->
+        return Atsc3ReceiverCore(atsc3Module, settings, repository, serviceGuideStore, mediaFileProvider, sslContext, analytics).apply {
             MainScope().launch {
-                Toast.makeText(appContext, message, Toast.LENGTH_SHORT).show()
+                errorFlow.collect { message ->
+                    Toast.makeText(appContext, message, Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }
