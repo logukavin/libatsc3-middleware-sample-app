@@ -14,7 +14,8 @@ import kotlinx.coroutines.launch
 import java.lang.Exception
 
 class TelemetryBroker(
-        context: Context
+        context: Context,
+        private val onCommand: suspend (action: String, arguments: List<String>) -> Unit
 ) {
     private val appContext = context.applicationContext
     private val thing = AWSIotThing(appContext)
@@ -32,14 +33,14 @@ class TelemetryBroker(
                     BatteryStatistics(appContext).start(eventFlow)
                 }
 
-                launch {
-                    thing.subscribeCommandsFlow(commandFlow)
-                }
-                launch {
-                    commandFlow.collect { command ->
-                        LOG.d(TAG, "AWS IoT command received: ${command.action}")
-                    }
-                }
+//                launch {
+//                    thing.subscribeCommandsFlow(commandFlow)
+//                }
+//                launch {
+//                    commandFlow.collect { command ->
+//                        onCommand(command.action, command.arguments)
+//                    }
+//                }
 
                 eventFlow.collect { event ->
                     thing.publish(event.topic, event.payload)

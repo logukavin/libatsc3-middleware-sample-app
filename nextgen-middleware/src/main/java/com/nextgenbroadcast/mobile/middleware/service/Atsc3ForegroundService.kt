@@ -18,6 +18,7 @@ import android.util.Log
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.media.session.MediaButtonReceiver
+import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
@@ -78,7 +79,9 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     override fun onCreate() {
         super.onCreate()
 
-        telemetryBroker = TelemetryBroker(applicationContext).also {
+        telemetryBroker = TelemetryBroker(applicationContext) { action, arguments ->
+            LOG.d(TelemetryBroker.TAG, "AWS IoT command received: $action, args: $arguments")
+        }.also {
             it.start()
         }
 
