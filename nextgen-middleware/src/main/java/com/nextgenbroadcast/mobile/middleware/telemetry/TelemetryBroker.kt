@@ -1,7 +1,11 @@
 package com.nextgenbroadcast.mobile.middleware.telemetry
 
 import android.content.Context
+import android.content.SharedPreferences
+import androidx.security.crypto.EncryptedSharedPreferences
+import androidx.security.crypto.MasterKey
 import com.nextgenbroadcast.mobile.core.LOG
+import com.nextgenbroadcast.mobile.middleware.BuildConfig
 import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIoTControl
 import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIoTEvent
 import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIotThing
@@ -18,7 +22,14 @@ class TelemetryBroker(
         private val onCommand: suspend (action: String, arguments: List<String>) -> Unit
 ) {
     private val appContext = context.applicationContext
-    private val thing = AWSIotThing(appContext)
+    private val preferences: SharedPreferences = EncryptedSharedPreferences.create(
+            appContext,
+            IoT_PREFERENCE,
+            MasterKey.Builder(appContext).setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build(),
+            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+    )
+    private val thing = AWSIotThing(preferences, appContext.assets)
     private val eventFlow = MutableSharedFlow<AWSIoTEvent>(replay = 20, extraBufferCapacity = 0, onBufferOverflow = BufferOverflow.DROP_OLDEST)
     private val commandFlow = MutableSharedFlow<AWSIoTControl>(replay = 0, extraBufferCapacity = 0, onBufferOverflow = BufferOverflow.SUSPEND)
 
@@ -58,5 +69,7 @@ class TelemetryBroker(
 
     companion object {
         val TAG: String = TelemetryBroker::class.java.simpleName
+
+        private const val IoT_PREFERENCE = "${BuildConfig.LIBRARY_PACKAGE_NAME}.awsiot"
     }
 }

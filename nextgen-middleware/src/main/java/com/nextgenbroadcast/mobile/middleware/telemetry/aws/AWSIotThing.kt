@@ -1,15 +1,12 @@
 package com.nextgenbroadcast.mobile.middleware.telemetry.aws
 
 import android.annotation.SuppressLint
-import android.content.Context
 import android.content.SharedPreferences
+import android.content.res.AssetManager
 import android.os.Build
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
 import com.amazonaws.services.iot.client.*
 import com.google.gson.Gson
 import com.nextgenbroadcast.mobile.core.LOG
-import com.nextgenbroadcast.mobile.middleware.BuildConfig
 import com.nextgenbroadcast.mobile.middleware.telemetry.reader.PrivateKeyReader
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -23,19 +20,11 @@ import java.util.*
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
-//TODO: remove Context
 class AWSIotThing(
-        context: Context
+        private val preferences: SharedPreferences,
+        private val assets: AssetManager
 ) {
     private val gson = Gson()
-    private val appContext = context.applicationContext
-    private val preferences: SharedPreferences = EncryptedSharedPreferences.create(
-            context,
-            IoT_PREFERENCE,
-            MasterKey.Builder(context).setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build(),
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-    )
 
     @SuppressLint("MissingPermission")
     private val serialNumber = Build.getSerial()
@@ -72,8 +61,8 @@ class AWSIotThing(
         if (provisionedCertificateId == null) {
             val (keyStore, keyPassword) = try {
                 readKeyPair(
-                        appContext.assets.open("9200fd27be-certificate.pem.crt"),
-                        appContext.assets.open("9200fd27be-private.pem.key")
+                        assets.open("9200fd27be-certificate.pem.crt"),
+                        assets.open("9200fd27be-private.pem.key")
                 ) ?: return
             } catch (e: IOException) {
                 LOG.e(TAG, "Keys reading error", e)
@@ -303,7 +292,6 @@ class AWSIotThing(
     companion object {
         val TAG: String = AWSIotThing::class.java.simpleName
 
-        private const val IoT_PREFERENCE = "${BuildConfig.LIBRARY_PACKAGE_NAME}.awsiot"
         private const val PREF_CERTIFICATE_ID = "certificateId"
         private const val PREF_CERTIFICATE_PEM = "certificatePem"
         private const val PREF_CERTIFICATE_KEY = "privateKey"
