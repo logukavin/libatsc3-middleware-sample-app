@@ -1,4 +1,4 @@
-package com.nextgenbroadcast.mobile.core.telemetry.aws
+package com.nextgenbroadcast.mobile.middleware.telemetry.aws
 
 class AWSIoTControl {
     var action: String? = null
