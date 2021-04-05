@@ -50,6 +50,22 @@ class TelemetryBroker(
                     GyroscopeSensorTelemetry(sensorManager).start(eventFlow)
                 }
 
+                launch {
+                    SignificantTelemetry(sensorManager).start(eventFlow)
+                }
+
+                launch {
+                    StepDetector(sensorManager).start(eventFlow)
+                }
+
+                launch {
+                    StepCounter(sensorManager).start(eventFlow)
+                }
+
+                launch {
+                    RotationVector(sensorManager).start(eventFlow)
+                }
+
                 eventFlow.collect { event ->
                     thing.publish(event.topic, event.payload)
                     LOG.d(TAG, "AWS IoT event: ${event.topic} - ${event.payload}")
