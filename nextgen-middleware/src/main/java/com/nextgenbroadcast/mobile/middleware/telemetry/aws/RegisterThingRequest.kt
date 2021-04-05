@@ -1,4 +1,4 @@
-package com.nextgenbroadcast.mobile.core.telemetry.aws
+package com.nextgenbroadcast.mobile.middleware.telemetry.aws
 
 class RegisterThingRequest (
     var certificateOwnershipToken: String

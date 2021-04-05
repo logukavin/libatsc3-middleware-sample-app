@@ -1,4 +1,4 @@
-package com.nextgenbroadcast.mobile.core.telemetry.aws
+package com.nextgenbroadcast.mobile.middleware.telemetry.aws
 
 import com.amazonaws.services.iot.client.AWSIotException
 import com.amazonaws.services.iot.client.AWSIotMessage
@@ -8,13 +8,13 @@ import kotlinx.coroutines.CancellableContinuation
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
-class AWSIotTopicKtx(
+open class AWSIotTopicKtx(
         private val cont: CancellableContinuation<AWSIotMessage?>,
         topic: String,
         qos: AWSIotQos = AWSIotQos.QOS1
 ) : AWSIotTopic(topic, qos) {
 
-    override fun onMessage(message: AWSIotMessage?) {
+    override fun onMessage(message: AWSIotMessage) {
         cont.resume(message)
     }
 

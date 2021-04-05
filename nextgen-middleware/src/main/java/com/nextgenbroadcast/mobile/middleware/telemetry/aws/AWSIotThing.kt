@@ -1,17 +1,15 @@
-package com.nextgenbroadcast.mobile.core.telemetry.aws
+package com.nextgenbroadcast.mobile.middleware.telemetry.aws
 
 import android.annotation.SuppressLint
-import android.content.Context
 import android.content.SharedPreferences
+import android.content.res.AssetManager
 import android.os.Build
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
 import com.amazonaws.services.iot.client.*
 import com.google.gson.Gson
-import com.nextgenbroadcast.mobile.core.BuildConfig
 import com.nextgenbroadcast.mobile.core.LOG
-import com.nextgenbroadcast.mobile.core.telemetry.reader.PrivateKeyReader
+import com.nextgenbroadcast.mobile.middleware.telemetry.reader.PrivateKeyReader
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.MutableSharedFlow
 import java.io.*
 import java.math.BigInteger
 import java.security.*
@@ -22,19 +20,12 @@ import java.util.*
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
-//TODO: remove Context
 class AWSIotThing(
-        context: Context
+        private val preferences: SharedPreferences,
+        private val assets: AssetManager
 ) {
     private val gson = Gson()
-    private val appContext = context.applicationContext
-    private val preferences: SharedPreferences = EncryptedSharedPreferences.create(
-            context,
-            IoT_PREFERENCE,
-            MasterKey.Builder(context).setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build(),
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-    )
+
     @SuppressLint("MissingPermission")
     private val serialNumber = Build.getSerial()
     private val clientId = "ATSC3MobileReceiver_$serialNumber"
@@ -46,7 +37,7 @@ class AWSIotThing(
     }
 
     fun publish(topic: String, payload: String) {
-        thingAwsIotClient?.publish(topic.replace(AWSIOT_TOPIC_FORMAT_SERIAL, serialNumber), payload)
+        thingAwsIotClient?.publish(topic.replace(AWSIOT_FORMAT_SERIAL, serialNumber), payload)
     }
 
     fun disconnect() {
@@ -70,8 +61,8 @@ class AWSIotThing(
         if (provisionedCertificateId == null) {
             val (keyStore, keyPassword) = try {
                 readKeyPair(
-                        appContext.assets.open("9200fd27be-certificate.pem.crt"),
-                        appContext.assets.open("9200fd27be-private.pem.key")
+                        assets.open("9200fd27be-certificate.pem.crt"),
+                        assets.open("9200fd27be-private.pem.key")
                 ) ?: return
             } catch (e: IOException) {
                 LOG.e(TAG, "Keys reading error", e)
@@ -112,6 +103,34 @@ class AWSIotThing(
                         thingAwsIotClient = createAWSIoTClient(keyStore, keyPassword)
                         LOG.i(TAG, "AWS IoT Client connected!")
                     }
+                }
+            }
+        }
+    }
+
+    suspend fun subscribeCommandsFlow(commandFlow: MutableSharedFlow<AWSIoTControl>) {
+        supervisorScope {
+            while (isActive) {
+                val client = thingAwsIotClient
+                if (client != null) {
+                    try {
+                        suspendCancellableCoroutine<AWSIotMessage?> { cont ->
+                            client.subscribe(
+                                    object : AWSIotTopicKtx(cont,
+                                            AWSIOT_SUBSCRIPTION_CONTROL.replace(AWSIOT_FORMAT_SERIAL, serialNumber)
+                                    ) {
+                                        override fun onMessage(message: AWSIotMessage) {
+                                            val command = gson.fromJson(message.stringPayload, AWSIoTControl::class.java)
+                                            commandFlow.tryEmit(command)
+                                        }
+                                    }
+                            )
+                        }
+                    } catch (e: Exception) {
+                        LOG.e(TAG, "Receiving command error", e)
+                    }
+                } else {
+                    delay(10_000)
                 }
             }
         }
@@ -273,29 +292,30 @@ class AWSIotThing(
     companion object {
         val TAG: String = AWSIotThing::class.java.simpleName
 
-        private const val IoT_PREFERENCE = "${BuildConfig.LIBRARY_PACKAGE_NAME}.awsiot"
         private const val PREF_CERTIFICATE_ID = "certificateId"
         private const val PREF_CERTIFICATE_PEM = "certificatePem"
         private const val PREF_CERTIFICATE_KEY = "privateKey"
         private const val PREF_CERTIFICATE_TOKEN = "certificateOwnershipToken"
 
+        private const val AWSIOT_FORMAT_SERIAL = "{serial}"
         private const val AWSIOT_PAYLOAD_FORMAT = "json"
         private const val AWSIOT_TEMPLATE_NAME = "ATSC3MobileReceiverProvisioning"
+
         private const val AWSIOT_REQUEST_CREATE_KEYS_AND_CERTIFICATE = "\$aws/certificates/create/$AWSIOT_PAYLOAD_FORMAT"
         private const val AWSIOT_REQUEST_REGISTER_THING = "\$aws/provisioning-templates/$AWSIOT_TEMPLATE_NAME/provision/$AWSIOT_PAYLOAD_FORMAT"
 
         private const val AWSIOT_SUBSCRIPTION_CREATE_CERTIFICATE_ACCEPTED = "\$aws/certificates/create/$AWSIOT_PAYLOAD_FORMAT/accepted"
         private const val AWSIOT_SUBSCRIPTION_REGISTER_THING_ACCEPTED = "\$aws/provisioning-templates/$AWSIOT_TEMPLATE_NAME/provision/$AWSIOT_PAYLOAD_FORMAT/accepted"
         private const val AWSIOT_SUBSCRIPTION_REGISTER_THING_REJECTED = "\$aws/provisioning-templates/$AWSIOT_TEMPLATE_NAME/provision/$AWSIOT_PAYLOAD_FORMAT/rejected"
+        private const val AWSIOT_SUBSCRIPTION_CONTROL = "control/$AWSIOT_FORMAT_SERIAL"
 
         private const val AWSIOT_CUSTOMER_SPECIFIC_ENDPOINT = "a2mpoqnjkscij4-ats.iot.us-east-1.amazonaws.com"
-        private const val AWSIOT_TOPIC_FORMAT_SERIAL = "{serial}"
 
-        const val AWSIOT_TOPIC_BATTERY = "telemetry/$AWSIOT_TOPIC_FORMAT_SERIAL/battery"
-        const val AWSIOT_TOPIC_LOCATION = "telemetry/$AWSIOT_TOPIC_FORMAT_SERIAL/location"
-        const val AWSIOT_TOPIC_PHY = "telemetry/$AWSIOT_TOPIC_FORMAT_SERIAL/phy"
-        const val AWSIOT_TOPIC_SENSORS = "telemetry/$AWSIOT_TOPIC_FORMAT_SERIAL/sensors"
-        const val AWSIOT_TOPIC_SAANKHYA_PHY_DEBUG = "telemetry/$AWSIOT_TOPIC_FORMAT_SERIAL/saankhya_phy_debug"
-        const val AWSIOT_TOPIC_ATSC3TRANSPORT = "telemetry/$AWSIOT_TOPIC_FORMAT_SERIAL/atsc3transport"
+        const val AWSIOT_TOPIC_BATTERY = "telemetry/$AWSIOT_FORMAT_SERIAL/battery"
+        const val AWSIOT_TOPIC_LOCATION = "telemetry/$AWSIOT_FORMAT_SERIAL/location"
+        const val AWSIOT_TOPIC_PHY = "telemetry/$AWSIOT_FORMAT_SERIAL/phy"
+        const val AWSIOT_TOPIC_SENSORS = "telemetry/$AWSIOT_FORMAT_SERIAL/sensors"
+        const val AWSIOT_TOPIC_SAANKHYA_PHY_DEBUG = "telemetry/$AWSIOT_FORMAT_SERIAL/saankhya_phy_debug"
+        const val AWSIOT_TOPIC_ATSC3TRANSPORT = "telemetry/$AWSIOT_FORMAT_SERIAL/atsc3transport"
     }
 }

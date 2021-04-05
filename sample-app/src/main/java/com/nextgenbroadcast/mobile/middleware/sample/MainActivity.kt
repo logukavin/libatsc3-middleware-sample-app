@@ -29,7 +29,6 @@ import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.ViewViewModel
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.factory.UserAgentViewModelFactory
 import com.nextgenbroadcast.mobile.middleware.service.media.MediaSessionConstants
-import com.nextgenbroadcast.mobile.view.telemetry.TelemetryBroker
 import dagger.android.AndroidInjection
 
 
@@ -37,10 +36,6 @@ class MainActivity : BaseActivity() {
     private val viewViewModel: ViewViewModel by viewModels()
 
     private lateinit var appUpdateManager: AppUpdateManager
-
-    private val telemetryBroker by lazy {
-        TelemetryBroker(applicationContext)
-    }
 
     private val hasFeaturePIP: Boolean by lazy {
         packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)
@@ -124,7 +119,6 @@ class MainActivity : BaseActivity() {
 
         //make sure we can read from device pcap files and get location
         if (checkSelfPermission()) {
-            telemetryBroker.start()
             bindService()
         }
     }
@@ -146,8 +140,6 @@ class MainActivity : BaseActivity() {
         mediaController?.unregisterCallback(mediaControllerCallback)
 
         unbindService()
-
-        telemetryBroker.stop()
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
@@ -184,7 +176,6 @@ class MainActivity : BaseActivity() {
 
                 requestPermissions(requiredPermissions)
             } else {
-                telemetryBroker.start()
                 bindService()
             }
         }
