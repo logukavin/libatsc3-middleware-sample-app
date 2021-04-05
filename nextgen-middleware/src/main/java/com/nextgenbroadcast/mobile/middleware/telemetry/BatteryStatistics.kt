@@ -1,11 +1,11 @@
-package com.nextgenbroadcast.mobile.view.telemetry
+package com.nextgenbroadcast.mobile.middleware.telemetry
 
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.BatteryManager
-import com.nextgenbroadcast.mobile.core.telemetry.aws.AWSIoTEvent
-import com.nextgenbroadcast.mobile.core.telemetry.aws.AWSIotThing
+import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIoTEvent
+import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIotThing
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableSharedFlow
 import java.util.concurrent.TimeUnit

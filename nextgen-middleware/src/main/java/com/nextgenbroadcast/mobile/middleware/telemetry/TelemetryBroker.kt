@@ -1,10 +1,10 @@
-package com.nextgenbroadcast.mobile.view.telemetry
+package com.nextgenbroadcast.mobile.middleware.telemetry
 
 import android.content.Context
 import com.nextgenbroadcast.mobile.core.LOG
-import com.nextgenbroadcast.mobile.core.telemetry.aws.AWSIoTControl
-import com.nextgenbroadcast.mobile.core.telemetry.aws.AWSIoTEvent
-import com.nextgenbroadcast.mobile.core.telemetry.aws.AWSIotThing
+import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIoTControl
+import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIoTEvent
+import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIotThing
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.BufferOverflow
@@ -35,7 +35,6 @@ class TelemetryBroker(
                 launch {
                     thing.subscribeCommandsFlow(commandFlow)
                 }
-
                 launch {
                     commandFlow.collect { command ->
                         LOG.d(TAG, "AWS IoT command received: ${command.action}")
