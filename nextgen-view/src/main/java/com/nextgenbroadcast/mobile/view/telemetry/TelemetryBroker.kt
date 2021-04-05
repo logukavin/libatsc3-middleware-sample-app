@@ -2,6 +2,7 @@ package com.nextgenbroadcast.mobile.view.telemetry
 
 import android.content.Context
 import com.nextgenbroadcast.mobile.core.LOG
+import com.nextgenbroadcast.mobile.core.telemetry.aws.AWSIoTControl
 import com.nextgenbroadcast.mobile.core.telemetry.aws.AWSIoTEvent
 import com.nextgenbroadcast.mobile.core.telemetry.aws.AWSIotThing
 import kotlinx.coroutines.GlobalScope
@@ -18,6 +19,7 @@ class TelemetryBroker(
     private val appContext = context.applicationContext
     private val thing = AWSIotThing(appContext)
     private val eventFlow = MutableSharedFlow<AWSIoTEvent>(replay = 20, extraBufferCapacity = 0, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+    private val commandFlow = MutableSharedFlow<AWSIoTControl>(replay = 0, extraBufferCapacity = 0, onBufferOverflow = BufferOverflow.SUSPEND)
 
     private var job: Job? = null
 
@@ -30,11 +32,21 @@ class TelemetryBroker(
                     BatteryStatistics(appContext).start(eventFlow)
                 }
 
+                launch {
+                    thing.subscribeCommandsFlow(commandFlow)
+                }
+
+                launch {
+                    commandFlow.collect { command ->
+                        LOG.d(TAG, "AWS IoT command received: ${command.action}")
+                    }
+                }
+
                 eventFlow.collect { event ->
                     thing.publish(event.topic, event.payload)
                 }
             } catch (e: Exception) {
-                LOG.d(TAG, "Telemetry gethering error: ", e)
+                LOG.d(TAG, "Telemetry gathering error: ", e)
             }
         }
     }
