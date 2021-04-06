@@ -20,6 +20,7 @@ import androidx.core.content.ContextCompat
 import androidx.media.session.MediaButtonReceiver
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.core.model.AVService
+import com.nextgenbroadcast.mobile.core.model.PhyFrequency
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverCore
@@ -38,6 +39,7 @@ import com.nextgenbroadcast.mobile.middleware.service.init.OnboardPhyInitializer
 import com.nextgenbroadcast.mobile.middleware.service.init.UsbPhyInitializer
 import com.nextgenbroadcast.mobile.middleware.service.media.MediaSessionConstants
 import com.nextgenbroadcast.mobile.middleware.telemetry.TelemetryBroker
+import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIotThing
 import com.nextgenbroadcast.mobile.player.Atsc3MediaPlayer
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -81,6 +83,18 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
         telemetryBroker = TelemetryBroker(applicationContext) { action, arguments ->
             LOG.d(TelemetryBroker.TAG, "AWS IoT command received: $action, args: $arguments")
+            when(action) {
+                AWSIotThing.AWSIOT_ACTION_TUNE -> {
+                    arguments[AWSIotThing.AWSIOT_ARGUMENT_FREQUENCY]?.let { frequencyList ->
+                        val frequencies = frequencyList
+                                .split(AWSIotThing.AWSIOT_ARGUMENT_DELIMITER)
+                                .mapNotNull { it.toIntOrNull() }
+                        if (frequencies.isNotEmpty()) {
+                            atsc3Receiver.tune(PhyFrequency.user(frequencies))
+                        }
+                    }
+                }
+            }
         }.also {
             it.start()
         }
