@@ -85,6 +85,7 @@ internal class ServiceDialogActivity : AppCompatActivity() {
 
     companion object {
         private const val FILE_REQUEST_CODE = 133
-        private const val ACTION_WATCH_TV = "com.nextgenbroadcast.mobile.tv"
+
+        const val ACTION_WATCH_TV = "com.nextgenbroadcast.mobile.tv"
     }
 }
