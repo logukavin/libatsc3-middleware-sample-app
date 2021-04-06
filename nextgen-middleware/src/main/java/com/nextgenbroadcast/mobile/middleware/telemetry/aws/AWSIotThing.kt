@@ -332,5 +332,6 @@ class AWSIotThing(
         const val AWSIOT_ARGUMENT_SERVICE_BSID = "serviceBsid"
         const val AWSIOT_ARGUMENT_SERVICE_NAME = "serviceName"
         const val AWSIOT_ARGUMENT_CASE = "case"
+        const val AWSIOT_ARGUMENT_START_DELAY = "startDelay"
     }
 }

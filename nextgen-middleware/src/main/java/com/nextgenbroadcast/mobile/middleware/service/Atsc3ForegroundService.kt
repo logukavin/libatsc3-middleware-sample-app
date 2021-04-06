@@ -1,5 +1,6 @@
 package com.nextgenbroadcast.mobile.middleware.service
 
+import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
@@ -24,19 +25,16 @@ import com.nextgenbroadcast.mobile.core.model.PhyFrequency
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverCore
-import com.nextgenbroadcast.mobile.middleware.BuildConfig
 import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverStandalone
+import com.nextgenbroadcast.mobile.middleware.BuildConfig
+import com.nextgenbroadcast.mobile.middleware.ServiceDialogActivity
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.SLTConstants
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.UsbAtsc3Source
 import com.nextgenbroadcast.mobile.middleware.cache.DownloadManager
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
 import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
 import com.nextgenbroadcast.mobile.middleware.phy.Atsc3DeviceReceiver
-import com.nextgenbroadcast.mobile.middleware.service.init.FrequencyInitializer
-import com.nextgenbroadcast.mobile.middleware.service.init.IServiceInitializer
-import com.nextgenbroadcast.mobile.middleware.service.init.MetadataReader
-import com.nextgenbroadcast.mobile.middleware.service.init.OnboardPhyInitializer
-import com.nextgenbroadcast.mobile.middleware.service.init.UsbPhyInitializer
+import com.nextgenbroadcast.mobile.middleware.service.init.*
 import com.nextgenbroadcast.mobile.middleware.service.media.MediaSessionConstants
 import com.nextgenbroadcast.mobile.middleware.telemetry.TelemetryBroker
 import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIotThing
@@ -44,6 +42,9 @@ import com.nextgenbroadcast.mobile.player.Atsc3MediaPlayer
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import java.lang.ref.WeakReference
+import kotlin.math.max
+import kotlin.system.exitProcess
+
 
 abstract class Atsc3ForegroundService : BindableForegroundService() {
     private val usbManager: UsbManager by lazy {
@@ -591,6 +592,19 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
                 telemetryBroker.testCase = arguments[AWSIotThing.AWSIOT_ARGUMENT_CASE]?.ifBlank {
                     null
                 }
+            }
+
+            AWSIotThing.AWSIOT_ACTION_RESTART_APP -> {
+                val delay = max(arguments[AWSIotThing.AWSIOT_ARGUMENT_START_DELAY]?.toLongOrNull() ?: 0, 100L)
+                val intent = Intent(ServiceDialogActivity.ACTION_WATCH_TV).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+
+                val mgr = getSystemService(ALARM_SERVICE) as AlarmManager
+                mgr[AlarmManager.RTC, System.currentTimeMillis() + delay] = PendingIntent.getActivity(
+                        this, 0, intent, PendingIntent.FLAG_CANCEL_CURRENT)
+
+                exitProcess(0)
             }
         }
     }
