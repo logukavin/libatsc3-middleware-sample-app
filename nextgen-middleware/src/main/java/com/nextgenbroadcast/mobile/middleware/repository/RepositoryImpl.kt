@@ -49,6 +49,10 @@ internal class RepositoryImpl : IRepository {
         return services.value.firstOrNull { it.bsid == bsid && it.id == serviceId }
     }
 
+    override fun findServiceOrNull(predicate: (AVService) -> Boolean): AVService? {
+        return services.value.firstOrNull(predicate)
+    }
+
     override fun setHeldPackage(data: Atsc3HeldPackage?) {
         heldPackage.value = data
     }

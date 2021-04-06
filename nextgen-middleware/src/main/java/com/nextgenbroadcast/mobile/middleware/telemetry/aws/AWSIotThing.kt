@@ -326,5 +326,8 @@ class AWSIotThing(
 
         const val AWSIOT_ARGUMENT_DELIMITER = ";"
         const val AWSIOT_ARGUMENT_FREQUENCY = "frequency"
+        const val AWSIOT_ARGUMENT_SERVICE_ID = "serviceId"
+        const val AWSIOT_ARGUMENT_SERVICE_BSID = "serviceBsid"
+        const val AWSIOT_ARGUMENT_SERVICE_NAME = "serviceName"
     }
 }

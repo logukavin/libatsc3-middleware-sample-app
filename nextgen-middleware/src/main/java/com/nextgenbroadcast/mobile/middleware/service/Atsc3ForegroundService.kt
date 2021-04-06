@@ -94,6 +94,22 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
                         }
                     }
                 }
+
+                AWSIotThing.AWSIOT_ACTION_ACQUIRE_SERVICE -> {
+                    val service = arguments[AWSIotThing.AWSIOT_ARGUMENT_SERVICE_ID]?.toIntOrNull()?.let { serviceId ->
+                        arguments[AWSIotThing.AWSIOT_ARGUMENT_SERVICE_BSID]?.toIntOrNull()?.let { bsid ->
+                            atsc3Receiver.findServiceBy(bsid, serviceId)
+                        } ?: let {
+                            atsc3Receiver.findActiveServiceById(serviceId)
+                        }
+                    } ?: arguments[AWSIotThing.AWSIOT_ARGUMENT_SERVICE_NAME]?.let { serviceName ->
+                        atsc3Receiver.findServiceBy(serviceName)
+                    }
+
+                    if (service != null) {
+                        atsc3Receiver.selectService(service)
+                    }
+                }
             }
         }.also {
             it.start()
