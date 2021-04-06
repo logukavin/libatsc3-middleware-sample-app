@@ -8,7 +8,9 @@ import android.content.IntentFilter
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import android.net.Uri
-import android.os.*
+import android.os.Bundle
+import android.os.IBinder
+import android.os.PowerManager
 import android.os.PowerManager.WakeLock
 import android.support.v4.media.MediaBrowserCompat
 import android.support.v4.media.MediaDescriptionCompat
@@ -595,7 +597,8 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
             }
 
             AWSIotThing.AWSIOT_ACTION_RESTART_APP -> {
-                val delay = max(arguments[AWSIotThing.AWSIOT_ARGUMENT_START_DELAY]?.toLongOrNull() ?: 0, 100L)
+                val delay = max(arguments[AWSIotThing.AWSIOT_ARGUMENT_START_DELAY]?.toLongOrNull()
+                        ?: 0, 100L)
                 val intent = Intent(ServiceDialogActivity.ACTION_WATCH_TV).apply {
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
@@ -605,6 +608,15 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
                         this, 0, intent, PendingIntent.FLAG_CANCEL_CURRENT)
 
                 exitProcess(0)
+            }
+
+            AWSIotThing.AWSIOT_ACTION_REBOOT_DEVICE -> {
+                //TODO: limit for MarkOne phone's only
+//                try {
+//                    Runtime.getRuntime().exec("shell execute reboot")
+//                } catch (e: Exception) {
+//                    LOG.d(TAG, "Can't reboot device", e)
+//                }
             }
         }
     }
