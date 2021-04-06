@@ -7,8 +7,8 @@ import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.middleware.BuildConfig
-import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIoTControl
-import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIoTEvent
+import com.nextgenbroadcast.mobile.middleware.telemetry.aws.entity.AWSIoTControl
+import com.nextgenbroadcast.mobile.middleware.telemetry.aws.entity.AWSIoTEvent
 import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIotThing
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
@@ -38,6 +38,8 @@ class TelemetryBroker(
     private val sensorManager = appContext.getSystemService(Context.SENSOR_SERVICE) as SensorManager
 
     private var job: Job? = null
+
+    var testCase: String? = null
 
     fun start() {
         thing.connect()
@@ -81,6 +83,7 @@ class TelemetryBroker(
                 }
 
                 eventFlow.collect { event ->
+                    event.payload.testCase = testCase
                     thing.publish(event.topic, event.payload)
                     LOG.d(TAG, "AWS IoT event: ${event.topic} - ${event.payload}")
                 }
