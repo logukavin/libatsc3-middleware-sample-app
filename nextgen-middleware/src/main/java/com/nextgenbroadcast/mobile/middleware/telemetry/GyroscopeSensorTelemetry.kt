@@ -10,6 +10,6 @@ class GyroscopeSensorTelemetry(
 ) : SensorTelemetry(sensorManager, sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE), sensorDelay) {
 
     companion object {
-        val UPDATE_FREQUENCY = TimeUnit.SECONDS.toMicros(1)
+        val UPDATE_FREQUENCY = TimeUnit.MINUTES.toMicros(1)
     }
 }
