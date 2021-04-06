@@ -77,6 +77,7 @@ class TelemetryBroker(
 //                        onCommand(command.action, command.arguments)
 //                    }
 //                }
+
                 eventFlow.collect { event ->
                     thing.publish(event.topic, event.payload)
                     LOG.d(TAG, "AWS IoT event: ${event.topic} - ${event.payload}")
