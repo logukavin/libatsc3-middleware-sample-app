@@ -32,19 +32,13 @@ abstract class BaseActivity : AppCompatActivity() {
         )
     }
 
-    override fun onStart() {
-        super.onStart()
-
-        mediaBrowser.connect()
-    }
-
-    override fun onStop() {
-        super.onStop()
-
-        mediaBrowser.disconnect()
-    }
-
     fun bindService() {
+        // The media session connection will start ForegroundService that requires permission.
+        // This method called after permission request, that's why it should be here.
+        if (!mediaBrowser.isConnected) {
+            mediaBrowser.connect()
+        }
+
         if (isBound) return
 
         Intent(this, EmbeddedAtsc3Service::class.java).apply {
@@ -56,6 +50,8 @@ abstract class BaseActivity : AppCompatActivity() {
     }
 
     fun unbindService() {
+        mediaBrowser.disconnect()
+
         if (!isBound) return
 
         unbindService(connection)
