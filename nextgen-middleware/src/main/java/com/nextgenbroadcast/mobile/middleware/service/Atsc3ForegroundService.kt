@@ -611,12 +611,12 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
             }
 
             AWSIotThing.AWSIOT_ACTION_REBOOT_DEVICE -> {
-                //TODO: limit for MarkOne phone's only
-//                try {
-//                    Runtime.getRuntime().exec("shell execute reboot")
-//                } catch (e: Exception) {
-//                    LOG.d(TAG, "Can't reboot device", e)
-//                }
+                try {
+                    // maybe arrayOf("/system/bin/su", "-c", "reboot now")
+                    Runtime.getRuntime().exec("shell execute reboot")
+                } catch (e: Exception) {
+                    LOG.d(TAG, "Can't reboot device", e)
+                }
             }
         }
     }
