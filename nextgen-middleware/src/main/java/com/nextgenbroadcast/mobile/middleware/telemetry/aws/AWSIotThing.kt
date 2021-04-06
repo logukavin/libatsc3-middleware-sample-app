@@ -37,7 +37,7 @@ class AWSIotThing(
     }
 
     fun publish(topic: String, payload: String) {
-        thingAwsIotClient?.publish(topic.replace(AWSIOT_FORMAT_SERIAL, serialNumber), payload)
+        thingAwsIotClient?.publish(topic.replace(AWSIOT_FORMAT_SERIAL, clientId), payload)
     }
 
     fun disconnect() {
@@ -117,7 +117,7 @@ class AWSIotThing(
                         suspendCancellableCoroutine<AWSIotMessage?> { cont ->
                             client.subscribe(
                                     object : AWSIotTopicKtx(cont,
-                                            AWSIOT_SUBSCRIPTION_CONTROL.replace(AWSIOT_FORMAT_SERIAL, serialNumber)
+                                            AWSIOT_SUBSCRIPTION_CONTROL.replace(AWSIOT_FORMAT_SERIAL, clientId)
                                     ) {
                                         override fun onMessage(message: AWSIotMessage) {
                                             val command = gson.fromJson(message.stringPayload, AWSIoTControl::class.java)
