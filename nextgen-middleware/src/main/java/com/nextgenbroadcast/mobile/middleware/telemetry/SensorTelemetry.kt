@@ -5,8 +5,9 @@ import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import com.nextgenbroadcast.mobile.core.LOG
-import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIoTEvent
 import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIotThing
+import com.nextgenbroadcast.mobile.middleware.telemetry.aws.entity.AWSIoTEvent
+import com.nextgenbroadcast.mobile.middleware.telemetry.aws.entity.AWSIoTPayload
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.channels.sendBlocking
@@ -14,6 +15,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.collect
+import java.util.concurrent.TimeUnit
 
 open class SensorTelemetry(
         private val sensorManager: SensorManager,
@@ -62,11 +64,11 @@ open class SensorTelemetry(
 
     companion object {
         val TAG: String = GyroscopeSensorTelemetry::class.java.simpleName
-        val DEFAULT_UPDATE_FREQUENCY = java.util.concurrent.TimeUnit.MINUTES.toMicros(1)
+        val DEFAULT_UPDATE_FREQUENCY = TimeUnit.MINUTES.toMicros(1)
     }
 }
 
 data class SensorData(
         val sensorName: String,
         val accuracy: Int
-)
+) : AWSIoTPayload()

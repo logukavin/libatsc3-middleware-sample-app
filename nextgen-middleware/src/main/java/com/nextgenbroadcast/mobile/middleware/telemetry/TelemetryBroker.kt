@@ -23,6 +23,7 @@ class TelemetryBroker(
         private val onCommand: suspend (action: String, arguments: Map<String, String>) -> Unit
 ) {
     private val appContext = context.applicationContext
+    private val sensorManager = appContext.getSystemService(Context.SENSOR_SERVICE) as SensorManager
     private val preferences: SharedPreferences = EncryptedSharedPreferences.create(
             appContext,
             IoT_PREFERENCE,
@@ -35,8 +36,6 @@ class TelemetryBroker(
     // it's MUST be non suspending because we use tryEmit in callback
     private val commandFlow = MutableSharedFlow<AWSIoTControl>(replay = 1, extraBufferCapacity = 0, onBufferOverflow = BufferOverflow.DROP_OLDEST)
 
-    private val sensorManager = appContext.getSystemService(Context.SENSOR_SERVICE) as SensorManager
-
     private var job: Job? = null
 
     var testCase: String? = null
@@ -46,30 +45,33 @@ class TelemetryBroker(
 
         job = GlobalScope.launch {
             try {
+                // Battery
                 launch {
                     BatteryTelemetry(appContext).start(eventFlow)
                 }
 
-                launch {
-                    LinearAccelerationTelemetry(sensorManager).start(eventFlow)
-                }
+                //TODO: fix event gethering period
+                // Sensors
+//                launch {
+//                    LinearAccelerationTelemetry(sensorManager).start(eventFlow)
+//                }
+//                launch {
+//                    GyroscopeSensorTelemetry(sensorManager).start(eventFlow)
+//                }
+//                launch {
+//                    SignificantMotionSensorTelemetry(sensorManager).start(eventFlow)
+//                }
+//                launch {
+//                    StepDetectorSensorTelemetry(sensorManager).start(eventFlow)
+//                }
+//                launch {
+//                    StepCounterSensorTelemetry(sensorManager).start(eventFlow)
+//                }
+//                launch {
+//                    RotationVectorSensorTelemetry(sensorManager).start(eventFlow)
+//                }
 
-                launch {
-                    GyroscopeSensorTelemetry(sensorManager).start(eventFlow)
-                }
-
-                launch {
-                    SignificantMotionSensorTelemetry(sensorManager).start(eventFlow)
-                }
-
-                launch {
-                    StepDetectorSensorTelemetry(sensorManager).start(eventFlow)
-                }
-
-                launch {
-                    StepCounterSensorTelemetry(sensorManager).start(eventFlow)
-                }
-
+                // Command processing
                 launch {
                     thing.subscribeCommandsFlow(commandFlow)
                 }
@@ -78,10 +80,8 @@ class TelemetryBroker(
                         onCommand(command.action, command.arguments)
                     }
                 }
-                launch {
-                    RotationVectorSensorTelemetry(sensorManager).start(eventFlow)
-                }
 
+                // Telemetry sending
                 eventFlow.collect { event ->
                     event.payload.testCase = testCase
                     thing.publish(event.topic, event.payload)
