@@ -67,16 +67,16 @@ class TelemetryBroker(
                 }
 
                 launch {
+                    thing.subscribeCommandsFlow(commandFlow)
+                }
+                launch {
+                    commandFlow.collect { command ->
+                        onCommand(command.action, command.arguments)
+                    }
+                }
+                launch {
                     RotationVectorSensorTelemetry(sensorManager).start(eventFlow)
                 }
-//                launch {
-//                    thing.subscribeCommandsFlow(commandFlow)
-//                }
-//                launch {
-//                    commandFlow.collect { command ->
-//                        onCommand(command.action, command.arguments)
-//                    }
-//                }
 
                 eventFlow.collect { event ->
                     thing.publish(event.topic, event.payload)
