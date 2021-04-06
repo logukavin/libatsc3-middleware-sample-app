@@ -14,14 +14,12 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.collect
-import java.lang.Exception
 
 open class SensorTelemetry(
         private val sensorManager: SensorManager,
         private val sensor: Sensor?,
         private val sensorDelay: Int
 ) {
-
     suspend fun start(eventFlow: MutableSharedFlow<AWSIoTEvent>) {
         if (sensor == null) return
 
@@ -64,6 +62,7 @@ open class SensorTelemetry(
 
     companion object {
         val TAG: String = GyroscopeSensorTelemetry::class.java.simpleName
+        val DEFAULT_UPDATE_FREQUENCY = java.util.concurrent.TimeUnit.MINUTES.toMicros(1)
     }
 }
 
