@@ -4,7 +4,7 @@ import android.hardware.Sensor
 import android.hardware.SensorManager
 import java.util.concurrent.TimeUnit
 
-class SignificantTelemetry(
+class SignificantMotionSensorTelemetry(
         sensorManager: SensorManager,
         sensorDelay: Int = UPDATE_FREQUENCY.toInt()
 ) : SensorTelemetry(sensorManager, sensorManager.getDefaultSensor(Sensor.TYPE_SIGNIFICANT_MOTION), sensorDelay) {
