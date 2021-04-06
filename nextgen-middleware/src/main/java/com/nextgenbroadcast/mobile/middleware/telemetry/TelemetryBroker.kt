@@ -2,6 +2,7 @@ package com.nextgenbroadcast.mobile.middleware.telemetry
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.hardware.Sensor
 import android.hardware.SensorManager
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
@@ -50,26 +51,19 @@ class TelemetryBroker(
                     BatteryTelemetry(appContext).start(eventFlow)
                 }
 
-                //TODO: fix event gethering period
                 // Sensors
-//                launch {
-//                    LinearAccelerationTelemetry(sensorManager).start(eventFlow)
-//                }
-//                launch {
-//                    GyroscopeSensorTelemetry(sensorManager).start(eventFlow)
-//                }
-//                launch {
-//                    SignificantMotionSensorTelemetry(sensorManager).start(eventFlow)
-//                }
-//                launch {
-//                    StepDetectorSensorTelemetry(sensorManager).start(eventFlow)
-//                }
-//                launch {
-//                    StepCounterSensorTelemetry(sensorManager).start(eventFlow)
-//                }
-//                launch {
-//                    RotationVectorSensorTelemetry(sensorManager).start(eventFlow)
-//                }
+                listOf(
+                        Sensor.TYPE_LINEAR_ACCELERATION,
+                        Sensor.TYPE_GYROSCOPE,
+                        Sensor.TYPE_SIGNIFICANT_MOTION,
+                        Sensor.TYPE_STEP_DETECTOR,
+                        Sensor.TYPE_STEP_COUNTER,
+                        Sensor.TYPE_ROTATION_VECTOR
+                ).forEach { sensorType ->
+                    launch {
+                        SensorTelemetry(sensorManager, sensorType).start(eventFlow)
+                    }
+                }
 
                 // Command processing
                 launch {
