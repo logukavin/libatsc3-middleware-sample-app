@@ -83,34 +83,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
         telemetryBroker = TelemetryBroker(applicationContext) { action, arguments ->
             LOG.d(TelemetryBroker.TAG, "AWS IoT command received: $action, args: $arguments")
-            when(action) {
-                AWSIotThing.AWSIOT_ACTION_TUNE -> {
-                    arguments[AWSIotThing.AWSIOT_ARGUMENT_FREQUENCY]?.let { frequencyList ->
-                        val frequencies = frequencyList
-                                .split(AWSIotThing.AWSIOT_ARGUMENT_DELIMITER)
-                                .mapNotNull { it.toIntOrNull() }
-                        if (frequencies.isNotEmpty()) {
-                            atsc3Receiver.tune(PhyFrequency.user(frequencies))
-                        }
-                    }
-                }
-
-                AWSIotThing.AWSIOT_ACTION_ACQUIRE_SERVICE -> {
-                    val service = arguments[AWSIotThing.AWSIOT_ARGUMENT_SERVICE_ID]?.toIntOrNull()?.let { serviceId ->
-                        arguments[AWSIotThing.AWSIOT_ARGUMENT_SERVICE_BSID]?.toIntOrNull()?.let { bsid ->
-                            atsc3Receiver.findServiceBy(bsid, serviceId)
-                        } ?: let {
-                            atsc3Receiver.findActiveServiceById(serviceId)
-                        }
-                    } ?: arguments[AWSIotThing.AWSIOT_ARGUMENT_SERVICE_NAME]?.let { serviceName ->
-                        atsc3Receiver.findServiceBy(serviceName)
-                    }
-
-                    if (service != null) {
-                        atsc3Receiver.selectService(service)
-                    }
-                }
-            }
+            executeCommand(action, arguments)
         }.also {
             it.start()
         }
@@ -582,6 +555,43 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
             //TODO: we must deactivate it
             mediaSession.isActive = true
+        }
+    }
+
+    private fun executeCommand(action: String, arguments: Map<String, String>) {
+        when (action) {
+            AWSIotThing.AWSIOT_ACTION_TUNE -> {
+                arguments[AWSIotThing.AWSIOT_ARGUMENT_FREQUENCY]?.let { frequencyList ->
+                    val frequencies = frequencyList
+                            .split(AWSIotThing.AWSIOT_ARGUMENT_DELIMITER)
+                            .mapNotNull { it.toIntOrNull() }
+                    if (frequencies.isNotEmpty()) {
+                        atsc3Receiver.tune(PhyFrequency.user(frequencies))
+                    }
+                }
+            }
+
+            AWSIotThing.AWSIOT_ACTION_ACQUIRE_SERVICE -> {
+                val service = arguments[AWSIotThing.AWSIOT_ARGUMENT_SERVICE_ID]?.toIntOrNull()?.let { serviceId ->
+                    arguments[AWSIotThing.AWSIOT_ARGUMENT_SERVICE_BSID]?.toIntOrNull()?.let { bsid ->
+                        atsc3Receiver.findServiceBy(bsid, serviceId)
+                    } ?: let {
+                        atsc3Receiver.findActiveServiceById(serviceId)
+                    }
+                } ?: arguments[AWSIotThing.AWSIOT_ARGUMENT_SERVICE_NAME]?.let { serviceName ->
+                    atsc3Receiver.findServiceBy(serviceName)
+                }
+
+                if (service != null) {
+                    atsc3Receiver.selectService(service)
+                }
+            }
+
+            AWSIotThing.AWSIOT_ACTION_SET_TEST_CASE -> {
+                telemetryBroker.testCase = arguments[AWSIotThing.AWSIOT_ARGUMENT_CASE]?.ifBlank {
+                    null
+                }
+            }
         }
     }
 

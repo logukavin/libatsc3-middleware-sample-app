@@ -4,8 +4,9 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.BatteryManager
-import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIoTEvent
+import com.nextgenbroadcast.mobile.middleware.telemetry.aws.entity.AWSIoTEvent
 import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIotThing
+import com.nextgenbroadcast.mobile.middleware.telemetry.aws.entity.AWSIoTPayload
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableSharedFlow
 import java.util.concurrent.TimeUnit
@@ -27,7 +28,7 @@ class BatteryTelemetry(
 
                     eventFlow.emit(AWSIoTEvent(
                             AWSIotThing.AWSIOT_TOPIC_BATTERY,
-                            batteryPct
+                            BatteryData(batteryPct)
                     ))
                 }
 
@@ -40,3 +41,7 @@ class BatteryTelemetry(
         val BATTERY_MEASURING_FREQUENCY = TimeUnit.MINUTES.toMillis(1)
     }
 }
+
+data class BatteryData(
+        val level: Float
+) : AWSIoTPayload()
