@@ -44,14 +44,14 @@ class TelemetryBroker(
                     BatteryStatistics(appContext).start(eventFlow)
                 }
 
-//                launch {
-//                    thing.subscribeCommandsFlow(commandFlow)
-//                }
-//                launch {
-//                    commandFlow.collect { command ->
-//                        onCommand(command.action, command.arguments)
-//                    }
-//                }
+                launch {
+                    thing.subscribeCommandsFlow(commandFlow)
+                }
+                launch {
+                    commandFlow.collect { command ->
+                        onCommand(command.action, command.arguments)
+                    }
+                }
 
                 eventFlow.collect { event ->
                     thing.publish(event.topic, event.payload)
