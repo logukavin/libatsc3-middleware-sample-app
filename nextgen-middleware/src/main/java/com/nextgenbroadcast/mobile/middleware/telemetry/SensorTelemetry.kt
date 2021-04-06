@@ -11,17 +11,17 @@ import com.nextgenbroadcast.mobile.middleware.telemetry.aws.entity.AWSIoTPayload
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.channels.sendBlocking
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.buffer
-import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.*
 import java.util.concurrent.TimeUnit
 
-open class SensorTelemetry(
+class SensorTelemetry(
         private val sensorManager: SensorManager,
-        private val sensor: Sensor?,
-        private val sensorDelay: Int
+        private val sensorType: Int,
+        private val sensorDelay: Long = DEFAULT_UPDATE_FREQUENCY
 ) {
+    private val emptyFloatArray = FloatArray(0)
+    private val sensor: Sensor? = sensorManager.getDefaultSensor(sensorType)
+
     suspend fun start(eventFlow: MutableSharedFlow<AWSIoTEvent>) {
         if (sensor == null) return
 
@@ -30,13 +30,15 @@ open class SensorTelemetry(
                 override fun onSensorChanged(event: SensorEvent) {
                     safeSend(SensorData(
                             sensorName = event.sensor.name,
-                            accuracy = 0
+                            values = event.values,
+                            accuracy = event.accuracy
                     ))
                 }
 
                 override fun onAccuracyChanged(sensor: Sensor, accuracy: Int) {
                     safeSend(SensorData(
                             sensorName = sensor.name,
+                            values = emptyFloatArray,
                             accuracy = accuracy
                     ))
                 }
@@ -50,25 +52,45 @@ open class SensorTelemetry(
                 }
             }
 
-            sensorManager.registerListener(listener, sensor, sensorDelay)
+            sensorManager.registerListener(listener, sensor, (sensorDelay * 1000).toInt())
 
             awaitClose {
                 sensorManager.unregisterListener(listener)
             }
-        }.apply {
-            buffer(Channel.CONFLATED) // To avoid blocking
-        }.collect { data ->
-            eventFlow.emit(AWSIoTEvent(AWSIotThing.AWSIOT_TOPIC_SENSORS, data))
-        }
+        }.buffer(Channel.CONFLATED) // To avoid send blocking
+                .sample(sensorDelay) // To control emission frequency
+                .collect { data ->
+                    eventFlow.emit(AWSIoTEvent(AWSIotThing.AWSIOT_TOPIC_SENSORS, data))
+                }
     }
 
     companion object {
-        val TAG: String = GyroscopeSensorTelemetry::class.java.simpleName
-        val DEFAULT_UPDATE_FREQUENCY = TimeUnit.MINUTES.toMicros(1)
+        val TAG: String = SensorTelemetry::class.java.simpleName
+
+        val DEFAULT_UPDATE_FREQUENCY = TimeUnit.SECONDS.toMillis(1)
     }
 }
 
 data class SensorData(
         val sensorName: String,
+        val values: FloatArray,
         val accuracy: Int
-) : AWSIoTPayload()
+) : AWSIoTPayload() {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as SensorData
+
+        if (sensorName != other.sensorName) return false
+        if (accuracy != other.accuracy) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = sensorName.hashCode()
+        result = 31 * result + accuracy
+        return result
+    }
+}
