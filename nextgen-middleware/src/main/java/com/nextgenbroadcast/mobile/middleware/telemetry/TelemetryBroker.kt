@@ -7,8 +7,8 @@ import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.middleware.BuildConfig
-import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIoTControl
-import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIoTEvent
+import com.nextgenbroadcast.mobile.middleware.telemetry.aws.entity.AWSIoTControl
+import com.nextgenbroadcast.mobile.middleware.telemetry.aws.entity.AWSIoTEvent
 import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIotThing
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
@@ -20,9 +20,10 @@ import java.lang.Exception
 
 class TelemetryBroker(
         context: Context,
-        private val onCommand: suspend (action: String, arguments: List<String>) -> Unit
+        private val onCommand: suspend (action: String, arguments: Map<String, String>) -> Unit
 ) {
     private val appContext = context.applicationContext
+    private val sensorManager = appContext.getSystemService(Context.SENSOR_SERVICE) as SensorManager
     private val preferences: SharedPreferences = EncryptedSharedPreferences.create(
             appContext,
             IoT_PREFERENCE,
@@ -32,40 +33,45 @@ class TelemetryBroker(
     )
     private val thing = AWSIotThing(preferences, appContext.assets)
     private val eventFlow = MutableSharedFlow<AWSIoTEvent>(replay = 20, extraBufferCapacity = 0, onBufferOverflow = BufferOverflow.DROP_OLDEST)
-    private val commandFlow = MutableSharedFlow<AWSIoTControl>(replay = 0, extraBufferCapacity = 0, onBufferOverflow = BufferOverflow.SUSPEND)
-    private val sensorManager = appContext.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+    // it's MUST be non suspending because we use tryEmit in callback
+    private val commandFlow = MutableSharedFlow<AWSIoTControl>(replay = 1, extraBufferCapacity = 0, onBufferOverflow = BufferOverflow.DROP_OLDEST)
 
     private var job: Job? = null
+
+    var testCase: String? = null
 
     fun start() {
         thing.connect()
 
         job = GlobalScope.launch {
             try {
+                // Battery
                 launch {
                     BatteryTelemetry(appContext).start(eventFlow)
                 }
 
-                launch {
-                    LinearAccelerationTelemetry(sensorManager).start(eventFlow)
-                }
+                //TODO: fix event gethering period
+                // Sensors
+//                launch {
+//                    LinearAccelerationTelemetry(sensorManager).start(eventFlow)
+//                }
+//                launch {
+//                    GyroscopeSensorTelemetry(sensorManager).start(eventFlow)
+//                }
+//                launch {
+//                    SignificantMotionSensorTelemetry(sensorManager).start(eventFlow)
+//                }
+//                launch {
+//                    StepDetectorSensorTelemetry(sensorManager).start(eventFlow)
+//                }
+//                launch {
+//                    StepCounterSensorTelemetry(sensorManager).start(eventFlow)
+//                }
+//                launch {
+//                    RotationVectorSensorTelemetry(sensorManager).start(eventFlow)
+//                }
 
-                launch {
-                    GyroscopeSensorTelemetry(sensorManager).start(eventFlow)
-                }
-
-                launch {
-                    SignificantMotionSensorTelemetry(sensorManager).start(eventFlow)
-                }
-
-                launch {
-                    StepDetectorSensorTelemetry(sensorManager).start(eventFlow)
-                }
-
-                launch {
-                    StepCounterSensorTelemetry(sensorManager).start(eventFlow)
-                }
-
+                // Command processing
                 launch {
                     thing.subscribeCommandsFlow(commandFlow)
                 }
@@ -74,11 +80,10 @@ class TelemetryBroker(
                         onCommand(command.action, command.arguments)
                     }
                 }
-                launch {
-                    RotationVectorSensorTelemetry(sensorManager).start(eventFlow)
-                }
 
+                // Telemetry sending
                 eventFlow.collect { event ->
+                    event.payload.testCase = testCase
                     thing.publish(event.topic, event.payload)
                     LOG.d(TAG, "AWS IoT event: ${event.topic} - ${event.payload}")
                 }

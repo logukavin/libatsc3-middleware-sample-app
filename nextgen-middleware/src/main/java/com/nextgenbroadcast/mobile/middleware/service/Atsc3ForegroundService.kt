@@ -1,5 +1,6 @@
 package com.nextgenbroadcast.mobile.middleware.service
 
+import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
@@ -7,7 +8,9 @@ import android.content.IntentFilter
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import android.net.Uri
-import android.os.*
+import android.os.Bundle
+import android.os.IBinder
+import android.os.PowerManager
 import android.os.PowerManager.WakeLock
 import android.support.v4.media.MediaBrowserCompat
 import android.support.v4.media.MediaDescriptionCompat
@@ -20,28 +23,30 @@ import androidx.core.content.ContextCompat
 import androidx.media.session.MediaButtonReceiver
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.core.model.AVService
+import com.nextgenbroadcast.mobile.core.model.PhyFrequency
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverCore
-import com.nextgenbroadcast.mobile.middleware.BuildConfig
 import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverStandalone
+import com.nextgenbroadcast.mobile.middleware.BuildConfig
+import com.nextgenbroadcast.mobile.middleware.ServiceDialogActivity
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.SLTConstants
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.UsbAtsc3Source
 import com.nextgenbroadcast.mobile.middleware.cache.DownloadManager
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
 import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
 import com.nextgenbroadcast.mobile.middleware.phy.Atsc3DeviceReceiver
-import com.nextgenbroadcast.mobile.middleware.service.init.FrequencyInitializer
-import com.nextgenbroadcast.mobile.middleware.service.init.IServiceInitializer
-import com.nextgenbroadcast.mobile.middleware.service.init.MetadataReader
-import com.nextgenbroadcast.mobile.middleware.service.init.OnboardPhyInitializer
-import com.nextgenbroadcast.mobile.middleware.service.init.UsbPhyInitializer
+import com.nextgenbroadcast.mobile.middleware.service.init.*
 import com.nextgenbroadcast.mobile.middleware.service.media.MediaSessionConstants
 import com.nextgenbroadcast.mobile.middleware.telemetry.TelemetryBroker
+import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIotThing
 import com.nextgenbroadcast.mobile.player.Atsc3MediaPlayer
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import java.lang.ref.WeakReference
+import kotlin.math.max
+import kotlin.system.exitProcess
+
 
 abstract class Atsc3ForegroundService : BindableForegroundService() {
     private val usbManager: UsbManager by lazy {
@@ -81,6 +86,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
         telemetryBroker = TelemetryBroker(applicationContext) { action, arguments ->
             LOG.d(TelemetryBroker.TAG, "AWS IoT command received: $action, args: $arguments")
+            executeCommand(action, arguments)
         }.also {
             it.start()
         }
@@ -552,6 +558,66 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
             //TODO: we must deactivate it
             mediaSession.isActive = true
+        }
+    }
+
+    private fun executeCommand(action: String, arguments: Map<String, String>) {
+        when (action) {
+            AWSIotThing.AWSIOT_ACTION_TUNE -> {
+                arguments[AWSIotThing.AWSIOT_ARGUMENT_FREQUENCY]?.let { frequencyList ->
+                    val frequencies = frequencyList
+                            .split(AWSIotThing.AWSIOT_ARGUMENT_DELIMITER)
+                            .mapNotNull { it.toIntOrNull() }
+                    if (frequencies.isNotEmpty()) {
+                        atsc3Receiver.tune(PhyFrequency.user(frequencies))
+                    }
+                }
+            }
+
+            AWSIotThing.AWSIOT_ACTION_ACQUIRE_SERVICE -> {
+                val service = arguments[AWSIotThing.AWSIOT_ARGUMENT_SERVICE_ID]?.toIntOrNull()?.let { serviceId ->
+                    arguments[AWSIotThing.AWSIOT_ARGUMENT_SERVICE_BSID]?.toIntOrNull()?.let { bsid ->
+                        atsc3Receiver.findServiceBy(bsid, serviceId)
+                    } ?: let {
+                        atsc3Receiver.findActiveServiceById(serviceId)
+                    }
+                } ?: arguments[AWSIotThing.AWSIOT_ARGUMENT_SERVICE_NAME]?.let { serviceName ->
+                    atsc3Receiver.findServiceBy(serviceName)
+                }
+
+                if (service != null) {
+                    atsc3Receiver.selectService(service)
+                }
+            }
+
+            AWSIotThing.AWSIOT_ACTION_SET_TEST_CASE -> {
+                telemetryBroker.testCase = arguments[AWSIotThing.AWSIOT_ARGUMENT_CASE]?.ifBlank {
+                    null
+                }
+            }
+
+            AWSIotThing.AWSIOT_ACTION_RESTART_APP -> {
+                val delay = max(arguments[AWSIotThing.AWSIOT_ARGUMENT_START_DELAY]?.toLongOrNull()
+                        ?: 0, 100L)
+                val intent = Intent(ServiceDialogActivity.ACTION_WATCH_TV).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+
+                val mgr = getSystemService(ALARM_SERVICE) as AlarmManager
+                mgr[AlarmManager.RTC, System.currentTimeMillis() + delay] = PendingIntent.getActivity(
+                        this, 0, intent, PendingIntent.FLAG_CANCEL_CURRENT)
+
+                exitProcess(0)
+            }
+
+            AWSIotThing.AWSIOT_ACTION_REBOOT_DEVICE -> {
+                try {
+                    // maybe arrayOf("/system/bin/su", "-c", "reboot now")
+                    Runtime.getRuntime().exec("shell execute reboot")
+                } catch (e: Exception) {
+                    LOG.d(TAG, "Can't reboot device", e)
+                }
+            }
         }
     }
 

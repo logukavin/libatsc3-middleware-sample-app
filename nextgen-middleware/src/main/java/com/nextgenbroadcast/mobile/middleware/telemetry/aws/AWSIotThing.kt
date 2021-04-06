@@ -7,6 +7,8 @@ import android.os.Build
 import com.amazonaws.services.iot.client.*
 import com.google.gson.Gson
 import com.nextgenbroadcast.mobile.core.LOG
+import com.nextgenbroadcast.mobile.middleware.telemetry.aws.entity.AWSIoTControl
+import com.nextgenbroadcast.mobile.middleware.telemetry.aws.entity.AWSIoTPayload
 import com.nextgenbroadcast.mobile.middleware.telemetry.reader.PrivateKeyReader
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -32,8 +34,8 @@ class AWSIotThing(
 
     private var thingAwsIotClient: AWSIotMqttClient? = null
 
-    fun publish(topic: String, any: Any) {
-        publish(topic, gson.toJson(any))
+    fun publish(topic: String, payload: AWSIoTPayload) {
+        publish(topic, gson.toJson(payload))
     }
 
     fun publish(topic: String, payload: String) {
@@ -317,5 +319,19 @@ class AWSIotThing(
         const val AWSIOT_TOPIC_SENSORS = "telemetry/$AWSIOT_FORMAT_SERIAL/sensors"
         const val AWSIOT_TOPIC_SAANKHYA_PHY_DEBUG = "telemetry/$AWSIOT_FORMAT_SERIAL/saankhya_phy_debug"
         const val AWSIOT_TOPIC_ATSC3TRANSPORT = "telemetry/$AWSIOT_FORMAT_SERIAL/atsc3transport"
+
+        const val AWSIOT_ACTION_TUNE = "tune"
+        const val AWSIOT_ACTION_ACQUIRE_SERVICE = "acquireService"
+        const val AWSIOT_ACTION_SET_TEST_CASE = "setTestCase"
+        const val AWSIOT_ACTION_RESTART_APP = "restartApp"
+        const val AWSIOT_ACTION_REBOOT_DEVICE = "rebootDevice"
+
+        const val AWSIOT_ARGUMENT_DELIMITER = ";"
+        const val AWSIOT_ARGUMENT_FREQUENCY = "frequency"
+        const val AWSIOT_ARGUMENT_SERVICE_ID = "serviceId"
+        const val AWSIOT_ARGUMENT_SERVICE_BSID = "serviceBsid"
+        const val AWSIOT_ARGUMENT_SERVICE_NAME = "serviceName"
+        const val AWSIOT_ARGUMENT_CASE = "case"
+        const val AWSIOT_ARGUMENT_START_DELAY = "startDelay"
     }
 }

@@ -29,6 +29,7 @@ internal interface IRepository {
     fun setSelectedService(service: AVService?)
     fun findServiceBy(globalServiceId: String): AVService?
     fun findServiceBy(bsid: Int, serviceId: Int): AVService?
+    fun findServiceOrNull(predicate: (AVService) -> Boolean): AVService?
 
     fun setHeldPackage(data: Atsc3HeldPackage?)
     fun setMediaUrl(mediaUrl: MediaUrl?)

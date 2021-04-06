@@ -187,6 +187,10 @@ internal class Atsc3ReceiverCore(
         serviceController.tune(frequency)
     }
 
+    override fun selectService(service: AVService) {
+        serviceController.selectService(service)
+    }
+
     override fun getReceiverState(): ReceiverState {
         return serviceController.receiverState.value
     }
@@ -197,6 +201,10 @@ internal class Atsc3ReceiverCore(
 
     fun findServiceBy(bsid: Int, serviceId: Int): AVService? {
         return repository.findServiceBy(bsid, serviceId)
+    }
+
+    fun findServiceBy(name: String): AVService? {
+        return repository.findServiceOrNull { it.shortName == name }
     }
 
     fun findActiveServiceById(serviceId: Int): AVService? {
