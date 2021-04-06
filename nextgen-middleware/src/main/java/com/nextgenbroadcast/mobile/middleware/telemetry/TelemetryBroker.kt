@@ -20,7 +20,7 @@ import java.lang.Exception
 
 class TelemetryBroker(
         context: Context,
-        private val onCommand: suspend (action: String, arguments: List<String>) -> Unit
+        private val onCommand: suspend (action: String, arguments: Map<String, String>) -> Unit
 ) {
     private val appContext = context.applicationContext
     private val preferences: SharedPreferences = EncryptedSharedPreferences.create(
@@ -32,7 +32,9 @@ class TelemetryBroker(
     )
     private val thing = AWSIotThing(preferences, appContext.assets)
     private val eventFlow = MutableSharedFlow<AWSIoTEvent>(replay = 20, extraBufferCapacity = 0, onBufferOverflow = BufferOverflow.DROP_OLDEST)
-    private val commandFlow = MutableSharedFlow<AWSIoTControl>(replay = 0, extraBufferCapacity = 0, onBufferOverflow = BufferOverflow.SUSPEND)
+    // it's MUST be non suspending because we use tryEmit in callback
+    private val commandFlow = MutableSharedFlow<AWSIoTControl>(replay = 1, extraBufferCapacity = 0, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+
     private val sensorManager = appContext.getSystemService(Context.SENSOR_SERVICE) as SensorManager
 
     private var job: Job? = null
