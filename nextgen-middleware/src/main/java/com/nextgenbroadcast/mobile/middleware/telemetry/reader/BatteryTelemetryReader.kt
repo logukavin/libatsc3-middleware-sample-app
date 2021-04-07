@@ -1,4 +1,4 @@
-package com.nextgenbroadcast.mobile.middleware.telemetry
+package com.nextgenbroadcast.mobile.middleware.telemetry.reader
 
 import android.content.Context
 import android.content.Intent
@@ -11,14 +11,14 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableSharedFlow
 import java.util.concurrent.TimeUnit
 
-class BatteryTelemetry(
+class BatteryTelemetryReader(
         context: Context,
         private val updateInterval: Long = BATTERY_MEASURING_FREQUENCY
-) {
+) : ITelemetryReader {
     private val appContext = context.applicationContext
     private val intentFilter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
 
-    suspend fun start(eventFlow: MutableSharedFlow<TelemetryEvent>) {
+    override suspend fun read(eventFlow: MutableSharedFlow<TelemetryEvent>) {
         supervisorScope {
             while (isActive) {
                 appContext.registerReceiver(null, intentFilter)?.let { batteryStatus ->
