@@ -56,6 +56,11 @@ class TelemetryBroker(
                     }
                 }
 
+                // Location
+                launch {
+                    GPSTelemetry(appContext, GPSTelemetry.Companion.FrequencyType.MEDIUM).start(eventFlow)
+                }
+
                 // Telemetry sending
                 observeEventFlow()
             } catch (e: Exception) {
