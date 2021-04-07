@@ -1,10 +1,12 @@
 package com.nextgenbroadcast.mobile.middleware.atsc3
 
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.IAtsc3Source
-import org.ngbp.libatsc3.middleware.android.application.interfaces.IAtsc3NdkApplicationBridgeCallbacks
-import org.ngbp.libatsc3.middleware.android.phy.interfaces.IAtsc3NdkPHYBridgeCallbacks
+import kotlinx.coroutines.flow.SharedFlow
+import org.ngbp.libatsc3.middleware.android.phy.models.RfPhyStatistics
 
 interface IAtsc3Module {
+    val rfPhyMetricsFlow: SharedFlow<RfPhyStatistics>
+
     fun setListener(listener: Atsc3ModuleListener?)
     fun tune(freqKhz: Int, frequencies: List<Int>, retuneOnDemod: Boolean)
     fun connect(source: IAtsc3Source): Boolean

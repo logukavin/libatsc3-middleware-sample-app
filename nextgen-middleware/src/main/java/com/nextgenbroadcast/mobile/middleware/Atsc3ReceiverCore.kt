@@ -1,6 +1,5 @@
 package com.nextgenbroadcast.mobile.middleware
 
-import android.widget.Toast
 import com.nextgenbroadcast.mobile.core.cert.IUserAgentSSLContext
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.PhyFrequency
@@ -27,6 +26,9 @@ import com.nextgenbroadcast.mobile.middleware.server.web.MiddlewareWebServer
 import com.nextgenbroadcast.mobile.middleware.service.provider.IMediaFileProvider
 import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
 import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.collect
 
 internal class Atsc3ReceiverCore(
@@ -36,16 +38,18 @@ internal class Atsc3ReceiverCore(
         private val serviceGuideStore: IServiceGuideStore,
         val mediaFileProvider: IMediaFileProvider,
         private val sslContext: IUserAgentSSLContext,
-        private val analytics: IAtsc3Analytics,
-        private val onError: ((message: String) -> Unit)? = null
+        private val analytics: IAtsc3Analytics
 ) : IAtsc3ServiceCore {
     //TODO: create own scope?
     private val coreScope: CoroutineScope = CoroutineScope(Dispatchers.Default)
     private var viewScope: CoroutineScope? = null
 
+    private val _errorFlow = MutableSharedFlow<String>(10, 0, BufferOverflow.DROP_OLDEST)
+    val errorFlow = _errorFlow.asSharedFlow()
+
     //TODO: we should close this instances
     private val serviceGuideReader = ServiceGuideDeliveryUnitReader(serviceGuideStore)
-    val serviceController: IServiceController = ServiceControllerImpl(repository, settings, atsc3Module, analytics, serviceGuideReader, coreScope, onError)
+    val serviceController: IServiceController = ServiceControllerImpl(repository, settings, atsc3Module, analytics, serviceGuideReader, coreScope, ::onError)
     var viewController: IViewController? = null
         private set
     var ignoreAudioServiceMedia: Boolean = true
@@ -54,6 +58,9 @@ internal class Atsc3ReceiverCore(
     private var webGateway: IWebGateway? = null
     private var rpcGateway: IRPCGateway? = null
     private var webServer: MiddlewareWebServer? = null
+
+    // event flows
+    val rfPhyMetricsFlow = atsc3Module.rfPhyMetricsFlow.asSharedFlow()
 
     fun deInitialize() {
         stopAndDestroyViewPresentation()
@@ -193,6 +200,10 @@ internal class Atsc3ReceiverCore(
 
     override fun getReceiverState(): ReceiverState {
         return serviceController.receiverState.value
+    }
+
+    private fun onError(message: String) {
+        _errorFlow.tryEmit(message)
     }
 
     fun getNextService() = serviceController.getNearbyService(1)

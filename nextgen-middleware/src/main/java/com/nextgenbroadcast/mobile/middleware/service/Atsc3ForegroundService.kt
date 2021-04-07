@@ -5,6 +5,8 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.hardware.Sensor
+import android.hardware.SensorManager
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import android.net.Uri
@@ -43,7 +45,11 @@ import com.nextgenbroadcast.mobile.middleware.service.media.MediaSessionConstant
 import com.nextgenbroadcast.mobile.middleware.telemetry.TelemetryBroker
 import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIotThing
 import com.nextgenbroadcast.mobile.middleware.telemetry.control.AWSIoTelemetryControl
+import com.nextgenbroadcast.mobile.middleware.telemetry.reader.BatteryTelemetryReader
+import com.nextgenbroadcast.mobile.middleware.telemetry.reader.GPSTelemetryReader
 import com.nextgenbroadcast.mobile.middleware.telemetry.writer.AWSIoTelemetryWriter
+import com.nextgenbroadcast.mobile.middleware.telemetry.reader.RfPhyTelemetryReader
+import com.nextgenbroadcast.mobile.middleware.telemetry.reader.SensorTelemetryReader
 import com.nextgenbroadcast.mobile.player.Atsc3MediaPlayer
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -55,6 +61,9 @@ import kotlin.system.exitProcess
 abstract class Atsc3ForegroundService : BindableForegroundService() {
     private val usbManager: UsbManager by lazy {
         getSystemService(Context.USB_SERVICE) as UsbManager
+    }
+    private val sensorManager: SensorManager by lazy {
+        getSystemService(Context.SENSOR_SERVICE) as SensorManager
     }
 
     //TODO: create own scope?
@@ -88,9 +97,10 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     override fun onCreate() {
         super.onCreate()
 
-        createTelemetryBroker()
         createReceiverCore()
         createMediaSession()
+
+        createTelemetryBroker()
 
         startStateObservation()
     }
@@ -104,6 +114,18 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
                 EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
         ), assets)
 
+        val readers = listOf(
+                BatteryTelemetryReader(applicationContext),
+                SensorTelemetryReader(sensorManager, Sensor.TYPE_LINEAR_ACCELERATION),
+                SensorTelemetryReader(sensorManager, Sensor.TYPE_GYROSCOPE),
+                SensorTelemetryReader(sensorManager, Sensor.TYPE_SIGNIFICANT_MOTION),
+                SensorTelemetryReader(sensorManager, Sensor.TYPE_STEP_DETECTOR),
+                SensorTelemetryReader(sensorManager, Sensor.TYPE_STEP_COUNTER),
+                SensorTelemetryReader(sensorManager, Sensor.TYPE_ROTATION_VECTOR),
+                GPSTelemetryReader(applicationContext, GPSTelemetryReader.Companion.FrequencyType.MEDIUM),
+                RfPhyTelemetryReader(atsc3Receiver.rfPhyMetricsFlow)
+        )
+
         val writers = listOf(
                 AWSIoTelemetryWriter(thing),
                 //FileTelemetryWriter(cacheDir, "telemetry.log")
@@ -113,7 +135,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
                 AWSIoTelemetryControl(thing, ::executeCommand)
         )
 
-        telemetryBroker = TelemetryBroker(applicationContext, writers, controls).also {
+        telemetryBroker = TelemetryBroker(readers, writers, controls).also {
             it.start()
         }
     }

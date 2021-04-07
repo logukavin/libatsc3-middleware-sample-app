@@ -21,6 +21,8 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.source.IAtsc3Source
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.ITunableSource
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.TunableConfigurableAtsc3Source
 import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import org.ngbp.libatsc3.middleware.Atsc3NdkApplicationBridge
 import org.ngbp.libatsc3.middleware.Atsc3NdkPHYBridge
 import org.ngbp.libatsc3.middleware.android.a331.PackageExtractEnvelopeMetadataAndPayload
@@ -68,6 +70,8 @@ internal class Atsc3Module(
     private var listener: Atsc3ModuleListener? = null
 
     private var nextSourceJob: Job? = null
+
+    override val rfPhyMetricsFlow = MutableSharedFlow<RfPhyStatistics>(3, 0, BufferOverflow.DROP_OLDEST)
 
     override fun setListener(listener: Atsc3ModuleListener?) {
         if (this.listener != null) throw IllegalStateException("Atsc3Module listener already initialized")
@@ -467,13 +471,16 @@ internal class Atsc3Module(
 
     override fun pushRfPhyStatisticsUpdate(rfPhyStatistics: RfPhyStatistics) {
         phyDemodLock = rfPhyStatistics.demod_lock != 0
-        PHYStatistics.PHYRfStatistics = "PHY:RFStatisticsUpdate: $rfPhyStatistics".also {
+
+        PHYStatistics.PHYRfStatistics = "PHY: $rfPhyStatistics".also {
             log(it)
         }
+
+        rfPhyMetricsFlow.tryEmit(rfPhyStatistics)
     }
 
     override fun pushBwPhyStatistics(bwPhyStatistics: BwPhyStatistics) {
-        PHYStatistics.PHYBWStatistics = "PHY:BWStatisticsUpdate: $bwPhyStatistics".also {
+        PHYStatistics.PHYBWStatistics = "BW: $bwPhyStatistics".also {
             log(it)
         }
     }
