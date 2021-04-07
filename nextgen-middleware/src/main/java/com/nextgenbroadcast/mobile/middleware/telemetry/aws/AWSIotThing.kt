@@ -7,9 +7,9 @@ import android.os.Build
 import com.amazonaws.services.iot.client.*
 import com.google.gson.Gson
 import com.nextgenbroadcast.mobile.core.LOG
-import com.nextgenbroadcast.mobile.middleware.telemetry.aws.entity.AWSIoTControl
-import com.nextgenbroadcast.mobile.middleware.telemetry.aws.entity.AWSIoTPayload
-import com.nextgenbroadcast.mobile.middleware.telemetry.reader.PrivateKeyReader
+import com.nextgenbroadcast.mobile.middleware.telemetry.entity.TelemetryControl
+import com.nextgenbroadcast.mobile.middleware.telemetry.entity.TelemetryPayload
+import com.nextgenbroadcast.mobile.middleware.telemetry.security.PrivateKeyReader
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableSharedFlow
 import java.io.*
@@ -34,7 +34,7 @@ class AWSIotThing(
 
     private var thingAwsIotClient: AWSIotMqttClient? = null
 
-    fun publish(topic: String, payload: AWSIoTPayload) {
+    fun publish(topic: String, payload: TelemetryPayload) {
         publish(topic, gson.toJson(payload))
     }
 
@@ -110,7 +110,7 @@ class AWSIotThing(
         }
     }
 
-    suspend fun subscribeCommandsFlow(commandFlow: MutableSharedFlow<AWSIoTControl>) {
+    suspend fun subscribeCommandsFlow(commandFlow: MutableSharedFlow<TelemetryControl>) {
         supervisorScope {
             while (isActive) {
                 val client = thingAwsIotClient
@@ -122,7 +122,7 @@ class AWSIotThing(
                                             AWSIOT_SUBSCRIPTION_CONTROL.replace(AWSIOT_FORMAT_SERIAL, clientId)
                                     ) {
                                         override fun onMessage(message: AWSIotMessage) {
-                                            val command = gson.fromJson(message.stringPayload, AWSIoTControl::class.java)
+                                            val command = gson.fromJson(message.stringPayload, TelemetryControl::class.java)
                                             commandFlow.tryEmit(command)
                                         }
                                     }
