@@ -13,5 +13,8 @@ class ViewViewModel : ViewModel() {
     val showDebugInfo = MutableLiveData(true)
     val showPhyInfo = MutableLiveData(false)
 
+    val enableCollectTelemetry = MutableLiveData(true)
+    val collectSensorTelemetry = MutableLiveData(false)
+    val collectLocationTelemetry = MutableLiveData(true)
     val debugData = MutableLiveData<String>()
 }
