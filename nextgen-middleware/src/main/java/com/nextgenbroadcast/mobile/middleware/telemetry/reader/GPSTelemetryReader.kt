@@ -1,4 +1,4 @@
-package com.nextgenbroadcast.mobile.middleware.telemetry
+package com.nextgenbroadcast.mobile.middleware.telemetry.reader
 
 import android.annotation.SuppressLint
 import android.content.Context
@@ -16,14 +16,14 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.isActive
 
 @SuppressLint("MissingPermission")
-class GPSTelemetry(
+class GPSTelemetryReader(
         context: Context,
         private val frequencyType: FrequencyType
-) {
+) : ITelemetryReader {
     private val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
     private val settingsClient: SettingsClient = LocationServices.getSettingsClient(context)
 
-    suspend fun start(eventFlow: MutableSharedFlow<TelemetryEvent>) {
+    override suspend fun read(eventFlow: MutableSharedFlow<TelemetryEvent>) {
         val (intervalFrequency, fastestIntervalFrequency) = getRequestParams(frequencyType)
         val locationRequest = LocationRequest.create().apply {
             interval = intervalFrequency
@@ -73,7 +73,7 @@ class GPSTelemetry(
     }
 
     companion object {
-        private val TAG = GPSTelemetry::class.java.simpleName
+        private val TAG = GPSTelemetryReader::class.java.simpleName
 
         enum class FrequencyType {
             ULTRA, HIGH, MEDIUM, LOW
