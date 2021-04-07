@@ -75,6 +75,10 @@ class TelemetryBroker(
                     }
                 }
 
+                launch {
+                    GPSTelemetry(context = appContext, GPSTelemetry.Companion.FREQUENCY.ULTRA).start(eventFlow)
+                }
+
                 // Telemetry sending
                 eventFlow.collect { event ->
                     event.payload.testCase = testCase
