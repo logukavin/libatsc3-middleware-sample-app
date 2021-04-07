@@ -6,8 +6,8 @@ import android.os.Looper
 import com.google.android.gms.location.*
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIotThing
-import com.nextgenbroadcast.mobile.middleware.telemetry.aws.entity.AWSIoTEvent
-import com.nextgenbroadcast.mobile.middleware.telemetry.aws.entity.AWSIoTPayload
+import com.nextgenbroadcast.mobile.middleware.telemetry.entity.TelemetryEvent
+import com.nextgenbroadcast.mobile.middleware.telemetry.entity.TelemetryPayload
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.awaitClose
@@ -23,7 +23,7 @@ class GPSTelemetry(
     private val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
     private val settingsClient: SettingsClient = LocationServices.getSettingsClient(context)
 
-    suspend fun start(eventFlow: MutableSharedFlow<AWSIoTEvent>) {
+    suspend fun start(eventFlow: MutableSharedFlow<TelemetryEvent>) {
         val (intervalFrequency, fastestIntervalFrequency) = getRequestParams(frequencyType)
         val locationRequest = LocationRequest.create().apply {
             interval = intervalFrequency
@@ -59,7 +59,7 @@ class GPSTelemetry(
             }
         }.buffer(Channel.CONFLATED) // To avoid blocking
                 .collect { data ->
-                    eventFlow.emit(AWSIoTEvent(AWSIotThing.AWSIOT_TOPIC_LOCATION, data))
+                    eventFlow.emit(TelemetryEvent(AWSIotThing.AWSIOT_TOPIC_LOCATION, data))
                 }
     }
 
@@ -86,4 +86,4 @@ data class LocationData(
         val provider: String,
         val lat: Double,
         val lng: Double
-) : AWSIoTPayload()
+) : TelemetryPayload()
