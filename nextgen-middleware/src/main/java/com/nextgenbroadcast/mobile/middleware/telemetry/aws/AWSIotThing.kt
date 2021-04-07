@@ -39,7 +39,16 @@ class AWSIotThing(
     }
 
     fun publish(topic: String, payload: String) {
-        thingAwsIotClient?.publish(topic.replace(AWSIOT_FORMAT_SERIAL, clientId), payload)
+        thingAwsIotClient?.let { client ->
+            if (client.connectionStatus != AWSIotConnectionStatus.DISCONNECTED) {
+                client.publish(
+                        LoggingAWSIotMessage(
+                                topic.replace(AWSIOT_FORMAT_SERIAL, clientId),
+                                payload
+                        ), 1000
+                )
+            }
+        }
     }
 
     fun disconnect() {
