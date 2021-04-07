@@ -1,4 +1,4 @@
-package com.nextgenbroadcast.mobile.middleware.telemetry
+package com.nextgenbroadcast.mobile.middleware.telemetry.reader
 
 import android.hardware.Sensor
 import android.hardware.SensorEvent
@@ -14,16 +14,15 @@ import kotlinx.coroutines.channels.sendBlocking
 import kotlinx.coroutines.flow.*
 import java.util.concurrent.TimeUnit
 
-class SensorTelemetry(
+class SensorTelemetryReader(
         private val sensorManager: SensorManager,
         private val sensorType: Int,
         private val sensorDelay: Long = DEFAULT_UPDATE_FREQUENCY
-) {
+) : ITelemetryReader {
     private val emptyFloatArray = FloatArray(0)
-    private val sensor: Sensor? = sensorManager.getDefaultSensor(sensorType)
 
-    suspend fun start(eventFlow: MutableSharedFlow<TelemetryEvent>) {
-        if (sensor == null) return
+    override suspend fun read(eventFlow: MutableSharedFlow<TelemetryEvent>) {
+        val sensor: Sensor = sensorManager.getDefaultSensor(sensorType) ?: return
 
         callbackFlow<SensorData> {
             val listener = object : SensorEventListener {
@@ -65,7 +64,7 @@ class SensorTelemetry(
     }
 
     companion object {
-        val TAG: String = SensorTelemetry::class.java.simpleName
+        val TAG: String = SensorTelemetryReader::class.java.simpleName
 
         val DEFAULT_UPDATE_FREQUENCY = TimeUnit.SECONDS.toMillis(1)
     }

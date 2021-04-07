@@ -59,6 +59,9 @@ internal class Atsc3ReceiverCore(
     private var rpcGateway: IRPCGateway? = null
     private var webServer: MiddlewareWebServer? = null
 
+    // event flows
+    val rfPhyMetricsFlow = atsc3Module.rfPhyMetricsFlow.asSharedFlow()
+
     fun deInitialize() {
         stopAndDestroyViewPresentation()
         atsc3Module.close()

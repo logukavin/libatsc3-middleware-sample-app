@@ -1,11 +1,9 @@
 package com.nextgenbroadcast.mobile.middleware.telemetry
 
-import android.content.Context
-import android.hardware.Sensor
-import android.hardware.SensorManager
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.middleware.telemetry.control.ITelemetryControl
 import com.nextgenbroadcast.mobile.middleware.telemetry.entity.TelemetryEvent
+import com.nextgenbroadcast.mobile.middleware.telemetry.reader.ITelemetryReader
 import com.nextgenbroadcast.mobile.middleware.telemetry.writer.ITelemetryWriter
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.BufferOverflow
@@ -14,13 +12,15 @@ import kotlinx.coroutines.flow.collect
 import java.lang.Exception
 
 class TelemetryBroker(
-        context: Context,
+        private val readers: List<ITelemetryReader>,
         private val writers: List<ITelemetryWriter>,
         private val controls: List<ITelemetryControl>
 ) {
-    private val appContext = context.applicationContext
-    private val sensorManager = appContext.getSystemService(Context.SENSOR_SERVICE) as SensorManager
-    private val eventFlow = MutableSharedFlow<TelemetryEvent>(replay = 20, extraBufferCapacity = 0, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+    private val eventFlow = MutableSharedFlow<TelemetryEvent>(
+            replay = 30,
+            extraBufferCapacity = 0,
+            onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
 
     private var job: Job? = null
 
@@ -37,32 +37,25 @@ class TelemetryBroker(
 
         job = CoroutineScope(Dispatchers.IO).launch {
             try {
-                // Battery
-                launch {
-                    BatteryTelemetry(appContext).start(eventFlow)
-                }
-
-                // Sensors
-                listOf(
-                        Sensor.TYPE_LINEAR_ACCELERATION,
-                        Sensor.TYPE_GYROSCOPE,
-                        Sensor.TYPE_SIGNIFICANT_MOTION,
-                        Sensor.TYPE_STEP_DETECTOR,
-                        Sensor.TYPE_STEP_COUNTER,
-                        Sensor.TYPE_ROTATION_VECTOR
-                ).forEach { sensorType ->
+                readers.forEach { reader ->
                     launch {
-                        SensorTelemetry(sensorManager, sensorType).start(eventFlow)
+                        reader.read(eventFlow)
                     }
                 }
 
-                // Location
-                launch {
-                    GPSTelemetry(appContext, GPSTelemetry.Companion.FrequencyType.MEDIUM).start(eventFlow)
-                }
+                eventFlow.collect { event ->
+                    LOG.d(TAG, "AWS IoT event: ${event.topic} - ${event.payload}")
 
-                // Telemetry sending
-                observeEventFlow()
+                    event.payload.testCase = testCase
+
+                    writers.forEach { writer ->
+                        try {
+                            writer.write(event)
+                        } catch (e: Exception) {
+                            LOG.e(TAG, "Can't Write to: ${writer::class.java.simpleName}", e)
+                        }
+                    }
+                }
             } catch (e: Exception) {
                 LOG.d(TAG, "Telemetry gathering error: ", e)
             }
@@ -73,22 +66,6 @@ class TelemetryBroker(
                 control.subscribe()
             } catch (e: Exception) {
                 LOG.e(TAG, "Can't subscribe control: ${control::class.java.simpleName}", e)
-            }
-        }
-    }
-
-    private suspend fun observeEventFlow() {
-        eventFlow.collect { event ->
-            LOG.d(TAG, "AWS IoT event: ${event.topic} - ${event.payload}")
-
-            event.payload.testCase = testCase
-
-            writers.forEach { writer ->
-                try {
-                    writer.write(event)
-                } catch (e: Exception) {
-                    LOG.e(TAG, "Can't Write to: ${writer::class.java.simpleName}", e)
-                }
             }
         }
     }
