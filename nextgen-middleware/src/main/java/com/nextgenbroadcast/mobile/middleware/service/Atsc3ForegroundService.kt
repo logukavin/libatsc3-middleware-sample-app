@@ -21,6 +21,8 @@ import android.util.Log
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.media.session.MediaButtonReceiver
+import androidx.security.crypto.EncryptedSharedPreferences
+import androidx.security.crypto.MasterKey
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.PhyFrequency
@@ -40,6 +42,8 @@ import com.nextgenbroadcast.mobile.middleware.service.init.*
 import com.nextgenbroadcast.mobile.middleware.service.media.MediaSessionConstants
 import com.nextgenbroadcast.mobile.middleware.telemetry.TelemetryBroker
 import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIotThing
+import com.nextgenbroadcast.mobile.middleware.telemetry.control.AWSIoTelemetryControl
+import com.nextgenbroadcast.mobile.middleware.telemetry.writer.AWSIoTelemetryWriter
 import com.nextgenbroadcast.mobile.player.Atsc3MediaPlayer
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -84,17 +88,34 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     override fun onCreate() {
         super.onCreate()
 
-        telemetryBroker = TelemetryBroker(applicationContext) { action, arguments ->
-            LOG.d(TelemetryBroker.TAG, "AWS IoT command received: $action, args: $arguments")
-            executeCommand(action, arguments)
-        }.also {
-            it.start()
-        }
-
+        createTelemetryBroker()
         createReceiverCore()
         createMediaSession()
 
         startStateObservation()
+    }
+
+    private fun createTelemetryBroker() {
+        val thing = AWSIotThing(EncryptedSharedPreferences.create(
+                applicationContext,
+                IoT_PREFERENCE,
+                MasterKey.Builder(applicationContext).setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build(),
+                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+        ), assets)
+
+        val writers = listOf(
+                AWSIoTelemetryWriter(thing),
+                //FileTelemetryWriter(cacheDir, "telemetry.log")
+        )
+
+        val controls = listOf(
+                AWSIoTelemetryControl(thing, ::executeCommand)
+        )
+
+        telemetryBroker = TelemetryBroker(applicationContext, writers, controls).also {
+            it.start()
+        }
     }
 
     private fun createReceiverCore() {
@@ -562,6 +583,8 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     }
 
     private fun executeCommand(action: String, arguments: Map<String, String>) {
+        LOG.d(TelemetryBroker.TAG, "AWS IoT command received: $action, args: $arguments")
+
         when (action) {
             AWSIotThing.AWSIOT_ACTION_TUNE -> {
                 arguments[AWSIotThing.AWSIOT_ARGUMENT_FREQUENCY]?.let { frequencyList ->
@@ -664,6 +687,8 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         val TAG: String = Atsc3ForegroundService::class.java.simpleName
 
         private const val PRESENTATION_DESTROYING_DELAY = 1000L
+
+        private const val IoT_PREFERENCE = "${BuildConfig.LIBRARY_PACKAGE_NAME}.awsiot"
 
         const val SERVICE_INTERFACE = "${BuildConfig.LIBRARY_PACKAGE_NAME}.INTERFACE"
 
