@@ -76,7 +76,7 @@ class TelemetryBroker(
                 }
 
                 launch {
-                    GPSTelemetry(context = appContext, GPSTelemetry.Companion.FREQUENCY.ULTRA).start(eventFlow)
+                    GPSTelemetry(appContext, GPSTelemetry.Companion.FrequencyType.MEDIUM).start(eventFlow)
                 }
 
                 // Telemetry sending
