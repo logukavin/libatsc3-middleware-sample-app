@@ -6,8 +6,8 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIotThing
-import com.nextgenbroadcast.mobile.middleware.telemetry.aws.entity.AWSIoTEvent
-import com.nextgenbroadcast.mobile.middleware.telemetry.aws.entity.AWSIoTPayload
+import com.nextgenbroadcast.mobile.middleware.telemetry.entity.TelemetryEvent
+import com.nextgenbroadcast.mobile.middleware.telemetry.entity.TelemetryPayload
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.channels.sendBlocking
@@ -22,7 +22,7 @@ class SensorTelemetry(
     private val emptyFloatArray = FloatArray(0)
     private val sensor: Sensor? = sensorManager.getDefaultSensor(sensorType)
 
-    suspend fun start(eventFlow: MutableSharedFlow<AWSIoTEvent>) {
+    suspend fun start(eventFlow: MutableSharedFlow<TelemetryEvent>) {
         if (sensor == null) return
 
         callbackFlow<SensorData> {
@@ -60,7 +60,7 @@ class SensorTelemetry(
         }.buffer(Channel.CONFLATED) // To avoid send blocking
                 .sample(sensorDelay) // To control emission frequency
                 .collect { data ->
-                    eventFlow.emit(AWSIoTEvent(AWSIotThing.AWSIOT_TOPIC_SENSORS, data))
+                    eventFlow.emit(TelemetryEvent(AWSIotThing.AWSIOT_TOPIC_SENSORS, data))
                 }
     }
 
@@ -75,7 +75,7 @@ data class SensorData(
         val sensorName: String,
         val values: FloatArray,
         val accuracy: Int
-) : AWSIoTPayload() {
+) : TelemetryPayload() {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
