@@ -89,9 +89,9 @@
             android:id="@+id/spinnerSensorsFrequency"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
+            android:layout_marginStart="16dp"
             android:spinnerMode="dropdown"
-            android:tooltipText="RRED"
+            android:enabled="@{viewModel.enableCollectTelemetry}"
             app:layout_constraintBottom_toBottomOf="@+id/switchSensorsTelemetry"
             app:layout_constraintLeft_toRightOf="@+id/switchSensorsTelemetry"
             app:layout_constraintTop_toTopOf="@+id/switchSensorsTelemetry" />
@@ -112,9 +112,9 @@
             android:id="@+id/spinnerLocationFrequency"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
+            android:layout_marginStart="16dp"
             android:spinnerMode="dropdown"
-            android:tooltipText="RRED"
+            android:enabled="@{viewModel.enableCollectTelemetry}"
             app:layout_constraintBottom_toBottomOf="@+id/switchLocationTelemetry"
             app:layout_constraintLeft_toRightOf="@+id/switchLocationTelemetry"
             app:layout_constraintTop_toTopOf="@+id/switchLocationTelemetry" />
