@@ -22,8 +22,8 @@ import kotlinx.android.synthetic.main.dialog_settings.view.*
 class SettingsDialog : DialogFragment() {
 
     private val viewViewModel: ViewViewModel by activityViewModels()
-    private val locationFrequencyTypeList = LocationFrequencyType.values().toMutableList()
-    private val sensorFrequencyTypeList = SensorFrequencyType.values().toMutableList()
+    private val locationFrequencyTypeList = LocationFrequencyType.values().toList()
+    private val sensorFrequencyTypeList = SensorFrequencyType.values().toList()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -38,7 +38,7 @@ class SettingsDialog : DialogFragment() {
 
         val view = binding.root
 
-        context?.let {
+        requireContext().let {
             view.spinnerLocationFrequency.adapter = ArrayAdapter(
                     it,
                     android.R.layout.simple_spinner_dropdown_item,
@@ -106,7 +106,7 @@ class SettingsDialog : DialogFragment() {
         return view
     }
 
-    private fun <T> getPositionFromList(value: T, list: MutableList<T>): Int {
+    private fun <T> getPositionFromList(value: T, list: List<T>): Int {
         for (i in 0..list.size) {
             if (list[i] == value) return i
         }
