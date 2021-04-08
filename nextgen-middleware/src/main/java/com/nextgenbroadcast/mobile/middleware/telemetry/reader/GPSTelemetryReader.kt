@@ -17,17 +17,19 @@ import kotlinx.coroutines.isActive
 
 @SuppressLint("MissingPermission")
 class GPSTelemetryReader(
-        context: Context,
-        private val frequencyType: LocationFrequencyType
+        context: Context
 ) : ITelemetryReader {
     private val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
     private val settingsClient: SettingsClient = LocationServices.getSettingsClient(context)
 
+    override val name = NAME
+    override var delayMils: Long = LocationFrequencyType.MEDIUM.delay()
+
     override suspend fun read(eventFlow: MutableSharedFlow<TelemetryEvent>) {
-        val (intervalFrequency, fastestIntervalFrequency) = getRequestParams(frequencyType)
+        val (intervalFrequency, fastestIntervalFrequency) = LocationFrequencyType.decode(delayMils)
         val locationRequest = LocationRequest.create().apply {
-            interval = intervalFrequency
-            fastestInterval = fastestIntervalFrequency
+            interval = intervalFrequency.toLong()
+            fastestInterval = fastestIntervalFrequency.toLong()
             priority = LocationRequest.PRIORITY_HIGH_ACCURACY
         }
 
@@ -63,23 +65,30 @@ class GPSTelemetryReader(
                 }
     }
 
-    private fun getRequestParams(frequencyType: LocationFrequencyType): Pair<Long, Long> {
-        return when (frequencyType) {
-            LocationFrequencyType.ULTRA -> Pair(1000, 250)
-            LocationFrequencyType.HIGH -> Pair(2000, 1000)
-            LocationFrequencyType.MEDIUM -> Pair(5000, 2000)
-            LocationFrequencyType.LOW -> Pair(10000, 5000)
-        }
-    }
-
     companion object {
         private val TAG = GPSTelemetryReader::class.java.simpleName
-
+        const val NAME = "location"
     }
 }
 
-enum class LocationFrequencyType {
-    ULTRA, HIGH, MEDIUM, LOW
+enum class LocationFrequencyType(
+        private val interval: Int,
+        private val fastestInterval: Int
+) {
+    ULTRA(1000, 250),
+    HIGH(2000, 1000),
+    MEDIUM(5000, 2000),
+    LOW(10000, 5000);
+
+    fun delay(): Long {
+        return (interval.toLong() shl 32) or (fastestInterval.toLong())
+    }
+
+    companion object {
+        fun decode(delay: Long): Pair<Int, Int> {
+            return Pair((delay shr 32).toInt(),  (delay and 0xFFFFFFFF).toInt())
+        }
+    }
 }
 
 data class LocationData(

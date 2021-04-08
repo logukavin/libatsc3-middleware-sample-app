@@ -108,6 +108,8 @@ class InterprocessServiceBinder(
 
     override val mediaPlayerPresenter = MediaPlayerPresenter()
 
+    override val controllerPresenter: IControllerPresenter? = null
+
     private var sendingMessenger: Messenger? = Messenger(service)
 
     private val incomingMessenger = Messenger(StandaloneClientHandler(
