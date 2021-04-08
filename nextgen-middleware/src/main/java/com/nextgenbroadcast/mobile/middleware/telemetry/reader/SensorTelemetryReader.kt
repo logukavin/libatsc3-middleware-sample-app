@@ -70,6 +70,10 @@ class SensorTelemetryReader(
     }
 }
 
+enum class SensorFrequencyType{
+    FASTEST, HIGH, MEDIUM, LOW
+}
+
 data class SensorData(
         val sensorName: String,
         val values: FloatArray,

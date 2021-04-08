@@ -45,11 +45,8 @@ import com.nextgenbroadcast.mobile.middleware.service.media.MediaSessionConstant
 import com.nextgenbroadcast.mobile.middleware.telemetry.TelemetryBroker
 import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIotThing
 import com.nextgenbroadcast.mobile.middleware.telemetry.control.AWSIoTelemetryControl
-import com.nextgenbroadcast.mobile.middleware.telemetry.reader.BatteryTelemetryReader
-import com.nextgenbroadcast.mobile.middleware.telemetry.reader.GPSTelemetryReader
+import com.nextgenbroadcast.mobile.middleware.telemetry.reader.*
 import com.nextgenbroadcast.mobile.middleware.telemetry.writer.AWSIoTelemetryWriter
-import com.nextgenbroadcast.mobile.middleware.telemetry.reader.RfPhyTelemetryReader
-import com.nextgenbroadcast.mobile.middleware.telemetry.reader.SensorTelemetryReader
 import com.nextgenbroadcast.mobile.player.Atsc3MediaPlayer
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -122,7 +119,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
                 SensorTelemetryReader(sensorManager, Sensor.TYPE_STEP_DETECTOR),
                 SensorTelemetryReader(sensorManager, Sensor.TYPE_STEP_COUNTER),
                 SensorTelemetryReader(sensorManager, Sensor.TYPE_ROTATION_VECTOR),
-                GPSTelemetryReader(applicationContext, GPSTelemetryReader.Companion.FrequencyType.MEDIUM),
+                GPSTelemetryReader(applicationContext, LocationFrequencyType.MEDIUM),
                 RfPhyTelemetryReader(atsc3Receiver.rfPhyMetricsFlow)
         )
 

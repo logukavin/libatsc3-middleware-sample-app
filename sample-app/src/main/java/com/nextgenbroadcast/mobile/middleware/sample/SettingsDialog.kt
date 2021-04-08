@@ -5,19 +5,25 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
 import androidx.databinding.DataBindingUtil
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.setFragmentResult
 import com.nextgenbroadcast.mobile.middleware.sample.databinding.DialogSettingsBinding
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.ViewViewModel
+import com.nextgenbroadcast.mobile.middleware.telemetry.reader.LocationFrequencyType
+import com.nextgenbroadcast.mobile.middleware.telemetry.reader.SensorFrequencyType
 import kotlinx.android.synthetic.main.dialog_settings.*
 import kotlinx.android.synthetic.main.dialog_settings.view.*
 
 
-class SettingsDialog: DialogFragment() {
+class SettingsDialog : DialogFragment() {
 
     private val viewViewModel: ViewViewModel by activityViewModels()
+    private val locationFrequencyTypeList = LocationFrequencyType.values().toList()
+    private val sensorFrequencyTypeList = SensorFrequencyType.values().toList()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -31,6 +37,45 @@ class SettingsDialog: DialogFragment() {
         }
 
         val view = binding.root
+
+        requireContext().let {
+            view.spinnerLocationFrequency.adapter = ArrayAdapter(
+                    it,
+                    android.R.layout.simple_spinner_dropdown_item,
+                    locationFrequencyTypeList)
+
+            view.spinnerSensorsFrequency.adapter = ArrayAdapter(
+                    it,
+                    android.R.layout.simple_spinner_dropdown_item,
+                    sensorFrequencyTypeList)
+        }
+
+        view.spinnerSensorsFrequency.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                viewViewModel.sensorFrequencyType.postValue(sensorFrequencyTypeList[position])
+            }
+
+        }
+
+        viewViewModel.sensorFrequencyType.value?.let {
+            view.spinnerSensorsFrequency.setSelection(sensorFrequencyTypeList.indexOf(it))
+        }
+
+        viewViewModel.locationFrequencyType.value?.let {
+            view.spinnerLocationFrequency.setSelection(locationFrequencyTypeList.indexOf(it))
+        }
+
+
+        view.spinnerLocationFrequency.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                viewViewModel.locationFrequencyType.postValue(locationFrequencyTypeList[position])
+            }
+
+        }
 
         view.frequencyEditText.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_DONE) {

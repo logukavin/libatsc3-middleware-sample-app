@@ -18,7 +18,7 @@ import kotlinx.coroutines.isActive
 @SuppressLint("MissingPermission")
 class GPSTelemetryReader(
         context: Context,
-        private val frequencyType: FrequencyType
+        private val frequencyType: LocationFrequencyType
 ) : ITelemetryReader {
     private val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
     private val settingsClient: SettingsClient = LocationServices.getSettingsClient(context)
@@ -63,23 +63,23 @@ class GPSTelemetryReader(
                 }
     }
 
-    private fun getRequestParams(frequencyType: FrequencyType): Pair<Long, Long> {
+    private fun getRequestParams(frequencyType: LocationFrequencyType): Pair<Long, Long> {
         return when (frequencyType) {
-            FrequencyType.ULTRA -> Pair(1000, 250)
-            FrequencyType.HIGH -> Pair(2000, 1000)
-            FrequencyType.MEDIUM -> Pair(5000, 2000)
-            FrequencyType.LOW -> Pair(10000, 5000)
+            LocationFrequencyType.ULTRA -> Pair(1000, 250)
+            LocationFrequencyType.HIGH -> Pair(2000, 1000)
+            LocationFrequencyType.MEDIUM -> Pair(5000, 2000)
+            LocationFrequencyType.LOW -> Pair(10000, 5000)
         }
     }
 
     companion object {
         private val TAG = GPSTelemetryReader::class.java.simpleName
 
-        enum class FrequencyType {
-            ULTRA, HIGH, MEDIUM, LOW
-        }
     }
+}
 
+enum class LocationFrequencyType {
+    ULTRA, HIGH, MEDIUM, LOW
 }
 
 data class LocationData(
