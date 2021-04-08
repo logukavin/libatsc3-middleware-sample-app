@@ -85,6 +85,24 @@ class EmbeddedAtsc3Service : Atsc3ForegroundService() {
                 viewController.removeOnPlayerSateChangedCallback(callback)
             }
         }
+
+        override val controllerPresenter = object : IControllerPresenter {
+            override fun setTelemetryEnabled(enabled: Boolean) {
+                if (enabled) {
+                    telemetryBroker.start()
+                } else {
+                    telemetryBroker.stop()
+                }
+            }
+
+            override fun setTelemetryEnabled(type: String, enabled: Boolean) {
+                telemetryBroker.setReaderEnabled(type, enabled)
+            }
+
+            override fun setTelemetryUpdateDelay(type: String, delayMils: Long) {
+                telemetryBroker.setReaderDelay(type, delayMils)
+            }
+        }
     }
 
     companion object {

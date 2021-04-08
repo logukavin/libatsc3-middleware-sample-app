@@ -61,6 +61,34 @@ class MainActivity : BaseActivity() {
         )
 
         getMainFragment().onBind(factory)
+
+        binder.controllerPresenter?.let { controllerPresenter ->
+            viewViewModel.enableTelemetry.observe(this) { enableTelemetry ->
+                if (enableTelemetry != null) {
+                    controllerPresenter.setTelemetryEnabled(enableTelemetry)
+                }
+            }
+            viewViewModel.sensorTelemetryEnabled.observe(this) { sensorEnabled ->
+                if (sensorEnabled != null) {
+                    controllerPresenter.setTelemetryEnabled("sensors", sensorEnabled)
+                }
+            }
+            viewViewModel.sensorFrequencyType.observe(this) { frequencyType ->
+                if (frequencyType != null) {
+                    controllerPresenter.setTelemetryUpdateDelay("sensors", frequencyType.delayMils)
+                }
+            }
+            viewViewModel.locationTelemetryEnabled.observe(this) { sensorEnabled ->
+                if (sensorEnabled != null) {
+                    controllerPresenter.setTelemetryEnabled("location", sensorEnabled)
+                }
+            }
+            viewViewModel.locationFrequencyType.observe(this) { frequencyType ->
+                if (frequencyType != null) {
+                    controllerPresenter.setTelemetryUpdateDelay("location", frequencyType.delay())
+                }
+            }
+        }
     }
 
     override fun onUnbind() {

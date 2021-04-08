@@ -13,6 +13,9 @@ class RfPhyTelemetryReader(
         private val flow: SharedFlow<RfPhyStatistics>
 ) : ITelemetryReader {
 
+    override val name = NAME
+    override var delayMils: Long = -1
+
     override suspend fun read(eventFlow: MutableSharedFlow<TelemetryEvent>) {
         flow.collect { rfStatistic ->
             eventFlow.emit(TelemetryEvent(AWSIotThing.AWSIOT_TOPIC_PHY, RfPhyData(
@@ -32,6 +35,10 @@ class RfPhyTelemetryReader(
                     fer_post_bch_0 = rfStatistic.fer_post_bch_0
             )))
         }
+    }
+
+    companion object {
+        const val NAME = "phy"
     }
 }
 

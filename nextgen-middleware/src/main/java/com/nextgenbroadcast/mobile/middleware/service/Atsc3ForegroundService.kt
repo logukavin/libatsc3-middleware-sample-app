@@ -86,7 +86,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     private var destroyPresentationLayerJob: Job? = null
 
     // Telemetry
-    private lateinit var telemetryBroker: TelemetryBroker
+    protected lateinit var telemetryBroker: TelemetryBroker
 
     private val initializer = ArrayList<WeakReference<IServiceInitializer>>()
     private var isInitialized = false
@@ -119,7 +119,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
                 SensorTelemetryReader(sensorManager, Sensor.TYPE_STEP_DETECTOR),
                 SensorTelemetryReader(sensorManager, Sensor.TYPE_STEP_COUNTER),
                 SensorTelemetryReader(sensorManager, Sensor.TYPE_ROTATION_VECTOR),
-                GPSTelemetryReader(applicationContext, LocationFrequencyType.MEDIUM),
+                GPSTelemetryReader(applicationContext),
                 RfPhyTelemetryReader(atsc3Receiver.rfPhyMetricsFlow)
         )
 
@@ -132,9 +132,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
                 AWSIoTelemetryControl(thing, ::executeCommand)
         )
 
-        telemetryBroker = TelemetryBroker(readers, writers, controls).also {
-            it.start()
-        }
+        telemetryBroker = TelemetryBroker(readers, writers, controls)
     }
 
     private fun createReceiverCore() {
