@@ -60,15 +60,11 @@ class SettingsDialog : DialogFragment() {
         }
 
         viewViewModel.sensorFrequencyType.value?.let {
-            getPositionFromList(it, sensorFrequencyTypeList)
-        }?.let {
-            view.spinnerSensorsFrequency.setSelection(it)
+            view.spinnerSensorsFrequency.setSelection(sensorFrequencyTypeList.indexOf(it))
         }
 
         viewViewModel.locationFrequencyType.value?.let {
-            getPositionFromList(it, locationFrequencyTypeList)
-        }?.let {
-            view.spinnerLocationFrequency.setSelection(it)
+            view.spinnerLocationFrequency.setSelection(locationFrequencyTypeList.indexOf(it))
         }
 
 
@@ -104,13 +100,6 @@ class SettingsDialog : DialogFragment() {
         }
 
         return view
-    }
-
-    private fun <T> getPositionFromList(value: T, list: List<T>): Int {
-        for (i in 0..list.size) {
-            if (list[i] == value) return i
-        }
-        return 0
     }
 
     private fun done() {
