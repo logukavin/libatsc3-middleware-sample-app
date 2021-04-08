@@ -10,6 +10,9 @@
     <string name="settings_apply_btn">Tune</string>
     <string name="settings_enable_debug_info">Enable Debug Information</string>
     <string name="settings_enable_phy_info">Enable Phy Information</string>
+    <string name="settings_enable_sensor_telemetry">Sensors</string>
+    <string name="settings_enable_location_telemetry">Location</string>
+    <string name="settings_enable_telemetry">Collect Telemetry</string>
     <string name="track_selection_title">Select media tracks</string>
     <string name="receiver_status_idle">Source not selected</string>
     <string name="receiver_status_scanning">Scanning %d/%d…</string>

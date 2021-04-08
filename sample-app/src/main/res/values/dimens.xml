@@ -4,4 +4,5 @@
     <dimen name="item_spinner_height">36dp</dimen>
     <dimen name="item_spinner_padding">12dp</dimen>
     <dimen name="service_bottom_sheet_item_height">28dp</dimen>
+    <dimen name="settings_margin_level_2">15dp</dimen>
 </resources>
