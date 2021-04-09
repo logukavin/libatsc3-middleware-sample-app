@@ -3,6 +3,7 @@ package com.nextgenbroadcast.mobile.middleware.atsc3
 import android.util.Log
 import android.util.SparseArray
 import androidx.annotation.MainThread
+import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.core.atsc3.MediaUrl
 import com.nextgenbroadcast.mobile.core.atsc3.phy.PHYStatistics
 import com.nextgenbroadcast.mobile.core.isEquals
@@ -113,21 +114,30 @@ internal class Atsc3Module(
         log("Connecting to: $source")
 
         close()
-        this.source = source
 
-        return withStateLock {
-            val result = source.open()
-            if (result == IAtsc3Source.RESULT_ERROR) {
-                this.source = null
-            } else {
-                setSourceConfig(result)
-                setState(
-                        if (result > 0) Atsc3ModuleState.SCANNING else Atsc3ModuleState.TUNED
-                )
-                return@withStateLock true
+        try {
+            this.source = source
+
+            return withStateLock {
+                val result = source.open()
+                if (result == IAtsc3Source.RESULT_ERROR) {
+                    this.source = null
+                } else {
+                    setSourceConfig(result)
+                    setState(
+                            if (result > 0) Atsc3ModuleState.SCANNING else Atsc3ModuleState.TUNED
+                    )
+                    return@withStateLock true
+                }
+                return@withStateLock false
             }
-            return@withStateLock false
+        } catch (e: Exception) {
+            LOG.e(TAG, "Error when opening the source: $source", e)
+
+            this.source = null
         }
+
+        return false
     }
 
     @Synchronized
