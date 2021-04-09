@@ -89,18 +89,18 @@ class EmbeddedAtsc3Service : Atsc3ForegroundService() {
         override val controllerPresenter = object : IControllerPresenter {
             override fun setTelemetryEnabled(enabled: Boolean) {
                 if (enabled) {
-                    telemetryBroker.start()
+                    telemetryBroker?.start()
                 } else {
-                    telemetryBroker.stop()
+                    telemetryBroker?.stop()
                 }
             }
 
             override fun setTelemetryEnabled(type: String, enabled: Boolean) {
-                telemetryBroker.setReaderEnabled(type, enabled)
+                telemetryBroker?.setReaderEnabled(type, enabled)
             }
 
             override fun setTelemetryUpdateDelay(type: String, delayMils: Long) {
-                telemetryBroker.setReaderDelay(type, delayMils)
+                telemetryBroker?.setReaderDelay(type, delayMils)
             }
         }
     }

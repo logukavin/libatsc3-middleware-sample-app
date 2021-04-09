@@ -25,6 +25,7 @@ import androidx.core.content.ContextCompat
 import androidx.media.session.MediaButtonReceiver
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import com.google.firebase.installations.FirebaseInstallations
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.PhyFrequency
@@ -86,7 +87,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     private var destroyPresentationLayerJob: Job? = null
 
     // Telemetry
-    protected lateinit var telemetryBroker: TelemetryBroker
+    protected var telemetryBroker: TelemetryBroker? = null
 
     private val initializer = ArrayList<WeakReference<IServiceInitializer>>()
     private var isInitialized = false
@@ -97,13 +98,20 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         createReceiverCore()
         createMediaSession()
 
-        createTelemetryBroker()
+        FirebaseInstallations.getInstance().id.addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                createTelemetryBroker(task.result)
+            } else {
+                LOG.e(AWSIotThing.TAG, "Can't create Telemetry because Firebase ID not received.", task.exception)
+            }
+        }
 
         startStateObservation()
     }
 
-    private fun createTelemetryBroker() {
-        val thing = AWSIotThing(EncryptedSharedPreferences.create(
+    private fun createTelemetryBroker(serialNumber: String) {
+        val thing = AWSIotThing(serialNumber,
+                EncryptedSharedPreferences.create(
                 applicationContext,
                 IoT_PREFERENCE,
                 MasterKey.Builder(applicationContext).setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build(),
@@ -287,7 +295,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         atsc3Receiver.deInitialize()
         serviceScope.cancel()
 
-        telemetryBroker.stop()
+        telemetryBroker?.stop()
     }
 
     override fun onBind(intent: Intent): IBinder? {
@@ -641,7 +649,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
             }
 
             AWSIotThing.AWSIOT_ACTION_SET_TEST_CASE -> {
-                telemetryBroker.testCase = arguments[AWSIotThing.AWSIOT_ARGUMENT_CASE]?.ifBlank {
+                telemetryBroker?.testCase = arguments[AWSIotThing.AWSIOT_ARGUMENT_CASE]?.ifBlank {
                     null
                 }
             }
