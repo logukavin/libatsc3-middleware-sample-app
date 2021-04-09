@@ -221,7 +221,7 @@ class ServiceControllerTest {
     fun testOpenRouteByPcapDEMUXEDPathReturnFalse() {
         val path = "pcap.demux."
         val type = PcapAtsc3Source.PcapType.DEMUXED
-        val sourceMock = PcapAtsc3Source(path, type)
+        val sourceMock = PcapFileAtsc3Source(path, type)
 
         `when`(atsc3Module.connect(sourceMock)).thenReturn(false)
 
@@ -242,7 +242,7 @@ class ServiceControllerTest {
     fun testOpenRouteByPcapDEMUXEDPathReturnTrue() {
         val path = "pcap.demux."
         val type = PcapAtsc3Source.PcapType.DEMUXED
-        val sourceMock = PcapAtsc3Source(path, type)
+        val sourceMock = PcapFileAtsc3Source(path, type)
 
         `when`(atsc3Module.connect(sourceMock)).thenReturn(true)
 
@@ -263,7 +263,7 @@ class ServiceControllerTest {
     fun testOpenRouteByPcapSTLTPPathReturnFalse() {
         val path = "pcapSTLTP"
         val type = PcapAtsc3Source.PcapType.STLTP
-        val sourceMock = PcapAtsc3Source(path, type)
+        val sourceMock = PcapFileAtsc3Source(path, type)
 
         `when`(atsc3Module.connect(sourceMock)).thenReturn(false)
 
@@ -284,7 +284,7 @@ class ServiceControllerTest {
     fun testOpenRouteByPcapSTLTPPathReturnTrue() {
         val path = "pcapSTLTP."
         val type = PcapAtsc3Source.PcapType.STLTP
-        val sourceMock = PcapAtsc3Source(path, type)
+        val sourceMock = PcapFileAtsc3Source(path, type)
 
         `when`(atsc3Module.connect(sourceMock)).thenReturn(true)
 

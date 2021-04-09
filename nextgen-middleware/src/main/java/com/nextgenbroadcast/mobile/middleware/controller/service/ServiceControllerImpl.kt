@@ -139,23 +139,6 @@ internal class ServiceControllerImpl (
         repository.setAlertList(list)
     }
 
-    override fun openRoute(path: String): Boolean {
-        val source = if (path.startsWith("srt://")) {
-            if (path.contains('\n')) {
-                val sources = path.split('\n')
-                SrtListAtsc3Source(sources)
-            } else {
-                SrtAtsc3Source(path)
-            }
-        } else {
-            //TODO: temporary solution
-            val type = if (path.contains(".demux.")) PcapAtsc3Source.PcapType.DEMUXED else PcapAtsc3Source.PcapType.STLTP
-            PcapAtsc3Source(path, type)
-        }
-
-        return openRoute(source)
-    }
-
     override fun openRoute(source: IAtsc3Source): Boolean {
         closeRoute()
 

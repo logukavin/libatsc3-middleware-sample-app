@@ -177,10 +177,6 @@ internal class Atsc3ReceiverCore(
         webServer = null
     }
 
-    override fun openRoute(filePath: String): Boolean {
-        return serviceController.openRoute(filePath)
-    }
-
     override fun openRoute(source: IAtsc3Source): Boolean {
         return serviceController.openRoute(source)
     }
