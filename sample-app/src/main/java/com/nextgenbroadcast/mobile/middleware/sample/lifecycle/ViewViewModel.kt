@@ -15,10 +15,11 @@ class ViewViewModel : ViewModel() {
     val showDebugInfo = MutableLiveData(true)
     val showPhyInfo = MutableLiveData(false)
 
-    val enableCollectTelemetry = MutableLiveData(false)
-    val collectSensorTelemetry = MutableLiveData(true)
-    val sensorFrequencyType = MutableLiveData(SensorFrequencyType.MEDIUM)
-    val collectLocationTelemetry = MutableLiveData(true)
-    val locationFrequencyType = MutableLiveData(LocationFrequencyType.MEDIUM)
     val debugData = MutableLiveData<String>()
+
+    val enableTelemetry = MutableLiveData(false)
+    val sensorTelemetryEnabled = MutableLiveData(true)
+    val sensorFrequencyType = MutableLiveData(SensorFrequencyType.MEDIUM)
+    val locationTelemetryEnabled = MutableLiveData(true)
+    val locationFrequencyType = MutableLiveData(LocationFrequencyType.MEDIUM)
 }

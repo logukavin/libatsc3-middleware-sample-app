@@ -12,11 +12,13 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import java.util.concurrent.TimeUnit
 
 class BatteryTelemetryReader(
-        context: Context,
-        private val updateInterval: Long = BATTERY_MEASURING_FREQUENCY
+        context: Context
 ) : ITelemetryReader {
     private val appContext = context.applicationContext
     private val intentFilter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
+
+    override val name = NAME
+    override var delayMils: Long = BATTERY_MEASURING_FREQUENCY
 
     override suspend fun read(eventFlow: MutableSharedFlow<TelemetryEvent>) {
         supervisorScope {
@@ -32,12 +34,14 @@ class BatteryTelemetryReader(
                     ))
                 }
 
-                delay(updateInterval)
+                delay(delayMils)
             }
         }
     }
 
     companion object {
+        const val NAME = "battery"
+
         val BATTERY_MEASURING_FREQUENCY = TimeUnit.MINUTES.toMillis(1)
     }
 }
