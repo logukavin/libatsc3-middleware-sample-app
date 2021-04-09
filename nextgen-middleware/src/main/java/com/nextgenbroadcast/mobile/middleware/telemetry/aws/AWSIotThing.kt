@@ -81,25 +81,29 @@ class AWSIotThing(
             }
 
             GlobalScope.launch {
-                val certResponse = requestCertificateAndRegister(keyStore, keyPassword)
-                        ?: return@launch
+                try {
+                    val certResponse = requestCertificateAndRegister(keyStore, keyPassword)
+                            ?: return@launch
 
-                withContext(Dispatchers.Main) {
-                    preferences.edit()
-                            .putString(PREF_CERTIFICATE_ID, certResponse.certificateId)
-                            .putString(PREF_CERTIFICATE_PEM, certResponse.certificatePem)
-                            .putString(PREF_CERTIFICATE_KEY, certResponse.privateKey)
-                            .putString(PREF_CERTIFICATE_TOKEN, certResponse.certificateOwnershipToken)
-                            .apply()
-                }
-
-                val certificateStream = certResponse.certificatePem?.byteInputStream()
-                val privateKeyStream = certResponse.privateKey?.byteInputStream()
-                if (certificateStream != null && privateKeyStream != null) {
-                    readKeyPair(certificateStream, privateKeyStream)?.let { (keyStore, keyPassword) ->
-                        thingAwsIotClient = createAWSIoTClient(keyStore, keyPassword)
-                        LOG.i(TAG, "AWS IoT Client connected!")
+                    withContext(Dispatchers.Main) {
+                        preferences.edit()
+                                .putString(PREF_CERTIFICATE_ID, certResponse.certificateId)
+                                .putString(PREF_CERTIFICATE_PEM, certResponse.certificatePem)
+                                .putString(PREF_CERTIFICATE_KEY, certResponse.privateKey)
+                                .putString(PREF_CERTIFICATE_TOKEN, certResponse.certificateOwnershipToken)
+                                .apply()
                     }
+
+                    val certificateStream = certResponse.certificatePem?.byteInputStream()
+                    val privateKeyStream = certResponse.privateKey?.byteInputStream()
+                    if (certificateStream != null && privateKeyStream != null) {
+                        readKeyPair(certificateStream, privateKeyStream)?.let { (keyStore, keyPassword) ->
+                            thingAwsIotClient = createAWSIoTClient(keyStore, keyPassword)
+                            LOG.i(TAG, "AWS IoT Client connected!")
+                        }
+                    }
+                } catch (e: Exception) {
+                    LOG.e(TAG, "Can't initialize AWS IoT connection", e)
                 }
             }
         } else {
@@ -107,13 +111,17 @@ class AWSIotThing(
             val provisionedCertificatePrivateKey = preferences.getString(PREF_CERTIFICATE_KEY, null)
 
             GlobalScope.launch {
-                val certificateStream = provisionedCertificatePEM?.byteInputStream()
-                val privateKeyStream = provisionedCertificatePrivateKey?.byteInputStream()
-                if (certificateStream != null && privateKeyStream != null) {
-                    readKeyPair(certificateStream, privateKeyStream)?.let { (keyStore, keyPassword) ->
-                        thingAwsIotClient = createAWSIoTClient(keyStore, keyPassword)
-                        LOG.i(TAG, "AWS IoT Client connected!")
+                try {
+                    val certificateStream = provisionedCertificatePEM?.byteInputStream()
+                    val privateKeyStream = provisionedCertificatePrivateKey?.byteInputStream()
+                    if (certificateStream != null && privateKeyStream != null) {
+                        readKeyPair(certificateStream, privateKeyStream)?.let { (keyStore, keyPassword) ->
+                            thingAwsIotClient = createAWSIoTClient(keyStore, keyPassword)
+                            LOG.i(TAG, "AWS IoT Client connected!")
+                        }
                     }
+                } catch (e: Exception) {
+                    LOG.e(TAG, "Can't initialize AWS IoT connection", e)
                 }
             }
         }
