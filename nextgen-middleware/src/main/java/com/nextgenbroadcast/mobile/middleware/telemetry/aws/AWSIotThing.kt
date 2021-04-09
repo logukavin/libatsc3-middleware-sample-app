@@ -1,9 +1,7 @@
 package com.nextgenbroadcast.mobile.middleware.telemetry.aws
 
-import android.annotation.SuppressLint
 import android.content.SharedPreferences
 import android.content.res.AssetManager
-import android.os.Build
 import com.amazonaws.services.iot.client.*
 import com.google.gson.Gson
 import com.nextgenbroadcast.mobile.core.LOG
@@ -23,13 +21,12 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 class AWSIotThing(
+        private val serialNumber: String,
         private val preferences: SharedPreferences,
         private val assets: AssetManager
 ) {
     private val gson = Gson()
 
-    @SuppressLint("MissingPermission")
-    private val serialNumber = Build.getSerial()
     private val clientId = "ATSC3MobileReceiver_$serialNumber"
 
     private var thingAwsIotClient: AWSIotMqttClient? = null
