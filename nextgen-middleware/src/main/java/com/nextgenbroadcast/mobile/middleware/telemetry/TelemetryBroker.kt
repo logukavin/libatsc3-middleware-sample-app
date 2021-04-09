@@ -10,22 +10,26 @@ import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.collect
 import java.lang.Exception
+import java.util.concurrent.ConcurrentHashMap
 
 class TelemetryBroker(
         private val readers: List<ITelemetryReader>,
         private val writers: List<ITelemetryWriter>,
         private val controls: List<ITelemetryControl>
 ) {
+    private val coroutineScope = CoroutineScope(Dispatchers.IO)
     private val eventFlow = MutableSharedFlow<TelemetryEvent>(
             replay = 30,
             extraBufferCapacity = 0,
             onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
+    private val readerJobs = ConcurrentHashMap<String, Job>()
 
     private var job: Job? = null
 
     var testCase: String? = null
 
+    //TODO: add start/stop delay?
     fun start() {
         writers.forEach { writer ->
             try {
@@ -35,12 +39,10 @@ class TelemetryBroker(
             }
         }
 
-        job = CoroutineScope(Dispatchers.IO).launch {
+        job = coroutineScope.launch {
             try {
                 readers.forEach { reader ->
-                    launch {
-                        reader.read(eventFlow)
-                    }
+                    launchReader(reader)
                 }
 
                 eventFlow.collect { event ->
@@ -70,6 +72,16 @@ class TelemetryBroker(
         }
     }
 
+    private fun CoroutineScope.launchReader(reader: ITelemetryReader) {
+        readerJobs[reader.name] = launch {
+            reader.read(eventFlow)
+        }.apply {
+            invokeOnCompletion {
+                readerJobs.remove(reader.name, this)
+            }
+        }
+    }
+
     fun stop() {
         controls.forEach { control ->
             try {
@@ -82,6 +94,11 @@ class TelemetryBroker(
         job?.cancel()
         job = null
 
+        readerJobs.values.forEach { job ->
+            if (!job.isCancelled) job.cancel()
+        }
+        readerJobs.clear()
+
         writers.forEach { writer ->
             try {
                 writer.close()
@@ -89,7 +106,43 @@ class TelemetryBroker(
                 LOG.e(TAG, "Can't Close writer: ${writer::class.java.simpleName}", e)
             }
         }
+
+        eventFlow.resetReplayCache()
     }
+
+    fun setReaderEnabled(name: String, enabled: Boolean) {
+        if (!isStarted()) return
+
+        if (enabled) {
+            readers.forEach { reader ->
+                if (reader.name.startsWith(name)) {
+                    if (!readerJobs.containsKey(reader.name)) {
+                        coroutineScope.launchReader(reader)
+                    }
+                }
+            }
+        } else {
+            readerJobs.forEach { (readerName, job) ->
+                if (readerName.startsWith(name)) {
+                    job.cancel()
+                }
+            }
+        }
+    }
+
+    fun setReaderDelay(name: String, delayMils: Long) {
+        if (!isStarted() || delayMils < 0) return
+
+        readers.forEach { reader ->
+            if (reader.name.startsWith(name)) {
+                readerJobs[reader.name]?.cancel()
+                reader.delayMils = delayMils
+                coroutineScope.launchReader(reader)
+            }
+        }
+    }
+
+    private fun isStarted() = job != null
 
     companion object {
         val TAG: String = TelemetryBroker::class.java.simpleName

@@ -1,15 +1,13 @@
 package com.nextgenbroadcast.mobile.core.service.binder
 
-import com.nextgenbroadcast.mobile.core.presentation.IMediaPlayerPresenter
-import com.nextgenbroadcast.mobile.core.presentation.ISelectorPresenter
-import com.nextgenbroadcast.mobile.core.presentation.IUserAgentPresenter
-import com.nextgenbroadcast.mobile.core.presentation.IReceiverPresenter
+import com.nextgenbroadcast.mobile.core.presentation.*
 
 interface IServiceBinder {
     val receiverPresenter: IReceiverPresenter
     val selectorPresenter: ISelectorPresenter
     val userAgentPresenter: IUserAgentPresenter
     val mediaPlayerPresenter: IMediaPlayerPresenter
+    val controllerPresenter: IControllerPresenter?
 
     companion object {
         const val TYPE_ALL = 1

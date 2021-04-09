@@ -16,10 +16,12 @@ import java.util.concurrent.TimeUnit
 
 class SensorTelemetryReader(
         private val sensorManager: SensorManager,
-        private val sensorType: Int,
-        private val sensorDelay: Long = DEFAULT_UPDATE_FREQUENCY
+        private val sensorType: Int
 ) : ITelemetryReader {
     private val emptyFloatArray = FloatArray(0)
+
+    override val name = "$NAME:$sensorType"
+    override var delayMils: Long = DEFAULT_UPDATE_FREQUENCY
 
     override suspend fun read(eventFlow: MutableSharedFlow<TelemetryEvent>) {
         val sensor: Sensor = sensorManager.getDefaultSensor(sensorType) ?: return
@@ -51,13 +53,13 @@ class SensorTelemetryReader(
                 }
             }
 
-            sensorManager.registerListener(listener, sensor, (sensorDelay * 1000).toInt())
+            sensorManager.registerListener(listener, sensor, (delayMils * 1000).toInt())
 
             awaitClose {
                 sensorManager.unregisterListener(listener)
             }
         }.buffer(Channel.CONFLATED) // To avoid send blocking
-                .sample(sensorDelay) // To control emission frequency
+                .sample(delayMils) // To control emission frequency
                 .collect { data ->
                     eventFlow.emit(TelemetryEvent(AWSIotThing.AWSIOT_TOPIC_SENSORS, data))
                 }
@@ -65,13 +67,19 @@ class SensorTelemetryReader(
 
     companion object {
         val TAG: String = SensorTelemetryReader::class.java.simpleName
+        const val NAME = "sensors"
 
         val DEFAULT_UPDATE_FREQUENCY = TimeUnit.SECONDS.toMillis(1)
     }
 }
 
-enum class SensorFrequencyType{
-    FASTEST, HIGH, MEDIUM, LOW
+enum class SensorFrequencyType(
+        val delayMils: Long
+) {
+    FASTEST(250),
+    HIGH(1000),
+    MEDIUM(2000),
+    LOW(5000)
 }
 
 data class SensorData(
