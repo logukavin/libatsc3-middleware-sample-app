@@ -212,18 +212,24 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
                                     .setTitle(service.shortName)
                                     .setExtras(service.toBundle())
                                     .build(),
-                            service.id.toLong()
+                            service.uniqueId()
                     )
                 }
 
                 withContext(Dispatchers.Main) {
-                    mediaSession.setQueue(queue)
+                    try {
+                        mediaSession.setQueue(queue)
+                    } catch (e: IllegalArgumentException) {
+                        LOG.e(TAG, "Can't set media queue", e)
+                    }
                 }
 
                 // Automatically start playing the first service in list
                 if (playbackState.value == PlaybackState.IDLE) {
                     services.firstOrNull()?.let { service ->
-                        selectMediaService(service)
+                        withContext(Dispatchers.Main) {
+                            selectMediaService(service)
+                        }
                     }
                 }
             }
@@ -244,7 +250,9 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
                 }
                 if (!isBinded || (atsc3Receiver.ignoreAudioServiceMedia && service?.category == SLTConstants.SERVICE_CATEGORY_AO)) {
                     mediaPath?.let {
-                        player.play(atsc3Receiver.mediaFileProvider.getMediaFileUri(mediaPath.url))
+                        withContext(Dispatchers.Main) {
+                            player.play(atsc3Receiver.mediaFileProvider.getMediaFileUri(mediaPath.url))
+                        }
                     }
                 }
             }
@@ -256,7 +264,9 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
                 withContext(Dispatchers.Main) {
                     alerts.forEach { alert ->
                         alert.messages?.forEach { msg ->
-                            Toast.makeText(applicationContext, msg, Toast.LENGTH_LONG).show()
+                            withContext(Dispatchers.Main) {
+                                Toast.makeText(applicationContext, msg, Toast.LENGTH_LONG).show()
+                            }
                         }
                     }
                 }

@@ -16,6 +16,10 @@ data class AVService(
         val hidden: Boolean = false
 ) : Parcelable {
 
+    fun uniqueId(): Long {
+        return (bsid.toLong() shl Int.SIZE_BITS) or id.toLong()
+    }
+
     fun toBundle(): Bundle {
         return Bundle().apply {
             putInt(FIELD_BSID, bsid)
