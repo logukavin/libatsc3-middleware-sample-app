@@ -19,7 +19,6 @@ internal interface IServiceController {
     val applications: StateFlow<List<Atsc3Application>>
     val alertList: StateFlow<List<AeaTable>>
 
-    fun openRoute(path: String): Boolean
     fun openRoute(source: IAtsc3Source): Boolean
     fun stopRoute()
     fun closeRoute()

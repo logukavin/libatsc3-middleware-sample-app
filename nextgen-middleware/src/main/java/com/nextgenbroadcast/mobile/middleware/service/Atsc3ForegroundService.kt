@@ -35,7 +35,7 @@ import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverStandalone
 import com.nextgenbroadcast.mobile.middleware.BuildConfig
 import com.nextgenbroadcast.mobile.middleware.ServiceDialogActivity
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.SLTConstants
-import com.nextgenbroadcast.mobile.middleware.atsc3.source.UsbAtsc3Source
+import com.nextgenbroadcast.mobile.middleware.atsc3.source.*
 import com.nextgenbroadcast.mobile.middleware.cache.DownloadManager
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
 import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
@@ -429,8 +429,28 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         // change source to file. So, let's unregister device receiver
         unregisterDeviceReceiver()
 
-        filePath?.let {
-            atsc3Receiver.openRoute(filePath)
+        if (filePath == null) return
+
+        val source = if (filePath.startsWith("srt://")) {
+            if (filePath.contains('\n')) {
+                val sources = filePath.split('\n')
+                SrtListAtsc3Source(sources)
+            } else {
+                SrtAtsc3Source(filePath)
+            }
+        } else {
+            //TODO: temporary solution
+            val type = if (filePath.contains(".demux.")) PcapAtsc3Source.PcapType.DEMUXED else PcapAtsc3Source.PcapType.STLTP
+
+            contentResolver.openFileDescriptor(Uri.parse(filePath), "r")?.use { descriptor ->
+                PcapDescriptorAtsc3Source(descriptor.detachFd(), descriptor.statSize, type)
+            }
+
+            //PcapFileAtsc3Source(filePath, type)
+        }
+
+        source?.let {
+            atsc3Receiver.openRoute(source)
         }
     }
 
