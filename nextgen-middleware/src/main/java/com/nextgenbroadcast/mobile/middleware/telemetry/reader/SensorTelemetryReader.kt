@@ -6,6 +6,12 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIotThing
+import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIotThing.Companion.AWSIOT_NAME_GYROSCOPE
+import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIotThing.Companion.AWSIOT_NAME_LINEAR_ACCELERATION
+import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIotThing.Companion.AWSIOT_NAME_ROTATION_VECTOR
+import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIotThing.Companion.AWSIOT_NAME_SIGNIFICANT_MOTION
+import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIotThing.Companion.AWSIOT_NAME_STEP_COUNTER
+import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIotThing.Companion.AWSIOT_NAME_STEP_DETECTOR
 import com.nextgenbroadcast.mobile.middleware.telemetry.entity.TelemetryEvent
 import com.nextgenbroadcast.mobile.middleware.telemetry.entity.TelemetryPayload
 import kotlinx.coroutines.channels.Channel
@@ -70,6 +76,21 @@ class SensorTelemetryReader(
         const val NAME = "sensors"
 
         val DEFAULT_UPDATE_FREQUENCY = TimeUnit.SECONDS.toMillis(1)
+
+        fun getFullSensorName(sensorName: String?): String {
+            val sensorType = when (sensorName) {
+                AWSIOT_NAME_LINEAR_ACCELERATION -> Sensor.TYPE_LINEAR_ACCELERATION
+                AWSIOT_NAME_GYROSCOPE -> Sensor.TYPE_GYROSCOPE
+                AWSIOT_NAME_SIGNIFICANT_MOTION -> Sensor.TYPE_SIGNIFICANT_MOTION
+                AWSIOT_NAME_STEP_DETECTOR -> Sensor.TYPE_STEP_DETECTOR
+                AWSIOT_NAME_STEP_COUNTER -> Sensor.TYPE_STEP_COUNTER
+                AWSIOT_NAME_ROTATION_VECTOR -> Sensor.TYPE_ROTATION_VECTOR
+                null -> ""
+                else -> "unknown type"
+            }
+            return "$NAME:$sensorType"
+        }
+
     }
 }
 
