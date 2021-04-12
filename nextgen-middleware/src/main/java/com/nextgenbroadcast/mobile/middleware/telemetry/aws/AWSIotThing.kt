@@ -59,7 +59,7 @@ class AWSIotThing(
                     cont.resume(Any())
                 }
             } catch (e: Exception) {
-                LOG.e(TAG, "Crash when disconnecting AWS IoT", e)
+                LOG.d(TAG, "Crash when disconnecting AWS IoT", e)
             }
         }
     }

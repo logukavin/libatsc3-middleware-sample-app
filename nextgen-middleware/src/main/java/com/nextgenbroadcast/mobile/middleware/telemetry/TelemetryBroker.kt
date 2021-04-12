@@ -30,7 +30,10 @@ class TelemetryBroker(
     var testCase: String? = null
 
     //TODO: add start/stop delay?
+    @Synchronized
     fun start() {
+        if (job != null) return
+
         writers.forEach { writer ->
             try {
                 writer.open()
@@ -82,6 +85,7 @@ class TelemetryBroker(
         }
     }
 
+    @Synchronized
     fun stop() {
         controls.forEach { control ->
             try {
