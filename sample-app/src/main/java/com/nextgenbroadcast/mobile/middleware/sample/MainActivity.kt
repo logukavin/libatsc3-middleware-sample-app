@@ -23,6 +23,7 @@ import com.google.android.play.core.install.model.AppUpdateType
 import com.google.android.play.core.install.model.UpdateAvailability
 import com.google.android.play.core.tasks.Task
 import androidx.lifecycle.asLiveData
+import androidx.lifecycle.distinctUntilChanged
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
@@ -63,27 +64,27 @@ class MainActivity : BaseActivity() {
         getMainFragment().onBind(factory)
 
         binder.controllerPresenter?.let { controllerPresenter ->
-            viewViewModel.enableTelemetry.observe(this) { enableTelemetry ->
+            viewViewModel.enableTelemetry.distinctUntilChanged().observe(this) { enableTelemetry ->
                 if (enableTelemetry != null) {
                     controllerPresenter.setTelemetryEnabled(enableTelemetry)
                 }
             }
-            viewViewModel.sensorTelemetryEnabled.observe(this) { sensorEnabled ->
+            viewViewModel.sensorTelemetryEnabled.distinctUntilChanged().observe(this) { sensorEnabled ->
                 if (sensorEnabled != null) {
                     controllerPresenter.setTelemetryEnabled("sensors", sensorEnabled)
                 }
             }
-            viewViewModel.sensorFrequencyType.observe(this) { frequencyType ->
+            viewViewModel.sensorFrequencyType.distinctUntilChanged().observe(this) { frequencyType ->
                 if (frequencyType != null) {
                     controllerPresenter.setTelemetryUpdateDelay("sensors", frequencyType.delayMils)
                 }
             }
-            viewViewModel.locationTelemetryEnabled.observe(this) { sensorEnabled ->
+            viewViewModel.locationTelemetryEnabled.distinctUntilChanged().observe(this) { sensorEnabled ->
                 if (sensorEnabled != null) {
                     controllerPresenter.setTelemetryEnabled("location", sensorEnabled)
                 }
             }
-            viewViewModel.locationFrequencyType.observe(this) { frequencyType ->
+            viewViewModel.locationFrequencyType.distinctUntilChanged().observe(this) { frequencyType ->
                 if (frequencyType != null) {
                     controllerPresenter.setTelemetryUpdateDelay("location", frequencyType.delay())
                 }
