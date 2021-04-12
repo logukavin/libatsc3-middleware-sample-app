@@ -1,21 +1,18 @@
 package com.nextgenbroadcast.mobile.middleware.telemetry
 
 import com.nextgenbroadcast.mobile.core.LOG
-import com.nextgenbroadcast.mobile.middleware.telemetry.control.ITelemetryControl
 import com.nextgenbroadcast.mobile.middleware.telemetry.entity.TelemetryEvent
 import com.nextgenbroadcast.mobile.middleware.telemetry.reader.ITelemetryReader
 import com.nextgenbroadcast.mobile.middleware.telemetry.writer.ITelemetryWriter
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.BufferOverflow
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.*
 import java.lang.Exception
 import java.util.concurrent.ConcurrentHashMap
 
 class TelemetryBroker(
         private val readers: List<ITelemetryReader>,
-        private val writers: List<ITelemetryWriter>,
-        private val controls: List<ITelemetryControl>
+        private val writers: List<ITelemetryWriter>
 ) {
     private val coroutineScope = CoroutineScope(Dispatchers.IO)
     private val eventFlow = MutableSharedFlow<TelemetryEvent>(
@@ -48,29 +45,17 @@ class TelemetryBroker(
                     launchReader(reader)
                 }
 
-                eventFlow.collect { event ->
-                    LOG.d(TAG, "AWS IoT event: ${event.topic} - ${event.payload}")
-
+                val flow = eventFlow.onEach { event ->
                     event.payload.testCase = testCase
+                }
 
-                    writers.forEach { writer ->
-                        try {
-                            writer.write(event)
-                        } catch (e: Exception) {
-                            LOG.e(TAG, "Can't Write to: ${writer::class.java.simpleName}", e)
-                        }
+                writers.forEach { writer ->
+                    launch {
+                        writer.write(flow)
                     }
                 }
             } catch (e: Exception) {
                 LOG.d(TAG, "Telemetry gathering error: ", e)
-            }
-        }
-
-        controls.forEach { control ->
-            try {
-                control.subscribe()
-            } catch (e: Exception) {
-                LOG.e(TAG, "Can't subscribe control: ${control::class.java.simpleName}", e)
             }
         }
     }
@@ -87,14 +72,6 @@ class TelemetryBroker(
 
     @Synchronized
     fun stop() {
-        controls.forEach { control ->
-            try {
-                control.unsubscribe()
-            } catch (e: Exception) {
-                LOG.e(TAG, "Can't unsubscribe control: ${control::class.java.simpleName}", e)
-            }
-        }
-
         job?.cancel()
         job = null
 
