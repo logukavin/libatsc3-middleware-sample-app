@@ -676,6 +676,22 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
                     LOG.d(TAG, "Can't reboot device", e)
                 }
             }
+
+            AWSIotThing.AWSIOT_ACTION_SENSORS -> {
+                val sensorName = arguments[AWSIotThing.AWSIOT_ARGUMENT_NAME]?:AWSIotThing.AWSIOT_ACTION_SENSORS
+                val isEnable =  arguments[AWSIotThing.AWSIOT_ARGUMENT_ENABLE]
+                isEnable?.toBoolean()?.let {
+                        telemetryBroker?.setReaderEnabled(sensorName, it)
+                }
+            }
+
+            AWSIotThing.AWSIOT_ACTION_LOCATION -> {
+                val isEnable =  arguments[AWSIotThing.AWSIOT_ARGUMENT_ENABLE]
+                isEnable?.toBoolean()?.let {
+                    telemetryBroker?.setReaderEnabled( AWSIotThing.AWSIOT_ACTION_LOCATION, it)
+                }
+            }
+
         }
     }
 
