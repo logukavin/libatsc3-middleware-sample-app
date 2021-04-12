@@ -342,13 +342,6 @@ class AWSIotThing(
         const val AWSIOT_ACTION_RESTART_APP = "restartApp"
         const val AWSIOT_ACTION_REBOOT_DEVICE = "rebootDevice"
 
-        const val AWSIOT_NAME_LINEAR_ACCELERATION = "linear_acceleration"
-        const val AWSIOT_NAME_GYROSCOPE = "gyroscope"
-        const val AWSIOT_NAME_SIGNIFICANT_MOTION = "significant_motion"
-        const val AWSIOT_NAME_STEP_DETECTOR = "step_detector"
-        const val AWSIOT_NAME_STEP_COUNTER = "step_counter"
-        const val AWSIOT_NAME_ROTATION_VECTOR = "rotation_vector"
-
         const val AWSIOT_ARGUMENT_ENABLE = "enable"
         const val AWSIOT_ARGUMENT_NAME = "name"
         const val AWSIOT_ARGUMENT_DELIMITER = ";"
