@@ -69,7 +69,7 @@ class AWSIotThing(
                             override fun onMessage(message: AWSIotMessage) {
                                 val command = gson.fromJson(message.stringPayload, TelemetryControl::class.java)
                                 if (command.action == AWSIOT_ACTION_PING) {
-                                    runBlocking{
+                                    CoroutineScope(Dispatchers.IO).launch {
                                         publish(AWSIOT_TOPIC_PING, AWSION_PONG_RESPONCE)
                                     }
                                 } else {
