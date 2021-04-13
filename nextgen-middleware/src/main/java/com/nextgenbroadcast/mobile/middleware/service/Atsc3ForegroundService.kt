@@ -677,24 +677,19 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
                 }
             }
 
-            AWSIotThing.AWSIOT_ACTION_SENSORS -> {
-                val awsiotSensorName = arguments[AWSIotThing.AWSIOT_ARGUMENT_NAME]
+            AWSIotThing.AWSIOT_ACTION_TELEMETRY_SENSORS -> {
+                val sensorName = arguments[AWSIotThing.AWSIOT_ARGUMENT_NAME]?.let { awsiotSensorName ->
+                    SensorTelemetryReader.getFullSensorName(awsiotSensorName) ?: return
+                } ?: SensorTelemetryReader.NAME
 
-                val sensorName = if (awsiotSensorName != null) {
-                    SensorTelemetryReader.getFullSensorName(awsiotSensorName)
-                } else {
-                    SensorTelemetryReader.NAME
-                }
-
-                arguments[AWSIotThing.AWSIOT_ARGUMENT_ENABLE]?.toBoolean()?.let {
-                    telemetryBroker?.setReaderEnabled(sensorName, it)
+                arguments[AWSIotThing.AWSIOT_ARGUMENT_ENABLE]?.let {
+                    telemetryBroker?.setReaderEnabled(sensorName, it.toBoolean())
                 }
             }
 
-            AWSIotThing.AWSIOT_ACTION_LOCATION -> {
-                val isEnable = arguments[AWSIotThing.AWSIOT_ARGUMENT_ENABLE]
-                isEnable?.toBoolean()?.let {
-                    telemetryBroker?.setReaderEnabled(GPSTelemetryReader.NAME, it)
+            AWSIotThing.AWSIOT_ACTION_TELEMETRY_LOCATION -> {
+                arguments[AWSIotThing.AWSIOT_ARGUMENT_ENABLE]?.let {
+                    telemetryBroker?.setReaderEnabled(GPSTelemetryReader.NAME, it.toBoolean())
                 }
             }
 
