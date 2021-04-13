@@ -335,12 +335,12 @@ class AWSIotThing(
         const val AWSIOT_TOPIC_ATSC3TRANSPORT = "telemetry/$AWSIOT_FORMAT_SERIAL/atsc3transport"
 
         const val AWSIOT_ACTION_TUNE = "tune"
-        const val AWSIOT_ACTION_LOCATION = "location"
-        const val AWSIOT_ACTION_SENSORS = "sensors"
         const val AWSIOT_ACTION_ACQUIRE_SERVICE = "acquireService"
         const val AWSIOT_ACTION_SET_TEST_CASE = "setTestCase"
         const val AWSIOT_ACTION_RESTART_APP = "restartApp"
         const val AWSIOT_ACTION_REBOOT_DEVICE = "rebootDevice"
+        const val AWSIOT_ACTION_TELEMETRY_LOCATION = "locationTelemetry"
+        const val AWSIOT_ACTION_TELEMETRY_SENSORS = "sensorsTelemetry"
 
         const val AWSIOT_ARGUMENT_ENABLE = "enable"
         const val AWSIOT_ARGUMENT_NAME = "name"

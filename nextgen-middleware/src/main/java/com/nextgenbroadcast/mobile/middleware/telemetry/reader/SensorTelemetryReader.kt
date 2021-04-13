@@ -4,7 +4,6 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
-import android.util.Log
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIotThing
 import com.nextgenbroadcast.mobile.middleware.telemetry.entity.TelemetryEvent
@@ -79,7 +78,7 @@ class SensorTelemetryReader(
         private const val AWSIOT_NAME_STEP_COUNTER = "step_counter"
         private const val AWSIOT_NAME_ROTATION_VECTOR = "rotation_vector"
 
-        fun getFullSensorName(sensorName: String): String {
+        fun getFullSensorName(sensorName: String): String? {
             val sensorType = when (sensorName) {
                 AWSIOT_NAME_LINEAR_ACCELERATION -> Sensor.TYPE_LINEAR_ACCELERATION
                 AWSIOT_NAME_GYROSCOPE -> Sensor.TYPE_GYROSCOPE
@@ -88,8 +87,7 @@ class SensorTelemetryReader(
                 AWSIOT_NAME_STEP_COUNTER -> Sensor.TYPE_STEP_COUNTER
                 AWSIOT_NAME_ROTATION_VECTOR -> Sensor.TYPE_ROTATION_VECTOR
                 else -> {
-                    Log.e(TAG, "getFullSensorName, unknown type")
-                    "unknown type"
+                    return null
                 }
             }
             return "$NAME:$sensorType"
