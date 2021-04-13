@@ -339,7 +339,11 @@ class AWSIotThing(
         const val AWSIOT_ACTION_SET_TEST_CASE = "setTestCase"
         const val AWSIOT_ACTION_RESTART_APP = "restartApp"
         const val AWSIOT_ACTION_REBOOT_DEVICE = "rebootDevice"
+        const val AWSIOT_ACTION_TELEMETRY_LOCATION = "locationTelemetry"
+        const val AWSIOT_ACTION_TELEMETRY_SENSORS = "sensorsTelemetry"
 
+        const val AWSIOT_ARGUMENT_ENABLE = "enable"
+        const val AWSIOT_ARGUMENT_NAME = "name"
         const val AWSIOT_ARGUMENT_DELIMITER = ";"
         const val AWSIOT_ARGUMENT_FREQUENCY = "frequency"
         const val AWSIOT_ARGUMENT_SERVICE_ID = "serviceId"
