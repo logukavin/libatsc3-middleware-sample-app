@@ -2,7 +2,9 @@ package com.nextgenbroadcast.mobile.middleware.telemetry.aws
 
 import android.content.SharedPreferences
 import android.content.res.AssetManager
+import android.util.Log
 import com.amazonaws.services.iot.client.*
+import com.amazonaws.services.iot.client.core.AwsIotRuntimeException
 import com.google.gson.Gson
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.middleware.telemetry.entity.TelemetryControl
@@ -30,13 +32,21 @@ class AWSIotThing(
     private val clientId = "ATSC3MobileReceiver_$serialNumber"
 
     private var thingAwsIotClient: AWSIotMqttClient? = null
+        set(value) {
+            synchronized(this) {
+                field?.let { client ->
+                    disconnect(client)
+                }
+                field = value
+            }
+        }
 
-    fun publish(topic: String, payload: TelemetryPayload) {
+    suspend fun publish(topic: String, payload: TelemetryPayload) {
         publish(topic, gson.toJson(payload))
     }
 
-    fun publish(topic: String, payload: String) {
-        thingAwsIotClient?.let { client ->
+    suspend fun publish(topic: String, payload: String) {
+        requireClient().let { client ->
             if (client.connectionStatus != AWSIotConnectionStatus.DISCONNECTED) {
                 client.publish(
                         LoggingAWSIotMessage(
@@ -48,33 +58,58 @@ class AWSIotThing(
         }
     }
 
-    fun disconnect() {
-        val client = thingAwsIotClient ?: return
-        thingAwsIotClient = null
 
-        GlobalScope.launch {
-            try {
-                suspendCancellableCoroutine<Any> { cont ->
-                    client.disconnect()
-                    cont.resume(Any())
-                }
-            } catch (e: Exception) {
-                LOG.d(TAG, "Crash when disconnecting AWS IoT", e)
+    suspend fun subscribeCommandsFlow(commandFlow: MutableSharedFlow<TelemetryControl>) {
+        val client = requireClient()
+        try {
+            suspendCancellableCoroutine<AWSIotMessage?> { cont ->
+                client.subscribe(
+                        object : AWSIotTopicKtx(cont,
+                                AWSIOT_SUBSCRIPTION_CONTROL.replace(AWSIOT_FORMAT_SERIAL, clientId)
+                        ) {
+                            override fun onMessage(message: AWSIotMessage) {
+                                val command = gson.fromJson(message.stringPayload, TelemetryControl::class.java)
+                                commandFlow.tryEmit(command)
+                            }
+                        }
+                )
             }
+        } catch (e: Exception) {
+            LOG.d(TAG, "Receiving command error", e)
         }
     }
 
-    fun connect() {
+    fun close() {
+        thingAwsIotClient = null // disconnects automatically
+    }
+
+    private fun disconnect(client: AWSIotMqttClient) {
+        try {
+            LOG.i(TAG, "Start client disconnect: " + Log.getStackTraceString(Exception()))
+            client.disconnect(1_000, false)
+        } catch (e: Exception) {
+            LOG.d(TAG, "Crash when disconnecting AWS IoT", e)
+        }
+    }
+
+    private suspend fun requireClient(): AWSIotMqttClient {
+        return thingAwsIotClient ?: let {
+            connect().join()
+            thingAwsIotClient ?: throw NullPointerException("AWS IoT client is NULL")
+        }
+    }
+
+    private fun connect(): Job {
         val provisionedCertificateId = preferences.getString(PREF_CERTIFICATE_ID, null)
-        if (provisionedCertificateId == null) {
+        return if (provisionedCertificateId == null) {
             val (keyStore, keyPassword) = try {
                 readKeyPair(
                         assets.open("9200fd27be-certificate.pem.crt"),
                         assets.open("9200fd27be-private.pem.key")
-                ) ?: return
+                ) ?: throw AwsIotRuntimeException("Key pair is null")
             } catch (e: IOException) {
                 LOG.e(TAG, "Keys reading error", e)
-                return
+                throw AwsIotRuntimeException(e)
             }
 
             GlobalScope.launch {
@@ -94,10 +129,7 @@ class AWSIotThing(
                     val certificateStream = certResponse.certificatePem?.byteInputStream()
                     val privateKeyStream = certResponse.privateKey?.byteInputStream()
                     if (certificateStream != null && privateKeyStream != null) {
-                        readKeyPair(certificateStream, privateKeyStream)?.let { (keyStore, keyPassword) ->
-                            thingAwsIotClient = createAWSIoTClient(keyStore, keyPassword)
-                            LOG.i(TAG, "AWS IoT Client connected!")
-                        }
+                        connectAWSIoT(certificateStream, privateKeyStream)
                     }
                 } catch (e: Exception) {
                     LOG.e(TAG, "Can't initialize AWS IoT connection", e)
@@ -112,10 +144,7 @@ class AWSIotThing(
                     val certificateStream = provisionedCertificatePEM?.byteInputStream()
                     val privateKeyStream = provisionedCertificatePrivateKey?.byteInputStream()
                     if (certificateStream != null && privateKeyStream != null) {
-                        readKeyPair(certificateStream, privateKeyStream)?.let { (keyStore, keyPassword) ->
-                            thingAwsIotClient = createAWSIoTClient(keyStore, keyPassword)
-                            LOG.i(TAG, "AWS IoT Client connected!")
-                        }
+                        connectAWSIoT(certificateStream, privateKeyStream)
                     }
                 } catch (e: Exception) {
                     LOG.e(TAG, "Can't initialize AWS IoT connection", e)
@@ -124,31 +153,12 @@ class AWSIotThing(
         }
     }
 
-    suspend fun subscribeCommandsFlow(commandFlow: MutableSharedFlow<TelemetryControl>) {
-        supervisorScope {
-            while (isActive) {
-                val client = thingAwsIotClient
-                if (client != null) {
-                    try {
-                        suspendCancellableCoroutine<AWSIotMessage?> { cont ->
-                            client.subscribe(
-                                    object : AWSIotTopicKtx(cont,
-                                            AWSIOT_SUBSCRIPTION_CONTROL.replace(AWSIOT_FORMAT_SERIAL, clientId)
-                                    ) {
-                                        override fun onMessage(message: AWSIotMessage) {
-                                            val command = gson.fromJson(message.stringPayload, TelemetryControl::class.java)
-                                            commandFlow.tryEmit(command)
-                                        }
-                                    }
-                            )
-                        }
-                    } catch (e: Exception) {
-                        LOG.e(TAG, "Receiving command error", e)
-                    }
-                } else {
-                    delay(10_000)
-                }
+    private suspend fun connectAWSIoT(certificateStream: InputStream, privateKeyStream: InputStream) {
+        readKeyPair(certificateStream, privateKeyStream)?.let { (keyStore, keyPassword) ->
+            thingAwsIotClient = createAWSIoTClient(keyStore, keyPassword) {
+                thingAwsIotClient = null
             }
+            LOG.i(TAG, "AWS IoT Client connected!")
         }
     }
 
@@ -226,7 +236,7 @@ class AWSIotThing(
                     certificateCreateResponse
                 }
             } finally {
-                client.disconnect()
+                disconnect(client)
             }
         } catch (e: AWSIotException) {
             LOG.e(TAG, "AWS IoT registration error", e)
@@ -235,8 +245,23 @@ class AWSIotThing(
         return null
     }
 
-    private suspend fun createAWSIoTClient(keyStore: KeyStore, keyPassword: String): AWSIotMqttClient {
-        return AWSIotMqttClient(AWSIOT_CUSTOMER_SPECIFIC_ENDPOINT, clientId, keyStore, keyPassword).also { client ->
+    private suspend fun createAWSIoTClient(keyStore: KeyStore, keyPassword: String, onClose: () -> Unit = {}): AWSIotMqttClient {
+        return object : AWSIotMqttClient(AWSIOT_CUSTOMER_SPECIFIC_ENDPOINT, clientId, keyStore, keyPassword) {
+            override fun onConnectionClosed() {
+                // AWSIotMqttClient doesn't cancel subscriptions on connection error, close them manually
+                try {
+                    subscriptions.values.forEach { topic ->
+                        topic.onFailure()
+                    }
+                } catch (e: AwsIotRuntimeException) {
+                    LOG.e(TAG, "Subscription closing error: ", e)
+                }
+
+                super.onConnectionClosed()
+
+                onClose()
+            }
+        }.also { client ->
             suspendCancellableCoroutine<Any> { cont ->
                 try {
                     client.connect()

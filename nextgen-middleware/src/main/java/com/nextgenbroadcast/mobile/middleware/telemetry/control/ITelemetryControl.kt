@@ -1,6 +1,8 @@
 package com.nextgenbroadcast.mobile.middleware.telemetry.control
 
+import com.nextgenbroadcast.mobile.middleware.telemetry.entity.TelemetryControl
+import kotlinx.coroutines.flow.MutableSharedFlow
+
 interface ITelemetryControl {
-    fun subscribe()
-    fun unsubscribe()
+    suspend fun subscribe(commandFlow: MutableSharedFlow<TelemetryControl>)
 }
