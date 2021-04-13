@@ -13,9 +13,9 @@ import android.os.Bundle
 import android.support.v4.media.MediaBrowserCompat
 import android.view.View
 import android.widget.Toast
-import androidx.activity.viewModels
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.ViewModelProvider
 import com.google.android.play.core.appupdate.AppUpdateInfo
 import com.google.android.play.core.appupdate.AppUpdateManager
 import com.google.android.play.core.appupdate.AppUpdateManagerFactory
@@ -32,11 +32,16 @@ import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.factory.UserAgent
 import com.nextgenbroadcast.mobile.middleware.service.media.MediaSessionConstants
 import dagger.android.AndroidInjection
 
-
 class MainActivity : BaseActivity() {
-    private val viewViewModel: ViewViewModel by viewModels()
-
     private lateinit var appUpdateManager: AppUpdateManager
+
+    private var _viewViewModel: ViewViewModel? = null
+    private val viewViewModel: ViewViewModel
+        get() = _viewViewModel ?: let {
+            ViewModelProvider(this).get(ViewViewModel::class.java).also {
+                _viewViewModel = it
+            }
+        }
 
     private val hasFeaturePIP: Boolean by lazy {
         packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)
@@ -93,6 +98,7 @@ class MainActivity : BaseActivity() {
     }
 
     override fun onUnbind() {
+        _viewViewModel = null
         viewModelStore.clear()
 
         getMainFragment().onUnbind()
@@ -283,7 +289,7 @@ class MainActivity : BaseActivity() {
         appUpdateInfoTask.addOnSuccessListener { appUpdateInfo ->
             if (appUpdateInfo.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE && appUpdateInfo.isUpdateTypeAllowed(AppUpdateType.IMMEDIATE)) {
                 // Request the update.
-                appUpdateManager.startUpdateFlowForResult(appUpdateInfo, AppUpdateType.IMMEDIATE,this, APP_UPDATE_REQUEST_CODE)
+                appUpdateManager.startUpdateFlowForResult(appUpdateInfo, AppUpdateType.IMMEDIATE, this, APP_UPDATE_REQUEST_CODE)
             }
         }
     }

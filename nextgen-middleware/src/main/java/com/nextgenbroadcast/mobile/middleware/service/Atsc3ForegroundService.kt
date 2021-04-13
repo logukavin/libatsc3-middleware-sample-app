@@ -43,6 +43,7 @@ import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
 import com.nextgenbroadcast.mobile.middleware.phy.Atsc3DeviceReceiver
 import com.nextgenbroadcast.mobile.middleware.service.init.*
 import com.nextgenbroadcast.mobile.middleware.service.media.MediaSessionConstants
+import com.nextgenbroadcast.mobile.middleware.telemetry.RemoteControlBroker
 import com.nextgenbroadcast.mobile.middleware.telemetry.TelemetryBroker
 import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIotThing
 import com.nextgenbroadcast.mobile.middleware.telemetry.control.AWSIoTelemetryControl
@@ -87,8 +88,11 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     private var destroyPresentationLayerJob: Job? = null
 
     // Telemetry
+    private var awsIoThing: AWSIotThing? = null
     protected var telemetryBroker: TelemetryBroker? = null
+    private var remoteControl: RemoteControlBroker? = null
 
+    // Initialization from Service metadata
     private val initializer = ArrayList<WeakReference<IServiceInitializer>>()
     private var isInitialized = false
 
@@ -112,35 +116,44 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     private fun createTelemetryBroker(serialNumber: String) {
         val thing = AWSIotThing(serialNumber,
                 EncryptedSharedPreferences.create(
-                applicationContext,
-                IoT_PREFERENCE,
-                MasterKey.Builder(applicationContext).setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build(),
-                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-        ), assets)
+                        applicationContext,
+                        IoT_PREFERENCE,
+                        MasterKey.Builder(applicationContext).setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build(),
+                        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+                ), assets
+        ).also {
+            awsIoThing = it
+        }
 
-        val readers = listOf(
-                BatteryTelemetryReader(applicationContext),
-                SensorTelemetryReader(sensorManager, Sensor.TYPE_LINEAR_ACCELERATION),
-                SensorTelemetryReader(sensorManager, Sensor.TYPE_GYROSCOPE),
-                SensorTelemetryReader(sensorManager, Sensor.TYPE_SIGNIFICANT_MOTION),
-                SensorTelemetryReader(sensorManager, Sensor.TYPE_STEP_DETECTOR),
-                SensorTelemetryReader(sensorManager, Sensor.TYPE_STEP_COUNTER),
-                SensorTelemetryReader(sensorManager, Sensor.TYPE_ROTATION_VECTOR),
-                GPSTelemetryReader(applicationContext),
-                RfPhyTelemetryReader(atsc3Receiver.rfPhyMetricsFlow)
-        )
+        telemetryBroker = TelemetryBroker(
+                listOf(
+                        BatteryTelemetryReader(applicationContext),
+                        SensorTelemetryReader(sensorManager, Sensor.TYPE_LINEAR_ACCELERATION),
+                        SensorTelemetryReader(sensorManager, Sensor.TYPE_GYROSCOPE),
+                        SensorTelemetryReader(sensorManager, Sensor.TYPE_SIGNIFICANT_MOTION),
+                        SensorTelemetryReader(sensorManager, Sensor.TYPE_STEP_DETECTOR),
+                        SensorTelemetryReader(sensorManager, Sensor.TYPE_STEP_COUNTER),
+                        SensorTelemetryReader(sensorManager, Sensor.TYPE_ROTATION_VECTOR),
+                        GPSTelemetryReader(applicationContext),
+                        RfPhyTelemetryReader(atsc3Receiver.rfPhyMetricsFlow)
+                ),
+                listOf(
+                        AWSIoTelemetryWriter(thing),
+                        //FileTelemetryWriter(cacheDir, "telemetry.log")
+                )
+        ).apply {
+            //start() do not start Telemetry with application, use switch in Settings dialog or AWS command
+        }
 
-        val writers = listOf(
-                AWSIoTelemetryWriter(thing),
-                //FileTelemetryWriter(cacheDir, "telemetry.log")
-        )
-
-        val controls = listOf(
-                AWSIoTelemetryControl(thing, ::executeCommand)
-        )
-
-        telemetryBroker = TelemetryBroker(readers, writers, controls)
+        remoteControl = RemoteControlBroker(
+                listOf(
+                        AWSIoTelemetryControl(thing/*, ::executeCommand*/)
+                ),
+                ::executeCommand
+        ).apply {
+            start()
+        }
     }
 
     private fun createReceiverCore() {
@@ -296,6 +309,8 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         serviceScope.cancel()
 
         telemetryBroker?.stop()
+        remoteControl?.stop()
+        awsIoThing?.close()
     }
 
     override fun onBind(intent: Intent): IBinder? {
