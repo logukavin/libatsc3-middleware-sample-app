@@ -8,6 +8,7 @@ import com.nextgenbroadcast.mobile.core.presentation.*
 import com.nextgenbroadcast.mobile.core.presentation.media.IObservablePlayer
 import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
+import kotlinx.coroutines.flow.*
 
 class EmbeddedAtsc3Service : Atsc3ForegroundService() {
 
@@ -87,6 +88,9 @@ class EmbeddedAtsc3Service : Atsc3ForegroundService() {
         }
 
         override val controllerPresenter = object : IControllerPresenter {
+
+            override val debugInfoSettings: SharedFlow<Map<String, Boolean>> = this@EmbeddedAtsc3Service.debugInfoSettings
+
             override fun setTelemetryEnabled(enabled: Boolean) {
                 if (enabled) {
                     telemetryBroker?.start()
