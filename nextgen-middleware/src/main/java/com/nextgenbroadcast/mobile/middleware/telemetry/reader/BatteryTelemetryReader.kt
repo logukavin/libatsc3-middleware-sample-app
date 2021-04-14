@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.BatteryManager
+import com.nextgenbroadcast.mobile.middleware.telemetry.ReceiverTelemetry
 import com.nextgenbroadcast.mobile.middleware.telemetry.entity.TelemetryEvent
 import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIotThing
 import com.nextgenbroadcast.mobile.middleware.telemetry.entity.TelemetryPayload
@@ -40,7 +41,7 @@ class BatteryTelemetryReader(
     }
 
     companion object {
-        const val NAME = "battery"
+        const val NAME = ReceiverTelemetry.TELEMETRY_BATTERY
 
         val BATTERY_MEASURING_FREQUENCY = TimeUnit.MINUTES.toMillis(1)
     }
