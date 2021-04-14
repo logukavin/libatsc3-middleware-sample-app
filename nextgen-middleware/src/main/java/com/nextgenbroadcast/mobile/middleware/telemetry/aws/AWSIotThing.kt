@@ -367,6 +367,7 @@ class AWSIotThing(
 
         const val AWSION_PONG_RESPONCE = "{\"name\":\"pong\"}"
         const val AWSIOT_ACTION_PING = "ping"
+        const val AWSIOT_ACTION_SHOW_DEBUG_INFO = "showDebugInfo"
         const val AWSIOT_ACTION_TUNE = "tune"
         const val AWSIOT_ACTION_ACQUIRE_SERVICE = "acquireService"
         const val AWSIOT_ACTION_SET_TEST_CASE = "setTestCase"
@@ -375,6 +376,8 @@ class AWSIotThing(
         const val AWSIOT_ACTION_TELEMETRY_LOCATION = "locationTelemetry"
         const val AWSIOT_ACTION_TELEMETRY_SENSORS = "sensorsTelemetry"
 
+        const val AWSIOT_ARGUMENT_DEBUG = "debug"
+        const val AWSIOT_ARGUMENT_PHY = "phy"
         const val AWSIOT_ARGUMENT_ENABLE = "enable"
         const val AWSIOT_ARGUMENT_NAME = "name"
         const val AWSIOT_ARGUMENT_DELIMITER = ";"

@@ -30,6 +30,7 @@ import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.ViewViewModel
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.factory.UserAgentViewModelFactory
 import com.nextgenbroadcast.mobile.middleware.service.media.MediaSessionConstants
+import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIotThing
 import dagger.android.AndroidInjection
 
 class MainActivity : BaseActivity() {
@@ -94,6 +95,27 @@ class MainActivity : BaseActivity() {
                     controllerPresenter.setTelemetryUpdateDelay("location", frequencyType.delay())
                 }
             }
+
+            controllerPresenter.debugInfoSettings().asLiveData().observe(this, {
+
+                if (it[AWSIotThing.AWSIOT_ARGUMENT_DEBUG] != null) {
+                    viewViewModel.showDebugInfo.postValue(it[AWSIotThing.AWSIOT_ARGUMENT_DEBUG])
+                }
+
+                val isPhyInfoEnable = it[AWSIotThing.AWSIOT_ARGUMENT_PHY]
+
+                if (isPhyInfoEnable != null) {
+                    if (isPhyInfoEnable) {
+                        viewViewModel.showDebugInfo.postValue(isPhyInfoEnable)
+                    }
+                    viewViewModel.showPhyInfo.postValue(isPhyInfoEnable)
+                }
+
+                if (it.isEmpty()) {
+                    viewViewModel.showDebugInfo.postValue(false)
+                }
+            })
+
         }
     }
 
@@ -118,7 +140,8 @@ class MainActivity : BaseActivity() {
     }
 
     override fun onMediaSessionCreated() {
-        viewViewModel.services.value = mediaController.queue?.mapNotNull { it.toService() } ?: emptyList()
+        viewViewModel.services.value = mediaController.queue?.mapNotNull { it.toService() }
+                ?: emptyList()
         viewViewModel.currentServiceTitle.value = mediaController.queueTitle?.toString()
         viewViewModel.isPlaying.value = mediaController.playbackState?.state == PlaybackState.STATE_PLAYING
 
