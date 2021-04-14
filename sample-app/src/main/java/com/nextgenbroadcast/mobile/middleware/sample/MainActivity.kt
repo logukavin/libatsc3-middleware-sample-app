@@ -105,13 +105,13 @@ class MainActivity : BaseActivity() {
 
                 if (isPhyInfoEnable != null) {
                     if (isPhyInfoEnable) {
-                        viewViewModel.showDebugInfo.postValue(isPhyInfoEnable)
+                        viewViewModel.showDebugInfo.value = isPhyInfoEnable
                     }
-                    viewViewModel.showPhyInfo.postValue(isPhyInfoEnable)
+                    viewViewModel.showPhyInfo.value = isPhyInfoEnable
                 }
 
                 if (debugInfoSetting.isEmpty()) {
-                    viewViewModel.showDebugInfo.postValue(false)
+                    viewViewModel.showDebugInfo.value = false
                 }
             }
 
