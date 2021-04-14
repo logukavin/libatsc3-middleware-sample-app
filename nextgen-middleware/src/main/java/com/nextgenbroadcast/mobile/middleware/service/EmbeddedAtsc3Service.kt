@@ -88,6 +88,9 @@ class EmbeddedAtsc3Service : Atsc3ForegroundService() {
         }
 
         override val controllerPresenter = object : IControllerPresenter {
+
+            override val debugInfoSettings: SharedFlow<Map<String, Boolean>> = this@EmbeddedAtsc3Service.debugInfoSettings
+
             override fun setTelemetryEnabled(enabled: Boolean) {
                 if (enabled) {
                     telemetryBroker?.start()
@@ -102,10 +105,6 @@ class EmbeddedAtsc3Service : Atsc3ForegroundService() {
 
             override fun setTelemetryUpdateDelay(type: String, delayMils: Long) {
                 telemetryBroker?.setReaderDelay(type, delayMils)
-            }
-
-            override fun debugInfoSettings(): SharedFlow<Map<String, Boolean>> {
-                return debugInfoSettings.asSharedFlow()
             }
         }
     }

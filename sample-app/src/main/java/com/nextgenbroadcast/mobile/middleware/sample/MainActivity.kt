@@ -96,13 +96,12 @@ class MainActivity : BaseActivity() {
                 }
             }
 
-            controllerPresenter.debugInfoSettings().asLiveData().observe(this, {
-
-                if (it[AWSIotThing.AWSIOT_ARGUMENT_DEBUG] != null) {
-                    viewViewModel.showDebugInfo.postValue(it[AWSIotThing.AWSIOT_ARGUMENT_DEBUG])
+            controllerPresenter.debugInfoSettings.asLiveData().observe(this) { debugInfoSetting ->
+                if (debugInfoSetting[AWSIotThing.AWSIOT_ARGUMENT_DEBUG] != null) {
+                    viewViewModel.showDebugInfo.value = (debugInfoSetting[AWSIotThing.AWSIOT_ARGUMENT_DEBUG])
                 }
 
-                val isPhyInfoEnable = it[AWSIotThing.AWSIOT_ARGUMENT_PHY]
+                val isPhyInfoEnable = debugInfoSetting[AWSIotThing.AWSIOT_ARGUMENT_PHY]
 
                 if (isPhyInfoEnable != null) {
                     if (isPhyInfoEnable) {
@@ -111,10 +110,10 @@ class MainActivity : BaseActivity() {
                     viewViewModel.showPhyInfo.postValue(isPhyInfoEnable)
                 }
 
-                if (it.isEmpty()) {
+                if (debugInfoSetting.isEmpty()) {
                     viewViewModel.showDebugInfo.postValue(false)
                 }
-            })
+            }
 
         }
     }
