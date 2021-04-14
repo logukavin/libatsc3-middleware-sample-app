@@ -21,7 +21,7 @@ import java.security.cert.CertificateFactory
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
-class AWSIotThing(
+internal class AWSIotThing(
         private val serialNumber: String,
         private val preferences: SharedPreferences,
         private val assets: AssetManager
@@ -90,7 +90,7 @@ class AWSIotThing(
 
     private fun disconnect(client: AWSIotMqttClient) {
         try {
-            LOG.i(TAG, "Start client disconnect: " + Log.getStackTraceString(Exception()))
+            //LOG.i(TAG, "Start client disconnect: " + Log.getStackTraceString(Exception()))
             client.disconnect(1_000, false)
         } catch (e: Exception) {
             LOG.d(TAG, "Crash when disconnecting AWS IoT", e)
@@ -376,8 +376,6 @@ class AWSIotThing(
         const val AWSIOT_ACTION_TELEMETRY_LOCATION = "locationTelemetry"
         const val AWSIOT_ACTION_TELEMETRY_SENSORS = "sensorsTelemetry"
 
-        const val AWSIOT_ARGUMENT_DEBUG = "debug"
-        const val AWSIOT_ARGUMENT_PHY = "phy"
         const val AWSIOT_ARGUMENT_ENABLE = "enable"
         const val AWSIOT_ARGUMENT_NAME = "name"
         const val AWSIOT_ARGUMENT_DELIMITER = ";"

@@ -5,6 +5,7 @@ import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import com.nextgenbroadcast.mobile.core.LOG
+import com.nextgenbroadcast.mobile.middleware.telemetry.ReceiverTelemetry
 import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIotThing
 import com.nextgenbroadcast.mobile.middleware.telemetry.entity.TelemetryEvent
 import com.nextgenbroadcast.mobile.middleware.telemetry.entity.TelemetryPayload
@@ -67,7 +68,7 @@ class SensorTelemetryReader(
 
     companion object {
         val TAG: String = SensorTelemetryReader::class.java.simpleName
-        const val NAME = "sensors"
+        const val NAME = ReceiverTelemetry.TELEMETRY_SENSORS
 
         val DEFAULT_UPDATE_FREQUENCY = TimeUnit.SECONDS.toMillis(1)
 

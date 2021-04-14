@@ -43,6 +43,7 @@ import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
 import com.nextgenbroadcast.mobile.middleware.phy.Atsc3DeviceReceiver
 import com.nextgenbroadcast.mobile.middleware.service.init.*
 import com.nextgenbroadcast.mobile.middleware.service.media.MediaSessionConstants
+import com.nextgenbroadcast.mobile.middleware.telemetry.ReceiverTelemetry
 import com.nextgenbroadcast.mobile.middleware.telemetry.RemoteControlBroker
 import com.nextgenbroadcast.mobile.middleware.telemetry.TelemetryBroker
 import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIotThing
@@ -51,7 +52,6 @@ import com.nextgenbroadcast.mobile.middleware.telemetry.reader.*
 import com.nextgenbroadcast.mobile.middleware.telemetry.writer.AWSIoTelemetryWriter
 import com.nextgenbroadcast.mobile.player.Atsc3MediaPlayer
 import kotlinx.coroutines.*
-import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.*
 import java.lang.ref.WeakReference
 import kotlin.math.max
@@ -75,12 +75,12 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     private lateinit var state: StateFlow<Triple<ReceiverState?, AVService?, PlaybackState?>>
     private lateinit var playbackState: StateFlow<PlaybackState>
 
-    private val _debugInfoSettings: MutableSharedFlow<Map<String, Boolean>> = MutableSharedFlow(
-            replay = 1,
-            extraBufferCapacity = 0,
-            onBufferOverflow = BufferOverflow.DROP_OLDEST)
+    //TODO: move somewhere
+    private val _debugInfoSettings = MutableStateFlow(mapOf(
+            ReceiverTelemetry.INFO_DEBUG to true
+    ))
 
-    val debugInfoSettings = _debugInfoSettings.asSharedFlow()
+    val debugInfoSettings = _debugInfoSettings.asStateFlow()
 
     // Receiver Core
     private lateinit var atsc3Receiver: Atsc3ReceiverCore
@@ -97,8 +97,8 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
     // Telemetry
     private var awsIoThing: AWSIotThing? = null
-    protected var telemetryBroker: TelemetryBroker? = null
-    private var remoteControl: RemoteControlBroker? = null
+    protected lateinit var telemetryBroker: TelemetryBroker
+    private lateinit var remoteControl: RemoteControlBroker
 
     // Initialization from Service metadata
     private val initializer = ArrayList<WeakReference<IServiceInitializer>>()
@@ -110,30 +110,12 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         createReceiverCore()
         createMediaSession()
 
-        FirebaseInstallations.getInstance().id.addOnCompleteListener { task ->
-            if (task.isSuccessful) {
-                createTelemetryBroker(task.result)
-            } else {
-                LOG.e(AWSIotThing.TAG, "Can't create Telemetry because Firebase ID not received.", task.exception)
-            }
-        }
+        createTelemetryBroker()
 
         startStateObservation()
     }
 
-    private fun createTelemetryBroker(serialNumber: String) {
-        val thing = AWSIotThing(serialNumber,
-                EncryptedSharedPreferences.create(
-                        applicationContext,
-                        IoT_PREFERENCE,
-                        MasterKey.Builder(applicationContext).setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build(),
-                        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-                ), assets
-        ).also {
-            awsIoThing = it
-        }
-
+    private fun createTelemetryBroker() {
         telemetryBroker = TelemetryBroker(
                 listOf(
                         BatteryTelemetryReader(applicationContext),
@@ -147,7 +129,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
                         RfPhyTelemetryReader(atsc3Receiver.rfPhyMetricsFlow)
                 ),
                 listOf(
-                        AWSIoTelemetryWriter(thing),
+                        //AWSIoTelemetryWriter(thing),
                         //FileTelemetryWriter(cacheDir, "telemetry.log")
                 )
         ).apply {
@@ -156,12 +138,43 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
         remoteControl = RemoteControlBroker(
                 listOf(
-                        AWSIoTelemetryControl(thing/*, ::executeCommand*/)
+                        //AWSIoTelemetryControl(thing),
+                        //WebTelemetryControl()
                 ),
                 ::executeCommand
         ).apply {
             start()
         }
+
+        FirebaseInstallations.getInstance().id.addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                initializeAWSIoThing(task.result)
+            } else {
+                LOG.e(AWSIotThing.TAG, "Can't create Telemetry because Firebase ID not received.", task.exception)
+            }
+        }
+    }
+
+    private fun initializeAWSIoThing(serialNumber: String) {
+        val thing = AWSIotThing(serialNumber,
+                EncryptedSharedPreferences.create(
+                        applicationContext,
+                        IoT_PREFERENCE,
+                        MasterKey.Builder(applicationContext).setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build(),
+                        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+                ), assets
+        ).also {
+            awsIoThing = it
+        }
+
+        telemetryBroker.addWriter(
+                AWSIoTelemetryWriter(thing)
+        )
+
+        remoteControl.addControl(
+                AWSIoTelemetryControl(thing)
+        )
     }
 
     private fun createReceiverCore() {
@@ -316,8 +329,8 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         atsc3Receiver.deInitialize()
         serviceScope.cancel()
 
-        telemetryBroker?.stop()
-        remoteControl?.stop()
+        telemetryBroker.stop()
+        remoteControl.stop()
         awsIoThing?.close()
     }
 
@@ -672,7 +685,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
             }
 
             AWSIotThing.AWSIOT_ACTION_SET_TEST_CASE -> {
-                telemetryBroker?.testCase = arguments[AWSIotThing.AWSIOT_ARGUMENT_CASE]?.ifBlank {
+                telemetryBroker.testCase = arguments[AWSIotThing.AWSIOT_ARGUMENT_CASE]?.ifBlank {
                     null
                 }
             }
@@ -706,22 +719,22 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
                 } ?: SensorTelemetryReader.NAME
 
                 arguments[AWSIotThing.AWSIOT_ARGUMENT_ENABLE]?.let {
-                    telemetryBroker?.setReaderEnabled(sensorName, it.toBoolean())
+                    telemetryBroker.setReaderEnabled(sensorName, it.toBoolean())
                 }
             }
 
             AWSIotThing.AWSIOT_ACTION_TELEMETRY_LOCATION -> {
                 arguments[AWSIotThing.AWSIOT_ARGUMENT_ENABLE]?.let {
-                    telemetryBroker?.setReaderEnabled(GPSTelemetryReader.NAME, it.toBoolean())
+                    telemetryBroker.setReaderEnabled(GPSTelemetryReader.NAME, it.toBoolean())
                 }
             }
 
             AWSIotThing.AWSIOT_ACTION_SHOW_DEBUG_INFO -> {
-                val mapInfo = mutableMapOf<String, Boolean>()
-                arguments.forEach { (key, value) ->
-                    mapInfo[key] = value.toBoolean()
+                _debugInfoSettings.value = mutableMapOf<String, Boolean>().apply {
+                    arguments.forEach { key, value ->
+                        put(key, value.toBoolean())
+                    }
                 }
-                _debugInfoSettings.tryEmit(mapInfo)
             }
 
         }
