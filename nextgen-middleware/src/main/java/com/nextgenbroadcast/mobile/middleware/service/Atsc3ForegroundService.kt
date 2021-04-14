@@ -74,6 +74,8 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     private lateinit var state: StateFlow<Triple<ReceiverState?, AVService?, PlaybackState?>>
     private lateinit var playbackState: StateFlow<PlaybackState>
 
+    val debugInfoSettings: MutableSharedFlow<Map<String, Boolean>> = MutableSharedFlow()
+
     // Receiver Core
     private lateinit var atsc3Receiver: Atsc3ReceiverCore
     private lateinit var wakeLock: WakeLock
@@ -706,6 +708,14 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
                 arguments[AWSIotThing.AWSIOT_ARGUMENT_ENABLE]?.let {
                     telemetryBroker?.setReaderEnabled(GPSTelemetryReader.NAME, it.toBoolean())
                 }
+            }
+
+            AWSIotThing.AWSIOT_ACTION_SHOW_DEBUG_INFO ->{
+                var mapInfo = mutableMapOf<String, Boolean>()
+                arguments.forEach {
+                    mapInfo[it.key] = it.value.toBoolean()
+                }
+               CoroutineScope(Dispatchers.Default).launch { debugInfoSettings.emit(mapInfo) }
             }
 
         }

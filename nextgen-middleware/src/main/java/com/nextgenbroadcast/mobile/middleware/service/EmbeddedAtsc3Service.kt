@@ -8,6 +8,7 @@ import com.nextgenbroadcast.mobile.core.presentation.*
 import com.nextgenbroadcast.mobile.core.presentation.media.IObservablePlayer
 import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
+import kotlinx.coroutines.flow.*
 
 class EmbeddedAtsc3Service : Atsc3ForegroundService() {
 
@@ -101,6 +102,10 @@ class EmbeddedAtsc3Service : Atsc3ForegroundService() {
 
             override fun setTelemetryUpdateDelay(type: String, delayMils: Long) {
                 telemetryBroker?.setReaderDelay(type, delayMils)
+            }
+
+            override fun debugInfoSettings(): SharedFlow<Map<String, Boolean>> {
+                return debugInfoSettings.asSharedFlow()
             }
         }
     }
