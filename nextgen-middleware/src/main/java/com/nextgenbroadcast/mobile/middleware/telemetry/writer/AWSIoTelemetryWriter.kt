@@ -7,7 +7,7 @@ import com.nextgenbroadcast.mobile.middleware.telemetry.entity.TelemetryEvent
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
 
-class AWSIoTelemetryWriter(
+internal class AWSIoTelemetryWriter(
         private val thing: AWSIotThing
 ) : ITelemetryWriter {
 

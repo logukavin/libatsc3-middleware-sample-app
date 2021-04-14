@@ -2,18 +2,17 @@ package com.nextgenbroadcast.mobile.middleware.telemetry
 
 import com.nextgenbroadcast.mobile.middleware.telemetry.control.ITelemetryControl
 import com.nextgenbroadcast.mobile.middleware.telemetry.entity.TelemetryControl
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
+import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.launch
+import java.util.concurrent.ConcurrentHashMap
 
 class RemoteControlBroker(
-        private val controls: List<ITelemetryControl>,
+        _controls: List<ITelemetryControl>,
         private val onCommand: suspend (action: String, arguments: Map<String, String>) -> Unit
 ) {
+    private val controls = mutableListOf(*_controls.toTypedArray())
     private val coroutineScope = CoroutineScope(Dispatchers.IO)
 
     // it's MUST be non suspending because we use tryEmit in callback
@@ -22,6 +21,7 @@ class RemoteControlBroker(
             extraBufferCapacity = 0,
             onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
+    private val controlJobs = ConcurrentHashMap<ITelemetryControl, Job>()
 
     private var job: Job? = null
 
@@ -30,13 +30,13 @@ class RemoteControlBroker(
 
         job = coroutineScope.launch {
             controls.forEach { control ->
-                launch {
-                    control.subscribe(commandFlow)
-                }
+                launchControl(control)
             }
 
             commandFlow.collect { command ->
-                onCommand(command.action, command.arguments)
+                withContext(Dispatchers.Main) {
+                    onCommand(command.action, command.arguments)
+                }
             }
         }
     }
@@ -44,5 +44,27 @@ class RemoteControlBroker(
     fun stop() {
         job?.cancel()
         job = null
+
+        controlJobs.values.forEach { job ->
+            if (!job.isCancelled) job.cancel()
+        }
+        controlJobs.clear()
+    }
+
+    fun addControl(control: ITelemetryControl) {
+        if (controls.contains(control) || controlJobs.containsKey(control)) return
+
+        controls.add(control)
+        coroutineScope.launchControl(control)
+    }
+
+    private fun CoroutineScope.launchControl(control: ITelemetryControl) {
+        controlJobs[control] = launch {
+            control.subscribe(commandFlow)
+        }.apply {
+            invokeOnCompletion {
+                controlJobs.remove(control, this)
+            }
+        }
     }
 }

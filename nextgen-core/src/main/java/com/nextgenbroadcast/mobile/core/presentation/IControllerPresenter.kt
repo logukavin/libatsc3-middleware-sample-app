@@ -1,9 +1,12 @@
 package com.nextgenbroadcast.mobile.core.presentation
 
-import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
 
 interface IControllerPresenter {
-    val debugInfoSettings: SharedFlow<Map<String, Boolean>>
+    val telemetryEnabled: StateFlow<Map<String, Boolean>>
+    val telemetryDelay: StateFlow<Map<String, Long>>
+    val debugInfoSettings: StateFlow<Map<String, Boolean>>
+
     fun setTelemetryEnabled(enabled: Boolean)
     fun setTelemetryEnabled(type: String, enabled: Boolean)
     fun setTelemetryUpdateDelay(type: String, delayMils: Long)
