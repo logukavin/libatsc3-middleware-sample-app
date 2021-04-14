@@ -5,6 +5,7 @@ import android.content.Context
 import android.os.Looper
 import com.google.android.gms.location.*
 import com.nextgenbroadcast.mobile.core.LOG
+import com.nextgenbroadcast.mobile.middleware.telemetry.ReceiverTelemetry
 import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIotThing
 import com.nextgenbroadcast.mobile.middleware.telemetry.entity.TelemetryEvent
 import com.nextgenbroadcast.mobile.middleware.telemetry.entity.TelemetryPayload
@@ -67,7 +68,7 @@ class GPSTelemetryReader(
 
     companion object {
         private val TAG = GPSTelemetryReader::class.java.simpleName
-        const val NAME = "location"
+        const val NAME = ReceiverTelemetry.TELEMETRY_LOCATION
     }
 }
 

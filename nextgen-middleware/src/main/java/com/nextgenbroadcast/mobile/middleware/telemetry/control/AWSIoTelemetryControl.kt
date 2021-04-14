@@ -6,7 +6,7 @@ import com.nextgenbroadcast.mobile.middleware.telemetry.entity.TelemetryControl
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableSharedFlow
 
-class AWSIoTelemetryControl(
+internal class AWSIoTelemetryControl(
         private val thing: AWSIotThing
 ) : ITelemetryControl {
 

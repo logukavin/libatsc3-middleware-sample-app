@@ -1,5 +1,6 @@
 package com.nextgenbroadcast.mobile.middleware.telemetry.reader
 
+import com.nextgenbroadcast.mobile.middleware.telemetry.ReceiverTelemetry
 import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIotThing
 import com.nextgenbroadcast.mobile.middleware.telemetry.entity.TelemetryEvent
 import com.nextgenbroadcast.mobile.middleware.telemetry.entity.TelemetryPayload
@@ -38,7 +39,7 @@ class RfPhyTelemetryReader(
     }
 
     companion object {
-        const val NAME = "phy"
+        const val NAME = ReceiverTelemetry.TELEMETRY_PHY
     }
 }
 
