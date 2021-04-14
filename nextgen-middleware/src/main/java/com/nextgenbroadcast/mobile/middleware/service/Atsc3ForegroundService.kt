@@ -51,6 +51,7 @@ import com.nextgenbroadcast.mobile.middleware.telemetry.reader.*
 import com.nextgenbroadcast.mobile.middleware.telemetry.writer.AWSIoTelemetryWriter
 import com.nextgenbroadcast.mobile.player.Atsc3MediaPlayer
 import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.*
 import java.lang.ref.WeakReference
 import kotlin.math.max
@@ -73,6 +74,13 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
     private lateinit var state: StateFlow<Triple<ReceiverState?, AVService?, PlaybackState?>>
     private lateinit var playbackState: StateFlow<PlaybackState>
+
+    private val _debugInfoSettings: MutableSharedFlow<Map<String, Boolean>> = MutableSharedFlow(
+            replay = 1,
+            extraBufferCapacity = 0,
+            onBufferOverflow = BufferOverflow.DROP_OLDEST)
+
+    val debugInfoSettings = _debugInfoSettings.asSharedFlow()
 
     // Receiver Core
     private lateinit var atsc3Receiver: Atsc3ReceiverCore
@@ -706,6 +714,14 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
                 arguments[AWSIotThing.AWSIOT_ARGUMENT_ENABLE]?.let {
                     telemetryBroker?.setReaderEnabled(GPSTelemetryReader.NAME, it.toBoolean())
                 }
+            }
+
+            AWSIotThing.AWSIOT_ACTION_SHOW_DEBUG_INFO -> {
+                val mapInfo = mutableMapOf<String, Boolean>()
+                arguments.forEach { (key, value) ->
+                    mapInfo[key] = value.toBoolean()
+                }
+                _debugInfoSettings.tryEmit(mapInfo)
             }
 
         }
