@@ -13,9 +13,9 @@ import android.os.Bundle
 import android.support.v4.media.MediaBrowserCompat
 import android.view.View
 import android.widget.Toast
+import androidx.activity.viewModels
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.ViewModelProvider
 import com.google.android.play.core.appupdate.AppUpdateInfo
 import com.google.android.play.core.appupdate.AppUpdateManager
 import com.google.android.play.core.appupdate.AppUpdateManagerFactory
@@ -23,7 +23,7 @@ import com.google.android.play.core.install.model.AppUpdateType
 import com.google.android.play.core.install.model.UpdateAvailability
 import com.google.android.play.core.tasks.Task
 import androidx.lifecycle.asLiveData
-import androidx.lifecycle.distinctUntilChanged
+import androidx.lifecycle.lifecycleScope
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.presentation.IControllerPresenter
@@ -33,21 +33,20 @@ import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.factory.UserAgent
 import com.nextgenbroadcast.mobile.middleware.service.media.MediaSessionConstants
 import com.nextgenbroadcast.mobile.middleware.telemetry.ReceiverTelemetry
 import dagger.android.AndroidInjection
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
 
 class MainActivity : BaseActivity() {
     private lateinit var appUpdateManager: AppUpdateManager
 
-    private var _viewViewModel: ViewViewModel? = null
-    private val viewViewModel: ViewViewModel
-        get() = _viewViewModel ?: let {
-            ViewModelProvider(this).get(ViewViewModel::class.java).also {
-                _viewViewModel = it
-            }
-        }
+    private val viewViewModel: ViewViewModel by viewModels()
 
     private val hasFeaturePIP: Boolean by lazy {
         packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)
     }
+
+    private var controlerPresentationJob: Job? = null
 
     override fun onBind(binder: IServiceBinder) {
         binder.receiverPresenter.receiverState.asLiveData().observe(this, { receiverState ->
@@ -76,8 +75,9 @@ class MainActivity : BaseActivity() {
     }
 
     override fun onUnbind() {
-        _viewViewModel = null
-        viewModelStore.clear()
+        viewViewModel.clearSubscriptions(this)
+        controlerPresentationJob?.cancel()
+        controlerPresentationJob = null
 
         getMainFragment().onUnbind()
     }
@@ -242,35 +242,41 @@ class MainActivity : BaseActivity() {
 
     private fun bindControlPresenter(controllerPresenter: IControllerPresenter) {
         with(viewViewModel) {
-            controllerPresenter.debugInfoSettings.asLiveData().observe(this@MainActivity) { debugInfoSetting ->
-                val isDebugInfoEnable = debugInfoSetting[ReceiverTelemetry.INFO_DEBUG] ?: false
-                val isPhyInfoEnable = debugInfoSetting[ReceiverTelemetry.INFO_PHY] ?: false
+            controlerPresentationJob = lifecycleScope.launch {
+                launch {
+                    controllerPresenter.debugInfoSettings.collect { debugInfoSetting ->
+                        val isDebugInfoEnable = debugInfoSetting[ReceiverTelemetry.INFO_DEBUG]
+                                ?: false
+                        val isPhyInfoEnable = debugInfoSetting[ReceiverTelemetry.INFO_PHY] ?: false
 
-                showDebugInfo.value = isDebugInfoEnable || isPhyInfoEnable
-                showPhyInfo.value = isPhyInfoEnable
-            }
+                        showDebugInfo.value = isDebugInfoEnable || isPhyInfoEnable
+                        showPhyInfo.value = isPhyInfoEnable
+                    }
+                }
 
-            //TODO: share status
+                //TODO: share status
 //            showDebugInfo.distinctUntilChanged().observe(this@MainActivity) { showDebugInfo ->
 //                if (showDebugInfo != null)
 //            }
 
-            //TODO: controllerPresenter.telemetryEnabled.asLiveData() will not be disconnected !!!
-            controllerPresenter.telemetryEnabled.asLiveData().observe(this@MainActivity) { enableMap ->
-                val distValues = enableMap.values.distinct()
-                if (distValues.size == 1) {
-                    enableTelemetry.value = distValues.first()
-                } else {
-                    enableTelemetry.value = distValues.size > 1
+                launch {
+                    controllerPresenter.telemetryEnabled.collect { enableMap ->
+                        val distValues = enableMap.values.distinct()
+                        if (distValues.size == 1) {
+                            enableTelemetry.value = distValues.first()
+                        } else {
+                            enableTelemetry.value = distValues.size > 1
+                        }
+                        val distSensorValues = enableMap.filterKeys {
+                            it.startsWith(ReceiverTelemetry.TELEMETRY_SENSORS)
+                        }.values.distinct()
+                        sensorTelemetryEnabled.value = distSensorValues.isNotEmpty() && (distSensorValues.size > 1 || distSensorValues.first())
+                        locationTelemetryEnabled.value = enableMap[ReceiverTelemetry.TELEMETRY_LOCATION]
+                    }
                 }
-                val distSensorValues = enableMap.filterKeys {
-                    it.startsWith(ReceiverTelemetry.TELEMETRY_SENSORS)
-                }.values.distinct()
-                sensorTelemetryEnabled.value = distSensorValues.isNotEmpty() && (distSensorValues.size > 1 || distSensorValues.first())
-                locationTelemetryEnabled.value = enableMap[ReceiverTelemetry.TELEMETRY_LOCATION]
             }
 
-            enableTelemetry.distinctUntilChanged().observe(this@MainActivity) { enableTelemetry ->
+            enableTelemetry.observe(this@MainActivity) { enableTelemetry ->
                 if (enableTelemetry != null) {
                     val actualValue = controllerPresenter.telemetryEnabled.value.distinctValue()
                     // switch must be On if telemetry partially switched On. We allow only switching off partially active telemetry
@@ -283,7 +289,8 @@ class MainActivity : BaseActivity() {
                     }
                 }
             }
-            sensorTelemetryEnabled.distinctUntilChanged().observe(this@MainActivity) { sensorEnabled ->
+
+            sensorTelemetryEnabled.observe(this@MainActivity) { sensorEnabled ->
                 if (sensorEnabled != null) {
                     val actualValue = controllerPresenter.telemetryEnabled.value.distinctValue(ReceiverTelemetry.TELEMETRY_SENSORS)
                     // switch must be On if if one of sensors is active. We allow only switching off partially active sensors
@@ -296,17 +303,17 @@ class MainActivity : BaseActivity() {
                     }
                 }
             }
-            sensorFrequencyType.distinctUntilChanged().observe(this@MainActivity) { frequencyType ->
+            sensorFrequencyType.observe(this@MainActivity) { frequencyType ->
                 if (frequencyType != null) {
                     controllerPresenter.setTelemetryUpdateDelay(ReceiverTelemetry.TELEMETRY_SENSORS, frequencyType.delayMils)
                 }
             }
-            locationTelemetryEnabled.distinctUntilChanged().observe(this@MainActivity) { sensorEnabled ->
+            locationTelemetryEnabled.observe(this@MainActivity) { sensorEnabled ->
                 if (sensorEnabled != null) {
                     controllerPresenter.setTelemetryEnabled(ReceiverTelemetry.TELEMETRY_LOCATION, sensorEnabled)
                 }
             }
-            locationFrequencyType.distinctUntilChanged().observe(this@MainActivity) { frequencyType ->
+            locationFrequencyType.observe(this@MainActivity) { frequencyType ->
                 if (frequencyType != null) {
                     controllerPresenter.setTelemetryUpdateDelay(ReceiverTelemetry.TELEMETRY_LOCATION, frequencyType.delay())
                 }
