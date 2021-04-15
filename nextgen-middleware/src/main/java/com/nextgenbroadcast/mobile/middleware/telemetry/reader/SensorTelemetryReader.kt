@@ -72,21 +72,21 @@ class SensorTelemetryReader(
 
         val DEFAULT_UPDATE_FREQUENCY = TimeUnit.SECONDS.toMillis(1)
 
-        private const val AWSIOT_NAME_LINEAR_ACCELERATION = "linear_acceleration"
-        private const val AWSIOT_NAME_GYROSCOPE = "gyroscope"
-        private const val AWSIOT_NAME_SIGNIFICANT_MOTION = "significant_motion"
-        private const val AWSIOT_NAME_STEP_DETECTOR = "step_detector"
-        private const val AWSIOT_NAME_STEP_COUNTER = "step_counter"
-        private const val AWSIOT_NAME_ROTATION_VECTOR = "rotation_vector"
+        private const val SENSOR_LINEAR_ACCELERATION = "acceleration"
+        private const val SENSOR_GYROSCOPE = "gyroscope"
+        private const val SENSOR_SIGNIFICANT_MOTION = "motion"
+        private const val SENSOR_STEP_DETECTOR = "step_detector"
+        private const val SENSOR_STEP_COUNTER = "step_counter"
+        private const val SENSOR_ROTATION_VECTOR = "rotation"
 
         fun getFullSensorName(sensorName: String): String? {
             val sensorType = when (sensorName) {
-                AWSIOT_NAME_LINEAR_ACCELERATION -> Sensor.TYPE_LINEAR_ACCELERATION
-                AWSIOT_NAME_GYROSCOPE -> Sensor.TYPE_GYROSCOPE
-                AWSIOT_NAME_SIGNIFICANT_MOTION -> Sensor.TYPE_SIGNIFICANT_MOTION
-                AWSIOT_NAME_STEP_DETECTOR -> Sensor.TYPE_STEP_DETECTOR
-                AWSIOT_NAME_STEP_COUNTER -> Sensor.TYPE_STEP_COUNTER
-                AWSIOT_NAME_ROTATION_VECTOR -> Sensor.TYPE_ROTATION_VECTOR
+                SENSOR_LINEAR_ACCELERATION -> Sensor.TYPE_LINEAR_ACCELERATION
+                SENSOR_GYROSCOPE -> Sensor.TYPE_GYROSCOPE
+                SENSOR_SIGNIFICANT_MOTION -> Sensor.TYPE_SIGNIFICANT_MOTION
+                SENSOR_STEP_DETECTOR -> Sensor.TYPE_STEP_DETECTOR
+                SENSOR_STEP_COUNTER -> Sensor.TYPE_STEP_COUNTER
+                SENSOR_ROTATION_VECTOR -> Sensor.TYPE_ROTATION_VECTOR
                 else -> {
                     return null
                 }
