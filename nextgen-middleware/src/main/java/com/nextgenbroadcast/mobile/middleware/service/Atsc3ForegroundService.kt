@@ -9,6 +9,7 @@ import android.hardware.Sensor
 import android.hardware.SensorManager
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
+import android.media.AudioManager
 import android.net.Uri
 import android.os.Bundle
 import android.os.IBinder
@@ -47,6 +48,7 @@ import com.nextgenbroadcast.mobile.middleware.telemetry.ReceiverTelemetry
 import com.nextgenbroadcast.mobile.middleware.telemetry.RemoteControlBroker
 import com.nextgenbroadcast.mobile.middleware.telemetry.TelemetryBroker
 import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIotThing
+import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIotThing.Companion.AWSIOT_ARGUMENT_VOLUME_LEVEL
 import com.nextgenbroadcast.mobile.middleware.telemetry.control.AWSIoTelemetryControl
 import com.nextgenbroadcast.mobile.middleware.telemetry.reader.*
 import com.nextgenbroadcast.mobile.middleware.telemetry.writer.AWSIoTelemetryWriter
@@ -104,6 +106,9 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     private val initializer = ArrayList<WeakReference<IServiceInitializer>>()
     private var isInitialized = false
 
+    private lateinit var audioManager: AudioManager
+    private var maxStreamVolume: Int = Int.MIN_VALUE
+
     override fun onCreate() {
         super.onCreate()
 
@@ -113,6 +118,9 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         createTelemetryBroker()
 
         startStateObservation()
+
+        audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        maxStreamVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
     }
 
     private fun createTelemetryBroker() {
@@ -735,6 +743,11 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
                         put(key, value.toBoolean())
                     }
                 }
+            }
+
+            AWSIotThing.AWSIOT_ACTION_VOLUME -> {
+                val inputVolume = arguments[AWSIOT_ARGUMENT_VOLUME_LEVEL]?.toIntOrNull() ?: 0
+                audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, maxStreamVolume * inputVolume / 100, 0)
             }
 
         }
