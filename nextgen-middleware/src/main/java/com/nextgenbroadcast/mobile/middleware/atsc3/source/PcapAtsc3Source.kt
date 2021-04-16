@@ -9,7 +9,7 @@ import org.ngbp.libatsc3.middleware.android.phy.virtual.PcapSTLTPVirtualPHYAndro
 class PcapAtsc3Source(
         private val filename: String,
         private val type: PcapType
-) : BaseAtsc3Source() {
+) : Atsc3Source() {
 
     enum class PcapType {
         DEMUXED, STLTP
