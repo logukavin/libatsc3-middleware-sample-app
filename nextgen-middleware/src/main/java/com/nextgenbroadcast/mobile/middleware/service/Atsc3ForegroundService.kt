@@ -57,6 +57,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import java.lang.ref.WeakReference
 import kotlin.math.max
+import kotlin.math.min
 import kotlin.system.exitProcess
 
 
@@ -66,6 +67,9 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     }
     private val sensorManager: SensorManager by lazy {
         getSystemService(Context.SENSOR_SERVICE) as SensorManager
+    }
+    private val audioManager: AudioManager by lazy {
+        getSystemService(Context.AUDIO_SERVICE) as AudioManager
     }
 
     //TODO: create own scope?
@@ -105,10 +109,6 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     // Initialization from Service metadata
     private val initializer = ArrayList<WeakReference<IServiceInitializer>>()
     private var isInitialized = false
-
-    private val audioManager: AudioManager by lazy {
-        getSystemService(Context.AUDIO_SERVICE) as AudioManager
-    }
 
     override fun onCreate() {
         super.onCreate()
@@ -745,15 +745,10 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
             AWSIotThing.AWSIOT_ACTION_VOLUME -> {
                 arguments[AWSIOT_ARGUMENT_VALUE]?.toIntOrNull()?.let { inputVolume ->
-                    val validateVolumeValue = when {
-                        inputVolume < 0 -> 0
-                        inputVolume > 100 -> 100
-                        else ->  inputVolume
-                    }
+                    val volume = min(max(0, inputVolume), 100) / 100f
                     val maxStreamVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
-                    audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, maxStreamVolume * validateVolumeValue / 100, 0)
+                    audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, (maxStreamVolume * volume).toInt(), 0)
                 }
-
             }
 
         }
