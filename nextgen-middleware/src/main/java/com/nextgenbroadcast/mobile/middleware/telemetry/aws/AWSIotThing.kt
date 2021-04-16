@@ -377,7 +377,7 @@ internal class AWSIotThing(
         const val AWSIOT_ACTION_TELEMETRY_LOCATION = "locationTelemetry"
         const val AWSIOT_ACTION_TELEMETRY_SENSORS = "sensorsTelemetry"
 
-        const val AWSIOT_ARGUMENT_VOLUME_LEVEL = "level"
+        const val AWSIOT_ARGUMENT_VALUE = "value"
         const val AWSIOT_ARGUMENT_ENABLE = "enable"
         const val AWSIOT_ARGUMENT_NAME = "name"
         const val AWSIOT_ARGUMENT_DELIMITER = ";"

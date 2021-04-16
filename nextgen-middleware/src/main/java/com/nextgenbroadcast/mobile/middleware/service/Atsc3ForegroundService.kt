@@ -48,7 +48,7 @@ import com.nextgenbroadcast.mobile.middleware.telemetry.ReceiverTelemetry
 import com.nextgenbroadcast.mobile.middleware.telemetry.RemoteControlBroker
 import com.nextgenbroadcast.mobile.middleware.telemetry.TelemetryBroker
 import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIotThing
-import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIotThing.Companion.AWSIOT_ARGUMENT_VOLUME_LEVEL
+import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIotThing.Companion.AWSIOT_ARGUMENT_VALUE
 import com.nextgenbroadcast.mobile.middleware.telemetry.control.AWSIoTelemetryControl
 import com.nextgenbroadcast.mobile.middleware.telemetry.reader.*
 import com.nextgenbroadcast.mobile.middleware.telemetry.writer.AWSIoTelemetryWriter
@@ -106,8 +106,9 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     private val initializer = ArrayList<WeakReference<IServiceInitializer>>()
     private var isInitialized = false
 
-    private lateinit var audioManager: AudioManager
-    private var maxStreamVolume: Int = Int.MIN_VALUE
+    private val audioManager: AudioManager by lazy {
+        getSystemService(Context.AUDIO_SERVICE) as AudioManager
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -118,9 +119,6 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         createTelemetryBroker()
 
         startStateObservation()
-
-        audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
-        maxStreamVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
     }
 
     private fun createTelemetryBroker() {
@@ -746,8 +744,16 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
             }
 
             AWSIotThing.AWSIOT_ACTION_VOLUME -> {
-                val inputVolume = arguments[AWSIOT_ARGUMENT_VOLUME_LEVEL]?.toIntOrNull() ?: 0
-                audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, maxStreamVolume * inputVolume / 100, 0)
+                arguments[AWSIOT_ARGUMENT_VALUE]?.toIntOrNull()?.let { inputVolume ->
+                    val validateVolumeValue = when {
+                        inputVolume < 0 -> 0
+                        inputVolume > 100 -> 100
+                        else ->  inputVolume
+                    }
+                    val maxStreamVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+                    audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, maxStreamVolume * validateVolumeValue / 100, 0)
+                }
+
             }
 
         }
