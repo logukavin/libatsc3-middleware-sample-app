@@ -95,15 +95,11 @@ class EmbeddedAtsc3Service : Atsc3ForegroundService() {
             override val debugInfoSettings = this@EmbeddedAtsc3Service.debugInfoSettings.asReadOnly()
 
             override fun setTelemetryEnabled(enabled: Boolean) {
-                if (enabled) {
-                    telemetryBroker.start()
-                } else {
-                    telemetryBroker.stop()
-                }
+                telemetryBroker.setReadersEnabled(enabled)
             }
 
             override fun setTelemetryEnabled(type: String, enabled: Boolean) {
-                telemetryBroker.setReaderEnabled(type, enabled)
+                telemetryBroker.setReaderEnabled(enabled, type)
             }
 
             override fun setTelemetryUpdateDelay(type: String, delayMils: Long) {

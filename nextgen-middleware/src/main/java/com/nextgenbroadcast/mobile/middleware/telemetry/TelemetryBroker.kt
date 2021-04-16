@@ -42,17 +42,11 @@ class TelemetryBroker(
     val readersEnabled = _readersEnabled.asStateFlow()
     val readersDelay = _readersDelay.asStateFlow()
 
-    //TODO: add start/stop delay?
-    @MainThread
-    fun start() {
-        if (isStarted) return
-
-        _readersEnabled.value = readers.map { it.name to true }.toMap()
-
-        internalStart()
+    fun close() {
+        stop()
     }
 
-    private fun internalStart() {
+    private fun start() {
         if (isStarted) return
 
         writers.forEach { writer ->
@@ -112,8 +106,7 @@ class TelemetryBroker(
         }
     }
 
-    @MainThread
-    fun stop() {
+    private fun stop() {
         readerJobs.values.forEach { job ->
             if (!job.isCancelled) job.cancel()
         }
@@ -150,28 +143,40 @@ class TelemetryBroker(
     }
 
     @MainThread
-    fun setReaderEnabled(name: String, enabled: Boolean) {
+    fun setReadersEnabled(enabled: Boolean) {
+        setReaderEnabled(enabled, readers.map { it.name })
+    }
+
+    @MainThread
+    fun setReaderEnabled(enabled: Boolean, nameList: List<String>) {
+        setReaderEnabled(enabled, *nameList.toTypedArray())
+    }
+
+    @MainThread
+    fun setReaderEnabled(enabled: Boolean/*TODO:, delayMils: Long*/, vararg names: String) {
         val map = _readersEnabled.value.toMutableMap()
         var changed = false
 
-        if (enabled) {
-            readers.forEach { reader ->
-                if (reader.name.startsWith(name)) {
-                    if (!readerJobs.containsKey(reader)) {
-                        if (isStarted) {
-                            coroutineScope.launchReader(reader)
+        names.forEach { name ->
+            if (enabled) {
+                readers.forEach { reader ->
+                    if (reader.name.startsWith(name)) {
+                        if (!readerJobs.containsKey(reader)) {
+                            if (isStarted) {
+                                coroutineScope.launchReader(reader)
+                            }
+                            map[reader.name] = true
+                            changed = true
                         }
-                        map[reader.name] = enabled
-                        changed = true
                     }
                 }
-            }
-        } else {
-            readerJobs.forEach { (reader, job) ->
-                if (reader.name.startsWith(name)) {
-                    job.cancel()
-                    map[reader.name] = enabled
-                    changed = true
+            } else {
+                readerJobs.forEach { (reader, job) ->
+                    if (reader.name.startsWith(name)) {
+                        job.cancel()
+                        map[reader.name] = false
+                        changed = true
+                    }
                 }
             }
         }
@@ -179,7 +184,7 @@ class TelemetryBroker(
         if (changed) {
             _readersEnabled.value = map
             if (enabled && !isStarted) {
-                internalStart()
+                start()
             } else if (!enabled && isStarted) {
                 // stop broker if all readers switched off
                 val dis = map.values.distinct()

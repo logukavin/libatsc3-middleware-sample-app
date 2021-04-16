@@ -335,7 +335,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         atsc3Receiver.deInitialize()
         serviceScope.cancel()
 
-        telemetryBroker.stop()
+        telemetryBroker.close()
         remoteControl.stop()
         awsIoThing?.close()
     }
@@ -719,25 +719,26 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
                 }
             }
 
-            AWSIotThing.AWSIOT_ACTION_TELEMETRY_SENSORS -> {
-                val sensorName = arguments[AWSIotThing.AWSIOT_ARGUMENT_NAME]?.let { awsiotSensorName ->
-                    SensorTelemetryReader.getFullSensorName(awsiotSensorName) ?: return
-                } ?: SensorTelemetryReader.NAME
-
-                arguments[AWSIotThing.AWSIOT_ARGUMENT_ENABLE]?.let {
-                    telemetryBroker.setReaderEnabled(sensorName, it.toBoolean())
+            AWSIotThing.AWSIOT_ACTION_TELEMETRY_ENABLE -> {
+                val telemetryNameList = arguments[AWSIotThing.AWSIOT_ARGUMENT_NAME]?.let { telemetryNameList ->
+                    telemetryNameList.split(" ").map { name ->
+                        SensorTelemetryReader.getFullSensorName(name) ?: name
+                    }
                 }
-            }
 
-            AWSIotThing.AWSIOT_ACTION_TELEMETRY_LOCATION -> {
                 arguments[AWSIotThing.AWSIOT_ARGUMENT_ENABLE]?.let {
-                    telemetryBroker.setReaderEnabled(GPSTelemetryReader.NAME, it.toBoolean())
+                    val enabled = it.toBoolean()
+                    if (telemetryNameList != null) {
+                        telemetryBroker.setReaderEnabled(enabled, telemetryNameList)
+                    } else {
+                        telemetryBroker.setReadersEnabled(enabled)
+                    }
                 }
             }
 
             AWSIotThing.AWSIOT_ACTION_SHOW_DEBUG_INFO -> {
                 _debugInfoSettings.value = mutableMapOf<String, Boolean>().apply {
-                    arguments.forEach { key, value ->
+                    arguments.forEach { (key, value) ->
                         put(key, value.toBoolean())
                     }
                 }
