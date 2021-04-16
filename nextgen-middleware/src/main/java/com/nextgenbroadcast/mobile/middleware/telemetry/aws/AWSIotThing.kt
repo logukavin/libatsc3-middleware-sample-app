@@ -366,6 +366,7 @@ internal class AWSIotThing(
         const val AWSIOT_TOPIC_ATSC3TRANSPORT = "telemetry/$AWSIOT_FORMAT_SERIAL/atsc3transport"
 
         const val AWSION_PONG_RESPONCE = "{\"name\":\"pong\"}"
+        const val AWSIOT_ACTION_VOLUME = "volume"
         const val AWSIOT_ACTION_PING = "ping"
         const val AWSIOT_ACTION_SHOW_DEBUG_INFO = "showDebugInfo"
         const val AWSIOT_ACTION_TUNE = "tune"
@@ -376,6 +377,7 @@ internal class AWSIotThing(
         const val AWSIOT_ACTION_TELEMETRY_LOCATION = "locationTelemetry"
         const val AWSIOT_ACTION_TELEMETRY_SENSORS = "sensorsTelemetry"
 
+        const val AWSIOT_ARGUMENT_VOLUME_LEVEL = "level"
         const val AWSIOT_ARGUMENT_ENABLE = "enable"
         const val AWSIOT_ARGUMENT_NAME = "name"
         const val AWSIOT_ARGUMENT_DELIMITER = ";"
