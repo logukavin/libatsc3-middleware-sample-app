@@ -9,6 +9,7 @@ import android.hardware.Sensor
 import android.hardware.SensorManager
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
+import android.media.AudioManager
 import android.net.Uri
 import android.os.Bundle
 import android.os.IBinder
@@ -47,6 +48,7 @@ import com.nextgenbroadcast.mobile.middleware.telemetry.ReceiverTelemetry
 import com.nextgenbroadcast.mobile.middleware.telemetry.RemoteControlBroker
 import com.nextgenbroadcast.mobile.middleware.telemetry.TelemetryBroker
 import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIotThing
+import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIotThing.Companion.AWSIOT_ARGUMENT_VALUE
 import com.nextgenbroadcast.mobile.middleware.telemetry.control.AWSIoTelemetryControl
 import com.nextgenbroadcast.mobile.middleware.telemetry.reader.*
 import com.nextgenbroadcast.mobile.middleware.telemetry.writer.AWSIoTelemetryWriter
@@ -55,6 +57,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import java.lang.ref.WeakReference
 import kotlin.math.max
+import kotlin.math.min
 import kotlin.system.exitProcess
 
 
@@ -64,6 +67,9 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     }
     private val sensorManager: SensorManager by lazy {
         getSystemService(Context.SENSOR_SERVICE) as SensorManager
+    }
+    private val audioManager: AudioManager by lazy {
+        getSystemService(Context.AUDIO_SERVICE) as AudioManager
     }
 
     //TODO: create own scope?
@@ -735,6 +741,14 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
                     arguments.forEach { (key, value) ->
                         put(key, value.toBoolean())
                     }
+                }
+            }
+
+            AWSIotThing.AWSIOT_ACTION_VOLUME -> {
+                arguments[AWSIOT_ARGUMENT_VALUE]?.toIntOrNull()?.let { inputVolume ->
+                    val volume = min(max(0, inputVolume), 100) / 100f
+                    val maxStreamVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+                    audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, (maxStreamVolume * volume).toInt(), 0)
                 }
             }
 
