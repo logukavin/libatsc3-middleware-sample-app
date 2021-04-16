@@ -6,7 +6,7 @@ import org.ngbp.libatsc3.middleware.android.phy.virtual.srt.SRTRxSTLTPVirtualPHY
 
 class SrtAtsc3Source(
         private val srtSource: String
-) : BaseAtsc3Source() {
+) : Atsc3Source() {
     override fun openPhyClient(): Atsc3NdkPHYClientBase? {
         try {
             return SRTRxSTLTPVirtualPHYAndroid().apply {

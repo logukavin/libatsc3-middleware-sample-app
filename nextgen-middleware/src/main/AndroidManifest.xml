@@ -28,6 +28,13 @@
             android:taskAffinity=".ServiceActivity"
             android:theme="@style/Theme.AppCompat.Light.Dialog" />
 
+        <activity
+            android:name=".DeviceTypeSelectionDialog"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:taskAffinity=".ServiceActivity"
+            android:theme="@style/Theme.AppCompat.Light.Dialog" />
+
         <receiver android:name="androidx.media.session.MediaButtonReceiver">
             <intent-filter>
                 <action android:name="android.intent.action.MEDIA_BUTTON" />
