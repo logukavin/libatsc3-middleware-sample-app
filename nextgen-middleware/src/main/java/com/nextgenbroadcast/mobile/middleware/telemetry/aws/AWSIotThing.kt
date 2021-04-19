@@ -357,6 +357,7 @@ internal class AWSIotThing(
 
         private const val AWSIOT_CUSTOMER_SPECIFIC_ENDPOINT = "a2mpoqnjkscij4-ats.iot.us-east-1.amazonaws.com"
 
+        const val AWSIOT_TOPIC_WIFI = "telemetry/$AWSIOT_FORMAT_SERIAL/wifi"
         const val AWSIOT_TOPIC_PING = "telemetry/$AWSIOT_FORMAT_SERIAL/ping"
         const val AWSIOT_TOPIC_BATTERY = "telemetry/$AWSIOT_FORMAT_SERIAL/battery"
         const val AWSIOT_TOPIC_LOCATION = "telemetry/$AWSIOT_FORMAT_SERIAL/location"
@@ -365,6 +366,11 @@ internal class AWSIotThing(
         const val AWSIOT_TOPIC_SAANKHYA_PHY_DEBUG = "telemetry/$AWSIOT_FORMAT_SERIAL/saankhya_phy_debug"
         const val AWSIOT_TOPIC_ATSC3TRANSPORT = "telemetry/$AWSIOT_FORMAT_SERIAL/atsc3transport"
 
+        const val AWSION_PONG_RESPONCE = "{\"name\":\"pong\"}"
+        const val AWSIOT_ACTION_WIFI_INFO = "getWifiInfo"
+        const val AWSIOT_ACTION_VOLUME = "volume"
+        const val AWSIOT_ACTION_PING = "ping"
+        const val AWSIOT_ACTION_SHOW_DEBUG_INFO = "showDebugInfo"
         const val AWSIOT_ACTION_TUNE = "tune"
         const val AWSIOT_ACTION_ACQUIRE_SERVICE = "acquireService"
         const val AWSIOT_ACTION_SET_TEST_CASE = "setTestCase"
