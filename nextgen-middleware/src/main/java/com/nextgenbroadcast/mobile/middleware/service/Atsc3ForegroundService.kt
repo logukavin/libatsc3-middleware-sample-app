@@ -10,7 +10,9 @@ import android.hardware.SensorManager
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import android.media.AudioManager
-import android.net.Uri
+import android.net.*
+import android.net.wifi.WifiInfo
+import android.net.wifi.WifiManager
 import android.os.Bundle
 import android.os.IBinder
 import android.os.PowerManager
@@ -27,6 +29,7 @@ import androidx.media.session.MediaButtonReceiver
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import com.google.firebase.installations.FirebaseInstallations
+import com.google.gson.Gson
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.PhyFrequency
@@ -49,6 +52,7 @@ import com.nextgenbroadcast.mobile.middleware.telemetry.RemoteControlBroker
 import com.nextgenbroadcast.mobile.middleware.telemetry.TelemetryBroker
 import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIotThing
 import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIotThing.Companion.AWSIOT_ARGUMENT_VALUE
+import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIotThing.Companion.AWSIOT_TOPIC_WIFI
 import com.nextgenbroadcast.mobile.middleware.telemetry.control.AWSIoTelemetryControl
 import com.nextgenbroadcast.mobile.middleware.telemetry.reader.*
 import com.nextgenbroadcast.mobile.middleware.telemetry.writer.AWSIoTelemetryWriter
@@ -56,6 +60,10 @@ import com.nextgenbroadcast.mobile.player.Atsc3MediaPlayer
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import java.lang.ref.WeakReference
+import java.math.BigInteger
+import java.net.Inet4Address
+import java.net.InetAddress
+import java.nio.ByteOrder
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.system.exitProcess
@@ -109,6 +117,14 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     // Initialization from Service metadata
     private val initializer = ArrayList<WeakReference<IServiceInitializer>>()
     private var isInitialized = false
+
+    private val audioManager: AudioManager by lazy {
+        getSystemService(Context.AUDIO_SERVICE) as AudioManager
+    }
+
+    private val gson: Gson by lazy {
+        Gson()
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -752,6 +768,64 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
                 }
             }
 
+            AWSIotThing.AWSIOT_ACTION_WIFI_INFO -> {
+                val connectivityManager = applicationContext.getSystemService(ConnectivityManager::class.java)
+
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                    getWiFiInfoForApiLevelQ(connectivityManager)
+                } else {
+                    getWiFiInfoForApiLevelLessQ(connectivityManager)
+                }
+            }
+
+        }
+    }
+
+    private fun getWiFiInfoForApiLevelQ(connectivityManager: ConnectivityManager) {
+        val request = NetworkRequest.Builder()
+                .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+                .build()
+
+        val networkCallback = object : ConnectivityManager.NetworkCallback() {
+
+            override fun onAvailable(network: Network) {
+
+                val networkCapabilities = connectivityManager.getNetworkCapabilities(network)
+
+                connectivityManager.getLinkProperties(network)?.let { linkProperties ->
+                    linkProperties.linkAddresses.filter { it.address is Inet4Address }.take(1)[0].toString().also { ip ->
+                        CoroutineScope(Dispatchers.Default).launch {
+                            awsIoThing?.publish(AWSIOT_TOPIC_WIFI, gson.toJson(WiFiData(ip, networkCapabilities.toString())))
+                        }
+                    }
+                }
+
+                connectivityManager.unregisterNetworkCallback(this)
+            }
+        }
+
+        connectivityManager.requestNetwork(request, networkCallback)
+        connectivityManager.registerNetworkCallback(request, networkCallback)
+    }
+
+    private fun getWiFiInfoForApiLevelLessQ(connectivityManager: ConnectivityManager) {
+
+        val networkInfo: NetworkInfo = connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI)
+        if (networkInfo.isConnected) {
+            val wifiManager: WifiManager = applicationContext.getSystemService(WIFI_SERVICE) as WifiManager
+
+            val connectionInfo: WifiInfo = wifiManager.connectionInfo
+            val ipAddress = connectionInfo.ipAddress
+
+            val ipAdressStr = String.format("%d.%d.%d.%d", ipAddress and 0xff, ipAddress shr 8 and 0xff, ipAddress shr 16 and 0xff, ipAddress shr 24 and 0xff)
+
+            CoroutineScope(Dispatchers.Default).launch {
+                awsIoThing?.publish(AWSIOT_TOPIC_WIFI, gson.toJson(WiFiData(ipAdressStr, connectionInfo.toString())))
+
+            }
+
+        } else {
+            Log.d(TAG, "WiFi disconnected")
         }
     }
 
