@@ -8,6 +8,7 @@ import com.nextgenbroadcast.mobile.core.presentation.*
 import com.nextgenbroadcast.mobile.middleware.analytics.IAtsc3Analytics
 import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3Module
 import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3ModuleState
+import com.nextgenbroadcast.mobile.middleware.atsc3.entities.SLTConstants
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.IServiceGuideStore
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.ServiceGuideDeliveryUnitReader
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.IAtsc3Source
@@ -220,5 +221,9 @@ internal class Atsc3ReceiverCore(
 
     fun findActiveServiceById(serviceId: Int): AVService? {
         return findServiceBy(atsc3Module.selectedServiceBsid, serviceId)
+    }
+
+    fun playEmbedded(service: AVService): Boolean {
+        return ignoreAudioServiceMedia && service.category == SLTConstants.SERVICE_CATEGORY_AO
     }
 }

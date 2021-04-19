@@ -72,6 +72,9 @@ class Atsc3MediaPlayer(
             playbackState(it.playbackState, it.playWhenReady)
         } ?: PlaybackState.IDLE
 
+    val isInitialized: Boolean
+        get() = playbackState != PlaybackState.IDLE
+
     fun setListener(listener: EventListener) {
         this.listener = listener
     }
