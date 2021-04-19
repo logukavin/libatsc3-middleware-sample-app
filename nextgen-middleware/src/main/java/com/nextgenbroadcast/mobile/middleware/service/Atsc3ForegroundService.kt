@@ -36,7 +36,6 @@ import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverCore
 import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverStandalone
 import com.nextgenbroadcast.mobile.middleware.BuildConfig
 import com.nextgenbroadcast.mobile.middleware.ServiceDialogActivity
-import com.nextgenbroadcast.mobile.middleware.atsc3.entities.SLTConstants
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.UsbAtsc3Source
 import com.nextgenbroadcast.mobile.middleware.cache.DownloadManager
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
@@ -293,14 +292,13 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
         serviceScope.launch {
             atsc3Receiver.repository.routeMediaUrl.collect { mediaPath ->
-                val service = mediaPath?.let {
-                    atsc3Receiver.findServiceBy(mediaPath.bsid, mediaPath.serviceId)
-                }
-                if (!isBinded || (atsc3Receiver.ignoreAudioServiceMedia && service?.category == SLTConstants.SERVICE_CATEGORY_AO)) {
-                    mediaPath?.let {
-                        withContext(Dispatchers.Main) {
-                            player.play(atsc3Receiver.mediaFileProvider.getMediaFileUri(mediaPath.url))
-                        }
+                withContext(Dispatchers.Main) {
+                    val service = mediaPath?.let {
+                        atsc3Receiver.findServiceBy(mediaPath.bsid, mediaPath.serviceId)
+                    } ?: return@withContext
+
+                    if (atsc3Receiver.playEmbedded(service)) {
+                        player.play(atsc3Receiver.mediaFileProvider.getMediaFileUri(mediaPath.url))
                     }
                 }
             }
@@ -309,13 +307,11 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         //TODO: This is temporary solution
         serviceScope.launch {
             atsc3Receiver.serviceController.alertList.collect { alerts ->
+                val messages = alerts.flatMap { it.messages ?: emptyList() }
+                if (messages.isEmpty()) return@collect
                 withContext(Dispatchers.Main) {
-                    alerts.forEach { alert ->
-                        alert.messages?.forEach { msg ->
-                            withContext(Dispatchers.Main) {
-                                Toast.makeText(applicationContext, msg, Toast.LENGTH_LONG).show()
-                            }
-                        }
+                    messages.forEach { msg ->
+                        Toast.makeText(applicationContext, msg, Toast.LENGTH_LONG).show()
                     }
                 }
             }
@@ -340,8 +336,12 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         awsIoThing?.close()
     }
 
+    internal abstract fun createServiceBinder(serviceController: IServiceController): IBinder
+
     override fun onBind(intent: Intent): IBinder? {
         if (intent.action == SERVICE_INTERFACE) {
+            tryStopPlaybackOnBoard()
+
             val playAudioOnBoard = intent.getBooleanExtra(EXTRA_PLAY_AUDIO_ON_BOARD, true)
 
             cancelViewPresentationDestroying()
@@ -355,10 +355,10 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         return super.onBind(intent)
     }
 
-    internal abstract fun createServiceBinder(serviceController: IServiceController): IBinder
-
     override fun onRebind(intent: Intent) {
         if (intent.action == SERVICE_INTERFACE) {
+            tryStopPlaybackOnBoard()
+
             cancelViewPresentationDestroying()
             atsc3Receiver.resumeViewPresentation()
         }
@@ -379,6 +379,18 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         super.onUnbind(intent)
 
         return true // allow reBind
+    }
+
+    private fun tryStopPlaybackOnBoard() {
+        if (player.isInitialized) {
+            val service = atsc3Receiver.repository.routeMediaUrl.value?.let { mediaPath ->
+                atsc3Receiver.findServiceBy(mediaPath.bsid, mediaPath.serviceId)
+            }
+
+            if (service != null && !atsc3Receiver.playEmbedded(service)) {
+                player.reset()
+            }
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -635,11 +647,9 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
                                 or playbackState
                 )
                 .setState(state, PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN, 0f)
-                .setExtras(
-                        Bundle().apply {
-                            putBoolean(MediaSessionConstants.MEDIA_PLAYBACK_EXTRA_EMBEDDED, embeddedPlayerState.value != PlaybackState.IDLE)
-                        }
-                )
+                .setExtras(Bundle().apply {
+                    putBoolean(MediaSessionConstants.MEDIA_PLAYBACK_EXTRA_EMBEDDED, embeddedPlayerState.value != PlaybackState.IDLE)
+                })
         mediaSession.setPlaybackState(stateBuilder.build())
     }
 
@@ -757,7 +767,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
     inner class MediaSessionCallback : MediaSessionCompat.Callback() {
         override fun onPlay() {
-            if (!isBinded) {
+            if (player.isInitialized) {
                 player.replay()
             } else {
                 atsc3Receiver.viewController?.rmpResume()
@@ -765,7 +775,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         }
 
         override fun onPause() {
-            if (!isBinded) {
+            if (player.isInitialized) {
                 player.pause()
             } else {
                 atsc3Receiver.viewController?.rmpPause()
