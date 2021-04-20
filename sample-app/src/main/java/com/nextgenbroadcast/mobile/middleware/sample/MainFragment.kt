@@ -442,6 +442,9 @@ class MainFragment : Fragment() {
     }
 
     private fun loadBroadcasterApplication(appData: AppData) {
+        if (user_agent_web_view.serverCertificateHash == null) {
+            user_agent_web_view.serverCertificateHash = userAgentViewModel?.getServerCertificateHash()
+        }
         user_agent_web_view.loadBAContent(appData.appEntryPage)
         userAgentViewModel?.setApplicationState(ApplicationState.LOADED)
     }

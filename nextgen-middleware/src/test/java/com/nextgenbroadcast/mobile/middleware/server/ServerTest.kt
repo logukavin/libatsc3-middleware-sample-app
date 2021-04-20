@@ -4,7 +4,7 @@ import android.content.Context
 import android.content.res.Resources
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import com.nextgenbroadcast.mobile.core.cert.CertificateUtils
-import com.nextgenbroadcast.mobile.core.cert.UserAgentSSLContext
+import com.nextgenbroadcast.mobile.middleware.server.cert.UserAgentSSLContext
 import com.nextgenbroadcast.mobile.middleware.gateway.web.ConnectionType
 import com.nextgenbroadcast.mobile.middleware.server.web.configureSSLFactory
 import com.nextgenbroadcast.mobile.middleware.server.web.getSecureServerConnector
@@ -45,11 +45,11 @@ open class ServerTest {
         }
 
         PowerMockito.mockStatic(CertificateUtils::class.java)
-        Mockito.`when`(CertificateUtils.KEY_MANAGER_ALGORITHM).thenReturn(KeyManagerFactory.getDefaultAlgorithm())
+        Mockito.`when`(CertificateUtils.CERTIFICATE_ALGORITHM).thenReturn(KeyManagerFactory.getDefaultAlgorithm())
 
         server = Server()
 
-        val sslContextFactory = configureSSLFactory(UserAgentSSLContext(mockApplicationContext))
+        val sslContextFactory = configureSSLFactory(UserAgentSSLContext.newInstance(mockApplicationContext))
         with(server) {
             connectors = arrayListOf(
                     getServerConnector(ConnectionType.HTTP, this, HOST_NAME, HTTP_PORT),
