@@ -10,7 +10,8 @@ import android.hardware.SensorManager
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import android.media.AudioManager
-import android.net.Uri
+import android.net.*
+import android.net.wifi.WifiManager
 import android.os.Bundle
 import android.os.IBinder
 import android.os.PowerManager
@@ -47,9 +48,12 @@ import com.nextgenbroadcast.mobile.middleware.telemetry.ReceiverTelemetry
 import com.nextgenbroadcast.mobile.middleware.telemetry.RemoteControlBroker
 import com.nextgenbroadcast.mobile.middleware.telemetry.TelemetryBroker
 import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIotThing
-import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIotThing.Companion.AWSIOT_ARGUMENT_VALUE
 import com.nextgenbroadcast.mobile.middleware.telemetry.control.AWSIoTelemetryControl
-import com.nextgenbroadcast.mobile.middleware.telemetry.reader.*
+import com.nextgenbroadcast.mobile.middleware.telemetry.reader.BatteryTelemetryReader
+import com.nextgenbroadcast.mobile.middleware.telemetry.reader.GPSTelemetryReader
+import com.nextgenbroadcast.mobile.middleware.telemetry.reader.RfPhyTelemetryReader
+import com.nextgenbroadcast.mobile.middleware.telemetry.reader.SensorTelemetryReader
+import com.nextgenbroadcast.mobile.middleware.telemetry.task.WiFiInfoTelemetryTask
 import com.nextgenbroadcast.mobile.middleware.telemetry.writer.AWSIoTelemetryWriter
 import com.nextgenbroadcast.mobile.player.Atsc3MediaPlayer
 import kotlinx.coroutines.*
@@ -69,6 +73,9 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     }
     private val audioManager: AudioManager by lazy {
         getSystemService(Context.AUDIO_SERVICE) as AudioManager
+    }
+    private val wifiManager: WifiManager by lazy {
+        getSystemService(WIFI_SERVICE) as WifiManager
     }
 
     //TODO: create own scope?
@@ -755,13 +762,16 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
             }
 
             AWSIotThing.AWSIOT_ACTION_VOLUME -> {
-                arguments[AWSIOT_ARGUMENT_VALUE]?.toIntOrNull()?.let { inputVolume ->
+                arguments[AWSIotThing.AWSIOT_ARGUMENT_VALUE]?.toIntOrNull()?.let { inputVolume ->
                     val volume = min(max(0, inputVolume), 100) / 100f
                     val maxStreamVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
                     audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, (maxStreamVolume * volume).toInt(), 0)
                 }
             }
 
+            AWSIotThing.AWSIOT_ACTION_WIFI_INFO -> {
+                telemetryBroker.runTask(WiFiInfoTelemetryTask(wifiManager))
+            }
         }
     }
 

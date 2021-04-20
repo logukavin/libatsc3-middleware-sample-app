@@ -4,6 +4,7 @@ import androidx.annotation.MainThread
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.middleware.telemetry.entity.TelemetryEvent
 import com.nextgenbroadcast.mobile.middleware.telemetry.reader.ITelemetryReader
+import com.nextgenbroadcast.mobile.middleware.telemetry.task.ITelemetryTask
 import com.nextgenbroadcast.mobile.middleware.telemetry.writer.ITelemetryWriter
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.BufferOverflow
@@ -139,6 +140,14 @@ class TelemetryBroker(
         writers.add(writer)
         if (isStarted) {
             coroutineScope.launchWriter(writer)
+        }
+    }
+
+    @MainThread
+    fun runTask(task: ITelemetryTask) {
+        coroutineScope.launchReader(task)
+        if (!isStarted) {
+            start()
         }
     }
 
