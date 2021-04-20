@@ -122,6 +122,10 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         Gson()
     }
 
+    private val wifiManager: WifiManager by lazy {
+        applicationContext.getSystemService(WIFI_SERVICE) as WifiManager
+    }
+
     override fun onCreate() {
         super.onCreate()
 
@@ -765,18 +769,15 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
             }
 
             AWSIotThing.AWSIOT_ACTION_WIFI_INFO -> {
-                val wifiManager: WifiManager = applicationContext.getSystemService(WIFI_SERVICE) as WifiManager
                 val connectionInfo = wifiManager.connectionInfo
 
                 val ipAddressStr = connectionInfo.ipAddress.let { ipAddress ->
                     getIpv4FromInt(ipAddress)
                 }
-
+                val ssid = connectionInfo.ssid.replace("\"", "", false)
                 CoroutineScope(Dispatchers.Default).launch {
-                    awsIoThing?.publish(AWSIOT_TOPIC_WIFI, WiFiData(connectionInfo.ssid, ipAddressStr, connectionInfo.toString()))
-
+                    awsIoThing?.publish(AWSIOT_TOPIC_WIFI, WiFiData(ssid, ipAddressStr, connectionInfo.toString()))
                 }
-
             }
 
         }
