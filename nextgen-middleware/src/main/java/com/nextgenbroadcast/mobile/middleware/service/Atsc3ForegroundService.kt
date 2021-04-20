@@ -79,6 +79,9 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     private val audioManager: AudioManager by lazy {
         getSystemService(Context.AUDIO_SERVICE) as AudioManager
     }
+    private val wifiManager: WifiManager by lazy {
+        applicationContext.getSystemService(WIFI_SERVICE) as WifiManager
+    }
 
     //TODO: create own scope?
     private val serviceScope: CoroutineScope = CoroutineScope(Dispatchers.Default)
@@ -120,10 +123,6 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
     private val gson: Gson by lazy {
         Gson()
-    }
-
-    private val wifiManager: WifiManager by lazy {
-        applicationContext.getSystemService(WIFI_SERVICE) as WifiManager
     }
 
     override fun onCreate() {
