@@ -1,14 +1,14 @@
 package com.nextgenbroadcast.mobile.middleware.server.web
 
 import android.util.Log
-import com.nextgenbroadcast.mobile.core.cert.CertificateUtils
-import com.nextgenbroadcast.mobile.core.cert.IUserAgentSSLContext
+import com.nextgenbroadcast.mobile.middleware.server.cert.IUserAgentSSLContext
 import com.nextgenbroadcast.mobile.core.md5
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import com.nextgenbroadcast.mobile.middleware.gateway.rpc.IRPCGateway
 import com.nextgenbroadcast.mobile.middleware.gateway.web.ConnectionType
 import com.nextgenbroadcast.mobile.middleware.gateway.web.IWebGateway
 import com.nextgenbroadcast.mobile.middleware.server.ServerConstants.ATSC_CMD_PATH
+import com.nextgenbroadcast.mobile.middleware.server.cert.UserAgentSSLContext
 import com.nextgenbroadcast.mobile.middleware.server.ws.MiddlewareWebSocket
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collect
@@ -225,13 +225,13 @@ private fun createWebSocket(req: ServletUpgradeRequest, rpcGateway: IRPCGateway)
 
 @Throws(GeneralSecurityException::class, IOException::class)
 fun configureSSLFactory(generatedSSLContext: IUserAgentSSLContext): SslContextFactory {
+    val password = UUID.randomUUID().toString() // create password for one session
     // Configuring SSL
     return SslContextFactory.Server().apply {
-        keyStoreType = CertificateUtils.KEY_STORE_TYPE
-        //TODO: remove hardcoded password
-        sslContext = generatedSSLContext.getInitializedSSLContext("MY_PASSWORD")
-        setKeyStorePassword("MY_PASSWORD")
-        setKeyManagerPassword("MY_PASSWORD")
+        keyStoreType = UserAgentSSLContext.KEY_STORE_TYPE
+        sslContext = generatedSSLContext.getInitializedSSLContext(password)
+        setKeyStorePassword(password)
+        setKeyManagerPassword(password)
     }
 }
 

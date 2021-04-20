@@ -2,7 +2,6 @@ package com.nextgenbroadcast.mobile.middleware.telemetry.aws
 
 import android.content.SharedPreferences
 import android.content.res.AssetManager
-import android.util.Log
 import com.amazonaws.services.iot.client.*
 import com.amazonaws.services.iot.client.core.AwsIotRuntimeException
 import com.google.gson.Gson
