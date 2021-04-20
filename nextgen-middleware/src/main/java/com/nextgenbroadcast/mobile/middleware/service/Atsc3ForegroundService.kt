@@ -28,7 +28,6 @@ import androidx.media.session.MediaButtonReceiver
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import com.google.firebase.installations.FirebaseInstallations
-import com.google.gson.Gson
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.PhyFrequency
@@ -50,15 +49,12 @@ import com.nextgenbroadcast.mobile.middleware.telemetry.ReceiverTelemetry
 import com.nextgenbroadcast.mobile.middleware.telemetry.RemoteControlBroker
 import com.nextgenbroadcast.mobile.middleware.telemetry.TelemetryBroker
 import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIotThing
-import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIotThing.Companion.AWSIOT_ARGUMENT_VALUE
-import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIotThing.Companion.AWSIOT_TOPIC_WIFI
 import com.nextgenbroadcast.mobile.middleware.telemetry.control.AWSIoTelemetryControl
-import com.nextgenbroadcast.mobile.middleware.telemetry.entity.WiFiData
 import com.nextgenbroadcast.mobile.middleware.telemetry.reader.BatteryTelemetryReader
 import com.nextgenbroadcast.mobile.middleware.telemetry.reader.GPSTelemetryReader
 import com.nextgenbroadcast.mobile.middleware.telemetry.reader.RfPhyTelemetryReader
 import com.nextgenbroadcast.mobile.middleware.telemetry.reader.SensorTelemetryReader
-import com.nextgenbroadcast.mobile.middleware.telemetry.utils.getIpv4FromInt
+import com.nextgenbroadcast.mobile.middleware.telemetry.task.WiFiInfoTelemetryTask
 import com.nextgenbroadcast.mobile.middleware.telemetry.writer.AWSIoTelemetryWriter
 import com.nextgenbroadcast.mobile.player.Atsc3MediaPlayer
 import kotlinx.coroutines.*
@@ -80,7 +76,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         getSystemService(Context.AUDIO_SERVICE) as AudioManager
     }
     private val wifiManager: WifiManager by lazy {
-        applicationContext.getSystemService(WIFI_SERVICE) as WifiManager
+        getSystemService(WIFI_SERVICE) as WifiManager
     }
 
     //TODO: create own scope?
@@ -120,10 +116,6 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     // Initialization from Service metadata
     private val initializer = ArrayList<WeakReference<IServiceInitializer>>()
     private var isInitialized = false
-
-    private val gson: Gson by lazy {
-        Gson()
-    }
 
     override fun onCreate() {
         super.onCreate()
@@ -760,7 +752,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
             }
 
             AWSIotThing.AWSIOT_ACTION_VOLUME -> {
-                arguments[AWSIOT_ARGUMENT_VALUE]?.toIntOrNull()?.let { inputVolume ->
+                arguments[AWSIotThing.AWSIOT_ARGUMENT_VALUE]?.toIntOrNull()?.let { inputVolume ->
                     val volume = min(max(0, inputVolume), 100) / 100f
                     val maxStreamVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
                     audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, (maxStreamVolume * volume).toInt(), 0)
@@ -768,20 +760,10 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
             }
 
             AWSIotThing.AWSIOT_ACTION_WIFI_INFO -> {
-                val connectionInfo = wifiManager.connectionInfo
-
-                val ipAddressStr = connectionInfo.ipAddress.let { ipAddress ->
-                    getIpv4FromInt(ipAddress)
-                }
-                val ssid = connectionInfo.ssid.replace("\"", "", false)
-                CoroutineScope(Dispatchers.Default).launch {
-                    awsIoThing?.publish(AWSIOT_TOPIC_WIFI, WiFiData(ssid, ipAddressStr, connectionInfo.toString()))
-                }
+                telemetryBroker.runTask(WiFiInfoTelemetryTask(wifiManager))
             }
-
         }
     }
-
 
     inner class MediaSessionCallback : MediaSessionCompat.Callback() {
         override fun onPlay() {
