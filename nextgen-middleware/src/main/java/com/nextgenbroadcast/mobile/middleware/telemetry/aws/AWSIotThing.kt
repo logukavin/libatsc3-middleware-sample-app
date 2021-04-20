@@ -2,7 +2,6 @@ package com.nextgenbroadcast.mobile.middleware.telemetry.aws
 
 import android.content.SharedPreferences
 import android.content.res.AssetManager
-import android.util.Log
 import com.amazonaws.services.iot.client.*
 import com.amazonaws.services.iot.client.core.AwsIotRuntimeException
 import com.google.gson.Gson
@@ -364,6 +363,7 @@ internal class AWSIotThing(
         const val AWSIOT_TOPIC_SENSORS = "telemetry/$AWSIOT_FORMAT_SERIAL/sensors"
         const val AWSIOT_TOPIC_SAANKHYA_PHY_DEBUG = "telemetry/$AWSIOT_FORMAT_SERIAL/saankhya_phy_debug"
         const val AWSIOT_TOPIC_ATSC3TRANSPORT = "telemetry/$AWSIOT_FORMAT_SERIAL/atsc3transport"
+        const val AWSIOT_TOPIC_WIFI = "telemetry/$AWSIOT_FORMAT_SERIAL/wifi"
 
         const val AWSIOT_ACTION_TUNE = "tune"
         const val AWSIOT_ACTION_ACQUIRE_SERVICE = "acquireService"
@@ -374,6 +374,7 @@ internal class AWSIotThing(
         const val AWSIOT_ACTION_PING = "ping"
         const val AWSIOT_ACTION_SHOW_DEBUG_INFO = "showDebugInfo"
         const val AWSIOT_ACTION_VOLUME = "volume"
+        const val AWSIOT_ACTION_WIFI_INFO = "networkInfo"
 
         const val AWSION_PONG_RESPONCE = "{\"name\":\"pong\"}"
 
