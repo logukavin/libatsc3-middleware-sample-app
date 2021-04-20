@@ -365,7 +365,6 @@ internal class AWSIotThing(
         const val AWSIOT_TOPIC_ATSC3TRANSPORT = "telemetry/$AWSIOT_FORMAT_SERIAL/atsc3transport"
         const val AWSIOT_TOPIC_WIFI = "telemetry/$AWSIOT_FORMAT_SERIAL/wifi"
 
-        const val AWSIOT_ACTION_WIFI_INFO = "getWifiInfo"
         const val AWSIOT_ACTION_TUNE = "tune"
         const val AWSIOT_ACTION_ACQUIRE_SERVICE = "acquireService"
         const val AWSIOT_ACTION_SET_TEST_CASE = "setTestCase"
@@ -375,6 +374,7 @@ internal class AWSIotThing(
         const val AWSIOT_ACTION_PING = "ping"
         const val AWSIOT_ACTION_SHOW_DEBUG_INFO = "showDebugInfo"
         const val AWSIOT_ACTION_VOLUME = "volume"
+        const val AWSIOT_ACTION_WIFI_INFO = "getWifiInfo"
 
         const val AWSION_PONG_RESPONCE = "{\"name\":\"pong\"}"
 
