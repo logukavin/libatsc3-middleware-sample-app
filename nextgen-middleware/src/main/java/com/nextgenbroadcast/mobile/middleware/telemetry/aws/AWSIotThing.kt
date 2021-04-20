@@ -374,7 +374,7 @@ internal class AWSIotThing(
         const val AWSIOT_ACTION_PING = "ping"
         const val AWSIOT_ACTION_SHOW_DEBUG_INFO = "showDebugInfo"
         const val AWSIOT_ACTION_VOLUME = "volume"
-        const val AWSIOT_ACTION_WIFI_INFO = "getWifiInfo"
+        const val AWSIOT_ACTION_WIFI_INFO = "networkInfo"
 
         const val AWSION_PONG_RESPONCE = "{\"name\":\"pong\"}"
 
