@@ -58,6 +58,7 @@ import com.nextgenbroadcast.mobile.middleware.telemetry.reader.BatteryTelemetryR
 import com.nextgenbroadcast.mobile.middleware.telemetry.reader.GPSTelemetryReader
 import com.nextgenbroadcast.mobile.middleware.telemetry.reader.RfPhyTelemetryReader
 import com.nextgenbroadcast.mobile.middleware.telemetry.reader.SensorTelemetryReader
+import com.nextgenbroadcast.mobile.middleware.telemetry.utils.getIpv4FromInt
 import com.nextgenbroadcast.mobile.middleware.telemetry.writer.AWSIoTelemetryWriter
 import com.nextgenbroadcast.mobile.player.Atsc3MediaPlayer
 import kotlinx.coroutines.*
@@ -768,7 +769,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
                 val connectionInfo = wifiManager.connectionInfo
 
                 val ipAddressStr = connectionInfo.ipAddress.let { ipAddress ->
-                    String.format("%d.%d.%d.%d", ipAddress and 0xff, ipAddress shr 8 and 0xff, ipAddress shr 16 and 0xff, ipAddress shr 24 and 0xff)
+                    getIpv4FromInt(ipAddress)
                 }
 
                 CoroutineScope(Dispatchers.Default).launch {
@@ -780,6 +781,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
         }
     }
+
 
     inner class MediaSessionCallback : MediaSessionCompat.Callback() {
         override fun onPlay() {
