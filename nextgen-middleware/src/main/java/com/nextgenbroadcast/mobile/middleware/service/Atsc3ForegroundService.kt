@@ -11,7 +11,6 @@ import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import android.media.AudioManager
 import android.net.*
-import android.net.wifi.WifiInfo
 import android.net.wifi.WifiManager
 import android.os.Bundle
 import android.os.IBinder
@@ -64,7 +63,6 @@ import com.nextgenbroadcast.mobile.player.Atsc3MediaPlayer
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import java.lang.ref.WeakReference
-import java.net.Inet4Address
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.system.exitProcess
@@ -766,63 +764,20 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
             }
 
             AWSIotThing.AWSIOT_ACTION_WIFI_INFO -> {
-                val connectivityManager = applicationContext.getSystemService(ConnectivityManager::class.java)
+                val wifiManager: WifiManager = applicationContext.getSystemService(WIFI_SERVICE) as WifiManager
+                val connectionInfo = wifiManager.connectionInfo
 
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-                    getWiFiInfoForApiLevelQ(connectivityManager)
-                } else {
-                    getWiFiInfoForApiLevelLessQ(connectivityManager)
-                }
-            }
-
-        }
-    }
-
-    private fun getWiFiInfoForApiLevelQ(connectivityManager: ConnectivityManager) {
-        val request = NetworkRequest.Builder()
-                .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
-                .build()
-
-        val networkCallback = object : ConnectivityManager.NetworkCallback() {
-
-            override fun onAvailable(network: Network) {
-
-                val networkCapabilities = connectivityManager.getNetworkCapabilities(network)
-
-                connectivityManager.getLinkProperties(network)?.let { linkProperties ->
-                    linkProperties.linkAddresses.filter { it.address is Inet4Address }.take(1)[0].toString().also { ip ->
-                        CoroutineScope(Dispatchers.Default).launch {
-                            awsIoThing?.publish(AWSIOT_TOPIC_WIFI, gson.toJson(WiFiData(ip, networkCapabilities.toString())))
-                        }
-                    }
+                val ipAddressStr = connectionInfo.ipAddress.let { ipAddress ->
+                    String.format("%d.%d.%d.%d", ipAddress and 0xff, ipAddress shr 8 and 0xff, ipAddress shr 16 and 0xff, ipAddress shr 24 and 0xff)
                 }
 
-                connectivityManager.unregisterNetworkCallback(this)
-            }
-        }
+                CoroutineScope(Dispatchers.Default).launch {
+                    awsIoThing?.publish(AWSIOT_TOPIC_WIFI, WiFiData(connectionInfo.ssid, ipAddressStr, connectionInfo.toString()))
 
-        connectivityManager.requestNetwork(request, networkCallback)
-        connectivityManager.registerNetworkCallback(request, networkCallback)
-    }
-
-    private fun getWiFiInfoForApiLevelLessQ(connectivityManager: ConnectivityManager) {
-
-        val networkInfo: NetworkInfo = connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI)
-        if (networkInfo.isConnected) {
-            val wifiManager: WifiManager = applicationContext.getSystemService(WIFI_SERVICE) as WifiManager
-
-            val connectionInfo: WifiInfo = wifiManager.connectionInfo
-            val ipAddress = connectionInfo.ipAddress
-
-            val ipAdressStr = String.format("%d.%d.%d.%d", ipAddress and 0xff, ipAddress shr 8 and 0xff, ipAddress shr 16 and 0xff, ipAddress shr 24 and 0xff)
-
-            CoroutineScope(Dispatchers.Default).launch {
-                awsIoThing?.publish(AWSIOT_TOPIC_WIFI, gson.toJson(WiFiData(ipAdressStr, connectionInfo.toString())))
+                }
 
             }
 
-        } else {
-            Log.d(TAG, "WiFi disconnected")
         }
     }
 
