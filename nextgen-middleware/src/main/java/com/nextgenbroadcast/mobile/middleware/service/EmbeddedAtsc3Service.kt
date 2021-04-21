@@ -8,6 +8,7 @@ import com.nextgenbroadcast.mobile.core.presentation.*
 import com.nextgenbroadcast.mobile.core.presentation.media.IObservablePlayer
 import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
+import com.nextgenbroadcast.mobile.middleware.server.cert.UserAgentSSLContext
 import kotlinx.coroutines.flow.*
 
 class EmbeddedAtsc3Service : Atsc3ForegroundService() {
@@ -47,12 +48,17 @@ class EmbeddedAtsc3Service : Atsc3ForegroundService() {
 
         override val userAgentPresenter = object : IUserAgentPresenter {
             private val viewController = requireViewController()
+            private val sslContext = UserAgentSSLContext.newInstance(applicationContext)
 
             override val appData = viewController.appData.asReadOnly()
             override val appState = viewController.appState.asReadOnly()
 
             override fun setApplicationState(state: ApplicationState) {
                 viewController.setApplicationState(state)
+            }
+
+            override fun getWebServerCertificateHash(): String? {
+                return sslContext.getCertificateHash()
             }
         }
 

@@ -6,6 +6,7 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.net.Uri
+import android.net.http.SslCertificate
 import android.net.http.SslError
 import android.util.AttributeSet
 import android.view.KeyCharacterMap
@@ -15,8 +16,13 @@ import android.webkit.*
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.distinctUntilChanged
-import com.nextgenbroadcast.mobile.core.cert.UserAgentSSLContext
+import com.nextgenbroadcast.mobile.core.LOG
+import com.nextgenbroadcast.mobile.core.cert.CertificateUtils.publicHash
 import kotlinx.coroutines.*
+import java.io.ByteArrayInputStream
+import java.security.cert.Certificate
+import java.security.cert.CertificateException
+import java.security.cert.CertificateFactory
 
 class UserAgentView @JvmOverloads constructor(
         context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
@@ -36,6 +42,8 @@ class UserAgentView @JvmOverloads constructor(
     private var emptyBitmap: Bitmap? = null
     private var layerCanvas: Canvas? = null
     private var lastCaptureTime: Long = 0
+
+    var serverCertificateHash: String? = null
 
     var captureContentVisibility = false
     var isContentVisible: LiveData<Boolean> = _isContentVisible.distinctUntilChanged()
@@ -149,11 +157,28 @@ class UserAgentView @JvmOverloads constructor(
     private fun createWebViewClient() = object : WebViewClient() {
 
         override fun onReceivedSslError(view: WebView, handler: SslErrorHandler, error: SslError) {
-            handler.proceed()
+            LOG.d(TAG, "onReceivedSslError: $error")
+
+            if (error.primaryError == SslError.SSL_IDMISMATCH || error.primaryError == SslError.SSL_UNTRUSTED) {
+                val cert = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                    error.certificate.x509Certificate
+                } else {
+                    getX509Certificate(error.certificate)
+                }
+
+                if (cert != null && cert.publicHash() == serverCertificateHash) {
+                    handler.proceed()
+                    return
+                }
+            }
+
+            handler.cancel()
         }
 
         override fun onReceivedError(view: WebView?, request: WebResourceRequest?, error: WebResourceError?) {
             super.onReceivedError(view, request, error)
+
+            LOG.d(TAG, "onReceivedError request: ${request?.url}, errorCode: ${error?.errorCode}, description: ${error?.description}")
 
             request?.let {
                 onLoadingError(request.url)
@@ -163,15 +188,22 @@ class UserAgentView @JvmOverloads constructor(
         override fun onReceivedHttpError(view: WebView?, request: WebResourceRequest?, errorResponse: WebResourceResponse?) {
             super.onReceivedHttpError(view, request, errorResponse)
 
+            LOG.d(TAG, "onReceivedHttpError request: ${request?.url}, statusCode: ${errorResponse?.statusCode}, reason: ${errorResponse?.reasonPhrase}")
+
             request?.let {
                 onLoadingError(request.url)
             }
         }
 
         override fun onReceivedClientCertRequest(view: WebView, request: ClientCertRequest) {
-            UserAgentSSLContext(view.context).loadCertificateAndPrivateKey()?.let { (privateKey, chain) ->
-                request.proceed(privateKey, arrayOf(chain))
-            }
+            super.onReceivedClientCertRequest(view, request)
+
+            LOG.d(TAG, "onReceivedClientCertRequest - certificate should be provided")
+
+            //TODO: do we need this?
+//            UserAgentSSLContext(view.context).loadCertificateAndPrivateKey()?.let { (privateKey, chain) ->
+//                request.proceed(privateKey, arrayOf(chain))
+//            }
         }
     }
 
@@ -246,7 +278,23 @@ class UserAgentView @JvmOverloads constructor(
             KeyCharacterMap.VIRTUAL_KEYBOARD,
             scanCode)
 
+    fun getX509Certificate(sslCertificate: SslCertificate): Certificate? {
+        val bundle = SslCertificate.saveState(sslCertificate)
+        val bytes = bundle.getByteArray("x509-certificate")
+        return if (bytes == null) {
+            null
+        } else {
+            try {
+                CertificateFactory.getInstance("X.509").generateCertificate(ByteArrayInputStream(bytes))
+            } catch (e: CertificateException) {
+                null
+            }
+        }
+    }
+
     companion object {
+        val TAG: String = UserAgentView::class.java.simpleName
+
         private const val RETRY_DELAY_MILS = 500L
         private const val MAX_RETRY_COUNT = 4
         private const val CAPTURE_PERIOD_MILS = 200L
