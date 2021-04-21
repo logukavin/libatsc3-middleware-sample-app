@@ -40,6 +40,7 @@ import com.nextgenbroadcast.mobile.middleware.cache.DownloadManager
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
 import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
 import com.nextgenbroadcast.mobile.middleware.phy.Atsc3DeviceReceiver
+import com.nextgenbroadcast.mobile.middleware.service.holder.WebServerHolder
 import com.nextgenbroadcast.mobile.middleware.service.init.*
 import com.nextgenbroadcast.mobile.middleware.service.media.MediaSessionConstants
 import com.nextgenbroadcast.mobile.middleware.telemetry.ReceiverTelemetry
@@ -47,6 +48,7 @@ import com.nextgenbroadcast.mobile.middleware.telemetry.RemoteControlBroker
 import com.nextgenbroadcast.mobile.middleware.telemetry.TelemetryBroker
 import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIotThing
 import com.nextgenbroadcast.mobile.middleware.telemetry.control.AWSIoTelemetryControl
+import com.nextgenbroadcast.mobile.middleware.telemetry.control.WebTelemetryControl
 import com.nextgenbroadcast.mobile.middleware.telemetry.reader.BatteryTelemetryReader
 import com.nextgenbroadcast.mobile.middleware.telemetry.reader.GPSTelemetryReader
 import com.nextgenbroadcast.mobile.middleware.telemetry.reader.RfPhyTelemetryReader
@@ -94,6 +96,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
     // Receiver Core
     private lateinit var atsc3Receiver: Atsc3ReceiverCore
+    private lateinit var webServer: WebServerHolder
     private lateinit var wakeLock: WakeLock
 
     // Media Service
@@ -125,6 +128,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         startStateObservation()
     }
 
+    //TODO: move to separate object or external method
     private fun createTelemetryBroker() {
         telemetryBroker = TelemetryBroker(
                 listOf(
@@ -184,6 +188,17 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
     private fun createReceiverCore() {
         atsc3Receiver = Atsc3ReceiverStandalone.get(applicationContext)
+        webServer = WebServerHolder(applicationContext, atsc3Receiver,
+                { server ->
+                    // used to rebuild data related to server
+                    atsc3Receiver.viewController?.onNewSessionStarted()
+
+                    remoteControl.addControl(WebTelemetryControl(server))
+                },
+                {
+                    remoteControl.removeControl(WebTelemetryControl::class.java)
+                }
+        )
         wakeLock = (getSystemService(POWER_SERVICE) as PowerManager).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Atsc3ForegroundService::lock")
     }
 
@@ -328,6 +343,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         player.reset()
         destroyViewPresentation()
         mediaSession.release()
+        webServer.stop()
         atsc3Receiver.deInitialize()
         serviceScope.cancel()
 
@@ -360,7 +376,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
             tryStopPlaybackOnBoard()
 
             cancelViewPresentationDestroying()
-            atsc3Receiver.resumeViewPresentation()
+            webServer.start()
         }
 
         super.onRebind(intent)
@@ -585,7 +601,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         if (wakeLock.isHeld) return
 
         val downloadManager = DownloadManager()
-        atsc3Receiver.createAndStartViewPresentation(downloadManager, ignoreAudioServiceMedia) { view, viewScope ->
+        atsc3Receiver.createViewPresentation(downloadManager, ignoreAudioServiceMedia) { view, viewScope ->
             viewScope.launch {
                 view.rmpState.onCompletion {
                     viewPlayerState.value = PlaybackState.IDLE
@@ -594,6 +610,8 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
                 }
             }
         }
+
+        webServer.start()
 
         //TODO: add lock limitation??
         wakeLock.acquire()
@@ -606,7 +624,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
         // Don't really destroy View Presentation because it could be pointed by Binder and re-binded
         //atsc3Receiver.stopAndDestroyViewPresentation()
-        atsc3Receiver.suspendViewPresentation()
+        webServer.stop()
     }
 
     private fun destroyViewPresentationDelayed() {
