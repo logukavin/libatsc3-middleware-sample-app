@@ -35,7 +35,7 @@ class RemoteControlBroker(
 
             commandFlow.collect { command ->
                 withContext(Dispatchers.Main) {
-                    onCommand(command.action, command.arguments)
+                    onCommand(command.action, command.arguments ?: emptyMap())
                 }
             }
         }

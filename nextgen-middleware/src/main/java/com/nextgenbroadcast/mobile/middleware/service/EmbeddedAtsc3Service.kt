@@ -96,20 +96,20 @@ class EmbeddedAtsc3Service : Atsc3ForegroundService() {
         override val controllerPresenter = object : IControllerPresenter {
             //TODO: isolate Flow to prevent internal objects blocking with UI
             // maybe something like this: .stateIn(viewController.scope(), SharingStarted.Lazily, telemetryBroker.readersEnabled.value)
-            override val telemetryEnabled = telemetryBroker.readersEnabled.asReadOnly()
-            override val telemetryDelay = telemetryBroker.readersDelay.asReadOnly()
-            override val debugInfoSettings = this@EmbeddedAtsc3Service.debugInfoSettings.asReadOnly()
+            override val telemetryEnabled = telemetryHolder.telemetryEnabled.asReadOnly()
+            override val telemetryDelay = telemetryHolder.telemetryDelay.asReadOnly()
+            override val debugInfoSettings = telemetryHolder.debugInfoSettings.asReadOnly()
 
             override fun setTelemetryEnabled(enabled: Boolean) {
-                telemetryBroker.setReadersEnabled(enabled)
+                telemetryHolder.setAllEnabled(enabled)
             }
 
             override fun setTelemetryEnabled(type: String, enabled: Boolean) {
-                telemetryBroker.setReaderEnabled(enabled, type)
+                telemetryHolder.setTelemetryEnabled(enabled, type)
             }
 
             override fun setTelemetryUpdateDelay(type: String, delayMils: Long) {
-                telemetryBroker.setReaderDelay(type, delayMils)
+                telemetryHolder.setTelemetryDelay(delayMils, type)
             }
         }
     }
