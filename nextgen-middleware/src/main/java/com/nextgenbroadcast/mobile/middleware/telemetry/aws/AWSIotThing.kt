@@ -67,13 +67,7 @@ internal class AWSIotThing(
                         ) {
                             override fun onMessage(message: AWSIotMessage) {
                                 val command = gson.fromJson(message.stringPayload, TelemetryControl::class.java)
-                                if (command.action == AWSIOT_ACTION_PING) {
-                                    CoroutineScope(Dispatchers.IO).launch {
-                                        publish(AWSIOT_TOPIC_PING, AWSION_PONG_RESPONCE)
-                                    }
-                                } else {
-                                    commandFlow.tryEmit(command)
-                                }
+                                commandFlow.tryEmit(command)
                             }
                         }
                 )
@@ -364,29 +358,5 @@ internal class AWSIotThing(
         const val AWSIOT_TOPIC_SAANKHYA_PHY_DEBUG = "telemetry/$AWSIOT_FORMAT_SERIAL/saankhya_phy_debug"
         const val AWSIOT_TOPIC_ATSC3TRANSPORT = "telemetry/$AWSIOT_FORMAT_SERIAL/atsc3transport"
         const val AWSIOT_TOPIC_WIFI = "telemetry/$AWSIOT_FORMAT_SERIAL/wifi"
-
-        const val AWSIOT_ACTION_TUNE = "tune"
-        const val AWSIOT_ACTION_ACQUIRE_SERVICE = "acquireService"
-        const val AWSIOT_ACTION_SET_TEST_CASE = "setTestCase"
-        const val AWSIOT_ACTION_RESTART_APP = "restartApp"
-        const val AWSIOT_ACTION_REBOOT_DEVICE = "rebootDevice"
-        const val AWSIOT_ACTION_TELEMETRY_ENABLE = "enableTelemetry"
-        const val AWSIOT_ACTION_PING = "ping"
-        const val AWSIOT_ACTION_SHOW_DEBUG_INFO = "showDebugInfo"
-        const val AWSIOT_ACTION_VOLUME = "volume"
-        const val AWSIOT_ACTION_WIFI_INFO = "networkInfo"
-
-        const val AWSION_PONG_RESPONCE = "{\"name\":\"pong\"}"
-
-        const val AWSIOT_ARGUMENT_DELIMITER = ";"
-        const val AWSIOT_ARGUMENT_FREQUENCY = "frequency"
-        const val AWSIOT_ARGUMENT_SERVICE_ID = "serviceId"
-        const val AWSIOT_ARGUMENT_SERVICE_BSID = "serviceBsid"
-        const val AWSIOT_ARGUMENT_SERVICE_NAME = "serviceName"
-        const val AWSIOT_ARGUMENT_CASE = "case"
-        const val AWSIOT_ARGUMENT_START_DELAY = "startDelay"
-        const val AWSIOT_ARGUMENT_NAME = "name"
-        const val AWSIOT_ARGUMENT_ENABLE = "enable"
-        const val AWSIOT_ARGUMENT_VALUE = "value"
     }
 }
