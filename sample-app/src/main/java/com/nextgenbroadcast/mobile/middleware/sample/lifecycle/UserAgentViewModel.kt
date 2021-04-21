@@ -21,4 +21,8 @@ class UserAgentViewModel(
     fun setApplicationState(state: ApplicationState) {
         presenter.setApplicationState(state)
     }
+
+    fun getServerCertificateHash(): String? {
+        return presenter.getWebServerCertificateHash()
+    }
 }

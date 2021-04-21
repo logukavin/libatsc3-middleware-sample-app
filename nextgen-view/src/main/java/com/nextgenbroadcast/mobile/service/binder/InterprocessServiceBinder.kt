@@ -61,6 +61,10 @@ class InterprocessServiceBinder(
                     IServiceBinder.PARAM_APPSTATE to state
             ))
         }
+
+        override fun getWebServerCertificateHash(): String? {
+            return null
+        }
     }
 
     inner class MediaPlayerPresenter : IMediaPlayerPresenter {
