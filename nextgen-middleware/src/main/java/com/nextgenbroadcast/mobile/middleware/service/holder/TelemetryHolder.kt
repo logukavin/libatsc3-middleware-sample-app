@@ -16,6 +16,7 @@ import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverCore
 import com.nextgenbroadcast.mobile.middleware.BuildConfig
 import com.nextgenbroadcast.mobile.middleware.ServiceDialogActivity
 import com.nextgenbroadcast.mobile.middleware.encryptedSharedPreferences
+import com.nextgenbroadcast.mobile.middleware.gateway.web.ConnectionType
 import com.nextgenbroadcast.mobile.middleware.server.web.IMiddlewareWebServer
 import com.nextgenbroadcast.mobile.middleware.service.Atsc3ForegroundService
 import com.nextgenbroadcast.mobile.middleware.telemetry.ReceiverTelemetry
@@ -32,6 +33,7 @@ import com.nextgenbroadcast.mobile.middleware.telemetry.reader.SensorTelemetryRe
 import com.nextgenbroadcast.mobile.middleware.telemetry.task.PongTelemetryTask
 import com.nextgenbroadcast.mobile.middleware.telemetry.task.WiFiInfoTelemetryTask
 import com.nextgenbroadcast.mobile.middleware.telemetry.writer.AWSIoTelemetryWriter
+import com.nextgenbroadcast.mobile.middleware.telemetry.writer.WebTelemetryWriter
 import kotlinx.coroutines.flow.*
 import kotlin.math.max
 import kotlin.math.min
@@ -132,11 +134,15 @@ internal class TelemetryHolder(
     }
 
     fun notifyWebServerStarted(server: IMiddlewareWebServer) {
+        server.addConnection(CONNECTION_TYPE, CONNECTION_HOST, CONNECTION_PORT)
+
         remoteControl?.addControl(WebTelemetryControl(server))
+        telemetryBroker?.addWriter(WebTelemetryWriter(server), true)
     }
 
     fun notifyWebServerStopped() {
         remoteControl?.removeControl(WebTelemetryControl::class.java)
+        telemetryBroker?.removeWriter(WebTelemetryWriter::class.java)
     }
 
     private fun initializeAWSIoThing(serialNumber: String) {
@@ -260,5 +266,9 @@ internal class TelemetryHolder(
 
     companion object {
         private const val IoT_PREFERENCE = "${BuildConfig.LIBRARY_PACKAGE_NAME}.awsiot"
+
+        private val CONNECTION_TYPE = ConnectionType.HTTP
+        private const val CONNECTION_HOST = "0.0.0.0"
+        private const val CONNECTION_PORT = 8080
     }
 }

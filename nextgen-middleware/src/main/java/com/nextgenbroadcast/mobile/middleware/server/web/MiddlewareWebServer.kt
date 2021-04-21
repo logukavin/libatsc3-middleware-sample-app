@@ -1,6 +1,7 @@
 package com.nextgenbroadcast.mobile.middleware.server.web
 
 import android.util.Log
+import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.middleware.server.cert.IUserAgentSSLContext
 import com.nextgenbroadcast.mobile.core.md5
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
@@ -56,14 +57,18 @@ internal class MiddlewareWebServer constructor(
     fun isRunning() = server.isRunning
 
     override fun addConnection(type: ConnectionType, host: String, port: Int) {
-        val connector = server.connectors.filterIsInstance(ServerConnector::class.java).firstOrNull { connector ->
-            connector.name == type.type && connector.host == host && connector.port == port
-        } ?: getServerConnector(type, server, host, port).also {
-            server.addConnector(it)
-        }
+        try {
+            val connector = server.connectors.filterIsInstance(ServerConnector::class.java).firstOrNull { connector ->
+                connector.name == type.type && connector.host == host && connector.port == port
+            } ?: getServerConnector(type, server, host, port).also {
+                server.addConnector(it)
+            }
 
-        if (!connector.isRunning) {
-            connector.start()
+            if (!connector.isRunning) {
+                connector.start()
+            }
+        } catch (e: IOException) {
+            LOG.e(TAG, "Failed to add web server connection to type: $type, host: $host, port: $port", e)
         }
     }
 
