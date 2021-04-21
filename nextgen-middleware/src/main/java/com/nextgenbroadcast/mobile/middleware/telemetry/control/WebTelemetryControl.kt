@@ -16,8 +16,6 @@ class WebTelemetryControl(
 ) : ITelemetryControl {
 
     override suspend fun subscribe(commandFlow: MutableSharedFlow<TelemetryControl>) {
-        webServer.addConnection(CONNECTION_TYPE, CONNECTION_HOST, CONNECTION_PORT)
-
         callbackFlow {
             webServer.addHandler(CONNECTION_PATH) { req, resp ->
                 val cmdAction = if (req.pathInfo.length > 1) req.pathInfo.substring(1) else req.pathInfo
@@ -45,9 +43,6 @@ class WebTelemetryControl(
     }
 
     companion object {
-        private val CONNECTION_TYPE = ConnectionType.HTTP
-        private const val CONNECTION_HOST = "0.0.0.0"
-        private const val CONNECTION_PORT = 8080
         private const val CONNECTION_PATH = "command"
     }
 }
