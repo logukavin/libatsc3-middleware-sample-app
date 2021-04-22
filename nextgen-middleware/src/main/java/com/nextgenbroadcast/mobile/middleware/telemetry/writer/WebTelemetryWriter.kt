@@ -27,23 +27,26 @@ class WebTelemetryWriter(
 
     override fun open() {
         webServer.addHandler(CONNECTION_PATH) { req, resp ->
-            req.startAsync().addListener(object : AsyncListener {
-                override fun onComplete(event: AsyncEvent) {
-                    cancekJob(req)
-                }
+            req.startAsync().apply {
+                timeout = 0 // infinite timeout
+                addListener(object : AsyncListener {
+                    override fun onComplete(event: AsyncEvent) {
+                        cancelJob(req)
+                    }
 
-                override fun onTimeout(event: AsyncEvent) {
-                    cancekJob(req)
-                }
+                    override fun onTimeout(event: AsyncEvent) {
+                        cancelJob(req)
+                    }
 
-                override fun onError(event: AsyncEvent) {
-                    cancekJob(req)
-                }
+                    override fun onError(event: AsyncEvent) {
+                        cancelJob(req)
+                    }
 
-                override fun onStartAsync(event: AsyncEvent) {
-                    // ignore
-                }
-            })
+                    override fun onStartAsync(event: AsyncEvent) {
+                        // ignore
+                    }
+                })
+            }
 
             resp.writer.println("Event logging started...")
             resp.writer.flush()
@@ -59,7 +62,7 @@ class WebTelemetryWriter(
         }
     }
 
-    private fun cancekJob(req: HttpServletRequest) {
+    private fun cancelJob(req: HttpServletRequest) {
         jobs.remove(req)?.cancel()
     }
 

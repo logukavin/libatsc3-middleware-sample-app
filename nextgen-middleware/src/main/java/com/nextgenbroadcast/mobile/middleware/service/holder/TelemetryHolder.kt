@@ -223,7 +223,7 @@ internal class TelemetryHolder(
 
             ITelemetryControl.CONTROL_ACTION_TELEMETRY_ENABLE -> {
                 val telemetryNameList = arguments[ITelemetryControl.CONTROL_ARGUMENT_NAME]?.let { telemetryNameList ->
-                    telemetryNameList.split(" ").map { name ->
+                    telemetryNameList.split(ITelemetryControl.CONTROL_ARGUMENT_DELIMITER).map { name ->
                         SensorTelemetryReader.getFullSensorName(name) ?: name
                     }
                 }

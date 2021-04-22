@@ -18,7 +18,8 @@ interface ITelemetryControl {
         const val CONTROL_ACTION_VOLUME = "volume"
         const val CONTROL_ACTION_WIFI_INFO = "networkInfo"
 
-        const val CONTROL_ARGUMENT_DELIMITER = ";"
+        const val CONTROL_ARGUMENT_DELIMITER = ","
+
         const val CONTROL_ARGUMENT_FREQUENCY = "frequency"
         const val CONTROL_ARGUMENT_SERVICE_ID = "serviceId"
         const val CONTROL_ARGUMENT_SERVICE_BSID = "serviceBsid"
