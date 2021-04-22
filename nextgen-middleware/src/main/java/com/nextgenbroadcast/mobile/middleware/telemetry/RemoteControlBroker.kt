@@ -21,7 +21,7 @@ class RemoteControlBroker(
             extraBufferCapacity = 0,
             onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
-    private val controlJobs = ConcurrentHashMap<ITelemetryControl, Job>()
+    private val controlJobs = ConcurrentHashMap<Class<ITelemetryControl>, Job>()
 
     private var job: Job? = null
 
@@ -35,7 +35,7 @@ class RemoteControlBroker(
 
             commandFlow.collect { command ->
                 withContext(Dispatchers.Main) {
-                    onCommand(command.action, command.arguments)
+                    onCommand(command.action, command.arguments ?: emptyMap())
                 }
             }
         }
@@ -52,18 +52,22 @@ class RemoteControlBroker(
     }
 
     fun addControl(control: ITelemetryControl) {
-        if (controls.contains(control) || controlJobs.containsKey(control)) return
+        if (controls.contains(control) || controlJobs.containsKey(control.javaClass)) return
 
         controls.add(control)
         coroutineScope.launchControl(control)
     }
 
+    fun removeControl(clazz: Class<out ITelemetryControl>) {
+        controlJobs.remove(clazz)?.cancel()
+    }
+
     private fun CoroutineScope.launchControl(control: ITelemetryControl) {
-        controlJobs[control] = launch {
+        controlJobs[control.javaClass] = launch {
             control.subscribe(commandFlow)
         }.apply {
             invokeOnCompletion {
-                controlJobs.remove(control, this)
+                controlJobs.remove(control.javaClass, this)
             }
         }
     }

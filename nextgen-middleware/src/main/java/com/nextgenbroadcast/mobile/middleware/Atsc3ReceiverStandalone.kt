@@ -44,10 +44,9 @@ internal object Atsc3ReceiverStandalone {
         }
         val atsc3Module = Atsc3Module(appContext.cacheDir)
         val mediaFileProvider = MediaFileProvider(appContext)
-        val sslContext = UserAgentSSLContext.newInstance(appContext)
         val analytics = Atsc3Analytics.getInstance(appContext, settings)
 
-        return Atsc3ReceiverCore(atsc3Module, settings, repository, serviceGuideStore, mediaFileProvider, sslContext, analytics).apply {
+        return Atsc3ReceiverCore(atsc3Module, settings, repository, serviceGuideStore, mediaFileProvider, analytics).apply {
             MainScope().launch {
                 errorFlow.collect { message ->
                     Toast.makeText(appContext, message, Toast.LENGTH_SHORT).show()
