@@ -20,7 +20,7 @@ class WebTelemetryControl(
             webServer.addHandler(CONNECTION_PATH) { req, resp ->
                 val cmdAction = if (req.pathInfo.length > 1) req.pathInfo.substring(1) else req.pathInfo
                 val cmdArgs = req.parameterMap.mapValues { (_, value) ->
-                    value.joinToString(",")
+                    value.joinToString(ITelemetryControl.CONTROL_ARGUMENT_DELIMITER)
                 }
 
                 sendBlocking(TelemetryControl().apply {
