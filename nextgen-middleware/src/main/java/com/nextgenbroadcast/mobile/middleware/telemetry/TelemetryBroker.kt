@@ -27,7 +27,7 @@ class TelemetryBroker(
         event.payload.testCase = testCase
     }
     private val readerJobs = ConcurrentHashMap<ITelemetryReader, Job>()
-    private val writerJobs = ConcurrentHashMap<ITelemetryWriter, Job>()
+    private val writerJobs = ConcurrentHashMap<Class<ITelemetryWriter>, Job>()
 
     private var isStarted = false
 
@@ -93,12 +93,12 @@ class TelemetryBroker(
     }
 
     private fun CoroutineScope.launchWriter(writer: ITelemetryWriter) {
-        writerJobs.put(writer,
+        writerJobs.put(writer.javaClass,
                 launch {
                     writer.write(testEventFlow)
                 }.apply {
                     invokeOnCompletion {
-                        writerJobs.remove(writer, this)
+                        writerJobs.remove(writer.javaClass, this)
                     }
                 }
         )?.let {
@@ -134,13 +134,20 @@ class TelemetryBroker(
     }
 
     @MainThread
-    fun addWriter(writer: ITelemetryWriter) {
-        if (writers.contains(writer) || writerJobs.containsKey(writer)) return
+    fun addWriter(writer: ITelemetryWriter, forceStart: Boolean = false) {
+        if (writers.contains(writer) || writerJobs.containsKey(writer.javaClass)) return
 
         writers.add(writer)
+
         if (isStarted) {
             coroutineScope.launchWriter(writer)
+        } else if (forceStart) {
+            start()
         }
+    }
+
+    fun removeWriter(clazz: Class<out ITelemetryWriter>) {
+        writerJobs.remove(clazz)?.cancel()
     }
 
     @MainThread
@@ -194,13 +201,17 @@ class TelemetryBroker(
             _readersEnabled.value = map
             if (enabled && !isStarted) {
                 start()
-            } else if (!enabled && isStarted) {
+            }
+            /*
+            Don't stop because we could answer on command request
+
+            else if (!enabled && isStarted) {
                 // stop broker if all readers switched off
                 val dis = map.values.distinct()
                 if (dis.size == 1 && !dis.first()) {
                     stop()
                 }
-            }
+            }*/
         }
     }
 

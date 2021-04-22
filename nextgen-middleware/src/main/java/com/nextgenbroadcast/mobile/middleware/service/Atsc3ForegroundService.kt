@@ -1,17 +1,12 @@
 package com.nextgenbroadcast.mobile.middleware.service
 
-import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.hardware.Sensor
-import android.hardware.SensorManager
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
-import android.media.AudioManager
 import android.net.*
-import android.net.wifi.WifiManager
 import android.os.Bundle
 import android.os.IBinder
 import android.os.PowerManager
@@ -25,55 +20,31 @@ import android.util.Log
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.media.session.MediaButtonReceiver
-import com.google.firebase.installations.FirebaseInstallations
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.core.model.AVService
-import com.nextgenbroadcast.mobile.core.model.PhyFrequency
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.middleware.*
 import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverCore
 import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverStandalone
-import com.nextgenbroadcast.mobile.middleware.ServiceDialogActivity
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.UsbAtsc3Source
 import com.nextgenbroadcast.mobile.middleware.cache.DownloadManager
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
 import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
 import com.nextgenbroadcast.mobile.middleware.phy.Atsc3DeviceReceiver
+import com.nextgenbroadcast.mobile.middleware.service.holder.TelemetryHolder
+import com.nextgenbroadcast.mobile.middleware.service.holder.WebServerHolder
 import com.nextgenbroadcast.mobile.middleware.service.init.*
 import com.nextgenbroadcast.mobile.middleware.service.media.MediaSessionConstants
-import com.nextgenbroadcast.mobile.middleware.telemetry.ReceiverTelemetry
-import com.nextgenbroadcast.mobile.middleware.telemetry.RemoteControlBroker
-import com.nextgenbroadcast.mobile.middleware.telemetry.TelemetryBroker
-import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIotThing
-import com.nextgenbroadcast.mobile.middleware.telemetry.control.AWSIoTelemetryControl
-import com.nextgenbroadcast.mobile.middleware.telemetry.reader.BatteryTelemetryReader
-import com.nextgenbroadcast.mobile.middleware.telemetry.reader.GPSTelemetryReader
-import com.nextgenbroadcast.mobile.middleware.telemetry.reader.RfPhyTelemetryReader
-import com.nextgenbroadcast.mobile.middleware.telemetry.reader.SensorTelemetryReader
-import com.nextgenbroadcast.mobile.middleware.telemetry.task.WiFiInfoTelemetryTask
-import com.nextgenbroadcast.mobile.middleware.telemetry.writer.AWSIoTelemetryWriter
 import com.nextgenbroadcast.mobile.player.Atsc3MediaPlayer
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import java.lang.ref.WeakReference
-import kotlin.math.max
-import kotlin.math.min
-import kotlin.system.exitProcess
 
 
 abstract class Atsc3ForegroundService : BindableForegroundService() {
     private val usbManager: UsbManager by lazy {
         getSystemService(Context.USB_SERVICE) as UsbManager
-    }
-    private val sensorManager: SensorManager by lazy {
-        getSystemService(Context.SENSOR_SERVICE) as SensorManager
-    }
-    private val audioManager: AudioManager by lazy {
-        getSystemService(Context.AUDIO_SERVICE) as AudioManager
-    }
-    private val wifiManager: WifiManager by lazy {
-        getSystemService(WIFI_SERVICE) as WifiManager
     }
 
     //TODO: create own scope?
@@ -85,15 +56,9 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     private lateinit var state: StateFlow<Triple<ReceiverState?, AVService?, PlaybackState?>>
     private lateinit var playbackState: StateFlow<PlaybackState>
 
-    //TODO: move somewhere
-    private val _debugInfoSettings = MutableStateFlow(mapOf(
-            ReceiverTelemetry.INFO_DEBUG to true
-    ))
-
-    val debugInfoSettings = _debugInfoSettings.asStateFlow()
-
     // Receiver Core
     private lateinit var atsc3Receiver: Atsc3ReceiverCore
+    private lateinit var webServer: WebServerHolder
     private lateinit var wakeLock: WakeLock
 
     // Media Service
@@ -106,9 +71,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     private var destroyPresentationLayerJob: Job? = null
 
     // Telemetry
-    private var awsIoThing: AWSIotThing? = null
-    protected lateinit var telemetryBroker: TelemetryBroker
-    private lateinit var remoteControl: RemoteControlBroker
+    internal lateinit var telemetryHolder: TelemetryHolder
 
     // Initialization from Service metadata
     private val initializer = ArrayList<WeakReference<IServiceInitializer>>()
@@ -120,66 +83,23 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         createReceiverCore()
         createMediaSession()
 
-        createTelemetryBroker()
+        telemetryHolder = TelemetryHolder(applicationContext, atsc3Receiver).also {
+            it.start()
+        }
+
+        webServer = WebServerHolder(applicationContext, atsc3Receiver,
+                { server ->
+                    // used to rebuild data related to server
+                    atsc3Receiver.viewController?.onNewSessionStarted()
+
+                    telemetryHolder.notifyWebServerStarted(server)
+                },
+                {
+                    telemetryHolder.notifyWebServerStopped()
+                }
+        )
 
         startStateObservation()
-    }
-
-    private fun createTelemetryBroker() {
-        telemetryBroker = TelemetryBroker(
-                listOf(
-                        BatteryTelemetryReader(applicationContext),
-                        SensorTelemetryReader(sensorManager, Sensor.TYPE_LINEAR_ACCELERATION),
-                        SensorTelemetryReader(sensorManager, Sensor.TYPE_GYROSCOPE),
-                        SensorTelemetryReader(sensorManager, Sensor.TYPE_SIGNIFICANT_MOTION),
-                        SensorTelemetryReader(sensorManager, Sensor.TYPE_STEP_DETECTOR),
-                        SensorTelemetryReader(sensorManager, Sensor.TYPE_STEP_COUNTER),
-                        SensorTelemetryReader(sensorManager, Sensor.TYPE_ROTATION_VECTOR),
-                        GPSTelemetryReader(applicationContext),
-                        RfPhyTelemetryReader(atsc3Receiver.rfPhyMetricsFlow)
-                ),
-                listOf(
-                        //AWSIoTelemetryWriter(thing),
-                        //FileTelemetryWriter(cacheDir, "telemetry.log")
-                )
-        ).apply {
-            //start() do not start Telemetry with application, use switch in Settings dialog or AWS command
-        }
-
-        remoteControl = RemoteControlBroker(
-                listOf(
-                        //AWSIoTelemetryControl(thing),
-                        //WebTelemetryControl()
-                ),
-                ::executeCommand
-        ).apply {
-            start()
-        }
-
-        FirebaseInstallations.getInstance().id.addOnCompleteListener { task ->
-            if (task.isSuccessful) {
-                initializeAWSIoThing(task.result)
-            } else {
-                LOG.e(AWSIotThing.TAG, "Can't create Telemetry because Firebase ID not received.", task.exception)
-            }
-        }
-    }
-
-    private fun initializeAWSIoThing(serialNumber: String) {
-        val thing = AWSIotThing(serialNumber,
-                encryptedSharedPreferences(applicationContext, IoT_PREFERENCE),
-                assets
-        ).also {
-            awsIoThing = it
-        }
-
-        telemetryBroker.addWriter(
-                AWSIoTelemetryWriter(thing)
-        )
-
-        remoteControl.addControl(
-                AWSIoTelemetryControl(thing)
-        )
     }
 
     private fun createReceiverCore() {
@@ -328,12 +248,11 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         player.reset()
         destroyViewPresentation()
         mediaSession.release()
+        webServer.stop()
         atsc3Receiver.deInitialize()
         serviceScope.cancel()
 
-        telemetryBroker.close()
-        remoteControl.stop()
-        awsIoThing?.close()
+        telemetryHolder.stop()
     }
 
     internal abstract fun createServiceBinder(serviceController: IServiceController): IBinder
@@ -360,7 +279,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
             tryStopPlaybackOnBoard()
 
             cancelViewPresentationDestroying()
-            atsc3Receiver.resumeViewPresentation()
+            webServer.start()
         }
 
         super.onRebind(intent)
@@ -585,7 +504,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         if (wakeLock.isHeld) return
 
         val downloadManager = DownloadManager()
-        atsc3Receiver.createAndStartViewPresentation(downloadManager, ignoreAudioServiceMedia) { view, viewScope ->
+        atsc3Receiver.createViewPresentation(downloadManager, ignoreAudioServiceMedia) { view, viewScope ->
             viewScope.launch {
                 view.rmpState.onCompletion {
                     viewPlayerState.value = PlaybackState.IDLE
@@ -594,6 +513,8 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
                 }
             }
         }
+
+        webServer.start()
 
         //TODO: add lock limitation??
         wakeLock.acquire()
@@ -606,7 +527,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
         // Don't really destroy View Presentation because it could be pointed by Binder and re-binded
         //atsc3Receiver.stopAndDestroyViewPresentation()
-        atsc3Receiver.suspendViewPresentation()
+        webServer.stop()
     }
 
     private fun destroyViewPresentationDelayed() {
@@ -669,105 +590,6 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         }
     }
 
-    private fun executeCommand(action: String, arguments: Map<String, String>) {
-        LOG.d(TelemetryBroker.TAG, "AWS IoT command received: $action, args: $arguments")
-
-        when (action) {
-            AWSIotThing.AWSIOT_ACTION_TUNE -> {
-                arguments[AWSIotThing.AWSIOT_ARGUMENT_FREQUENCY]?.let { frequencyList ->
-                    val frequencies = frequencyList
-                            .split(AWSIotThing.AWSIOT_ARGUMENT_DELIMITER)
-                            .mapNotNull { it.toIntOrNull() }
-                    if (frequencies.isNotEmpty()) {
-                        atsc3Receiver.tune(PhyFrequency.user(frequencies))
-                    }
-                }
-            }
-
-            AWSIotThing.AWSIOT_ACTION_ACQUIRE_SERVICE -> {
-                val service = arguments[AWSIotThing.AWSIOT_ARGUMENT_SERVICE_ID]?.toIntOrNull()?.let { serviceId ->
-                    arguments[AWSIotThing.AWSIOT_ARGUMENT_SERVICE_BSID]?.toIntOrNull()?.let { bsid ->
-                        atsc3Receiver.findServiceBy(bsid, serviceId)
-                    } ?: let {
-                        atsc3Receiver.findActiveServiceById(serviceId)
-                    }
-                } ?: arguments[AWSIotThing.AWSIOT_ARGUMENT_SERVICE_NAME]?.let { serviceName ->
-                    atsc3Receiver.findServiceBy(serviceName)
-                }
-
-                if (service != null) {
-                    atsc3Receiver.selectService(service)
-                }
-            }
-
-            AWSIotThing.AWSIOT_ACTION_SET_TEST_CASE -> {
-                telemetryBroker.testCase = arguments[AWSIotThing.AWSIOT_ARGUMENT_CASE]?.ifBlank {
-                    null
-                }
-            }
-
-            AWSIotThing.AWSIOT_ACTION_RESTART_APP -> {
-                val delay = max(arguments[AWSIotThing.AWSIOT_ARGUMENT_START_DELAY]?.toLongOrNull()
-                        ?: 0, 100L)
-                val intent = Intent(ServiceDialogActivity.ACTION_WATCH_TV).apply {
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
-
-                val mgr = getSystemService(ALARM_SERVICE) as AlarmManager
-                mgr[AlarmManager.RTC, System.currentTimeMillis() + delay] = PendingIntent.getActivity(
-                        this, 0, intent, PendingIntent.FLAG_CANCEL_CURRENT)
-
-                exitProcess(0)
-            }
-
-            AWSIotThing.AWSIOT_ACTION_REBOOT_DEVICE -> {
-                try {
-                    // maybe arrayOf("/system/bin/su", "-c", "reboot now")
-                    Runtime.getRuntime().exec("shell execute reboot")
-                } catch (e: Exception) {
-                    LOG.d(TAG, "Can't reboot device", e)
-                }
-            }
-
-            AWSIotThing.AWSIOT_ACTION_TELEMETRY_ENABLE -> {
-                val telemetryNameList = arguments[AWSIotThing.AWSIOT_ARGUMENT_NAME]?.let { telemetryNameList ->
-                    telemetryNameList.split(" ").map { name ->
-                        SensorTelemetryReader.getFullSensorName(name) ?: name
-                    }
-                }
-
-                arguments[AWSIotThing.AWSIOT_ARGUMENT_ENABLE]?.let {
-                    val enabled = it.toBoolean()
-                    if (telemetryNameList != null) {
-                        telemetryBroker.setReaderEnabled(enabled, telemetryNameList)
-                    } else {
-                        telemetryBroker.setReadersEnabled(enabled)
-                    }
-                }
-            }
-
-            AWSIotThing.AWSIOT_ACTION_SHOW_DEBUG_INFO -> {
-                _debugInfoSettings.value = mutableMapOf<String, Boolean>().apply {
-                    arguments.forEach { (key, value) ->
-                        put(key, value.toBoolean())
-                    }
-                }
-            }
-
-            AWSIotThing.AWSIOT_ACTION_VOLUME -> {
-                arguments[AWSIotThing.AWSIOT_ARGUMENT_VALUE]?.toIntOrNull()?.let { inputVolume ->
-                    val volume = min(max(0, inputVolume), 100) / 100f
-                    val maxStreamVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
-                    audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, (maxStreamVolume * volume).toInt(), 0)
-                }
-            }
-
-            AWSIotThing.AWSIOT_ACTION_WIFI_INFO -> {
-                telemetryBroker.runTask(WiFiInfoTelemetryTask(wifiManager))
-            }
-        }
-    }
-
     inner class MediaSessionCallback : MediaSessionCompat.Callback() {
         override fun onPlay() {
             if (player.isInitialized) {
@@ -811,8 +633,6 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         val TAG: String = Atsc3ForegroundService::class.java.simpleName
 
         private const val PRESENTATION_DESTROYING_DELAY = 1000L
-
-        private const val IoT_PREFERENCE = "${BuildConfig.LIBRARY_PACKAGE_NAME}.awsiot"
 
         const val SERVICE_INTERFACE = "${BuildConfig.LIBRARY_PACKAGE_NAME}.INTERFACE"
 
