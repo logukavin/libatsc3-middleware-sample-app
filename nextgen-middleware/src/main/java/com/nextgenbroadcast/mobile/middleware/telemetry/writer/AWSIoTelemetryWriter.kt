@@ -2,13 +2,13 @@ package com.nextgenbroadcast.mobile.middleware.telemetry.writer
 
 import com.amazonaws.services.iot.client.core.AwsIotRuntimeException
 import com.nextgenbroadcast.mobile.core.LOG
-import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIotThing
+import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIoThing
 import com.nextgenbroadcast.mobile.middleware.telemetry.entity.TelemetryEvent
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
 
 internal class AWSIoTelemetryWriter(
-        private val thing: AWSIotThing
+        private val thing: AWSIoThing
 ) : ITelemetryWriter {
 
     override fun open() {
