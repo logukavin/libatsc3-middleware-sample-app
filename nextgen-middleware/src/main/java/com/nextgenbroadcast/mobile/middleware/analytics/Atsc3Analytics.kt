@@ -7,8 +7,8 @@ import android.util.Log
 import androidx.work.*
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
+import com.google.gson.annotations.SerializedName
 import com.nextgenbroadcast.mobile.core.DateUtils
-import com.nextgenbroadcast.mobile.middleware.analytics.model.AVService
 import com.nextgenbroadcast.mobile.middleware.analytics.model.AppInterval
 import com.nextgenbroadcast.mobile.middleware.analytics.model.BroadcastInterval
 import com.nextgenbroadcast.mobile.middleware.analytics.model.ReportInterval
@@ -418,4 +418,15 @@ class Atsc3Analytics private constructor(
             }
         }
     }
+}
+
+private class AVService(
+        val country: String,
+        val bsid: Int,
+        val serviceID: Int,
+        val globalServiceID: String?,
+        val serviceType: Int
+) {
+    @SerializedName("reportInterval")
+    val reportIntervals = mutableListOf<ReportInterval>()
 }
