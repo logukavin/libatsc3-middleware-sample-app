@@ -6,7 +6,6 @@ import android.os.Looper
 import com.google.android.gms.location.*
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.middleware.telemetry.ReceiverTelemetry
-import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIotThing
 import com.nextgenbroadcast.mobile.middleware.telemetry.entity.TelemetryEvent
 import com.nextgenbroadcast.mobile.middleware.telemetry.entity.TelemetryPayload
 import kotlinx.coroutines.cancel
@@ -62,7 +61,7 @@ class GPSTelemetryReader(
             }
         }.buffer(Channel.CONFLATED) // To avoid blocking
                 .collect { data ->
-                    eventFlow.emit(TelemetryEvent(AWSIotThing.AWSIOT_TOPIC_LOCATION, data))
+                    eventFlow.emit(TelemetryEvent(TelemetryEvent.EVENT_TOPIC_LOCATION, data))
                 }
     }
 
@@ -92,7 +91,7 @@ enum class LocationFrequencyType(
     }
 }
 
-data class LocationData(
+private data class LocationData(
         val provider: String,
         val lat: Double,
         val lng: Double
