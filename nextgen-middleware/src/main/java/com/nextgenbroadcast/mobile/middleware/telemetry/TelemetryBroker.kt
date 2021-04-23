@@ -50,14 +50,6 @@ class TelemetryBroker(
     private fun start() {
         if (isStarted) return
 
-        writers.forEach { writer ->
-            try {
-                writer.open()
-            } catch (e: Exception) {
-                LOG.e(TAG, "Can't Open writer: ${writer::class.java.simpleName}", e)
-            }
-        }
-
         try {
             val map = _readersEnabled.value
 
@@ -68,7 +60,9 @@ class TelemetryBroker(
             }
 
             writers.forEach { writer ->
-                coroutineScope.launchWriter(writer)
+                if (!writerJobs.containsKey(writer::class.java)) {
+                    coroutineScope.launchWriter(writer)
+                }
             }
         } catch (e: Exception) {
             LOG.d(TAG, "Telemetry gathering error: ", e)
@@ -93,16 +87,29 @@ class TelemetryBroker(
     }
 
     private fun CoroutineScope.launchWriter(writer: ITelemetryWriter) {
+        try {
+            writer.open()
+        } catch (e: Exception) {
+            LOG.e(TAG, "Failed to open writer: ${writer::class.java.simpleName}", e)
+            return
+        }
+
         writerJobs.put(writer.javaClass,
                 launch {
                     writer.write(testEventFlow)
                 }.apply {
                     invokeOnCompletion {
                         writerJobs.remove(writer.javaClass, this)
+
+                        try {
+                            writer.close()
+                        } catch (e: Exception) {
+                            LOG.e(TAG, "Failed to close writer: ${writer::class.java.simpleName}", e)
+                        }
                     }
                 }
         )?.let {
-            LOG.e(TAG, "Writes is duplicated: $writer")
+            LOG.e(TAG, "Writer is duplicated: $writer")
             it.cancel()
         }
     }
@@ -134,19 +141,15 @@ class TelemetryBroker(
     }
 
     @MainThread
-    fun addWriter(writer: ITelemetryWriter, forceStart: Boolean = false) {
+    fun addWriter(writer: ITelemetryWriter) {
         if (writers.contains(writer) || writerJobs.containsKey(writer.javaClass)) return
 
         writers.add(writer)
-
-        if (isStarted) {
-            coroutineScope.launchWriter(writer)
-        } else if (forceStart) {
-            start()
-        }
+        coroutineScope.launchWriter(writer)
     }
 
     fun removeWriter(clazz: Class<out ITelemetryWriter>) {
+        // writer will be closed automatically
         writerJobs.remove(clazz)?.cancel()
     }
 
