@@ -57,6 +57,7 @@ android {
         buildConfigField("String", "Auth0TokenUrl", "\"https://sinclairplatform.auth0.com/oauth/token\"")
         buildConfigField("String", "Auth0Audience", "\"https://api.prod.sinclairplatform.com\"")
         buildConfigField("String", "SinclairPlatformUrl", "\"https://prod-property-gateway.sinclairplatform.com\"")
+        buildConfigField("String", "AWSIoTCustomerUrl", "\"a2mpoqnjkscij4-ats.iot.us-east-1.amazonaws.com\"")
     }
 
     buildTypes {

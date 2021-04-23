@@ -6,7 +6,6 @@ import android.content.IntentFilter
 import android.os.BatteryManager
 import com.nextgenbroadcast.mobile.middleware.telemetry.ReceiverTelemetry
 import com.nextgenbroadcast.mobile.middleware.telemetry.entity.TelemetryEvent
-import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIotThing
 import com.nextgenbroadcast.mobile.middleware.telemetry.entity.TelemetryPayload
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -30,7 +29,7 @@ class BatteryTelemetryReader(
                     val batteryPct = level * 100 / scale.toFloat()
 
                     eventFlow.emit(TelemetryEvent(
-                            AWSIotThing.AWSIOT_TOPIC_BATTERY,
+                            TelemetryEvent.EVENT_TOPIC_BATTERY,
                             BatteryData(batteryPct)
                     ))
                 }
@@ -47,6 +46,6 @@ class BatteryTelemetryReader(
     }
 }
 
-data class BatteryData(
+private data class BatteryData(
         val level: Float
 ) : TelemetryPayload()

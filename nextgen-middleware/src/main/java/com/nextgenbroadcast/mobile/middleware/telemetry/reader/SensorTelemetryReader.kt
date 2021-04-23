@@ -6,7 +6,6 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.middleware.telemetry.ReceiverTelemetry
-import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIotThing
 import com.nextgenbroadcast.mobile.middleware.telemetry.entity.TelemetryEvent
 import com.nextgenbroadcast.mobile.middleware.telemetry.entity.TelemetryPayload
 import kotlinx.coroutines.channels.Channel
@@ -62,7 +61,7 @@ class SensorTelemetryReader(
         }.buffer(Channel.CONFLATED) // To avoid send blocking
                 .sample(delayMils) // To control emission frequency
                 .collect { data ->
-                    eventFlow.emit(TelemetryEvent(AWSIotThing.AWSIOT_TOPIC_SENSORS, data))
+                    eventFlow.emit(TelemetryEvent(TelemetryEvent.EVENT_TOPIC_SENSORS, data))
                 }
     }
 
@@ -106,7 +105,7 @@ enum class SensorFrequencyType(
     LOW(5000)
 }
 
-data class SensorData(
+private data class SensorData(
         val sensorName: String,
         val values: FloatArray,
         val accuracy: Int

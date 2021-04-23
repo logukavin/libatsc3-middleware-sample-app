@@ -1,7 +1,6 @@
 package com.nextgenbroadcast.mobile.middleware.telemetry.task
 
 import android.net.wifi.WifiManager
-import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIotThing
 import com.nextgenbroadcast.mobile.middleware.telemetry.entity.TelemetryEvent
 import com.nextgenbroadcast.mobile.middleware.telemetry.entity.TelemetryPayload
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -18,7 +17,7 @@ class WiFiInfoTelemetryTask(
         val ssid = connectionInfo.ssid.replace("\"", "", false)
 
         eventFlow.emit(TelemetryEvent(
-                AWSIotThing.AWSIOT_TOPIC_WIFI,
+                TelemetryEvent.EVENT_TOPIC_WIFI,
                 WiFiData(ssid, ipAddressStr, connectionInfo.toString())
         ))
     }
@@ -27,7 +26,7 @@ class WiFiInfoTelemetryTask(
             String.format("%d.%d.%d.%d", ipAddress and 0xff, ipAddress shr 8 and 0xff, ipAddress shr 16 and 0xff, ipAddress shr 24 and 0xff)
 }
 
-data class WiFiData(
+private data class WiFiData(
         val name: String,
         val ipv4: String,
         val commonInfo: String
