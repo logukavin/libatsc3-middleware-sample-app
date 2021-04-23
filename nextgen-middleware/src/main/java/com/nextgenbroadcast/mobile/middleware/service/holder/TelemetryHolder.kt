@@ -22,7 +22,7 @@ import com.nextgenbroadcast.mobile.middleware.service.Atsc3ForegroundService
 import com.nextgenbroadcast.mobile.middleware.telemetry.ReceiverTelemetry
 import com.nextgenbroadcast.mobile.middleware.telemetry.RemoteControlBroker
 import com.nextgenbroadcast.mobile.middleware.telemetry.TelemetryBroker
-import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIotThing
+import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIoThing
 import com.nextgenbroadcast.mobile.middleware.telemetry.control.AWSIoTelemetryControl
 import com.nextgenbroadcast.mobile.middleware.telemetry.control.ITelemetryControl
 import com.nextgenbroadcast.mobile.middleware.telemetry.control.WebTelemetryControl
@@ -58,7 +58,7 @@ internal class TelemetryHolder(
 
     private var telemetryBroker: TelemetryBroker? = null
     private var remoteControl: RemoteControlBroker? = null
-    private var awsIoThing: AWSIotThing? = null
+    private var awsIoThing: AWSIoThing? = null
 
     private val _debugInfoSettings = MutableStateFlow(mapOf(
             ReceiverTelemetry.INFO_DEBUG to true
@@ -105,7 +105,7 @@ internal class TelemetryHolder(
             if (task.isSuccessful) {
                 initializeAWSIoThing(task.result)
             } else {
-                LOG.e(AWSIotThing.TAG, "Can't create Telemetry because Firebase ID not received.", task.exception)
+                LOG.e(TAG, "Can't create Telemetry because Firebase ID not received.", task.exception)
             }
         }
     }
@@ -146,7 +146,7 @@ internal class TelemetryHolder(
     }
 
     private fun initializeAWSIoThing(serialNumber: String) {
-        val thing = AWSIotThing(serialNumber,
+        val thing = AWSIoThing(serialNumber,
                 encryptedSharedPreferences(context, IoT_PREFERENCE),
                 context.assets
         ).also {
@@ -265,6 +265,8 @@ internal class TelemetryHolder(
     }
 
     companion object {
+        val TAG: String = TelemetryHolder::class.java.simpleName
+
         private const val IoT_PREFERENCE = "${BuildConfig.LIBRARY_PACKAGE_NAME}.awsiot"
 
         private val CONNECTION_TYPE = ConnectionType.HTTP

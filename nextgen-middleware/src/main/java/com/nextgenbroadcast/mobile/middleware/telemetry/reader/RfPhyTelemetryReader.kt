@@ -1,7 +1,6 @@
 package com.nextgenbroadcast.mobile.middleware.telemetry.reader
 
 import com.nextgenbroadcast.mobile.middleware.telemetry.ReceiverTelemetry
-import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIotThing
 import com.nextgenbroadcast.mobile.middleware.telemetry.entity.TelemetryEvent
 import com.nextgenbroadcast.mobile.middleware.telemetry.entity.TelemetryPayload
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -19,7 +18,7 @@ class RfPhyTelemetryReader(
 
     override suspend fun read(eventFlow: MutableSharedFlow<TelemetryEvent>) {
         flow.collect { rfStatistic ->
-            eventFlow.emit(TelemetryEvent(AWSIotThing.AWSIOT_TOPIC_PHY, RfPhyData(
+            eventFlow.emit(TelemetryEvent(TelemetryEvent.EVENT_TOPIC_PHY, RfPhyData(
                     tuner_lock = rfStatistic.tuner_lock == 1,
                     demod_lock = rfStatistic.demod_lock == 1,
                     plp_lock_any = rfStatistic.demod_lock == 1,
@@ -43,7 +42,7 @@ class RfPhyTelemetryReader(
     }
 }
 
-data class RfPhyData(
+private data class RfPhyData(
         val tuner_lock: Boolean,
         val demod_lock: Boolean,
         val plp_lock_any: Boolean,
