@@ -70,7 +70,7 @@ internal class TelemetryHolder(
     val telemetryDelay: StateFlow<Map<String, Long>>
         get() = telemetryBroker?.readersDelay ?: MutableStateFlow(emptyMap())
 
-    fun start() {
+    fun open() {
         telemetryBroker = TelemetryBroker(
                 listOf(
                         BatteryTelemetryReader(context),
@@ -110,7 +110,7 @@ internal class TelemetryHolder(
         }
     }
 
-    fun stop() {
+    fun close() {
         telemetryBroker?.close()
         telemetryBroker = null
 
