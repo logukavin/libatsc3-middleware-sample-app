@@ -117,7 +117,7 @@ internal class TelemetryHolder(
         }
     }
 
-    fun stop() {
+    fun close() {
         telemetryBroker?.close()
         telemetryBroker = null
 
@@ -144,7 +144,7 @@ internal class TelemetryHolder(
         server.addConnection(CONNECTION_TYPE, CONNECTION_HOST, CONNECTION_PORT)
 
         remoteControl?.addControl(WebTelemetryControl(server))
-        telemetryBroker?.addWriter(WebTelemetryWriter(server), true)
+        telemetryBroker?.addWriter(WebTelemetryWriter(server))
     }
 
     fun notifyWebServerStopped() {
@@ -191,10 +191,9 @@ internal class TelemetryHolder(
                     } ?: let {
                         receiver.findActiveServiceById(serviceId)
                     }
+                } ?: arguments[ITelemetryControl.CONTROL_ARGUMENT_SERVICE_NAME]?.let { serviceName ->
+                    receiver.findServiceBy(serviceName)
                 }
-                        ?: arguments[ITelemetryControl.CONTROL_ARGUMENT_SERVICE_NAME]?.let { serviceName ->
-                            receiver.findServiceBy(serviceName)
-                        }
 
                 if (service != null) {
                     receiver.selectService(service)
