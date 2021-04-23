@@ -21,7 +21,7 @@ import java.security.cert.CertificateFactory
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
-internal class AWSIotThing(
+internal class AWSIoThing(
         private val serialNumber: String,
         private val preferences: SharedPreferences,
         private val assets: AssetManager
@@ -328,7 +328,7 @@ internal class AWSIotThing(
     }
 
     companion object {
-        val TAG: String = AWSIotThing::class.java.simpleName
+        val TAG: String = AWSIoThing::class.java.simpleName
 
         private const val PREF_CERTIFICATE_ID = "certificateId"
         private const val PREF_CERTIFICATE_PEM = "certificatePem"
