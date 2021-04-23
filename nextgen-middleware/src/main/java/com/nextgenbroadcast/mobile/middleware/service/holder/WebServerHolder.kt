@@ -18,7 +18,7 @@ internal class WebServerHolder(
 ) {
     private var webServer: MiddlewareWebServer? = null
 
-    fun start() {
+    fun open() {
         val (web, rpc, stateScope) = receiver.getWebInterface() ?: return
 
         val sslContext = UserAgentSSLContext.newInstance(context.applicationContext)
@@ -38,7 +38,7 @@ internal class WebServerHolder(
                 }
     }
 
-    fun stop() {
+    fun close() {
         webServer?.let { server ->
             if (server.isRunning()) {
                 GlobalScope.launch {
