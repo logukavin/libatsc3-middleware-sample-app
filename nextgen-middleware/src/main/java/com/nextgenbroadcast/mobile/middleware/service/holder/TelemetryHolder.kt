@@ -137,7 +137,7 @@ internal class TelemetryHolder(
         server.addConnection(CONNECTION_TYPE, CONNECTION_HOST, CONNECTION_PORT)
 
         remoteControl?.addControl(WebTelemetryControl(server))
-        telemetryBroker?.addWriter(WebTelemetryWriter(server), true)
+        telemetryBroker?.addWriter(WebTelemetryWriter(server))
     }
 
     fun notifyWebServerStopped() {
