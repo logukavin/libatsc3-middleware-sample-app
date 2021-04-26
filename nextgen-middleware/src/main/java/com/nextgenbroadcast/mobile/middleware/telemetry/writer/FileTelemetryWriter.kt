@@ -3,60 +3,67 @@ package com.nextgenbroadcast.mobile.middleware.telemetry.writer
 import com.google.gson.Gson
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.middleware.telemetry.entity.TelemetryEvent
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.onCompletion
 import java.io.File
 import java.io.IOException
 import java.io.RandomAccessFile
-import kotlin.text.StringBuilder
+import java.util.*
+import kotlin.concurrent.schedule
 
 class FileTelemetryWriter(
         private val dir: File,
-        private val fileName: String
+        private val fileName: String,
+        private val writeDuration: Long?
 ) : ITelemetryWriter {
     private val gson = Gson()
-    private val fileNameStringBuilder: StringBuilder by lazy {
-        StringBuilder(fileName)
-    }
-    private var randomAccessFile: RandomAccessFile? = null
+    private var file: RandomAccessFile? = null
+    private var timerTask: TimerTask? = null
 
     override fun open() {
-        if (randomAccessFile != null) throw IllegalStateException("File already opened")
+        if (file != null) throw IllegalStateException("File already opened")
 
-        randomAccessFile = RandomAccessFile(getUniqueFile(), "rw")
+        file = RandomAccessFile(getUniqueFile(), "rw")
     }
 
     private fun getUniqueFile(): File {
         var i = 1
-        var file = File(dir, fileName)
-        val dotIndex = fileName.lastIndexOf('.')
-        while (file.exists()) {
-            fileNameStringBuilder.clear()
-            if (dotIndex > 0) {
-                fileNameStringBuilder.insert(dotIndex, "($i)")
-            } else {
-                fileNameStringBuilder.append("($i)")
-            }
-            file = File(dir, fileNameStringBuilder.toString())
+        var uniqueFile = File(dir, fileName)
+        while (uniqueFile.exists()) {
+            uniqueFile = File(dir, "$fileName($i)")
             i++
         }
-        return file
+        return uniqueFile
     }
 
     override fun close() {
-        randomAccessFile?.close()
-        randomAccessFile = null
+        file?.close()
+        file = null
     }
 
     override suspend fun write(eventFlow: Flow<TelemetryEvent>) {
-        eventFlow.collect { event ->
-            try {
-                val line = gson.toJson(event) + "\n"
-                randomAccessFile?.write(line.toByteArray(Charsets.US_ASCII))
-            } catch (e: IOException) {
-                LOG.d(TAG, "Can't store telemetry topic: ${event.topic}", e)
+        supervisorScope {
+            if (writeDuration != null && writeDuration > 0) {
+                timerTask = Timer().schedule(writeDuration * 1000) {
+                    close()
+                    this@supervisorScope.cancel()
+                }
+            }
+
+            eventFlow.onCompletion {
+                timerTask?.cancel()
+            }.collect { event ->
+                try {
+                    val line = gson.toJson(event) + "\n"
+                    file?.write(line.toByteArray(Charsets.US_ASCII))
+                } catch (e: IOException) {
+                    LOG.d(TAG, "Can't store telemetry topic: ${event.topic}", e)
+                }
             }
         }
+
     }
 
     companion object {
