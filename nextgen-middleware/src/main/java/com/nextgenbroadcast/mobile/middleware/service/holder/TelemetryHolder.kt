@@ -8,7 +8,6 @@ import android.hardware.Sensor
 import android.hardware.SensorManager
 import android.media.AudioManager
 import android.net.wifi.WifiManager
-import android.util.Log
 import androidx.media.MediaBrowserServiceCompat
 import com.google.firebase.installations.FirebaseInstallations
 import com.nextgenbroadcast.mobile.core.LOG
@@ -38,11 +37,9 @@ import com.nextgenbroadcast.mobile.middleware.telemetry.task.WiFiInfoTelemetryTa
 import com.nextgenbroadcast.mobile.middleware.telemetry.writer.AWSIoTelemetryWriter
 import com.nextgenbroadcast.mobile.middleware.telemetry.writer.FileTelemetryWriter
 import com.nextgenbroadcast.mobile.middleware.telemetry.writer.WebTelemetryWriter
-import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import java.sql.Time
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.*
 import java.util.*
 import kotlin.concurrent.schedule
 import kotlin.math.max
@@ -196,8 +193,7 @@ internal class TelemetryHolder(
                     } ?: let {
                         receiver.findActiveServiceById(serviceId)
                     }
-                }
-                        ?: arguments[ITelemetryControl.CONTROL_ARGUMENT_SERVICE_NAME]?.let { serviceName ->
+                } ?: arguments[ITelemetryControl.CONTROL_ARGUMENT_SERVICE_NAME]?.let { serviceName ->
                             receiver.findServiceBy(serviceName)
                         }
 
