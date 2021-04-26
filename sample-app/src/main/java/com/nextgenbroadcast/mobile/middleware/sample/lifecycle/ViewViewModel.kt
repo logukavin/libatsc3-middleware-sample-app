@@ -17,8 +17,6 @@ class ViewViewModel : ViewModel() {
     val showPhyInfo = MutableLiveData(false)
 
     val debugData = MutableLiveData<String>()
-    val isAppDataUpdated:MutableLiveData<Boolean> = MutableLiveData(false)
- }
 
     // must be cleared on unBind
     val enableTelemetry = MutableLiveData(false)

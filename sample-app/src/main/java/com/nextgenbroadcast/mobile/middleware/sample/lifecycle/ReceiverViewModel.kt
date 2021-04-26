@@ -17,9 +17,9 @@ class ReceiverViewModel(
         private val agentPresenter: IUserAgentPresenter,
         private val playerPresenter: IMediaPlayerPresenter
 ) : AndroidViewModel(application) {
+    private var appData = MutableLiveData<AppData>()
     private val _appDataLog = MediatorLiveData<CharSequence>()
 
-    private var appData: MutableLiveData<AppData> = MutableLiveData()
     val appDataLog: LiveData<CharSequence> = _appDataLog
     val stateDescription = presenter.receiverState.asLiveData().map { receiverState ->
         when(receiverState.state) {
@@ -38,16 +38,16 @@ class ReceiverViewModel(
     }
 
     init {
-        _appDataLog.addSource(agentPresenter.appData.asLiveData()) { data ->
+        _appDataLog.addSource(/*agentPresenter.appData.asLiveData()*/appData) { data ->
             _appDataLog.value = formatLog(data, playerPresenter.rmpMediaUri.value?.toString())
         }
         _appDataLog.addSource(playerPresenter.rmpMediaUri.asLiveData()) { uri ->
-            _appDataLog.value = formatLog(agentPresenter.appData.value, uri?.toString())
+            _appDataLog.value = formatLog(/*agentPresenter.appData.value*/appData.value, uri?.toString())
         }
     }
 
     fun getFrequency(): Int {
-        return presenter.freqKhz.value ?: 0
+        return presenter.freqKhz.value
     }
 
     fun tune(freqKhz: Int) {
@@ -62,7 +62,7 @@ class ReceiverViewModel(
         return Html.fromHtml("> $contextId<br>> $entryPoint<br>> $cachePath<br>> $mediaUrl", Html.FROM_HTML_MODE_LEGACY)
     }
 
-    fun setAppData(appData: AppData) {
+    fun logAppData(appData: AppData?) {
         this.appData.postValue(appData)
     }
 }

@@ -1,14 +1,9 @@
 package com.nextgenbroadcast.mobile.middleware.sample
 
 import android.annotation.SuppressLint
-import android.content.ContentResolver
-import android.content.ContentValues
 import android.content.Context
-import android.database.ContentObserver
 import android.net.Uri
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.view.GestureDetector
 import android.view.LayoutInflater
 import android.view.View
@@ -30,12 +25,6 @@ import com.nextgenbroadcast.mobile.core.atsc3.phy.PHYStatistics
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.presentation.ApplicationState
-import com.nextgenbroadcast.mobile.middleware.provider.appData.ListConverter
-import com.nextgenbroadcast.mobile.middleware.provider.appData.ReceiverContentProvider
-import com.nextgenbroadcast.mobile.middleware.provider.appData.ReceiverContentProvider.Companion.APP_STATE_VALUE
-import com.nextgenbroadcast.mobile.middleware.provider.appData.ReceiverContentProvider.Companion.getAppDataUri
-import com.nextgenbroadcast.mobile.middleware.provider.appData.ReceiverContentProvider.Companion.getAppStateUri
-import com.nextgenbroadcast.mobile.middleware.sample.SettingsDialog.Companion.REQUEST_KEY_FREQUENCY
 import com.nextgenbroadcast.mobile.middleware.sample.core.SwipeGestureDetector
 import com.nextgenbroadcast.mobile.middleware.sample.core.mapWith
 import com.nextgenbroadcast.mobile.middleware.sample.databinding.FragmentMainBinding
@@ -44,6 +33,7 @@ import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.ReceiverViewModel
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.UserAgentViewModel
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.ViewViewModel
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.factory.UserAgentViewModelFactory
+import com.nextgenbroadcast.mobile.middleware.sample.resolver.ReceiverContentResolver
 import com.nextgenbroadcast.mobile.middleware.sample.useragent.ServiceAdapter
 import com.nextgenbroadcast.mobile.view.AboutDialog
 import com.nextgenbroadcast.mobile.view.TrackSelectionDialog
@@ -70,12 +60,9 @@ class MainFragment : Fragment() {
     private lateinit var serviceAdapter: ServiceAdapter
     private lateinit var sourceAdapter: ArrayAdapter<String>
     private lateinit var bottomSheetBehavior: BottomSheetBehavior<View>
+    private lateinit var receiverContentResolver: ReceiverContentResolver
 
     private var phyLoggingJob: Job? = null
-
-    private val listConverter = ListConverter()
-    private var appDataContentResolver: ContentResolver? = null
-    private var appContentObserver = AppDataContentObserver(Handler(Looper.getMainLooper()))
 
     private val getContent = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         val path = uri?.let { FileUtils.getPath(requireContext(), uri) }
@@ -98,6 +85,13 @@ class MainFragment : Fragment() {
             }
         }
         requireActivity().onBackPressedDispatcher.addCallback(this, callback)
+
+        receiverContentResolver = ReceiverContentResolver(context) { appData ->
+            switchApplication(appData)
+            receiverViewModel?.logAppData(appData)
+        }.apply {
+            register()
+        }
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
@@ -106,41 +100,7 @@ class MainFragment : Fragment() {
             viewModel = viewViewModel
         }
 
-        context?.applicationContext?.contentResolver?.registerContentObserver(
-                getAppDataUri(getString(R.string.receiverContentProvider)), false,
-                appContentObserver)
-
-        viewViewModel.isAppDataUpdated.observe(viewLifecycleOwner, {
-            getAppData()
-        })
-
-        appDataContentResolver = context?.applicationContext?.contentResolver
-
         return binding.root
-    }
-
-    private fun getAppData() {
-
-        val cpClient = context?.contentResolver?.acquireContentProviderClient(getAppDataUri(getString(R.string.receiverContentProvider)))
-        val appDataCursor = cpClient?.query(getAppDataUri(getString(R.string.receiverContentProvider)), null, null, null)
-        var appData: AppData?
-
-        appDataCursor?.let { _ ->
-            if (appDataCursor.moveToFirst()) {
-                val appContextID = appDataCursor.getColumnIndexOrThrow(ReceiverContentProvider.APP_CONTEXT_ID).let { appDataCursor.getString(it) }
-                val appEntryPage = appDataCursor.getColumnIndexOrThrow(ReceiverContentProvider.APP_ENTRY_PAGE).let { appDataCursor.getString(it) }
-                val appServiceIds = appDataCursor.getColumnIndexOrThrow(ReceiverContentProvider.COMPATIBLE_SERVICE_IDS).let { appDataCursor.getString(it) }
-                val appCachePath = appDataCursor.getColumnIndexOrThrow(ReceiverContentProvider.CACHE_PATH).let { appDataCursor.getString(it) }
-                appData = AppData(
-                        appContextID,
-                        appEntryPage,
-                        listConverter.fromString(appServiceIds),
-                        appCachePath
-                )
-                switchApplication(appData)
-            }
-        }
-        appDataCursor?.close()
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -165,11 +125,11 @@ class MainFragment : Fragment() {
         user_agent_web_view.setOnTouchListener { _, motionEvent -> swipeGD.onTouchEvent(motionEvent) }
         user_agent_web_view.setListener(object : UserAgentView.IListener {
             override fun onOpen() {
-                insertStateIntoContentProvider(getStateName(ApplicationState.OPENED))
+                receiverContentResolver.publishApplicationState(ApplicationState.OPENED)
             }
 
             override fun onClose() {
-                insertStateIntoContentProvider(getStateName(ApplicationState.LOADED))
+                receiverContentResolver.publishApplicationState(ApplicationState.LOADED)
             }
 
             override fun onLoadingError() {
@@ -218,7 +178,7 @@ class MainFragment : Fragment() {
             }
         }
 
-        setFragmentResultListener(REQUEST_KEY_FREQUENCY) { _, bundle ->
+        setFragmentResultListener(SettingsDialog.REQUEST_KEY_FREQUENCY) { _, bundle ->
             val freqKhz = bundle.getInt(SettingsDialog.PARAM_FREQUENCY, 0)
             receiverViewModel?.tune(freqKhz)
         }
@@ -303,7 +263,7 @@ class MainFragment : Fragment() {
                     getString(R.string.track_selection_title),
                     currentTrackSelection,
                     trackSelection
-            ) { _ -> isShowingTrackSelectionDialog = false }
+            ) { isShowingTrackSelectionDialog = false }
             trackSelectionDialog.show(parentFragmentManager, null)
         }
     }
@@ -340,7 +300,8 @@ class MainFragment : Fragment() {
 
         phyLoggingJob?.cancel()
         phyLoggingJob = null
-        context?.applicationContext?.contentResolver?.unregisterContentObserver(appContentObserver);
+
+        receiverContentResolver.unregister()
     }
 
     override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean) {
@@ -360,7 +321,7 @@ class MainFragment : Fragment() {
 
     fun onBind(factory: UserAgentViewModelFactory) {
         val provider = ViewModelProvider(viewModelStore, factory)
-        bindViewModels(provider).let { (rmp, userAgent) ->
+        bindViewModels(provider).let { (rmp, _) ->
             bindMediaPlayer(rmp)
         }
     }
@@ -469,7 +430,6 @@ class MainFragment : Fragment() {
             unloadBroadcasterApplication()
         }
         currentAppData = appData
-        currentAppData?.let { receiverViewModel?.setAppData(it) }
     }
 
     private fun isBAvailable() = currentAppData?.isAvailable() ?: false
@@ -486,24 +446,15 @@ class MainFragment : Fragment() {
 
     private fun loadBroadcasterApplication(appData: AppData) {
         if (user_agent_web_view.serverCertificateHash == null) {
-            user_agent_web_view.serverCertificateHash = userAgentViewModel?.getServerCertificateHash()
+            user_agent_web_view.serverCertificateHash = receiverContentResolver.queryServerCertificate()
         }
         user_agent_web_view.loadBAContent(appData.appEntryPage)
-        insertStateIntoContentProvider(getStateName(ApplicationState.LOADED))
-    }
-
-    private fun insertStateIntoContentProvider(state: String) {
-        val cv = ContentValues().also { it.put(APP_STATE_VALUE, state) }
-        appDataContentResolver?.insert(getAppStateUri(getString(R.string.receiverContentProvider)), cv)
+        receiverContentResolver.publishApplicationState(ApplicationState.LOADED)
     }
 
     private fun unloadBroadcasterApplication() {
         user_agent_web_view.unloadBAContent()
-        insertStateIntoContentProvider(getStateName(ApplicationState.UNAVAILABLE))
-    }
-
-    private fun getStateName(state: ApplicationState): String {
-        return state.name
+        receiverContentResolver.publishApplicationState(ApplicationState.UNAVAILABLE)
     }
 
     companion object {
@@ -511,13 +462,6 @@ class MainFragment : Fragment() {
 
         fun newInstance(): MainFragment {
             return MainFragment()
-        }
-    }
-
-    inner class AppDataContentObserver(handler: Handler) : ContentObserver(handler) {
-        override fun onChange(selfChange: Boolean, uri: Uri?) {
-            super.onChange(selfChange, uri)
-            getAppData()
         }
     }
 }

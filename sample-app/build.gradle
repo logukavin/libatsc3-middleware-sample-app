@@ -94,7 +94,7 @@ android {
             resValue "string", "nextgenMediaFileProvider", "com.nextgenbroadcast.mobile.middleware.provider.dash.tv"
             resValue("string", "nextgenMMTContentProvider", "com.nextgenbroadcast.mobile.middleware.provider.mmt.tv")
             resValue("string", "nextgenServicesGuideProvider", "com.nextgenbroadcast.mobile.middleware.provider.esg.tv")
-            resValue("string", "receiverContentProvider", "com.nextgenbroadcast.mobile.middleware.provider.appData")
+            resValue("string", "receiverContentProvider", "com.nextgenbroadcast.mobile.middleware.provider.content")
         }
 
         light {
