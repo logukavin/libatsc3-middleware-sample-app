@@ -37,11 +37,7 @@ import com.nextgenbroadcast.mobile.middleware.telemetry.task.WiFiInfoTelemetryTa
 import com.nextgenbroadcast.mobile.middleware.telemetry.writer.AWSIoTelemetryWriter
 import com.nextgenbroadcast.mobile.middleware.telemetry.writer.FileTelemetryWriter
 import com.nextgenbroadcast.mobile.middleware.telemetry.writer.WebTelemetryWriter
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.*
-import java.util.*
-import kotlin.concurrent.schedule
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.system.exitProcess
@@ -76,8 +72,6 @@ internal class TelemetryHolder(
         get() = telemetryBroker?.readersEnabled ?: MutableStateFlow(emptyMap())
     val telemetryDelay: StateFlow<Map<String, Long>>
         get() = telemetryBroker?.readersDelay ?: MutableStateFlow(emptyMap())
-    private var stopWritingJob: Job? = null
-    private var timerTask: TimerTask? = null
 
     fun open() {
         telemetryBroker = TelemetryBroker(
@@ -275,18 +269,9 @@ internal class TelemetryHolder(
                 val fileName = arguments[CONTROL_ARGUMENT_NAME]
                 val writeDuration = arguments[CONTROL_ARGUMENT_DURATION]?.toLongOrNull()
                 telemetryBroker?.removeWriter(FileTelemetryWriter::class.java)
-                timerTask?.cancel()
 
                 if (!fileName.isNullOrEmpty()) {
-                    telemetryBroker?.addWriter(FileTelemetryWriter(context.applicationContext.filesDir, fileName))
-                    stopWritingJob?.cancel("updated command")
-
-                    if (writeDuration != null && writeDuration > 0) {
-                        timerTask = Timer().schedule(writeDuration*1000) {
-                            telemetryBroker?.removeWriter(FileTelemetryWriter::class.java)
-                        }
-
-                    }
+                    telemetryBroker?.addWriter(FileTelemetryWriter(context.applicationContext.filesDir, fileName, writeDuration))
                 }
             }
         }
