@@ -25,8 +25,6 @@ import com.nextgenbroadcast.mobile.middleware.telemetry.TelemetryBroker
 import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIoThing
 import com.nextgenbroadcast.mobile.middleware.telemetry.control.AWSIoTelemetryControl
 import com.nextgenbroadcast.mobile.middleware.telemetry.control.ITelemetryControl
-import com.nextgenbroadcast.mobile.middleware.telemetry.control.ITelemetryControl.Companion.CONTROL_ARGUMENT_DURATION
-import com.nextgenbroadcast.mobile.middleware.telemetry.control.ITelemetryControl.Companion.CONTROL_ARGUMENT_NAME
 import com.nextgenbroadcast.mobile.middleware.telemetry.control.WebTelemetryControl
 import com.nextgenbroadcast.mobile.middleware.telemetry.reader.BatteryTelemetryReader
 import com.nextgenbroadcast.mobile.middleware.telemetry.reader.GPSTelemetryReader
@@ -266,12 +264,12 @@ internal class TelemetryHolder(
             }
 
             ITelemetryControl.CONTROL_ACTION_FILE_WRITER -> {
-                val fileName = arguments[CONTROL_ARGUMENT_NAME]
-                val writeDuration = arguments[CONTROL_ARGUMENT_DURATION]?.toLongOrNull()
+                val fileName = arguments[ITelemetryControl.CONTROL_ARGUMENT_NAME]
+                val writeDuration = arguments[ITelemetryControl.CONTROL_ARGUMENT_DURATION]?.toLongOrNull()
                 telemetryBroker?.removeWriter(FileTelemetryWriter::class.java)
 
                 if (!fileName.isNullOrEmpty()) {
-                    telemetryBroker?.addWriter(FileTelemetryWriter(context.applicationContext.filesDir, fileName, writeDuration))
+                    telemetryBroker?.addWriter(FileTelemetryWriter(context.filesDir, fileName, writeDuration))
                 }
             }
         }
