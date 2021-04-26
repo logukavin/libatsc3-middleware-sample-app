@@ -26,6 +26,7 @@ import com.nextgenbroadcast.mobile.middleware.telemetry.TelemetryBroker
 import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIoThing
 import com.nextgenbroadcast.mobile.middleware.telemetry.control.AWSIoTelemetryControl
 import com.nextgenbroadcast.mobile.middleware.telemetry.control.ITelemetryControl
+import com.nextgenbroadcast.mobile.middleware.telemetry.control.ITelemetryControl.Companion.CONTROL_ARGUMENT_DURATION
 import com.nextgenbroadcast.mobile.middleware.telemetry.control.ITelemetryControl.Companion.CONTROL_ARGUMENT_NAME
 import com.nextgenbroadcast.mobile.middleware.telemetry.control.WebTelemetryControl
 import com.nextgenbroadcast.mobile.middleware.telemetry.reader.BatteryTelemetryReader
@@ -38,7 +39,10 @@ import com.nextgenbroadcast.mobile.middleware.telemetry.writer.AWSIoTelemetryWri
 import com.nextgenbroadcast.mobile.middleware.telemetry.writer.FileTelemetryWriter
 import com.nextgenbroadcast.mobile.middleware.telemetry.writer.WebTelemetryWriter
 import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import java.sql.Time
 import java.util.*
 import kotlin.concurrent.schedule
 import kotlin.math.max
@@ -75,9 +79,10 @@ internal class TelemetryHolder(
         get() = telemetryBroker?.readersEnabled ?: MutableStateFlow(emptyMap())
     val telemetryDelay: StateFlow<Map<String, Long>>
         get() = telemetryBroker?.readersDelay ?: MutableStateFlow(emptyMap())
-    private var timer: Timer? = null
     private var stopWritingJob: Job? = null
-    fun start() {
+    private var timerTask: TimerTask? = null
+
+    fun open() {
         telemetryBroker = TelemetryBroker(
                 listOf(
                         BatteryTelemetryReader(context),
@@ -191,9 +196,10 @@ internal class TelemetryHolder(
                     } ?: let {
                         receiver.findActiveServiceById(serviceId)
                     }
-                } ?: arguments[ITelemetryControl.CONTROL_ARGUMENT_SERVICE_NAME]?.let { serviceName ->
-                    receiver.findServiceBy(serviceName)
                 }
+                        ?: arguments[ITelemetryControl.CONTROL_ARGUMENT_SERVICE_NAME]?.let { serviceName ->
+                            receiver.findServiceBy(serviceName)
+                        }
 
                 if (service != null) {
                     receiver.selectService(service)
@@ -271,34 +277,24 @@ internal class TelemetryHolder(
 
             ITelemetryControl.CONTROL_ACTION_FILE_WRITER -> {
                 val fileName = arguments[CONTROL_ARGUMENT_NAME]
+                val writeDuration = arguments[CONTROL_ARGUMENT_DURATION]?.toLongOrNull()
                 telemetryBroker?.removeWriter(FileTelemetryWriter::class.java)
-
+                timerTask?.cancel()
 
                 if (!fileName.isNullOrEmpty()) {
                     telemetryBroker?.addWriter(FileTelemetryWriter(context.applicationContext.filesDir, fileName))
                     stopWritingJob?.cancel("updated command")
-//                    timer?.cancel()
-//                    timer = Timer().also {
-//                        it.schedule(object : TimerTask() {
-//                            override fun run() {
-//                                telemetryBroker?.removeWriter(FileTelemetryWriter::class.java)
-//                                it.cancel()
-//                                Log.d(TAG, "-------------------------- timer, removeWriter")
-//                            }
-//                        }, 10000, 1)
-//                    }
-               stopWritingJob =  CoroutineScope(Dispatchers.Default).launch {
-                        delay(10000)
-                        telemetryBroker?.removeWriter(FileTelemetryWriter::class.java)
-                        Log.d(TAG, "-------------------------- timer, removeWriter")
+
+                    if (writeDuration != null && writeDuration > 0) {
+                        timerTask = Timer().schedule(writeDuration*1000) {
+                            telemetryBroker?.removeWriter(FileTelemetryWriter::class.java)
+                        }
+
                     }
-
                 }
-
-
             }
-
         }
+
     }
 
     companion object {

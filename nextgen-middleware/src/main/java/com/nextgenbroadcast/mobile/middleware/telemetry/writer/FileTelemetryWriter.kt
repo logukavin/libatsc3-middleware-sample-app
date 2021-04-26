@@ -8,32 +8,51 @@ import kotlinx.coroutines.flow.collect
 import java.io.File
 import java.io.IOException
 import java.io.RandomAccessFile
-import java.lang.IllegalStateException
+import kotlin.text.StringBuilder
 
 class FileTelemetryWriter(
-        private val cacheDir: File,
+        private val dir: File,
         private val fileName: String
 ) : ITelemetryWriter {
     private val gson = Gson()
-
-    private var file: RandomAccessFile? = null
+    private val fileNameStringBuilder: StringBuilder by lazy {
+        StringBuilder(fileName)
+    }
+    private var randomAccessFile: RandomAccessFile? = null
 
     override fun open() {
-        if (file != null) throw IllegalStateException("File already opened")
+        if (randomAccessFile != null) throw IllegalStateException("File already opened")
 
-        file = RandomAccessFile(File(cacheDir, fileName), "rw")
+        randomAccessFile = RandomAccessFile(getUniqueFile(), "rw")
+    }
+
+    private fun getUniqueFile(): File {
+        var i = 1
+        var file = File(dir, fileName)
+        val dotIndex = fileName.lastIndexOf('.')
+        while (file.exists()) {
+            fileNameStringBuilder.clear()
+            if (dotIndex > 0) {
+                fileNameStringBuilder.insert(dotIndex, "($i)")
+            } else {
+                fileNameStringBuilder.append("($i)")
+            }
+            file = File(dir, fileNameStringBuilder.toString())
+            i++
+        }
+        return file
     }
 
     override fun close() {
-        file?.close()
-        file = null
+        randomAccessFile?.close()
+        randomAccessFile = null
     }
 
     override suspend fun write(eventFlow: Flow<TelemetryEvent>) {
         eventFlow.collect { event ->
             try {
                 val line = gson.toJson(event) + "\n"
-                file?.write(line.toByteArray(Charsets.US_ASCII))
+                randomAccessFile?.write(line.toByteArray(Charsets.US_ASCII))
             } catch (e: IOException) {
                 LOG.d(TAG, "Can't store telemetry topic: ${event.topic}", e)
             }
