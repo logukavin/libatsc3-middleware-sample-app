@@ -30,5 +30,6 @@ interface ITelemetryControl {
         const val CONTROL_ARGUMENT_NAME = "name"
         const val CONTROL_ARGUMENT_ENABLE = "enable"
         const val CONTROL_ARGUMENT_VALUE = "value"
+        const val CONTROL_ARGUMENT_DURATION = "duration"
     }
 }
