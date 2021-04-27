@@ -33,6 +33,7 @@ import com.nextgenbroadcast.mobile.middleware.telemetry.reader.SensorTelemetryRe
 import com.nextgenbroadcast.mobile.middleware.telemetry.task.PongTelemetryTask
 import com.nextgenbroadcast.mobile.middleware.telemetry.task.WiFiInfoTelemetryTask
 import com.nextgenbroadcast.mobile.middleware.telemetry.writer.AWSIoTelemetryWriter
+import com.nextgenbroadcast.mobile.middleware.telemetry.writer.FileTelemetryWriter
 import com.nextgenbroadcast.mobile.middleware.telemetry.writer.WebTelemetryWriter
 import kotlinx.coroutines.flow.*
 import kotlin.math.max
@@ -185,8 +186,8 @@ internal class TelemetryHolder(
                         receiver.findActiveServiceById(serviceId)
                     }
                 } ?: arguments[ITelemetryControl.CONTROL_ARGUMENT_SERVICE_NAME]?.let { serviceName ->
-                    receiver.findServiceBy(serviceName)
-                }
+                            receiver.findServiceBy(serviceName)
+                        }
 
                 if (service != null) {
                     receiver.selectService(service)
@@ -261,7 +262,18 @@ internal class TelemetryHolder(
             ITelemetryControl.CONTROL_ACTION_PING -> {
                 telemetryBroker?.runTask(PongTelemetryTask())
             }
+
+            ITelemetryControl.CONTROL_ACTION_FILE_WRITER -> {
+                val fileName = arguments[ITelemetryControl.CONTROL_ARGUMENT_NAME]
+                val writeDuration = arguments[ITelemetryControl.CONTROL_ARGUMENT_DURATION]?.toIntOrNull()
+                telemetryBroker?.removeWriter(FileTelemetryWriter::class.java)
+
+                if (!fileName.isNullOrBlank()) {
+                    telemetryBroker?.addWriter(FileTelemetryWriter(context.filesDir, fileName, writeDuration ?: 0), false)
+                }
+            }
         }
+
     }
 
     companion object {

@@ -17,6 +17,7 @@ interface ITelemetryControl {
         const val CONTROL_ACTION_SHOW_DEBUG_INFO = "showDebugInfo"
         const val CONTROL_ACTION_VOLUME = "volume"
         const val CONTROL_ACTION_WIFI_INFO = "networkInfo"
+        const val CONTROL_ACTION_FILE_WRITER = "fileWriter"
 
         const val CONTROL_ARGUMENT_DELIMITER = ","
 
@@ -29,5 +30,6 @@ interface ITelemetryControl {
         const val CONTROL_ARGUMENT_NAME = "name"
         const val CONTROL_ARGUMENT_ENABLE = "enable"
         const val CONTROL_ARGUMENT_VALUE = "value"
+        const val CONTROL_ARGUMENT_DURATION = "duration"
     }
 }
