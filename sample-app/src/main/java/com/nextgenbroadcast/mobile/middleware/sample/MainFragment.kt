@@ -2,6 +2,7 @@ package com.nextgenbroadcast.mobile.middleware.sample
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.view.GestureDetector
@@ -24,6 +25,7 @@ import com.nextgenbroadcast.mobile.core.FileUtils
 import com.nextgenbroadcast.mobile.core.atsc3.phy.PHYStatistics
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.AppData
+import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.presentation.ApplicationState
 import com.nextgenbroadcast.mobile.middleware.sample.core.SwipeGestureDetector
 import com.nextgenbroadcast.mobile.middleware.sample.core.mapWith
@@ -44,7 +46,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-class MainFragment : Fragment() {
+class MainFragment : Fragment(), ReceiverContentResolver.Listener {
 
     private lateinit var binding: FragmentMainBinding
     private var rmpViewModel: RMPViewModel? = null
@@ -72,7 +74,7 @@ class MainFragment : Fragment() {
     override fun onAttach(context: Context) {
         super.onAttach(context)
 
-        val callback = object : OnBackPressedCallback(true) {
+        requireActivity().onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 if (user_agent_web_view.checkContentVisible()) {
                     user_agent_web_view.actionExit()
@@ -83,15 +85,9 @@ class MainFragment : Fragment() {
                     }
                 }
             }
-        }
-        requireActivity().onBackPressedDispatcher.addCallback(this, callback)
+        })
 
-        receiverContentResolver = ReceiverContentResolver(context) { appData ->
-            switchApplication(appData)
-            receiverViewModel?.logAppData(appData)
-        }.apply {
-            register()
-        }
+        receiverContentResolver = ReceiverContentResolver(context, this)
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
@@ -180,7 +176,7 @@ class MainFragment : Fragment() {
 
         setFragmentResultListener(SettingsDialog.REQUEST_KEY_FREQUENCY) { _, bundle ->
             val freqKhz = bundle.getInt(SettingsDialog.PARAM_FREQUENCY, 0)
-            receiverViewModel?.tune(freqKhz)
+            receiverContentResolver.tuneReceiver(freqKhz)
         }
 
         settings_button.setOnClickListener {
@@ -221,6 +217,49 @@ class MainFragment : Fragment() {
         }
     }
 
+    override fun onStart() {
+        super.onStart()
+
+        receiverContentResolver.register()
+
+        // reload BA to prevent desynchronization between BA and RMP playback state
+        user_agent_web_view.reload()
+    }
+
+    override fun onStop() {
+        super.onStop()
+
+        receiverContentResolver.unregister()
+
+        receiver_player.stop()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+
+        phyLoggingJob?.cancel()
+        phyLoggingJob = null
+    }
+
+    override fun onDataReceived(appData: AppData?) {
+        switchApplication(appData)
+        receiverViewModel?.appData?.value = appData
+    }
+
+    override fun onReceiverStateChanged(state: ReceiverState) {
+        receiverViewModel?.receiverState?.value = state
+
+        // exit PIP mode when Receiver is de-initialized
+        if (state.state == ReceiverState.State.IDLE) {
+            val activity = requireActivity()
+            if (activity.isInPictureInPictureMode) {
+                startActivity(Intent(activity, MainActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+                })
+            }
+        }
+    }
+
     private fun showPopupSettingsMenu(v: View) {
         PopupMenu(context, v).apply {
             inflate(R.menu.settings_menu)
@@ -230,7 +269,9 @@ class MainFragment : Fragment() {
             setOnMenuItemClickListener { item ->
                 when (item.itemId) {
                     R.id.menu_settings -> {
-                        openSettingsDialog(receiverViewModel?.getFrequency())
+                        openSettingsDialog(
+                                receiverContentResolver.queryReceiverFrequency()
+                        )
                         true
                     }
                     R.id.menu_select_tracks -> {
@@ -282,28 +323,6 @@ class MainFragment : Fragment() {
         }
     }
 
-    override fun onStart() {
-        super.onStart()
-
-        // reload BA to prevent desynchronization between BA and RMP playback state
-        user_agent_web_view.reload()
-    }
-
-    override fun onStop() {
-        super.onStop()
-
-        receiver_player.stop()
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-
-        phyLoggingJob?.cancel()
-        phyLoggingJob = null
-
-        receiverContentResolver.unregister()
-    }
-
     override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean) {
         val visibility = if (isInPictureInPictureMode) {
             user_agent_web_view.actionExit()
@@ -324,6 +343,10 @@ class MainFragment : Fragment() {
         bindViewModels(provider).let { (rmp, _) ->
             bindMediaPlayer(rmp)
         }
+
+        // temporary solution while we are migrating to ContentResolver
+        onDataReceived(receiverContentResolver.queryAppData())
+        onReceiverStateChanged(receiverContentResolver.queryReceiverState() ?: ReceiverState.idle())
     }
 
     fun onUnbind() {
@@ -337,6 +360,9 @@ class MainFragment : Fragment() {
 
         // Current view-models holds presenters from IBinder of service. Should be released
         viewModelStore.clear()
+
+        // important to reset it to allow BA reload
+        currentAppData = null
     }
 
     private fun selectService(service: AVService) {
