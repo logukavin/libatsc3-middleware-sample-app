@@ -17,8 +17,8 @@ class RemoteControlBroker(
 
     // it's MUST be non suspending because we use tryEmit in callback
     private val commandFlow = MutableSharedFlow<TelemetryControl>(
-            replay = 2,
-            extraBufferCapacity = 0,
+            replay = 0,
+            extraBufferCapacity = 2,
             onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
     private val controlJobs = ConcurrentHashMap<Class<ITelemetryControl>, Job>()
