@@ -272,6 +272,10 @@ internal class TelemetryHolder(
                     telemetryBroker?.addWriter(FileTelemetryWriter(context.filesDir, fileName, writeDuration ?: 0), false)
                 }
             }
+
+            ITelemetryControl.CONTROL_ACTION_RESET_RECEIVER_DEMODE ->{
+                /// todo should be implemented
+            }
         }
 
     }
