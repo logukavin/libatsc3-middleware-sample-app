@@ -25,7 +25,6 @@ import com.nextgenbroadcast.mobile.core.atsc3.phy.PHYStatistics
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.presentation.ApplicationState
-import com.nextgenbroadcast.mobile.middleware.sample.SettingsDialog.Companion.REQUEST_KEY_FREQUENCY
 import com.nextgenbroadcast.mobile.middleware.sample.core.SwipeGestureDetector
 import com.nextgenbroadcast.mobile.middleware.sample.core.mapWith
 import com.nextgenbroadcast.mobile.middleware.sample.databinding.FragmentMainBinding
@@ -34,6 +33,7 @@ import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.ReceiverViewModel
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.UserAgentViewModel
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.ViewViewModel
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.factory.UserAgentViewModelFactory
+import com.nextgenbroadcast.mobile.middleware.sample.resolver.ReceiverContentResolver
 import com.nextgenbroadcast.mobile.middleware.sample.useragent.ServiceAdapter
 import com.nextgenbroadcast.mobile.view.AboutDialog
 import com.nextgenbroadcast.mobile.view.TrackSelectionDialog
@@ -60,6 +60,7 @@ class MainFragment : Fragment() {
     private lateinit var serviceAdapter: ServiceAdapter
     private lateinit var sourceAdapter: ArrayAdapter<String>
     private lateinit var bottomSheetBehavior: BottomSheetBehavior<View>
+    private lateinit var receiverContentResolver: ReceiverContentResolver
 
     private var phyLoggingJob: Job? = null
 
@@ -84,6 +85,13 @@ class MainFragment : Fragment() {
             }
         }
         requireActivity().onBackPressedDispatcher.addCallback(this, callback)
+
+        receiverContentResolver = ReceiverContentResolver(context) { appData ->
+            switchApplication(appData)
+            receiverViewModel?.logAppData(appData)
+        }.apply {
+            register()
+        }
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
@@ -117,11 +125,11 @@ class MainFragment : Fragment() {
         user_agent_web_view.setOnTouchListener { _, motionEvent -> swipeGD.onTouchEvent(motionEvent) }
         user_agent_web_view.setListener(object : UserAgentView.IListener {
             override fun onOpen() {
-                userAgentViewModel?.setApplicationState(ApplicationState.OPENED)
+                receiverContentResolver.publishApplicationState(ApplicationState.OPENED)
             }
 
             override fun onClose() {
-                userAgentViewModel?.setApplicationState(ApplicationState.LOADED)
+                receiverContentResolver.publishApplicationState(ApplicationState.LOADED)
             }
 
             override fun onLoadingError() {
@@ -170,7 +178,7 @@ class MainFragment : Fragment() {
             }
         }
 
-        setFragmentResultListener(REQUEST_KEY_FREQUENCY) { _, bundle ->
+        setFragmentResultListener(SettingsDialog.REQUEST_KEY_FREQUENCY) { _, bundle ->
             val freqKhz = bundle.getInt(SettingsDialog.PARAM_FREQUENCY, 0)
             receiverViewModel?.tune(freqKhz)
         }
@@ -255,7 +263,7 @@ class MainFragment : Fragment() {
                     getString(R.string.track_selection_title),
                     currentTrackSelection,
                     trackSelection
-            ) { _ -> isShowingTrackSelectionDialog = false }
+            ) { isShowingTrackSelectionDialog = false }
             trackSelectionDialog.show(parentFragmentManager, null)
         }
     }
@@ -292,6 +300,8 @@ class MainFragment : Fragment() {
 
         phyLoggingJob?.cancel()
         phyLoggingJob = null
+
+        receiverContentResolver.unregister()
     }
 
     override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean) {
@@ -311,8 +321,7 @@ class MainFragment : Fragment() {
 
     fun onBind(factory: UserAgentViewModelFactory) {
         val provider = ViewModelProvider(viewModelStore, factory)
-        bindViewModels(provider).let { (rmp, userAgent) ->
-            bindUserAgent(userAgent)
+        bindViewModels(provider).let { (rmp, _) ->
             bindMediaPlayer(rmp)
         }
     }
@@ -369,12 +378,6 @@ class MainFragment : Fragment() {
         unloadBroadcasterApplication()
 
         Toast.makeText(requireContext(), getText(R.string.ba_loading_problem), Toast.LENGTH_SHORT).show()
-    }
-
-    private fun bindUserAgent(userAgentViewModel: UserAgentViewModel) {
-        userAgentViewModel.appData.observe(this, { appData ->
-            switchApplication(appData)
-        })
     }
 
     private fun bindMediaPlayer(rmpViewModel: RMPViewModel) {
@@ -443,15 +446,15 @@ class MainFragment : Fragment() {
 
     private fun loadBroadcasterApplication(appData: AppData) {
         if (user_agent_web_view.serverCertificateHash == null) {
-            user_agent_web_view.serverCertificateHash = userAgentViewModel?.getServerCertificateHash()
+            user_agent_web_view.serverCertificateHash = receiverContentResolver.queryServerCertificate()
         }
         user_agent_web_view.loadBAContent(appData.appEntryPage)
-        userAgentViewModel?.setApplicationState(ApplicationState.LOADED)
+        receiverContentResolver.publishApplicationState(ApplicationState.LOADED)
     }
 
     private fun unloadBroadcasterApplication() {
         user_agent_web_view.unloadBAContent()
-        userAgentViewModel?.setApplicationState(ApplicationState.UNAVAILABLE)
+        receiverContentResolver.publishApplicationState(ApplicationState.UNAVAILABLE)
     }
 
     companion object {
