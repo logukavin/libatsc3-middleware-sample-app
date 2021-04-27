@@ -53,6 +53,7 @@ android {
         resValue("string", "nextgenMediaFileProvider", "com.nextgenbroadcast.mobile.middleware.provider.dash")
         resValue("string", "nextgenMMTContentProvider", "com.nextgenbroadcast.mobile.middleware.provider.mmt")
         resValue("string", "nextgenServicesGuideProvider", "com.nextgenbroadcast.mobile.middleware.provider.esg")
+        resValue("string", "receiverContentProvider", "com.nextgenbroadcast.mobile.middleware.provider.content")
 
         buildConfigField("String", "Auth0TokenUrl", "\"https://sinclairplatform.auth0.com/oauth/token\"")
         buildConfigField("String", "Auth0Audience", "\"https://api.prod.sinclairplatform.com\"")

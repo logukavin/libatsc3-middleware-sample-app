@@ -3,12 +3,12 @@ package com.nextgenbroadcast.mobile.middleware.sample.lifecycle
 import android.app.Application
 import android.text.Html
 import androidx.lifecycle.*
-import com.nextgenbroadcast.mobile.core.presentation.IMediaPlayerPresenter
-import com.nextgenbroadcast.mobile.core.presentation.IUserAgentPresenter
 import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.model.PhyFrequency
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
+import com.nextgenbroadcast.mobile.core.presentation.IMediaPlayerPresenter
 import com.nextgenbroadcast.mobile.core.presentation.IReceiverPresenter
+import com.nextgenbroadcast.mobile.core.presentation.IUserAgentPresenter
 import com.nextgenbroadcast.mobile.middleware.sample.R
 
 class ReceiverViewModel(
@@ -17,6 +17,7 @@ class ReceiverViewModel(
         private val agentPresenter: IUserAgentPresenter,
         private val playerPresenter: IMediaPlayerPresenter
 ) : AndroidViewModel(application) {
+    private var appData = MutableLiveData<AppData>()
     private val _appDataLog = MediatorLiveData<CharSequence>()
 
     val appDataLog: LiveData<CharSequence> = _appDataLog
@@ -37,16 +38,16 @@ class ReceiverViewModel(
     }
 
     init {
-        _appDataLog.addSource(agentPresenter.appData.asLiveData()) { data ->
+        _appDataLog.addSource(/*agentPresenter.appData.asLiveData()*/appData) { data ->
             _appDataLog.value = formatLog(data, playerPresenter.rmpMediaUri.value?.toString())
         }
         _appDataLog.addSource(playerPresenter.rmpMediaUri.asLiveData()) { uri ->
-            _appDataLog.value = formatLog(agentPresenter.appData.value, uri?.toString())
+            _appDataLog.value = formatLog(/*agentPresenter.appData.value*/appData.value, uri?.toString())
         }
     }
 
     fun getFrequency(): Int {
-        return presenter.freqKhz.value ?: 0
+        return presenter.freqKhz.value
     }
 
     fun tune(freqKhz: Int) {
@@ -59,5 +60,9 @@ class ReceiverViewModel(
         val cachePath = data?.cachePath ?: "<b>NO Application available</b>"
         val mediaUrl = rpmMediaUri ?: "<b>NO Media Url</b>"
         return Html.fromHtml("> $contextId<br>> $entryPoint<br>> $cachePath<br>> $mediaUrl", Html.FROM_HTML_MODE_LEGACY)
+    }
+
+    fun logAppData(appData: AppData?) {
+        this.appData.postValue(appData)
     }
 }
