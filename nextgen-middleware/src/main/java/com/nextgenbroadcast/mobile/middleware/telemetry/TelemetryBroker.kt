@@ -19,8 +19,8 @@ class TelemetryBroker(
     private val coroutineScope = CoroutineScope(Dispatchers.IO)
     private val writers = mutableListOf(*_writers.toTypedArray())
     private val eventFlow = MutableSharedFlow<TelemetryEvent>(
-            replay = 30,
-            extraBufferCapacity = 0,
+            replay = 0,
+            extraBufferCapacity = 30,
             onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
     private val testEventFlow = eventFlow.onEach { event ->
@@ -141,10 +141,12 @@ class TelemetryBroker(
     }
 
     @MainThread
-    fun addWriter(writer: ITelemetryWriter) {
+    fun addWriter(writer: ITelemetryWriter, persist: Boolean = true) {
         if (writers.contains(writer) || writerJobs.containsKey(writer.javaClass)) return
 
-        writers.add(writer)
+        if (persist) {
+            writers.add(writer)
+        }
         coroutineScope.launchWriter(writer)
     }
 
