@@ -5,6 +5,7 @@ import android.database.Cursor
 import android.database.MatrixCursor
 import android.net.Uri
 import com.nextgenbroadcast.mobile.core.model.AppData
+import com.nextgenbroadcast.mobile.core.model.PhyFrequency
 import com.nextgenbroadcast.mobile.core.presentation.ApplicationState
 import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverCore
 import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverStandalone
@@ -43,10 +44,13 @@ class ReceiverContentProvider : ContentProvider() {
             addURI(authority, CONTENT_APP_DATA, QUERY_APP_DATA)
             addURI(authority, CONTENT_APP_STATE, QUERY_APP_STATE)
             addURI(authority, CONTENT_SERVER_CERTIFICATE, QUERY_CERTIFICATE)
+            addURI(authority, CONTENT_RECEIVER_STATE, QUERY_RECEIVER_STATE)
+            addURI(authority, CONTENT_RECEIVER_FREQUENCY, QUERY_RECEIVER_FREQUENCY)
         }
 
         val repository = receiver.repository
-        appData = combine(repository.heldPackage, repository.applications/*, sessionNum*/) { held, applications/*, sNum*/ ->
+
+        appData = combine(repository.heldPackage, repository.applications, receiver.sessionNum) { held, applications, _ ->
             held?.let {
                 val appContextId = held.appContextId ?: return@let null
                 val appUrl = held.bcastEntryPageUrl?.let { entryPageUrl ->
@@ -66,10 +70,19 @@ class ReceiverContentProvider : ContentProvider() {
             }
         }.stateIn(stateScope, SharingStarted.Eagerly, null)
 
-        val contentAppData = getUriForAppData(appContext)
+        val contentResolver = appContext.contentResolver
+
+        val appDataUri = getUriForPath(appContext, CONTENT_APP_DATA)
         stateScope.launch {
             appData.collect {
-                appContext.contentResolver.notifyChange(contentAppData, null)
+                contentResolver.notifyChange(appDataUri, null)
+            }
+        }
+
+        val receiverStateUri = getUriForPath(appContext, CONTENT_RECEIVER_STATE)
+        stateScope.launch {
+            receiver.serviceController.receiverState.collect {
+                contentResolver.notifyChange(receiverStateUri, null)
             }
         }
 
@@ -95,6 +108,22 @@ class ReceiverContentProvider : ContentProvider() {
                 }
             }
 
+            QUERY_RECEIVER_STATE -> {
+                val receiverState = receiver.serviceController.receiverState.value
+                MatrixCursor(arrayOf(RECEIVER_STATE_CODE, RECEIVER_STATE_INDEX, RECEIVER_STATE_COUNT)).apply {
+                    newRow().add(RECEIVER_STATE_CODE, receiverState.state.code)
+                            .add(RECEIVER_STATE_INDEX, receiverState.configIndex)
+                            .add(RECEIVER_STATE_COUNT, receiverState.configCount)
+                }
+            }
+
+            QUERY_RECEIVER_FREQUENCY -> {
+                val receiverFrequency = receiver.serviceController.receiverFrequency.value
+                MatrixCursor(arrayOf(RECEIVER_FREQUENCY)).apply {
+                    newRow().add(RECEIVER_FREQUENCY, receiverFrequency)
+                }
+            }
+
             else -> null
         }
     }
@@ -110,6 +139,13 @@ class ReceiverContentProvider : ContentProvider() {
                     receiver.viewController?.setApplicationState(ApplicationState.valueOf(stateStr))
                 }
             }
+
+            QUERY_RECEIVER_FREQUENCY -> {
+                value?.getAsInteger(RECEIVER_FREQUENCY)?.let { frequency ->
+                    receiver.serviceController.tune(PhyFrequency.user(listOf(frequency)))
+                }
+            }
+
             else -> throw IllegalArgumentException("Wrong URI: $uri")
         }
 
@@ -132,10 +168,14 @@ class ReceiverContentProvider : ContentProvider() {
         private const val QUERY_APP_DATA = 1
         private const val QUERY_APP_STATE = 2
         private const val QUERY_CERTIFICATE = 3
+        private const val QUERY_RECEIVER_STATE = 4
+        private const val QUERY_RECEIVER_FREQUENCY = 5
 
         const val CONTENT_APP_DATA = "appData"
         const val CONTENT_APP_STATE = "appState"
         const val CONTENT_SERVER_CERTIFICATE = "serverCertificate"
+        const val CONTENT_RECEIVER_STATE = "receiverState"
+        const val CONTENT_RECEIVER_FREQUENCY = "receiverFrequency"
 
         const val APP_CONTEXT_ID = "appContextId"
         const val APP_ENTRY_PAGE = "appEntryPage"
@@ -145,19 +185,12 @@ class ReceiverContentProvider : ContentProvider() {
 
         const val SERVER_CERTIFICATE = "certificate"
 
-        fun getUriForAppData(context: Context): Uri {
-            return getUriForPath(context, CONTENT_APP_DATA)
-        }
+        const val RECEIVER_STATE_CODE = "receiverStateValue"
+        const val RECEIVER_STATE_INDEX = "receiverStateIndex"
+        const val RECEIVER_STATE_COUNT = "receiverStateCount"
+        const val RECEIVER_FREQUENCY = "receiverFrequency"
 
-        fun getUriForAppState(context: Context): Uri {
-            return getUriForPath(context, CONTENT_APP_STATE)
-        }
-
-        fun getUriForCertificate(context: Context): Uri {
-            return getUriForPath(context, CONTENT_SERVER_CERTIFICATE)
-        }
-
-        private fun getUriForPath(context: Context, path: String): Uri {
+        fun getUriForPath(context: Context, path: String): Uri {
             return Uri.Builder().scheme(ContentResolver.SCHEME_CONTENT)
                     .authority(context.getString(R.string.receiverContentProvider))
                     .encodedPath(path).build()

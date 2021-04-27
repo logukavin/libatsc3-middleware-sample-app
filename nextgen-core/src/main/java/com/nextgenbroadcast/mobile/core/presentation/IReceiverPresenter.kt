@@ -4,6 +4,7 @@ import com.nextgenbroadcast.mobile.core.model.PhyFrequency
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import kotlinx.coroutines.flow.StateFlow
 
+@Deprecated("Use the ReceiverContentProvider instead")
 interface IReceiverPresenter {
     val receiverState: StateFlow<ReceiverState>
     val freqKhz: StateFlow<Int>
