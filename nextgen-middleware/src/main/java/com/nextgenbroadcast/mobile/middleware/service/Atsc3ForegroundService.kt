@@ -88,7 +88,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         webServer = WebServerHolder(applicationContext, atsc3Receiver,
                 { server ->
                     // used to rebuild data related to server
-                    atsc3Receiver.viewController?.onNewSessionStarted()
+                    atsc3Receiver.notifyNewSessionStarted()
 
                     telemetryHolder.notifyWebServerStarted(server)
                 },

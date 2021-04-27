@@ -26,9 +26,7 @@ import com.nextgenbroadcast.mobile.middleware.service.provider.IMediaFileProvide
 import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.BufferOverflow
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.*
 
 internal class Atsc3ReceiverCore(
         private val atsc3Module: Atsc3Module,
@@ -42,10 +40,12 @@ internal class Atsc3ReceiverCore(
     private val coreScope: CoroutineScope = CoroutineScope(Dispatchers.Default)
     private var viewScope: CoroutineScope? = null
 
-    private val _errorFlow = MutableSharedFlow<String>(10, 0, BufferOverflow.DROP_OLDEST)
+    private val _sessionNum = MutableStateFlow(0)
+    val sessionNum = _sessionNum.asStateFlow()
+
+    private val _errorFlow = MutableSharedFlow<String>(0, 10, BufferOverflow.DROP_OLDEST)
     val errorFlow = _errorFlow.asSharedFlow()
 
-    //TODO: we should close this instances
     private val serviceGuideReader = ServiceGuideDeliveryUnitReader(serviceGuideStore)
     val serviceController: IServiceController = ServiceControllerImpl(repository, settings, atsc3Module, analytics, serviceGuideReader, coreScope, ::onError)
     var viewController: IViewController? = null
@@ -176,5 +176,10 @@ internal class Atsc3ReceiverCore(
 
     fun playEmbedded(service: AVService): Boolean {
         return ignoreAudioServiceMedia && service.category == SLTConstants.SERVICE_CATEGORY_AO
+    }
+
+    fun notifyNewSessionStarted() {
+        _sessionNum.value++
+        viewController?.onNewSessionStarted()
     }
 }
