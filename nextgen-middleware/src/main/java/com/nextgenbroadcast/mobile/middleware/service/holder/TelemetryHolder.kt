@@ -185,7 +185,8 @@ internal class TelemetryHolder(
                     } ?: let {
                         receiver.findActiveServiceById(serviceId)
                     }
-                } ?: arguments[ITelemetryControl.CONTROL_ARGUMENT_SERVICE_NAME]?.let { serviceName ->
+                }
+                        ?: arguments[ITelemetryControl.CONTROL_ARGUMENT_SERVICE_NAME]?.let { serviceName ->
                             receiver.findServiceBy(serviceName)
                         }
 
@@ -273,8 +274,8 @@ internal class TelemetryHolder(
                 }
             }
 
-            ITelemetryControl.CONTROL_ACTION_RESET_RECEIVER_DEMODE ->{
-                /// todo should be implemented
+            ITelemetryControl.CONTROL_ACTION_RESET_RECEIVER_DEMODE -> {
+                /// TODO should be implemented
             }
         }
 
