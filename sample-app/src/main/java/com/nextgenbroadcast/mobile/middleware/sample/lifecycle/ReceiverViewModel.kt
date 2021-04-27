@@ -11,17 +11,20 @@ import com.nextgenbroadcast.mobile.core.presentation.IReceiverPresenter
 import com.nextgenbroadcast.mobile.core.presentation.IUserAgentPresenter
 import com.nextgenbroadcast.mobile.middleware.sample.R
 
+@Deprecated("Use the ReceiverContentResolver instead")
 class ReceiverViewModel(
         application: Application,
         private val presenter: IReceiverPresenter,
         private val agentPresenter: IUserAgentPresenter,
         private val playerPresenter: IMediaPlayerPresenter
 ) : AndroidViewModel(application) {
-    private var appData = MutableLiveData<AppData>()
     private val _appDataLog = MediatorLiveData<CharSequence>()
 
+    val appData = MutableLiveData<AppData>(null)
+    val receiverState = MutableLiveData(ReceiverState.idle())
+
     val appDataLog: LiveData<CharSequence> = _appDataLog
-    val stateDescription = presenter.receiverState.asLiveData().map { receiverState ->
+    val stateDescription = /*presenter.receiverState.asLiveData()*/receiverState.map { receiverState ->
         when(receiverState.state) {
             ReceiverState.State.IDLE -> {
                 application.getString(R.string.receiver_status_idle)
@@ -47,11 +50,12 @@ class ReceiverViewModel(
     }
 
     fun getFrequency(): Int {
-        return presenter.freqKhz.value
+//        return presenter.freqKhz.value
+        return 0
     }
 
     fun tune(freqKhz: Int) {
-        presenter.tune(PhyFrequency.user(listOf(freqKhz)))
+//        presenter.tune(PhyFrequency.user(listOf(freqKhz)))
     }
 
     private fun formatLog(data: AppData?, rpmMediaUri: String?): CharSequence {
@@ -60,9 +64,5 @@ class ReceiverViewModel(
         val cachePath = data?.cachePath ?: "<b>NO Application available</b>"
         val mediaUrl = rpmMediaUri ?: "<b>NO Media Url</b>"
         return Html.fromHtml("> $contextId<br>> $entryPoint<br>> $cachePath<br>> $mediaUrl", Html.FROM_HTML_MODE_LEGACY)
-    }
-
-    fun logAppData(appData: AppData?) {
-        this.appData.postValue(appData)
     }
 }

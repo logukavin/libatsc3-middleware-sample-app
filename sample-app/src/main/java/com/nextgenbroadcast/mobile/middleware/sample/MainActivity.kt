@@ -49,17 +49,6 @@ class MainActivity : BaseActivity() {
     private var controlerPresentationJob: Job? = null
 
     override fun onBind(binder: IServiceBinder) {
-        binder.receiverPresenter.receiverState.asLiveData().observe(this, { receiverState ->
-            val state = receiverState?.state
-            if (state == null || state == ReceiverState.State.IDLE) {
-                if (isInPictureInPictureMode) {
-                    startActivity(Intent(this, MainActivity::class.java).apply {
-                        flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-                    })
-                }
-            }
-        })
-
         val factory = UserAgentViewModelFactory(
                 application,
                 binder.userAgentPresenter,
