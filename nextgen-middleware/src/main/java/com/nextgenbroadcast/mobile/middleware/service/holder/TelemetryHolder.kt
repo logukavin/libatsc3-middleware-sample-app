@@ -265,11 +265,11 @@ internal class TelemetryHolder(
 
             ITelemetryControl.CONTROL_ACTION_FILE_WRITER -> {
                 val fileName = arguments[ITelemetryControl.CONTROL_ARGUMENT_NAME]
-                val writeDuration = arguments[ITelemetryControl.CONTROL_ARGUMENT_DURATION]?.toLongOrNull()
+                val writeDuration = arguments[ITelemetryControl.CONTROL_ARGUMENT_DURATION]?.toIntOrNull()
                 telemetryBroker?.removeWriter(FileTelemetryWriter::class.java)
 
-                if (!fileName.isNullOrEmpty()) {
-                    telemetryBroker?.addWriter(FileTelemetryWriter(context.filesDir, fileName, writeDuration))
+                if (!fileName.isNullOrBlank()) {
+                    telemetryBroker?.addWriter(FileTelemetryWriter(context.filesDir, fileName, writeDuration ?: 0), false)
                 }
             }
         }

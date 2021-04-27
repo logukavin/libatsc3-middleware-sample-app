@@ -16,9 +16,10 @@ import kotlin.concurrent.schedule
 class FileTelemetryWriter(
         private val dir: File,
         private val fileName: String,
-        private val writeDuration: Long?
+        private val lifetime: Int
 ) : ITelemetryWriter {
     private val gson = Gson()
+
     private var file: RandomAccessFile? = null
     private var timerTask: TimerTask? = null
 
@@ -30,9 +31,9 @@ class FileTelemetryWriter(
 
     private fun getUniqueFile(): File {
         var i = 1
-        var uniqueFile = File(dir, fileName)
+        var uniqueFile = File(dir, "$fileName.$FILE_EXT")
         while (uniqueFile.exists()) {
-            uniqueFile = File(dir, "$fileName($i)")
+            uniqueFile = File(dir, "$fileName($i).$FILE_EXT")
             i++
         }
         return uniqueFile
@@ -45,8 +46,8 @@ class FileTelemetryWriter(
 
     override suspend fun write(eventFlow: Flow<TelemetryEvent>) {
         supervisorScope {
-            if (writeDuration != null && writeDuration > 0) {
-                timerTask = Timer().schedule(writeDuration * 1000) {
+            if (lifetime > 0) {
+                timerTask = Timer().schedule(lifetime * 1000L) {
                     close()
                     this@supervisorScope.cancel()
                 }
@@ -68,5 +69,7 @@ class FileTelemetryWriter(
 
     companion object {
         val TAG: String = FileTelemetryWriter::class.java.simpleName
+
+        private const val FILE_EXT = "log"
     }
 }
