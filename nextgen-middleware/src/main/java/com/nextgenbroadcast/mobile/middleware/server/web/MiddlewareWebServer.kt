@@ -1,19 +1,21 @@
 package com.nextgenbroadcast.mobile.middleware.server.web
 
 import android.util.Log
-import com.nextgenbroadcast.mobile.core.cert.CertificateUtils
-import com.nextgenbroadcast.mobile.core.cert.IUserAgentSSLContext
+import com.nextgenbroadcast.mobile.core.LOG
+import com.nextgenbroadcast.mobile.middleware.server.cert.IUserAgentSSLContext
 import com.nextgenbroadcast.mobile.core.md5
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import com.nextgenbroadcast.mobile.middleware.gateway.rpc.IRPCGateway
 import com.nextgenbroadcast.mobile.middleware.gateway.web.ConnectionType
 import com.nextgenbroadcast.mobile.middleware.gateway.web.IWebGateway
 import com.nextgenbroadcast.mobile.middleware.server.ServerConstants.ATSC_CMD_PATH
+import com.nextgenbroadcast.mobile.middleware.server.cert.UserAgentSSLContext
 import com.nextgenbroadcast.mobile.middleware.server.ws.MiddlewareWebSocket
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collect
 import org.eclipse.jetty.http.HttpVersion
 import org.eclipse.jetty.server.*
+import org.eclipse.jetty.server.handler.ContextHandler
 import org.eclipse.jetty.server.handler.HandlerCollection
 import org.eclipse.jetty.server.handler.HandlerList
 import org.eclipse.jetty.servlet.DefaultServlet
@@ -30,15 +32,17 @@ import java.io.IOException
 import java.security.GeneralSecurityException
 import java.util.*
 import java.util.concurrent.Executors
+import javax.servlet.http.HttpServlet
+import javax.servlet.http.HttpServletRequest
+import javax.servlet.http.HttpServletResponse
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
-
 
 internal class MiddlewareWebServer constructor(
         private val server: Server,
         private val webGateway: IWebGateway?,
         private val stateScope: CoroutineScope?
-) : AutoCloseable {
+) : IMiddlewareWebServer, AutoCloseable {
 
     private val availResources = arrayListOf<AppResource>()
 
@@ -51,6 +55,58 @@ internal class MiddlewareWebServer constructor(
     }
 
     fun isRunning() = server.isRunning
+
+    override fun addConnection(type: ConnectionType, host: String, port: Int) {
+        try {
+            val connector = server.connectors.filterIsInstance(ServerConnector::class.java).firstOrNull { connector ->
+                connector.name == type.type && connector.host == host && connector.port == port
+            } ?: getServerConnector(type, server, host, port).also {
+                server.addConnector(it)
+            }
+
+            if (!connector.isRunning) {
+                connector.start()
+            }
+        } catch (e: IOException) {
+            LOG.e(TAG, "Failed to add web server connection to type: $type, host: $host, port: $port", e)
+        }
+    }
+
+    override fun addHandler(path: String, onGet: (req: HttpServletRequest, resp: HttpServletResponse) -> Unit): Boolean {
+        val handlerCollection = server.handler as? HandlerCollection ?: return false
+
+        val servlet = object : HttpServlet() {
+            override fun doGet(req: HttpServletRequest, resp: HttpServletResponse) {
+                onGet(req, resp)
+            }
+        }
+
+        val contextHandler = handlerCollection.handlers.filterIsInstance(ContextHandler::class.java).firstOrNull { handler ->
+            handler.contextPath == "/$path"
+        } ?: ServletContextHandler().apply {
+            contextPath = "/$path"
+            addServlet(ServletHolder(servlet), "/*")
+        }.also {
+            handlerCollection.addHandler(it)
+        }
+
+        if (!contextHandler.isRunning) {
+            contextHandler.start()
+        }
+
+        return true
+    }
+
+    override fun removeHandler(path: String) {
+        val handlerCollection = server.handler as? HandlerCollection ?: return
+
+        val contextHandler = handlerCollection.handlers.filterIsInstance(ContextHandler::class.java).firstOrNull { handler ->
+            handler.contextPath == "/$path"
+        } ?: return
+
+        contextHandler.stop()
+        handlerCollection.removeHandler(contextHandler)
+    }
 
     @Throws(MiddlewareWebServerError::class)
     suspend fun start(generatedSSLContext: IUserAgentSSLContext?) {
@@ -81,6 +137,21 @@ internal class MiddlewareWebServer constructor(
         val connectors = server.connectors.asList()
         withContext(Dispatchers.Main) {
             setSelectedPorts(connectors)
+        }
+    }
+
+    private fun setSelectedPorts(connectors: List<Connector>) {
+        webGateway?.let { gateway ->
+            connectors.forEach { connector ->
+                (connector as? ServerConnector?)?.also { serverConnector ->
+                    when (ConnectionType.valueOf(serverConnector.name)) {
+                        ConnectionType.HTTP -> gateway.httpPort = serverConnector.localPort
+                        ConnectionType.WS -> gateway.wsPort = serverConnector.localPort
+                        ConnectionType.HTTPS -> gateway.httpsPort = serverConnector.localPort
+                        ConnectionType.WSS -> gateway.wssPort = serverConnector.localPort
+                    }
+                }
+            }
         }
     }
 
@@ -194,21 +265,6 @@ internal class MiddlewareWebServer constructor(
         }
     }
 
-    private fun setSelectedPorts(connectors: List<Connector>) {
-        webGateway?.let { gateway ->
-            connectors.forEach { connector ->
-                (connector as? ServerConnector?)?.also { serverConnector ->
-                    when (ConnectionType.valueOf(serverConnector.name)) {
-                        ConnectionType.HTTP -> gateway.httpPort = serverConnector.localPort
-                        ConnectionType.WS -> gateway.wsPort = serverConnector.localPort
-                        ConnectionType.HTTPS -> gateway.httpsPort = serverConnector.localPort
-                        ConnectionType.WSS -> gateway.wssPort = serverConnector.localPort
-                    }
-                }
-            }
-        }
-    }
-
     companion object {
         val TAG: String = MiddlewareWebServer::class.java.simpleName
 
@@ -225,13 +281,13 @@ private fun createWebSocket(req: ServletUpgradeRequest, rpcGateway: IRPCGateway)
 
 @Throws(GeneralSecurityException::class, IOException::class)
 fun configureSSLFactory(generatedSSLContext: IUserAgentSSLContext): SslContextFactory {
+    val password = UUID.randomUUID().toString() // create password for one session
     // Configuring SSL
     return SslContextFactory.Server().apply {
-        keyStoreType = CertificateUtils.KEY_STORE_TYPE
-        //TODO: remove hardcoded password
-        sslContext = generatedSSLContext.getInitializedSSLContext("MY_PASSWORD")
-        setKeyStorePassword("MY_PASSWORD")
-        setKeyManagerPassword("MY_PASSWORD")
+        keyStoreType = UserAgentSSLContext.KEY_STORE_TYPE
+        sslContext = generatedSSLContext.getInitializedSSLContext(password)
+        setKeyStorePassword(password)
+        setKeyManagerPassword(password)
     }
 }
 

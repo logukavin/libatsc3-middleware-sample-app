@@ -3,14 +3,15 @@ package com.nextgenbroadcast.mobile.middleware.sample.lifecycle
 import android.app.Application
 import android.text.Html
 import androidx.lifecycle.*
-import com.nextgenbroadcast.mobile.core.presentation.IMediaPlayerPresenter
-import com.nextgenbroadcast.mobile.core.presentation.IUserAgentPresenter
 import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.model.PhyFrequency
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
+import com.nextgenbroadcast.mobile.core.presentation.IMediaPlayerPresenter
 import com.nextgenbroadcast.mobile.core.presentation.IReceiverPresenter
+import com.nextgenbroadcast.mobile.core.presentation.IUserAgentPresenter
 import com.nextgenbroadcast.mobile.middleware.sample.R
 
+@Deprecated("Use the ReceiverContentResolver instead")
 class ReceiverViewModel(
         application: Application,
         private val presenter: IReceiverPresenter,
@@ -19,8 +20,11 @@ class ReceiverViewModel(
 ) : AndroidViewModel(application) {
     private val _appDataLog = MediatorLiveData<CharSequence>()
 
+    val appData = MutableLiveData<AppData>(null)
+    val receiverState = MutableLiveData(ReceiverState.idle())
+
     val appDataLog: LiveData<CharSequence> = _appDataLog
-    val stateDescription = presenter.receiverState.asLiveData().map { receiverState ->
+    val stateDescription = /*presenter.receiverState.asLiveData()*/receiverState.map { receiverState ->
         when(receiverState.state) {
             ReceiverState.State.IDLE -> {
                 application.getString(R.string.receiver_status_idle)
@@ -37,20 +41,21 @@ class ReceiverViewModel(
     }
 
     init {
-        _appDataLog.addSource(agentPresenter.appData.asLiveData()) { data ->
+        _appDataLog.addSource(/*agentPresenter.appData.asLiveData()*/appData) { data ->
             _appDataLog.value = formatLog(data, playerPresenter.rmpMediaUri.value?.toString())
         }
         _appDataLog.addSource(playerPresenter.rmpMediaUri.asLiveData()) { uri ->
-            _appDataLog.value = formatLog(agentPresenter.appData.value, uri?.toString())
+            _appDataLog.value = formatLog(/*agentPresenter.appData.value*/appData.value, uri?.toString())
         }
     }
 
     fun getFrequency(): Int {
-        return presenter.freqKhz.value ?: 0
+//        return presenter.freqKhz.value
+        return 0
     }
 
     fun tune(freqKhz: Int) {
-        presenter.tune(PhyFrequency.user(listOf(freqKhz)))
+//        presenter.tune(PhyFrequency.user(listOf(freqKhz)))
     }
 
     private fun formatLog(data: AppData?, rpmMediaUri: String?): CharSequence {

@@ -10,8 +10,13 @@ data class ReceiverState(
         val configCount: Int
 ) : Parcelable {
 
-    enum class State {
-        IDLE, SCANNING, TUNING, CONNECTED
+    enum class State(
+            val code: Int
+    ) {
+        IDLE(0),
+        SCANNING(1),
+        TUNING(2),
+        CONNECTED(3)
     }
 
     companion object {

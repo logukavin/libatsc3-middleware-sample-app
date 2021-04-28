@@ -1,6 +1,6 @@
 package com.nextgenbroadcast.mobile.middleware.server
 
-import com.nextgenbroadcast.mobile.core.cert.UserAgentSSLContext
+import com.nextgenbroadcast.mobile.middleware.server.cert.UserAgentSSLContext
 import com.nextgenbroadcast.mobile.middleware.server.web.MiddlewareWebServer
 import com.nextgenbroadcast.mobile.middleware.server.web.MiddlewareWebServerError
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -98,7 +98,7 @@ class WebServerTests : ServerTest() {
 
     @Test
     fun makeHttpsCall() {
-        val sslContext = UserAgentSSLContext(mockApplicationContext).getInitializedSSLContext("MY_PASSWORD")
+        val sslContext = UserAgentSSLContext.newInstance(mockApplicationContext).getInitializedSSLContext("MY_PASSWORD")
         val client = OkHttpClient().newBuilder().sslSocketFactory(sslContext.socketFactory, getTrustManager()).build()
         val request: Request = Request.Builder().url("https://localhost:8443/index.html").build()
         val response = client.newCall(request).execute()
@@ -110,7 +110,7 @@ class WebServerTests : ServerTest() {
 
     @Test
     fun makeHttpsErrorCall() {
-        val sslContext = UserAgentSSLContext(mockApplicationContext).getInitializedSSLContext("MY_PASSWORD")
+        val sslContext = UserAgentSSLContext.newInstance(mockApplicationContext).getInitializedSSLContext("MY_PASSWORD")
         val client = OkHttpClient().newBuilder().sslSocketFactory(sslContext.socketFactory, getTrustManager()).build()
         val request: Request = Request.Builder().url("https://localhost:8443/index1.html").build()
         val response = client.newCall(request).execute()
