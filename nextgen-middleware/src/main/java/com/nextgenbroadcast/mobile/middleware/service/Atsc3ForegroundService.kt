@@ -1,110 +1,73 @@
 package com.nextgenbroadcast.mobile.middleware.service
 
-import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.hardware.Sensor
 import android.hardware.SensorManager
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
-import android.media.AudioManager
-import android.net.Uri
+import android.net.*
 import android.os.Bundle
 import android.os.IBinder
 import android.os.PowerManager
 import android.os.PowerManager.WakeLock
 import android.support.v4.media.MediaBrowserCompat
-import android.support.v4.media.MediaDescriptionCompat
-import android.support.v4.media.MediaMetadataCompat
-import android.support.v4.media.session.MediaSessionCompat
-import android.support.v4.media.session.PlaybackStateCompat
 import android.util.Log
 import android.widget.Toast
 import androidx.core.content.ContextCompat
-import androidx.media.session.MediaButtonReceiver
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
-import com.google.firebase.installations.FirebaseInstallations
-import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.core.model.AVService
-import com.nextgenbroadcast.mobile.core.model.PhyFrequency
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
+import com.nextgenbroadcast.mobile.middleware.*
 import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverCore
 import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverStandalone
-import com.nextgenbroadcast.mobile.middleware.BuildConfig
-import com.nextgenbroadcast.mobile.middleware.ServiceDialogActivity
-import com.nextgenbroadcast.mobile.middleware.atsc3.entities.SLTConstants
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.Atsc3Source
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.UsbAtsc3Source
 import com.nextgenbroadcast.mobile.middleware.cache.DownloadManager
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
 import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
 import com.nextgenbroadcast.mobile.middleware.phy.Atsc3DeviceReceiver
+import com.nextgenbroadcast.mobile.middleware.service.holder.MediaHolder
+import com.nextgenbroadcast.mobile.middleware.service.holder.TelemetryHolder
+import com.nextgenbroadcast.mobile.middleware.service.holder.WebServerHolder
 import com.nextgenbroadcast.mobile.middleware.service.init.*
-import com.nextgenbroadcast.mobile.middleware.service.media.MediaSessionConstants
-import com.nextgenbroadcast.mobile.middleware.telemetry.ReceiverTelemetry
-import com.nextgenbroadcast.mobile.middleware.telemetry.RemoteControlBroker
-import com.nextgenbroadcast.mobile.middleware.telemetry.TelemetryBroker
-import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIotThing
-import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIotThing.Companion.AWSIOT_ARGUMENT_VALUE
-import com.nextgenbroadcast.mobile.middleware.telemetry.control.AWSIoTelemetryControl
-import com.nextgenbroadcast.mobile.middleware.telemetry.reader.*
-import com.nextgenbroadcast.mobile.middleware.telemetry.writer.AWSIoTelemetryWriter
-import com.nextgenbroadcast.mobile.player.Atsc3MediaPlayer
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import java.lang.ref.WeakReference
-import kotlin.math.max
-import kotlin.math.min
-import kotlin.system.exitProcess
 
 
 abstract class Atsc3ForegroundService : BindableForegroundService() {
     private val usbManager: UsbManager by lazy {
         getSystemService(Context.USB_SERVICE) as UsbManager
     }
-    private val sensorManager: SensorManager by lazy {
-        getSystemService(Context.SENSOR_SERVICE) as SensorManager
-    }
-    private val audioManager: AudioManager by lazy {
-        getSystemService(Context.AUDIO_SERVICE) as AudioManager
+    private val powerManager: PowerManager by lazy {
+        getSystemService(Context.POWER_SERVICE) as PowerManager
     }
 
     //TODO: create own scope?
     private val serviceScope: CoroutineScope = CoroutineScope(Dispatchers.Default)
 
-    private val embeddedPlayerState = MutableStateFlow(PlaybackState.IDLE)
     private val viewPlayerState = MutableStateFlow(PlaybackState.IDLE)
 
     private lateinit var state: StateFlow<Triple<ReceiverState?, AVService?, PlaybackState?>>
     private lateinit var playbackState: StateFlow<PlaybackState>
 
-    //TODO: move somewhere
-    private val _debugInfoSettings = MutableStateFlow(mapOf(
-            ReceiverTelemetry.INFO_DEBUG to true
-    ))
-
-    val debugInfoSettings = _debugInfoSettings.asStateFlow()
-
     // Receiver Core
     private lateinit var atsc3Receiver: Atsc3ReceiverCore
+    private lateinit var webServer: WebServerHolder
     private lateinit var wakeLock: WakeLock
 
     // Media Service
-    private lateinit var mediaSession: MediaSessionCompat
-    private lateinit var stateBuilder: PlaybackStateCompat.Builder
-    private lateinit var player: Atsc3MediaPlayer
+    private lateinit var media: MediaHolder
 
     // View Presentation
     private var deviceReceiver: Atsc3DeviceReceiver? = null
     private var destroyPresentationLayerJob: Job? = null
 
     // Telemetry
-    private var awsIoThing: AWSIotThing? = null
-    protected lateinit var telemetryBroker: TelemetryBroker
-    private lateinit var remoteControl: RemoteControlBroker
+    internal lateinit var telemetryHolder: TelemetryHolder
 
     // Initialization from Service metadata
     private val initializer = ArrayList<WeakReference<IServiceInitializer>>()
@@ -113,109 +76,35 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     override fun onCreate() {
         super.onCreate()
 
-        createReceiverCore()
-        createMediaSession()
+        atsc3Receiver = Atsc3ReceiverStandalone.get(applicationContext)
+        wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Atsc3ForegroundService::lock")
 
-        createTelemetryBroker()
+        media = MediaHolder(applicationContext, atsc3Receiver).also {
+            it.open()
+            sessionToken = it.sessionToken
+        }
+
+        telemetryHolder = TelemetryHolder(applicationContext, atsc3Receiver).also {
+            it.open()
+        }
+
+        webServer = WebServerHolder(applicationContext, atsc3Receiver,
+                { server ->
+                    // used to rebuild data related to server
+                    atsc3Receiver.notifyNewSessionStarted()
+
+                    telemetryHolder.notifyWebServerStarted(server)
+                },
+                {
+                    telemetryHolder.notifyWebServerStopped()
+                }
+        )
 
         startStateObservation()
     }
 
-    private fun createTelemetryBroker() {
-        telemetryBroker = TelemetryBroker(
-                listOf(
-                        BatteryTelemetryReader(applicationContext),
-                        SensorTelemetryReader(sensorManager, Sensor.TYPE_LINEAR_ACCELERATION),
-                        SensorTelemetryReader(sensorManager, Sensor.TYPE_GYROSCOPE),
-                        SensorTelemetryReader(sensorManager, Sensor.TYPE_SIGNIFICANT_MOTION),
-                        SensorTelemetryReader(sensorManager, Sensor.TYPE_STEP_DETECTOR),
-                        SensorTelemetryReader(sensorManager, Sensor.TYPE_STEP_COUNTER),
-                        SensorTelemetryReader(sensorManager, Sensor.TYPE_ROTATION_VECTOR),
-                        GPSTelemetryReader(applicationContext),
-                        RfPhyTelemetryReader(atsc3Receiver.rfPhyMetricsFlow)
-                ),
-                listOf(
-                        //AWSIoTelemetryWriter(thing),
-                        //FileTelemetryWriter(cacheDir, "telemetry.log")
-                )
-        ).apply {
-            //start() do not start Telemetry with application, use switch in Settings dialog or AWS command
-        }
-
-        remoteControl = RemoteControlBroker(
-                listOf(
-                        //AWSIoTelemetryControl(thing),
-                        //WebTelemetryControl()
-                ),
-                ::executeCommand
-        ).apply {
-            start()
-        }
-
-        FirebaseInstallations.getInstance().id.addOnCompleteListener { task ->
-            if (task.isSuccessful) {
-                initializeAWSIoThing(task.result)
-            } else {
-                LOG.e(AWSIotThing.TAG, "Can't create Telemetry because Firebase ID not received.", task.exception)
-            }
-        }
-    }
-
-    private fun initializeAWSIoThing(serialNumber: String) {
-        val thing = AWSIotThing(serialNumber,
-                EncryptedSharedPreferences.create(
-                        applicationContext,
-                        IoT_PREFERENCE,
-                        MasterKey.Builder(applicationContext).setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build(),
-                        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-                ), assets
-        ).also {
-            awsIoThing = it
-        }
-
-        telemetryBroker.addWriter(
-                AWSIoTelemetryWriter(thing)
-        )
-
-        remoteControl.addControl(
-                AWSIoTelemetryControl(thing)
-        )
-    }
-
-    private fun createReceiverCore() {
-        atsc3Receiver = Atsc3ReceiverStandalone.get(applicationContext)
-        wakeLock = (getSystemService(POWER_SERVICE) as PowerManager).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Atsc3ForegroundService::lock")
-    }
-
-    private fun createMediaSession() {
-        stateBuilder = PlaybackStateCompat.Builder()
-        mediaSession = MediaSessionCompat(applicationContext, TAG).apply {
-            setPlaybackState(stateBuilder.build())
-            setCallback(MediaSessionCallback())
-        }.also { session ->
-            sessionToken = session.sessionToken
-        }
-
-        player = Atsc3MediaPlayer(applicationContext).apply {
-            setListener(object : Atsc3MediaPlayer.EventListener {
-                override fun onPlayerStateChanged(state: PlaybackState) {
-                    embeddedPlayerState.value = state
-                }
-
-                override fun onPlayerError(error: Exception) {
-                    Log.d(TAG, error.message ?: "")
-                }
-
-                override fun onPlaybackSpeedChanged(speed: Float) {
-                    atsc3Receiver.viewController?.rmpPlaybackRateChanged(speed)
-                }
-            })
-        }
-    }
-
     private fun startStateObservation() {
-        playbackState = combine(embeddedPlayerState, viewPlayerState) { firstState, secondState ->
+        playbackState = combine(media.embeddedPlayerState, viewPlayerState) { firstState, secondState ->
             if (firstState == PlaybackState.PLAYING || secondState == PlaybackState.PLAYING) {
                 PlaybackState.PLAYING
             } else if (firstState == PlaybackState.PAUSED || secondState == PlaybackState.PAUSED) {
@@ -228,11 +117,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         serviceScope.launch {
             playbackState.collect { state ->
                 withContext(Dispatchers.Main) {
-                    if (state == PlaybackState.PLAYING) {
-                        setPlaybackState(PlaybackStateCompat.STATE_PLAYING)
-                    } else {
-                        setPlaybackState(PlaybackStateCompat.STATE_PAUSED)
-                    }
+                    media.setPlaybackState(state)
                 }
             }
         }
@@ -245,7 +130,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
             state.collect { (receiverState, selectedService, playbackState) ->
                 withContext(Dispatchers.Main) {
                     if (isForeground) {
-                        pushNotification(createNotificationBuilder(receiverState, selectedService, playbackState, mediaSession))
+                        pushNotification(createNotificationBuilder(receiverState, selectedService, playbackState))
                     }
                 }
             }
@@ -253,30 +138,13 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
         serviceScope.launch {
             atsc3Receiver.serviceController.routeServices.collect { services ->
-                val queue = services.map { service ->
-                    MediaSessionCompat.QueueItem(
-                            MediaDescriptionCompat.Builder()
-                                    .setMediaId(service.globalId)
-                                    .setTitle(service.shortName)
-                                    .setExtras(service.toBundle())
-                                    .build(),
-                            service.uniqueId()
-                    )
-                }
-
                 withContext(Dispatchers.Main) {
-                    try {
-                        mediaSession.setQueue(queue)
-                    } catch (e: IllegalArgumentException) {
-                        LOG.e(TAG, "Can't set media queue", e)
-                    }
-                }
+                    media.setQueue(services)
 
-                // Automatically start playing the first service in list
-                if (playbackState.value == PlaybackState.IDLE) {
-                    services.firstOrNull()?.let { service ->
-                        withContext(Dispatchers.Main) {
-                            selectMediaService(service)
+                    // Automatically start playing the first service in list
+                    if (playbackState.value == PlaybackState.IDLE) {
+                        services.firstOrNull()?.let { service ->
+                            media.selectMediaService(service)
                         }
                     }
                 }
@@ -286,22 +154,15 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         serviceScope.launch {
             atsc3Receiver.serviceController.selectedService.collect { service ->
                 withContext(Dispatchers.Main) {
-                    mediaSession.setQueueTitle(service?.shortName)
+                    media.setQueueSelection(service)
                 }
             }
         }
 
         serviceScope.launch {
             atsc3Receiver.repository.routeMediaUrl.collect { mediaPath ->
-                val service = mediaPath?.let {
-                    atsc3Receiver.findServiceBy(mediaPath.bsid, mediaPath.serviceId)
-                }
-                if (!isBinded || (atsc3Receiver.ignoreAudioServiceMedia && service?.category == SLTConstants.SERVICE_CATEGORY_AO)) {
-                    mediaPath?.let {
-                        withContext(Dispatchers.Main) {
-                            player.play(atsc3Receiver.mediaFileProvider.getMediaFileUri(mediaPath.url))
-                        }
-                    }
+                withContext(Dispatchers.Main) {
+                    media.startPlaybackIfServicerAvailable(mediaPath)
                 }
             }
         }
@@ -309,13 +170,11 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         //TODO: This is temporary solution
         serviceScope.launch {
             atsc3Receiver.serviceController.alertList.collect { alerts ->
+                val messages = alerts.flatMap { it.messages ?: emptyList() }
+                if (messages.isEmpty()) return@collect
                 withContext(Dispatchers.Main) {
-                    alerts.forEach { alert ->
-                        alert.messages?.forEach { msg ->
-                            withContext(Dispatchers.Main) {
-                                Toast.makeText(applicationContext, msg, Toast.LENGTH_LONG).show()
-                            }
-                        }
+                    messages.forEach { msg ->
+                        Toast.makeText(applicationContext, msg, Toast.LENGTH_LONG).show()
                     }
                 }
             }
@@ -329,19 +188,21 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
             ref.get()?.cancel()
         }
 
-        player.reset()
         destroyViewPresentation()
-        mediaSession.release()
+
+        media.close()
+        webServer.close()
         atsc3Receiver.deInitialize()
         serviceScope.cancel()
-
-        telemetryBroker.close()
-        remoteControl.stop()
-        awsIoThing?.close()
+        telemetryHolder.close()
     }
+
+    internal abstract fun createServiceBinder(serviceController: IServiceController): IBinder
 
     override fun onBind(intent: Intent): IBinder? {
         if (intent.action == SERVICE_INTERFACE) {
+            media.stopPlaybackIfInitialized()
+
             val playAudioOnBoard = intent.getBooleanExtra(EXTRA_PLAY_AUDIO_ON_BOARD, true)
 
             cancelViewPresentationDestroying()
@@ -355,12 +216,12 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         return super.onBind(intent)
     }
 
-    internal abstract fun createServiceBinder(serviceController: IServiceController): IBinder
-
     override fun onRebind(intent: Intent) {
         if (intent.action == SERVICE_INTERFACE) {
+            media.stopPlaybackIfInitialized()
+
             cancelViewPresentationDestroying()
-            atsc3Receiver.resumeViewPresentation()
+            webServer.open()
         }
 
         super.onRebind(intent)
@@ -384,7 +245,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
 
-        MediaButtonReceiver.handleIntent(mediaSession, intent)
+        media.handleIntent(intent)
 
         if (intent != null) {
             when (intent.action) {
@@ -424,29 +285,22 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
     override fun onGetRoot(clientPackageName: String, clientUid: Int, rootHints: Bundle?): BrowserRoot? {
         return if (clientPackageName == packageName) {
-            BrowserRoot(MEDIA_ROOT_ID, null)
+            MediaHolder.getRoot()
         } else {
             null
         }
     }
 
-    override fun onLoadChildren(parentId: String, result: Result<MutableList<MediaBrowserCompat.MediaItem>>) {
-        val mediaItems = mutableListOf<MediaBrowserCompat.MediaItem>()
+    override fun onLoadChildren(parentId: String, result: Result<List<MediaBrowserCompat.MediaItem>>) {
+        if (MediaHolder.isRoot(parentId)) {
+            result.sendResult(sourceList.map { (title, path, id) ->
+                MediaHolder.getItem(title, path, id)
+            })
 
-        if (parentId == MEDIA_ROOT_ID) {
-            sourceList.forEach { (title, path, id) ->
-                mediaItems.add(MediaBrowserCompat.MediaItem(
-                        MediaDescriptionCompat.Builder()
-                                .setMediaId(id)
-                                .setTitle(title)
-                                .setMediaUri(Uri.parse(path))
-                                .build(),
-                        MediaBrowserCompat.MediaItem.FLAG_BROWSABLE
-                ))
-            }
+            return
         }
 
-        result.sendResult(mediaItems)
+        result.sendResult(emptyList())
     }
 
     private fun maybeInitialize() {
@@ -580,7 +434,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         if (wakeLock.isHeld) return
 
         val downloadManager = DownloadManager()
-        atsc3Receiver.createAndStartViewPresentation(downloadManager, ignoreAudioServiceMedia) { view, viewScope ->
+        atsc3Receiver.createViewPresentation(downloadManager, ignoreAudioServiceMedia) { view, viewScope ->
             viewScope.launch {
                 view.rmpState.onCompletion {
                     viewPlayerState.value = PlaybackState.IDLE
@@ -589,6 +443,8 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
                 }
             }
         }
+
+        webServer.open()
 
         //TODO: add lock limitation??
         wakeLock.acquire()
@@ -601,7 +457,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
         // Don't really destroy View Presentation because it could be pointed by Binder and re-binded
         //atsc3Receiver.stopAndDestroyViewPresentation()
-        atsc3Receiver.suspendViewPresentation()
+        webServer.close()
     }
 
     private fun destroyViewPresentationDelayed() {
@@ -628,185 +484,12 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         return atsc3Receiver.viewController ?: throw InitializationException()
     }
 
-    private fun setPlaybackState(@PlaybackStateCompat.State state: Int) {
-        val playbackState = if (state == PlaybackStateCompat.STATE_PLAYING) {
-            PlaybackStateCompat.ACTION_PAUSE
-        } else {
-            PlaybackStateCompat.ACTION_PLAY
-        }
-        stateBuilder
-                .setActions(
-                        PlaybackStateCompat.ACTION_SKIP_TO_NEXT
-                                or PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS
-                                or PlaybackStateCompat.ACTION_PLAY_PAUSE
-                                or playbackState
-                )
-                .setState(state, PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN, 0f)
-                .setExtras(
-                        Bundle().apply {
-                            putBoolean(MediaSessionConstants.MEDIA_PLAYBACK_EXTRA_EMBEDDED, embeddedPlayerState.value != PlaybackState.IDLE)
-                        }
-                )
-        mediaSession.setPlaybackState(stateBuilder.build())
-    }
-
-    private fun selectMediaService(service: AVService) {
-        val result = atsc3Receiver.serviceController.selectService(service)
-        if (result) {
-            player.reset()
-
-            mediaSession.setMetadata(MediaMetadataCompat.Builder()
-                    .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, service.globalId)
-                    .putString(MediaMetadataCompat.METADATA_KEY_TITLE, service.shortName)
-                    .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, "${service.majorChannelNo}-${service.minorChannelNo}")
-                    .build())
-
-            //TODO: we must deactivate it
-            mediaSession.isActive = true
-        }
-    }
-
-    private fun executeCommand(action: String, arguments: Map<String, String>) {
-        LOG.d(TelemetryBroker.TAG, "AWS IoT command received: $action, args: $arguments")
-
-        when (action) {
-            AWSIotThing.AWSIOT_ACTION_TUNE -> {
-                arguments[AWSIotThing.AWSIOT_ARGUMENT_FREQUENCY]?.let { frequencyList ->
-                    val frequencies = frequencyList
-                            .split(AWSIotThing.AWSIOT_ARGUMENT_DELIMITER)
-                            .mapNotNull { it.toIntOrNull() }
-                    if (frequencies.isNotEmpty()) {
-                        atsc3Receiver.tune(PhyFrequency.user(frequencies))
-                    }
-                }
-            }
-
-            AWSIotThing.AWSIOT_ACTION_ACQUIRE_SERVICE -> {
-                val service = arguments[AWSIotThing.AWSIOT_ARGUMENT_SERVICE_ID]?.toIntOrNull()?.let { serviceId ->
-                    arguments[AWSIotThing.AWSIOT_ARGUMENT_SERVICE_BSID]?.toIntOrNull()?.let { bsid ->
-                        atsc3Receiver.findServiceBy(bsid, serviceId)
-                    } ?: let {
-                        atsc3Receiver.findActiveServiceById(serviceId)
-                    }
-                } ?: arguments[AWSIotThing.AWSIOT_ARGUMENT_SERVICE_NAME]?.let { serviceName ->
-                    atsc3Receiver.findServiceBy(serviceName)
-                }
-
-                if (service != null) {
-                    atsc3Receiver.selectService(service)
-                }
-            }
-
-            AWSIotThing.AWSIOT_ACTION_SET_TEST_CASE -> {
-                telemetryBroker.testCase = arguments[AWSIotThing.AWSIOT_ARGUMENT_CASE]?.ifBlank {
-                    null
-                }
-            }
-
-            AWSIotThing.AWSIOT_ACTION_RESTART_APP -> {
-                val delay = max(arguments[AWSIotThing.AWSIOT_ARGUMENT_START_DELAY]?.toLongOrNull()
-                        ?: 0, 100L)
-                val intent = Intent(ServiceDialogActivity.ACTION_WATCH_TV).apply {
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
-
-                val mgr = getSystemService(ALARM_SERVICE) as AlarmManager
-                mgr[AlarmManager.RTC, System.currentTimeMillis() + delay] = PendingIntent.getActivity(
-                        this, 0, intent, PendingIntent.FLAG_CANCEL_CURRENT)
-
-                exitProcess(0)
-            }
-
-            AWSIotThing.AWSIOT_ACTION_REBOOT_DEVICE -> {
-                try {
-                    // maybe arrayOf("/system/bin/su", "-c", "reboot now")
-                    Runtime.getRuntime().exec("shell execute reboot")
-                } catch (e: Exception) {
-                    LOG.d(TAG, "Can't reboot device", e)
-                }
-            }
-
-            AWSIotThing.AWSIOT_ACTION_TELEMETRY_ENABLE -> {
-                val telemetryNameList = arguments[AWSIotThing.AWSIOT_ARGUMENT_NAME]?.let { telemetryNameList ->
-                    telemetryNameList.split(" ").map { name ->
-                        SensorTelemetryReader.getFullSensorName(name) ?: name
-                    }
-                }
-
-                arguments[AWSIotThing.AWSIOT_ARGUMENT_ENABLE]?.let {
-                    val enabled = it.toBoolean()
-                    if (telemetryNameList != null) {
-                        telemetryBroker.setReaderEnabled(enabled, telemetryNameList)
-                    } else {
-                        telemetryBroker.setReadersEnabled(enabled)
-                    }
-                }
-            }
-
-            AWSIotThing.AWSIOT_ACTION_SHOW_DEBUG_INFO -> {
-                _debugInfoSettings.value = mutableMapOf<String, Boolean>().apply {
-                    arguments.forEach { (key, value) ->
-                        put(key, value.toBoolean())
-                    }
-                }
-            }
-
-            AWSIotThing.AWSIOT_ACTION_VOLUME -> {
-                arguments[AWSIOT_ARGUMENT_VALUE]?.toIntOrNull()?.let { inputVolume ->
-                    val volume = min(max(0, inputVolume), 100) / 100f
-                    val maxStreamVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
-                    audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, (maxStreamVolume * volume).toInt(), 0)
-                }
-            }
-
-        }
-    }
-
-    inner class MediaSessionCallback : MediaSessionCompat.Callback() {
-        override fun onPlay() {
-            if (!isBinded) {
-                player.replay()
-            } else {
-                atsc3Receiver.viewController?.rmpResume()
-            }
-        }
-
-        override fun onPause() {
-            if (!isBinded) {
-                player.pause()
-            } else {
-                atsc3Receiver.viewController?.rmpPause()
-            }
-        }
-
-        override fun onSkipToNext() {
-            atsc3Receiver.getNextService()?.let { service ->
-                selectMediaService(service)
-            }
-        }
-
-        override fun onSkipToPrevious() {
-            atsc3Receiver.getPreviousService()?.let { service ->
-                selectMediaService(service)
-            }
-        }
-
-        override fun onPlayFromMediaId(mediaId: String?, extras: Bundle?) {
-            val globalId = mediaId ?: return
-            atsc3Receiver.serviceController.findServiceById(globalId)?.let { service ->
-                selectMediaService(service)
-            }
-        }
-    }
-
     class InitializationException : RuntimeException()
 
     companion object {
         val TAG: String = Atsc3ForegroundService::class.java.simpleName
 
         private const val PRESENTATION_DESTROYING_DELAY = 1000L
-
-        private const val IoT_PREFERENCE = "${BuildConfig.LIBRARY_PACKAGE_NAME}.awsiot"
 
         const val SERVICE_INTERFACE = "${BuildConfig.LIBRARY_PACKAGE_NAME}.INTERFACE"
 
@@ -826,8 +509,6 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         const val EXTRA_DEVICE_TYPE = "device_type"
         const val EXTRA_ROUTE_PATH = "route_path"
         const val EXTRA_PLAY_AUDIO_ON_BOARD = "play_audio_on_board"
-
-        const val MEDIA_ROOT_ID = "2262d068-67cf-11eb-ae93-0242ac130002"
 
         val sourceList = listOf(
                 Triple("las", "srt://las.srt.atsc3.com:31350?passphrase=A166AC45-DB7C-4B68-B957-09B8452C76A4", "A166AC45-DB7C-4B68-B957-09B8452C76A4"),

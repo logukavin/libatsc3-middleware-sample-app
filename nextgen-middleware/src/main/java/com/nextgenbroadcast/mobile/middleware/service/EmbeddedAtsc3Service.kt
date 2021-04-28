@@ -8,6 +8,7 @@ import com.nextgenbroadcast.mobile.core.presentation.*
 import com.nextgenbroadcast.mobile.core.presentation.media.IObservablePlayer
 import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
+import com.nextgenbroadcast.mobile.middleware.server.cert.UserAgentSSLContext
 import kotlinx.coroutines.flow.*
 
 class EmbeddedAtsc3Service : Atsc3ForegroundService() {
@@ -47,12 +48,17 @@ class EmbeddedAtsc3Service : Atsc3ForegroundService() {
 
         override val userAgentPresenter = object : IUserAgentPresenter {
             private val viewController = requireViewController()
+            private val sslContext = UserAgentSSLContext.newInstance(applicationContext)
 
             override val appData = viewController.appData.asReadOnly()
             override val appState = viewController.appState.asReadOnly()
 
             override fun setApplicationState(state: ApplicationState) {
                 viewController.setApplicationState(state)
+            }
+
+            override fun getWebServerCertificateHash(): String? {
+                return sslContext.getCertificateHash()
             }
         }
 
@@ -90,20 +96,20 @@ class EmbeddedAtsc3Service : Atsc3ForegroundService() {
         override val controllerPresenter = object : IControllerPresenter {
             //TODO: isolate Flow to prevent internal objects blocking with UI
             // maybe something like this: .stateIn(viewController.scope(), SharingStarted.Lazily, telemetryBroker.readersEnabled.value)
-            override val telemetryEnabled = telemetryBroker.readersEnabled.asReadOnly()
-            override val telemetryDelay = telemetryBroker.readersDelay.asReadOnly()
-            override val debugInfoSettings = this@EmbeddedAtsc3Service.debugInfoSettings.asReadOnly()
+            override val telemetryEnabled = telemetryHolder.telemetryEnabled.asReadOnly()
+            override val telemetryDelay = telemetryHolder.telemetryDelay.asReadOnly()
+            override val debugInfoSettings = telemetryHolder.debugInfoSettings.asReadOnly()
 
             override fun setTelemetryEnabled(enabled: Boolean) {
-                telemetryBroker.setReadersEnabled(enabled)
+                telemetryHolder.setAllEnabled(enabled)
             }
 
             override fun setTelemetryEnabled(type: String, enabled: Boolean) {
-                telemetryBroker.setReaderEnabled(enabled, type)
+                telemetryHolder.setTelemetryEnabled(enabled, type)
             }
 
             override fun setTelemetryUpdateDelay(type: String, delayMils: Long) {
-                telemetryBroker.setReaderDelay(type, delayMils)
+                telemetryHolder.setTelemetryDelay(delayMils, type)
             }
         }
     }

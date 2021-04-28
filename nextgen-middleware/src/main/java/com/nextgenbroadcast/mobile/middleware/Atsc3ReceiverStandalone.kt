@@ -2,7 +2,7 @@ package com.nextgenbroadcast.mobile.middleware
 
 import android.content.Context
 import android.widget.Toast
-import com.nextgenbroadcast.mobile.core.cert.UserAgentSSLContext
+import com.nextgenbroadcast.mobile.middleware.server.cert.UserAgentSSLContext
 import com.nextgenbroadcast.mobile.middleware.analytics.Atsc3Analytics
 import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3Module
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.db.RoomServiceGuideStore
@@ -44,10 +44,9 @@ internal object Atsc3ReceiverStandalone {
         }
         val atsc3Module = Atsc3Module(appContext.cacheDir)
         val mediaFileProvider = MediaFileProvider(appContext)
-        val sslContext = UserAgentSSLContext(appContext)
         val analytics = Atsc3Analytics.getInstance(appContext, settings)
 
-        return Atsc3ReceiverCore(atsc3Module, settings, repository, serviceGuideStore, mediaFileProvider, sslContext, analytics).apply {
+        return Atsc3ReceiverCore(atsc3Module, settings, repository, serviceGuideStore, mediaFileProvider, analytics).apply {
             MainScope().launch {
                 errorFlow.collect { message ->
                     Toast.makeText(appContext, message, Toast.LENGTH_SHORT).show()

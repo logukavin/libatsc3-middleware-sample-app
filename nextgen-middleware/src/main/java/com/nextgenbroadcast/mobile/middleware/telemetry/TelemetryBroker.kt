@@ -4,6 +4,7 @@ import androidx.annotation.MainThread
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.middleware.telemetry.entity.TelemetryEvent
 import com.nextgenbroadcast.mobile.middleware.telemetry.reader.ITelemetryReader
+import com.nextgenbroadcast.mobile.middleware.telemetry.task.ITelemetryTask
 import com.nextgenbroadcast.mobile.middleware.telemetry.writer.ITelemetryWriter
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.BufferOverflow
@@ -18,15 +19,15 @@ class TelemetryBroker(
     private val coroutineScope = CoroutineScope(Dispatchers.IO)
     private val writers = mutableListOf(*_writers.toTypedArray())
     private val eventFlow = MutableSharedFlow<TelemetryEvent>(
-            replay = 30,
-            extraBufferCapacity = 0,
+            replay = 0,
+            extraBufferCapacity = 30,
             onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
     private val testEventFlow = eventFlow.onEach { event ->
         event.payload.testCase = testCase
     }
     private val readerJobs = ConcurrentHashMap<ITelemetryReader, Job>()
-    private val writerJobs = ConcurrentHashMap<ITelemetryWriter, Job>()
+    private val writerJobs = ConcurrentHashMap<Class<ITelemetryWriter>, Job>()
 
     private var isStarted = false
 
@@ -49,14 +50,6 @@ class TelemetryBroker(
     private fun start() {
         if (isStarted) return
 
-        writers.forEach { writer ->
-            try {
-                writer.open()
-            } catch (e: Exception) {
-                LOG.e(TAG, "Can't Open writer: ${writer::class.java.simpleName}", e)
-            }
-        }
-
         try {
             val map = _readersEnabled.value
 
@@ -67,7 +60,9 @@ class TelemetryBroker(
             }
 
             writers.forEach { writer ->
-                coroutineScope.launchWriter(writer)
+                if (!writerJobs.containsKey(writer::class.java)) {
+                    coroutineScope.launchWriter(writer)
+                }
             }
         } catch (e: Exception) {
             LOG.d(TAG, "Telemetry gathering error: ", e)
@@ -92,16 +87,29 @@ class TelemetryBroker(
     }
 
     private fun CoroutineScope.launchWriter(writer: ITelemetryWriter) {
-        writerJobs.put(writer,
+        try {
+            writer.open()
+        } catch (e: Exception) {
+            LOG.e(TAG, "Failed to open writer: ${writer::class.java.simpleName}", e)
+            return
+        }
+
+        writerJobs.put(writer.javaClass,
                 launch {
                     writer.write(testEventFlow)
                 }.apply {
                     invokeOnCompletion {
-                        writerJobs.remove(writer, this)
+                        writerJobs.remove(writer.javaClass, this)
+
+                        try {
+                            writer.close()
+                        } catch (e: Exception) {
+                            LOG.e(TAG, "Failed to close writer: ${writer::class.java.simpleName}", e)
+                        }
                     }
                 }
         )?.let {
-            LOG.e(TAG, "Writes is duplicated: $writer")
+            LOG.e(TAG, "Writer is duplicated: $writer")
             it.cancel()
         }
     }
@@ -133,12 +141,25 @@ class TelemetryBroker(
     }
 
     @MainThread
-    fun addWriter(writer: ITelemetryWriter) {
-        if (writers.contains(writer) || writerJobs.containsKey(writer)) return
+    fun addWriter(writer: ITelemetryWriter, persist: Boolean = true) {
+        if (writers.contains(writer) || writerJobs.containsKey(writer.javaClass)) return
 
-        writers.add(writer)
-        if (isStarted) {
-            coroutineScope.launchWriter(writer)
+        if (persist) {
+            writers.add(writer)
+        }
+        coroutineScope.launchWriter(writer)
+    }
+
+    fun removeWriter(clazz: Class<out ITelemetryWriter>) {
+        // writer will be closed automatically
+        writerJobs.remove(clazz)?.cancel()
+    }
+
+    @MainThread
+    fun runTask(task: ITelemetryTask) {
+        coroutineScope.launchReader(task)
+        if (!isStarted) {
+            start()
         }
     }
 
@@ -185,13 +206,17 @@ class TelemetryBroker(
             _readersEnabled.value = map
             if (enabled && !isStarted) {
                 start()
-            } else if (!enabled && isStarted) {
+            }
+            /*
+            Don't stop because we could answer on command request
+
+            else if (!enabled && isStarted) {
                 // stop broker if all readers switched off
                 val dis = map.values.distinct()
                 if (dis.size == 1 && !dis.first()) {
                     stop()
                 }
-            }
+            }*/
         }
     }
 

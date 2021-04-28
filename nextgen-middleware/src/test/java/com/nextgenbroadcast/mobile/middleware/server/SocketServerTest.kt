@@ -1,6 +1,6 @@
 package com.nextgenbroadcast.mobile.middleware.server
 
-import com.nextgenbroadcast.mobile.core.cert.UserAgentSSLContext
+import com.nextgenbroadcast.mobile.middleware.server.cert.UserAgentSSLContext
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.middleware.gateway.rpc.IRPCGateway
 import com.nextgenbroadcast.mobile.middleware.rpc.notification.NotificationType
@@ -73,7 +73,7 @@ class SocketServerTest : ServerTest() {
                 it.start(null)
             }
         }
-        webSocketClient = WebSocketClient(HttpClient(configureSSLFactory(UserAgentSSLContext(mockApplicationContext))))
+        webSocketClient = WebSocketClient(HttpClient(configureSSLFactory(UserAgentSSLContext.newInstance(mockApplicationContext))))
     }
 
     @After
