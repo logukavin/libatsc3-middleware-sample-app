@@ -3,13 +3,19 @@ package com.nextgenbroadcast.mobile.middleware.phy
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
-import com.nextgenbroadcast.mobile.middleware.service.Atsc3ForegroundService
 
 class Atsc3DeviceReceiver(
-        private val deviceName: String
+        private val deviceName: String,
+        private val onAction: (device: UsbDevice) -> Unit
 ) : BroadcastReceiver() {
+
+    val intentFilter: IntentFilter
+        get() = IntentFilter().apply {
+            addAction(UsbManager.ACTION_USB_DEVICE_DETACHED)
+        }
 
     override fun onReceive(context: Context, intent: Intent?) {
         intent?.action?.let { action ->
@@ -20,7 +26,7 @@ class Atsc3DeviceReceiver(
             if (deviceName != device.deviceName) return
 
             if (action == UsbManager.ACTION_USB_DEVICE_DETACHED) {
-                Atsc3ForegroundService.stopForDevice(context, device)
+                onAction(device)
             }
         }
     }
