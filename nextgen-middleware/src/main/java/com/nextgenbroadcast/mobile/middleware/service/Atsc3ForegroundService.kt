@@ -3,9 +3,6 @@ package com.nextgenbroadcast.mobile.middleware.service
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
-import android.hardware.Sensor
-import android.hardware.SensorManager
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import android.net.*
