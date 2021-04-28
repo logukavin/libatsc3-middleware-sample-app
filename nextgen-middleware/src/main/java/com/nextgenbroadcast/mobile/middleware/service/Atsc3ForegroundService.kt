@@ -4,6 +4,8 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.hardware.Sensor
+import android.hardware.SensorManager
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import android.net.*
@@ -21,6 +23,10 @@ import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.middleware.*
 import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverCore
 import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverStandalone
+import com.nextgenbroadcast.mobile.middleware.BuildConfig
+import com.nextgenbroadcast.mobile.middleware.ServiceDialogActivity
+import com.nextgenbroadcast.mobile.middleware.atsc3.entities.SLTConstants
+import com.nextgenbroadcast.mobile.middleware.atsc3.source.Atsc3Source
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.UsbAtsc3Source
 import com.nextgenbroadcast.mobile.middleware.cache.DownloadManager
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
@@ -248,13 +254,19 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
             when (intent.action) {
                 ACTION_START_FOREGROUND -> startForeground()
 
-                ACTION_DEVICE_ATTACHED -> onDeviceAttached(intent.getParcelableExtra(UsbManager.EXTRA_DEVICE))
+                ACTION_DEVICE_ATTACHED -> onDeviceAttached(
+                        intent.getParcelableExtra(EXTRA_DEVICE),
+                        intent.getIntExtra(EXTRA_DEVICE_TYPE, Atsc3Source.DEVICE_TYPE_AUTO)
+                )
 
-                ACTION_DEVICE_DETACHED -> onDeviceDetached(intent.getParcelableExtra(UsbManager.EXTRA_DEVICE))
+                ACTION_DEVICE_DETACHED -> onDeviceDetached(intent.getParcelableExtra(EXTRA_DEVICE))
 
                 ACTION_USB_PERMISSION -> intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false).let { granted ->
                     if (granted) {
-                        onDevicePermissionGranted(intent.getParcelableExtra(UsbManager.EXTRA_DEVICE))
+                        onDevicePermissionGranted(
+                                intent.getParcelableExtra(EXTRA_DEVICE),
+                                intent.getIntExtra(EXTRA_DEVICE_TYPE, Atsc3Source.DEVICE_TYPE_AUTO)
+                        )
                     }
                 }
 
@@ -335,11 +347,11 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         }
     }
 
-    private fun openRoute(device: UsbDevice) {
+    private fun openRoute(device: UsbDevice, deviceType: Int) {
         startForeground()
         unregisterDeviceReceiver()
 
-        atsc3Receiver.openRoute(UsbAtsc3Source(usbManager, device))
+        atsc3Receiver.openRoute(UsbAtsc3Source(usbManager, device, deviceType))
 
         // Register BroadcastReceiver to detect when device is disconnected
         registerDeviceReceiver(device)
@@ -368,7 +380,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         stopSelf()
     }
 
-    private fun onDeviceAttached(device: UsbDevice?) {
+    private fun onDeviceAttached(device: UsbDevice?, deviceType: Int) {
         if (device == null) {
             if (!isForeground && !isBinded) {
                 stopSelf()
@@ -378,9 +390,9 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
         //TODO: process case with second connected device
         if (usbManager.hasPermission(device)) {
-            openRoute(device)
+            openRoute(device, deviceType)
         } else {
-            requestDevicePermission(device)
+            requestDevicePermission(device, deviceType)
         }
     }
 
@@ -388,18 +400,18 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         closeRoute()
     }
 
-    private fun onDevicePermissionGranted(device: UsbDevice?) {
+    private fun onDevicePermissionGranted(device: UsbDevice?, deviceType: Int) {
         device?.let {
             // open device using a new Intent to start Service as foreground
-            startForDevice(this, device)
+            startForDevice(this, device, deviceType)
         }
     }
 
     private fun registerDeviceReceiver(device: UsbDevice) {
-        deviceReceiver = Atsc3DeviceReceiver(device.deviceName).also { receiver ->
-            registerReceiver(receiver, IntentFilter().apply {
-                addAction(UsbManager.ACTION_USB_DEVICE_DETACHED)
-            })
+        deviceReceiver = Atsc3DeviceReceiver(device.deviceName) {
+            stopForDevice(applicationContext, device)
+        }.also { receiver ->
+            registerReceiver(receiver, receiver.intentFilter)
         }
     }
 
@@ -410,9 +422,10 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         }
     }
 
-    private fun requestDevicePermission(device: UsbDevice) {
+    private fun requestDevicePermission(device: UsbDevice, deviceType: Int) {
         val intent = Intent(this, clazz).apply {
             action = ACTION_USB_PERMISSION
+            putExtra(EXTRA_DEVICE_TYPE, deviceType)
         }
         usbManager.requestPermission(device, PendingIntent.getService(this, 0, intent, 0))
     }
@@ -496,6 +509,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         const val ACTION_CLOSE_ROUTE = "$SERVICE_ACTION.CLOSE_ROUTE"
 
         const val EXTRA_DEVICE = UsbManager.EXTRA_DEVICE
+        const val EXTRA_DEVICE_TYPE = "device_type"
         const val EXTRA_ROUTE_PATH = "route_path"
         const val EXTRA_PLAY_AUDIO_ON_BOARD = "play_audio_on_board"
 
@@ -518,9 +532,10 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
             }
         }
 
-        fun startForDevice(context: Context, device: UsbDevice) {
+        fun startForDevice(context: Context, device: UsbDevice, deviceType: Int) {
             newIntent(context, ACTION_DEVICE_ATTACHED).let { serviceIntent ->
                 serviceIntent.putExtra(EXTRA_DEVICE, device)
+                serviceIntent.putExtra(EXTRA_DEVICE_TYPE, deviceType)
                 ContextCompat.startForegroundService(context, serviceIntent)
             }
         }
