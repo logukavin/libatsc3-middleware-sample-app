@@ -5,7 +5,7 @@ import kotlin.collections.ArrayList
 
 abstract class ConfigurableAtsc3Source<T>(
         configs: List<T>
-): BaseAtsc3Source() {
+): Atsc3Source() {
     private val configList = ArrayList(configs)
     private var configIndex: Int = configs.size - 1
     private var scanning: Boolean = configs.size > 1

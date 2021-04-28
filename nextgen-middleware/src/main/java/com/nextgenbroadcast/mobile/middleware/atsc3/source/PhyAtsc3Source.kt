@@ -13,7 +13,7 @@ class PhyAtsc3Source(
     override fun openPhyClient(): Atsc3NdkPHYClientBase? {
         try {
             if (phy.init() == 0) {
-                if (phy.open(fd, devicePath) == 0) {
+                if (phy.open(fd, DEVICE_TYPE_AUTO, devicePath) == 0) {
                     phy.startPhyOpenTrace()
 
                     if (freqKhz > 0) {
