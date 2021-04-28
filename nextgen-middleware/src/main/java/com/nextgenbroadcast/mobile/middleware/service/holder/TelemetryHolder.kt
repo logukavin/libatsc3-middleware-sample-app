@@ -185,7 +185,8 @@ internal class TelemetryHolder(
                     } ?: let {
                         receiver.findActiveServiceById(serviceId)
                     }
-                } ?: arguments[ITelemetryControl.CONTROL_ARGUMENT_SERVICE_NAME]?.let { serviceName ->
+                }
+                        ?: arguments[ITelemetryControl.CONTROL_ARGUMENT_SERVICE_NAME]?.let { serviceName ->
                             receiver.findServiceBy(serviceName)
                         }
 
@@ -271,6 +272,10 @@ internal class TelemetryHolder(
                 if (!fileName.isNullOrBlank()) {
                     telemetryBroker?.addWriter(FileTelemetryWriter(context.filesDir, fileName, writeDuration ?: 0), false)
                 }
+            }
+
+            ITelemetryControl.CONTROL_ACTION_RESET_RECEIVER_DEMODE -> {
+                /// TODO should be implemented
             }
         }
 

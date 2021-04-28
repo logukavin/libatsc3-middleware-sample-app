@@ -18,6 +18,7 @@ interface ITelemetryControl {
         const val CONTROL_ACTION_VOLUME = "volume"
         const val CONTROL_ACTION_WIFI_INFO = "networkInfo"
         const val CONTROL_ACTION_FILE_WRITER = "fileWriter"
+        const val CONTROL_ACTION_RESET_RECEIVER_DEMODE = "reset"
 
         const val CONTROL_ARGUMENT_DELIMITER = ","
 
