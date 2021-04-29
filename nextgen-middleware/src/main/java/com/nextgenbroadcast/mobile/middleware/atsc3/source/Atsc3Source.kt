@@ -51,7 +51,7 @@ abstract class Atsc3Source : IAtsc3Source {
         const val DEVICE_TYPE_YOGA = SaankhyaPHYAndroid.DEVICE_TYPE_FX3_YOGA
 
         fun isSaankhyaDevice(vendorId: Int, productId: Int): Boolean {
-            return vendorId == SaankhyaPHYAndroid.CYPRESS_VENDOR_ID && productId == SaankhyaPHYAndroid.KAILASH_PRODUCT_ID
+            return vendorId == SaankhyaPHYAndroid.CYPRESS_VENDOR_ID && productId == SaankhyaPHYAndroid.FX3_PREBOOT_PRODUCT_ID;
         }
     }
 }

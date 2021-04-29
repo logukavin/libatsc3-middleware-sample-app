@@ -3,6 +3,9 @@ package com.nextgenbroadcast.mobile.middleware.service
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
+import android.hardware.Sensor
+import android.hardware.SensorManager
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import android.net.*
@@ -20,6 +23,9 @@ import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.middleware.*
 import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverCore
 import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverStandalone
+import com.nextgenbroadcast.mobile.middleware.BuildConfig
+import com.nextgenbroadcast.mobile.middleware.ServiceDialogActivity
+import com.nextgenbroadcast.mobile.middleware.atsc3.entities.SLTConstants
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.Atsc3Source
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.UsbAtsc3Source
 import com.nextgenbroadcast.mobile.middleware.cache.DownloadManager
