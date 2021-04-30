@@ -9,7 +9,10 @@ import com.nextgenbroadcast.mobile.core.presentation.media.IObservablePlayer
 import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
 import com.nextgenbroadcast.mobile.middleware.server.cert.UserAgentSSLContext
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
 
 class EmbeddedAtsc3Service : Atsc3ForegroundService() {
 
@@ -33,7 +36,9 @@ class EmbeddedAtsc3Service : Atsc3ForegroundService() {
             }
 
             override fun tune(frequency: PhyFrequency) {
-                serviceController.tune(frequency)
+                CoroutineScope(Dispatchers.Default).launch {
+                    serviceController.tune(frequency)
+                }
             }
         }
 
@@ -41,8 +46,10 @@ class EmbeddedAtsc3Service : Atsc3ForegroundService() {
             override val sltServices = serviceController.routeServices.asReadOnly()
             override val selectedService = serviceController.selectedService.asReadOnly()
 
-            override fun selectService(service: AVService): Boolean {
-                return serviceController.selectService(service)
+            override fun selectService(service: AVService) {
+                CoroutineScope(Dispatchers.Default).launch {
+                    serviceController.selectService(service)
+                }
             }
         }
 

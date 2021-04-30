@@ -19,17 +19,14 @@ internal interface IServiceController {
     val applications: StateFlow<List<Atsc3Application>>
     val alertList: StateFlow<List<AeaTable>>
 
-    fun openRoute(path: String): Boolean
-    fun openRoute(source: IAtsc3Source): Boolean
-    fun stopRoute()
-    fun closeRoute()
-
-    fun tune(frequency: PhyFrequency)
-    fun selectService(service: AVService): Boolean
+    suspend fun openRoute(source: IAtsc3Source): Boolean
+    suspend fun stopRoute()
+    suspend fun closeRoute()
+    suspend fun tune(frequency: PhyFrequency)
+    suspend fun selectService(service: AVService): Boolean
 
     fun findServiceById(globalServiceId: String): AVService?
     fun getNearbyService(offset: Int): AVService?
-
     fun getCurrentService(): AVService?
     fun getCurrentRouteMediaUrl(): MediaUrl?
 }

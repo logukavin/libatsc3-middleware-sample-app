@@ -35,7 +35,7 @@ internal class Atsc3ReceiverCore(
         private val serviceGuideStore: IServiceGuideStore,
         val mediaFileProvider: IMediaFileProvider,
         private val analytics: IAtsc3Analytics
-) : IAtsc3ServiceCore {
+) : IAtsc3ReceiverCore {
     //TODO: create own scope?
     private val coreScope: CoroutineScope = CoroutineScope(Dispatchers.Default)
     private var viewScope: CoroutineScope? = null
@@ -129,25 +129,31 @@ internal class Atsc3ReceiverCore(
         return Triple(web, rpc, stateScope)
     }
 
-    override fun openRoute(filePath: String): Boolean {
-        return serviceController.openRoute(filePath)
-    }
-
-    override fun openRoute(source: IAtsc3Source): Boolean {
-        return serviceController.openRoute(source)
+    override fun openRoute(source: IAtsc3Source, block: suspend (result: Boolean) -> Unit) {
+        coreScope.launch {
+            val result = serviceController.openRoute(source)
+            block(result)
+        }
     }
 
     override fun closeRoute() {
-        serviceController.stopRoute() // call to stopRoute is not a mistake. We use it to close previously opened file
-        serviceController.closeRoute()
+        coreScope.launch {
+            serviceController.stopRoute() // call to stopRoute is not a mistake. We use it to close previously opened file
+            serviceController.closeRoute()
+        }
     }
 
     override fun tune(frequency: PhyFrequency) {
-        serviceController.tune(frequency)
+        coreScope.launch {
+            serviceController.tune(frequency)
+        }
     }
 
-    override fun selectService(service: AVService) {
-        serviceController.selectService(service)
+    override fun selectService(service: AVService, block: suspend (result: Boolean) -> Unit) {
+        coreScope.launch {
+            val result = serviceController.selectService(service)
+            block(result)
+        }
     }
 
     override fun getReceiverState(): ReceiverState {
@@ -162,16 +168,20 @@ internal class Atsc3ReceiverCore(
 
     fun getPreviousService() = serviceController.getNearbyService(-1)
 
-    fun findServiceBy(bsid: Int, serviceId: Int): AVService? {
+    fun findServiceById(bsid: Int, serviceId: Int): AVService? {
         return repository.findServiceBy(bsid, serviceId)
     }
 
-    fun findServiceBy(name: String): AVService? {
+    fun findServiceById(globalId: String): AVService? {
+        return repository.findServiceBy(globalId)
+    }
+
+    fun findServiceByName(name: String): AVService? {
         return repository.findServiceOrNull { it.shortName == name }
     }
 
     fun findActiveServiceById(serviceId: Int): AVService? {
-        return findServiceBy(atsc3Module.selectedServiceBsid, serviceId)
+        return findServiceById(atsc3Module.selectedServiceBsid, serviceId)
     }
 
     fun playEmbedded(service: AVService): Boolean {

@@ -11,7 +11,7 @@ import org.xmlpull.v1.XmlPullParser
 internal class UsbPhyInitializer : IServiceInitializer {
     private var isActive = true
 
-    override fun initialize(context: Context, components: Map<Class<*>, Pair<Int, String>>): Boolean {
+    override suspend fun initialize(context: Context, components: Map<Class<*>, Pair<Int, String>>): Boolean {
         components.filter { (clazz, _) ->
             Atsc3UsbPhyConnector::class.java.isAssignableFrom(clazz)
         }.map { (clazz, data) ->
@@ -24,9 +24,9 @@ internal class UsbPhyInitializer : IServiceInitializer {
                 val phys = readPhyAttributes(parser)
 
                 val instance: Any = component.getDeclaredConstructor().newInstance()
-                val initializer = instance as Atsc3UsbPhyConnector
+                val connector = instance as Atsc3UsbPhyConnector
 
-                if (initializer.connect(context, phys)) {
+                if (connector.connect(context, phys)) {
                     return true
                 }
             } catch (e: Resources.NotFoundException) {
