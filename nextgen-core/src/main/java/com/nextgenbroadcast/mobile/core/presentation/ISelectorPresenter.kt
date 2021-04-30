@@ -8,5 +8,5 @@ interface ISelectorPresenter {
     val sltServices: StateFlow<List<AVService>>
     val selectedService: StateFlow<AVService?>
 
-    fun selectService(service: AVService): Boolean
+    fun selectService(service: AVService)
 }

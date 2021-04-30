@@ -19,7 +19,9 @@ import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverCore
 import com.nextgenbroadcast.mobile.middleware.service.Atsc3ForegroundService
 import com.nextgenbroadcast.mobile.middleware.service.media.MediaSessionConstants
 import com.nextgenbroadcast.mobile.player.Atsc3MediaPlayer
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.withContext
 
 internal class MediaHolder(
         private val context: Context,
@@ -91,18 +93,21 @@ internal class MediaHolder(
     }
 
     fun selectMediaService(service: AVService) {
-        val result = receiver.serviceController.selectService(service)
-        if (result) {
-            player.reset()
+        receiver.selectService(service) { result ->
+            withContext(Dispatchers.Main) {
+                if (result) {
+                    player.reset()
 
-            mediaSession.setMetadata(MediaMetadataCompat.Builder()
-                    .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, service.globalId)
-                    .putString(MediaMetadataCompat.METADATA_KEY_TITLE, service.shortName)
-                    .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, "${service.majorChannelNo}-${service.minorChannelNo}")
-                    .build())
+                    mediaSession.setMetadata(MediaMetadataCompat.Builder()
+                            .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, service.globalId)
+                            .putString(MediaMetadataCompat.METADATA_KEY_TITLE, service.shortName)
+                            .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, "${service.majorChannelNo}-${service.minorChannelNo}")
+                            .build())
 
-            //TODO: we must deactivate it
-            mediaSession.isActive = true
+                    //TODO: we must deactivate it
+                    mediaSession.isActive = true
+                }
+            }
         }
     }
 
@@ -136,7 +141,7 @@ internal class MediaHolder(
 
     fun startPlaybackIfServicerAvailable(mediaUrl: MediaUrl?) {
         val service = mediaUrl?.let {
-            receiver.findServiceBy(mediaUrl.bsid, mediaUrl.serviceId)
+            receiver.findServiceById(mediaUrl.bsid, mediaUrl.serviceId)
         } ?: return
 
         if (receiver.playEmbedded(service)) {
@@ -147,7 +152,7 @@ internal class MediaHolder(
     fun stopPlaybackIfInitialized() {
         if (player.isInitialized) {
             val service = receiver.repository.routeMediaUrl.value?.let { mediaPath ->
-                receiver.findServiceBy(mediaPath.bsid, mediaPath.serviceId)
+                receiver.findServiceById(mediaPath.bsid, mediaPath.serviceId)
             }
 
             if (service != null && !receiver.playEmbedded(service)) {
@@ -187,7 +192,7 @@ internal class MediaHolder(
 
         override fun onPlayFromMediaId(mediaId: String?, extras: Bundle?) {
             val globalId = mediaId ?: return
-            receiver.serviceController.findServiceById(globalId)?.let { service ->
+            receiver.findServiceById(globalId)?.let { service ->
                 selectMediaService(service)
             }
         }

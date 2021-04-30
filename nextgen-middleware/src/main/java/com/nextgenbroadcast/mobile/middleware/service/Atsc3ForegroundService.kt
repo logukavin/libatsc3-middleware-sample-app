@@ -3,9 +3,6 @@ package com.nextgenbroadcast.mobile.middleware.service
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
-import android.hardware.Sensor
-import android.hardware.SensorManager
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import android.net.*
@@ -24,8 +21,6 @@ import com.nextgenbroadcast.mobile.middleware.*
 import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverCore
 import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverStandalone
 import com.nextgenbroadcast.mobile.middleware.BuildConfig
-import com.nextgenbroadcast.mobile.middleware.ServiceDialogActivity
-import com.nextgenbroadcast.mobile.middleware.atsc3.entities.SLTConstants
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.Atsc3Source
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.UsbAtsc3Source
 import com.nextgenbroadcast.mobile.middleware.cache.DownloadManager
@@ -50,7 +45,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     }
 
     //TODO: create own scope?
-    private val serviceScope: CoroutineScope = CoroutineScope(Dispatchers.Default)
+    private val serviceScope = CoroutineScope(Dispatchers.Default)
 
     private val viewPlayerState = MutableStateFlow(PlaybackState.IDLE)
 
@@ -310,14 +305,19 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         if (isInitialized) return
         isInitialized = true
 
-        val context: Context = applicationContext
+        val appContext = applicationContext
+        val components = MetadataReader.discoverMetadata(this)
+
+        val handler = CoroutineExceptionHandler { _, e ->
+            Log.d(TAG, "Can't initialize, something is wrong in metadata", e)
+        }
 
         try {
-            val components = MetadataReader.discoverMetadata(this)
-
-            FrequencyInitializer(atsc3Receiver.settings, atsc3Receiver).also {
-                initializer.add(WeakReference(it))
-            }.initialize(context, components)
+            serviceScope.launch(handler) {
+                FrequencyInitializer(atsc3Receiver.settings, atsc3Receiver).also {
+                    initializer.add(WeakReference(it))
+                }.initialize(appContext, components)
+            }
 
             // Do not re-open the libatsc3 if it's already opened
             if (!atsc3Receiver.isIdle()) return
@@ -326,24 +326,26 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
                 initializer.add(WeakReference(it))
             }
 
-            if (phyInitializer.initialize(context, components)) {
-                startForeground(applicationContext)
-            } else {
-                UsbPhyInitializer().also {
-                    initializer.add(WeakReference(it))
-                }.initialize(context, components)
+            serviceScope.launch(handler) {
+                if (phyInitializer.initialize(appContext, components)) {
+                    startForeground(applicationContext)
+                } else {
+                    UsbPhyInitializer().also {
+                        initializer.add(WeakReference(it))
+                    }.initialize(appContext, components)
+                }
             }
         } catch (e: Exception) {
             Log.d(TAG, "Can't initialize, something is wrong in metadata", e)
         }
     }
 
-    private fun openRoute(filePath: String?) {
+    private fun openRoute(sourcePath: String?) {
         // change source to file. So, let's unregister device receiver
         unregisterDeviceReceiver()
 
-        filePath?.let {
-            atsc3Receiver.openRoute(filePath)
+        sourcePath?.let {
+            atsc3Receiver.openRoute(routePathToSource(sourcePath))
         }
     }
 

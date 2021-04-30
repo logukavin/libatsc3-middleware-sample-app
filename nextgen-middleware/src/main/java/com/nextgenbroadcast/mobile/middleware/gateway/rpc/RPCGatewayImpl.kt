@@ -195,7 +195,9 @@ internal class RPCGatewayImpl(
 
     override fun requestServiceChange(globalServiceId: String): Boolean {
         return serviceController.findServiceById(globalServiceId)?.let { service ->
-            serviceController.selectService(service)
+            runBlocking {
+                serviceController.selectService(service)
+            }
         } ?: false
     }
 
