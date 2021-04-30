@@ -7,11 +7,16 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.source.Atsc3Source
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.UsbAtsc3Source
 
 fun startAtsc3ServiceForDevice(context: Context, device: UsbDevice) {
-    if (UsbAtsc3Source.isSaankhyaFX3PrebootDevice(device)) {
-        context.startActivity(DeviceTypeSelectionDialog.newIntent(context, device))
-    } else if(UsbAtsc3Source.getSaankhyaFX3BootedDeviceType(device) != Atsc3Source.DEVICE_TYPE_UNKNOWN) {
-        Atsc3ForegroundService.startForDevice(context, device, UsbAtsc3Source.getSaankhyaFX3BootedDeviceType(device))
-    } else {
-        Atsc3ForegroundService.startForDevice(context, device, Atsc3Source.DEVICE_TYPE_AUTO)
+    val type = UsbAtsc3Source.getSaankhyaFX3DeviceType(device)
+    when {
+        type == Atsc3Source.DEVICE_TYPE_PREBOOT -> {
+            context.startActivity(DeviceTypeSelectionDialog.newIntent(context, device))
+        }
+        type != Atsc3Source.DEVICE_TYPE_UNKNOWN -> {
+            Atsc3ForegroundService.startForDevice(context, device, type)
+        }
+        else -> {
+            Atsc3ForegroundService.startForDevice(context, device, Atsc3Source.DEVICE_TYPE_AUTO)
+        }
     }
 }

@@ -88,8 +88,6 @@ class UsbAtsc3Source(
     companion object {
         private val TAG: String = UsbAtsc3Source::class.java.simpleName
 
-        fun isSaankhyaFX3PrebootDevice(device: UsbDevice) = isSaankhyaFX3PrebootDevice(device.vendorId, device.productId)
-        fun getSaankhyaFX3BootedDeviceType(device: UsbDevice) = Atsc3Source.getSaankhyaFX3BootedDeviceType(device)
-
+        fun getSaankhyaFX3DeviceType(device: UsbDevice) = getSaankhyaFX3DeviceType(device.vendorId, device.productId, device.manufacturerName)
     }
 }
