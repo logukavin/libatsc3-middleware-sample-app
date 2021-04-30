@@ -1,6 +1,5 @@
 package com.nextgenbroadcast.mobile.middleware.atsc3.source
 
-import android.hardware.usb.UsbDevice
 import com.nextgenbroadcast.mobile.core.LOG
 import org.ngbp.libatsc3.middleware.android.phy.Atsc3NdkPHYClientBase
 import org.ngbp.libatsc3.middleware.android.phy.SaankhyaPHYAndroid
@@ -48,27 +47,28 @@ abstract class Atsc3Source : IAtsc3Source {
         private val TAG: String = Atsc3Source::class.java.simpleName
 
         const val DEVICE_TYPE_UNKNOWN = -1
+        const val DEVICE_TYPE_PREBOOT = -2
 
         const val DEVICE_TYPE_AUTO = 0 // use for SaankhyaPHYAndroid.DEVICE_TYPE_MARKONE
         const val DEVICE_TYPE_KAILASH = SaankhyaPHYAndroid.DEVICE_TYPE_FX3_KAILASH
         const val DEVICE_TYPE_YOGA = SaankhyaPHYAndroid.DEVICE_TYPE_FX3_YOGA
 
-        fun isSaankhyaFX3PrebootDevice(vendorId: Int, productId: Int): Boolean {
-            return vendorId == SaankhyaPHYAndroid.CYPRESS_VENDOR_ID && productId == SaankhyaPHYAndroid.FX3_PREBOOT_PRODUCT_ID;
-        }
-
-        fun getSaankhyaFX3BootedDeviceType(device: UsbDevice): Int {
-            if(device.vendorId == SaankhyaPHYAndroid.CYPRESS_VENDOR_ID && device.productId == SaankhyaPHYAndroid.KAILASH_OR_YOGA_PRODUCT_ID) {
-                if(device.manufacturerName.equals(SaankhyaPHYAndroid.KAILASH_FIRMWARE_MFG_NAME_JJ)) {
-                    return DEVICE_TYPE_KAILASH
-                } else {
-                    //jjustman-2021-04-29 - fall thru for BB dongle here
-                    //TODO: update BB FX3 firmware with mProductName identifier for YOGA
-                    return DEVICE_TYPE_YOGA
+        fun getSaankhyaFX3DeviceType(vendorId: Int, productId: Int, manufacturer: String?): Int {
+            if (vendorId == SaankhyaPHYAndroid.CYPRESS_VENDOR_ID) {
+                if (productId == SaankhyaPHYAndroid.FX3_PREBOOT_PRODUCT_ID) {
+                    return DEVICE_TYPE_PREBOOT
+                } else if (productId == SaankhyaPHYAndroid.KAILASH_OR_YOGA_PRODUCT_ID) {
+                    return if(manufacturer == SaankhyaPHYAndroid.KAILASH_FIRMWARE_MFG_NAME_JJ) {
+                        DEVICE_TYPE_KAILASH
+                    } else {
+                        //jjustman-2021-04-29 - fall thru for BB dongle here
+                        //TODO: update BB FX3 firmware with mProductName identifier for YOGA
+                        DEVICE_TYPE_YOGA
+                    }
                 }
-            } else {
-                return DEVICE_TYPE_UNKNOWN
             }
+
+            return DEVICE_TYPE_UNKNOWN
         }
     }
 }
