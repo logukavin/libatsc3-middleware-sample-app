@@ -142,7 +142,7 @@ class ReceiverContentProvider : ContentProvider() {
 
             QUERY_RECEIVER_FREQUENCY -> {
                 value?.getAsInteger(RECEIVER_FREQUENCY)?.let { frequency ->
-                    receiver.serviceController.tune(PhyFrequency.user(listOf(frequency)))
+                    receiver.tune(PhyFrequency.user(listOf(frequency)))
                 }
             }
 

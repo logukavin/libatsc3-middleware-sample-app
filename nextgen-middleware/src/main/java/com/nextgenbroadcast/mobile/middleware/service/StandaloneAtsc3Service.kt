@@ -7,6 +7,9 @@ import com.nextgenbroadcast.mobile.core.model.PhyFrequency
 import com.nextgenbroadcast.mobile.middleware.service.handler.StandaloneServiceHandler
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
 import com.nextgenbroadcast.mobile.core.presentation.IReceiverPresenter
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class StandaloneAtsc3Service : Atsc3ForegroundService() {
 
@@ -29,7 +32,9 @@ class StandaloneAtsc3Service : Atsc3ForegroundService() {
                             }
 
                             override fun tune(frequency: PhyFrequency) {
-                                serviceController.tune(frequency)
+                                CoroutineScope(Dispatchers.Default).launch {
+                                    serviceController.tune(frequency)
+                                }
                             }
                         },
                         serviceController = serviceController,
