@@ -2,9 +2,9 @@ package com.nextgenbroadcast.mobile.middleware.controller.service
 
 import android.util.Log
 import com.nextgenbroadcast.mobile.core.atsc3.MediaUrl
+import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.PhyFrequency
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
-import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.middleware.analytics.IAtsc3Analytics
 import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3ModuleListener
 import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3ModuleState
@@ -20,9 +20,10 @@ import com.nextgenbroadcast.mobile.middleware.repository.IRepository
 import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
+import java.util.concurrent.Executors
 
 
-internal class ServiceControllerImpl (
+internal class ServiceControllerImpl(
         private val repository: IRepository,
         private val settings: IMiddlewareSettings,
         private val atsc3Module: IAtsc3Module,
@@ -31,6 +32,9 @@ internal class ServiceControllerImpl (
         private val stateScope: CoroutineScope = CoroutineScope(Dispatchers.IO),
         private val onError: ((message: String) -> Unit)? = null
 ) : IServiceController, Atsc3ModuleListener {
+
+    private val atsc3Scope = CoroutineScope(Executors.newSingleThreadExecutor().asCoroutineDispatcher())
+
     private var heldResetJob: Job? = null
     private var mediaUrlAssignmentJob: Job? = null
 
@@ -109,7 +113,9 @@ internal class ServiceControllerImpl (
         services.firstOrNull { service ->
             service.serviceCategory == SLTConstants.SERVICE_CATEGORY_ESG
         }?.let { service ->
-            atsc3Module.selectAdditionalService(service.serviceId)
+            atsc3Scope.launch {
+                atsc3Module.selectAdditionalService(service.serviceId)
+            }
         }
     }
 
@@ -139,112 +145,116 @@ internal class ServiceControllerImpl (
         repository.setAlertList(list)
     }
 
-    override fun openRoute(path: String): Boolean {
-        val source = if (path.startsWith("srt://")) {
-            if (path.contains('\n')) {
-                val sources = path.split('\n')
-                SrtListAtsc3Source(sources)
-            } else {
-                SrtAtsc3Source(path)
-            }
-        } else {
-            //TODO: temporary solution
-            val type = if (path.contains(".demux.")) PcapAtsc3Source.PcapType.DEMUXED else PcapAtsc3Source.PcapType.STLTP
-            PcapAtsc3Source(path, type)
-        }
+    override suspend fun openRoute(source: IAtsc3Source): Boolean {
+        return withContext(Dispatchers.Main) {
+            closeRoute()
 
-        return openRoute(source)
-    }
-
-    override fun openRoute(source: IAtsc3Source): Boolean {
-        closeRoute()
-
-        if (atsc3Module.connect(source)) {
-            if (source is ITunableSource) {
-                tune(PhyFrequency.default(PhyFrequency.Source.AUTO))
-            }
-            return true
-        }
-        return false
-    }
-
-    override fun stopRoute() {
-        atsc3Module.stop()
-    }
-
-    override fun closeRoute() {
-        atsc3Analytics.finishSession()
-
-        cancelMediaUrlAssignment()
-        atsc3Module.close()
-
-        serviceGuideReader.clearAll()
-        repository.reset()
-    }
-
-    override fun selectService(service: AVService): Boolean {
-        if (repository.selectedService.value == service) return true
-
-        // Reset current media. New media url will be received after service selection.
-        cancelMediaUrlAssignment()
-        repository.setMediaUrl(null)
-
-        if (atsc3Module.isServiceSelected(service.bsid, service.id)) return true
-
-        val res = atsc3Module.selectService(service.bsid, service.id)
-        if (res) {
-            atsc3Analytics.startSession(service.bsid, service.id, service.globalId, service.category)
-
-            // Store successfully selected service. This will lead to RMP reset
-            repository.setSelectedService(service)
-
-            // Reset the current HELD if it's not compatible new service or start delayed reset otherwise.
-            // Delayed reset will be canceled when a new HELD been received for selected service.
-            repository.heldPackage.value?.let { currentHeld ->
-                // Is new service compatible with current HELD?
-                if (currentHeld.coupledServices?.contains(service.id) == true) {
-                    resetHeldWithDelay()
-                } else {
-                    repository.setHeldPackage(null)
+            atsc3Scope.async {
+                if (atsc3Module.connect(source)) {
+                    if (source is ITunableSource) {
+                        tune(PhyFrequency.default(PhyFrequency.Source.AUTO))
+                    }
+                    return@async true
                 }
-            }
-        } else {
-            // Reset HELD and service if service can't be selected
-            repository.setHeldPackage(null)
-            repository.setSelectedService(null)
+                return@async false
+            }.await()
         }
-
-        return res
     }
 
-    override fun tune(frequency: PhyFrequency) {
-        val frequencyList: List<Int> = if (frequency.list.isEmpty()) {
-            val lastFrequency = settings.lastFrequency
-            settings.frequencyLocation?.let {
-                it.frequencyList.toMutableList().apply {
-                    if (lastFrequency > 0) {
-                        remove(lastFrequency)
-                        add(0, lastFrequency)
+    override suspend fun stopRoute() {
+        withContext(atsc3Scope.coroutineContext) {
+            atsc3Module.stop()
+        }
+    }
+
+    override suspend fun closeRoute() {
+        withContext(Dispatchers.Main) {
+            withContext(atsc3Scope.coroutineContext) {
+                atsc3Module.close()
+            }
+
+            atsc3Analytics.finishSession()
+
+            cancelMediaUrlAssignment()
+
+            serviceGuideReader.clearAll()
+            repository.reset()
+        }
+    }
+
+    override suspend fun selectService(service: AVService): Boolean {
+        return withContext(Dispatchers.Main) {
+            if (repository.selectedService.value == service) return@withContext true
+
+            // Reset current media. New media url will be received after service selection.
+            cancelMediaUrlAssignment()
+            repository.setMediaUrl(null)
+
+            val res = atsc3Scope.async {
+                if (atsc3Module.isServiceSelected(service.bsid, service.id)) return@async null
+
+                atsc3Module.selectService(service.bsid, service.id)
+            }.await() ?: return@withContext true
+
+            if (res) {
+                atsc3Analytics.startSession(service.bsid, service.id, service.globalId, service.category)
+
+                // Store successfully selected service. This will lead to RMP reset
+                repository.setSelectedService(service)
+
+                // Reset the current HELD if it's not compatible new service or start delayed reset otherwise.
+                // Delayed reset will be canceled when a new HELD been received for selected service.
+                repository.heldPackage.value?.let { currentHeld ->
+                    // Is new service compatible with current HELD?
+                    if (currentHeld.coupledServices?.contains(service.id) == true) {
+                        resetHeldWithDelay()
+                    } else {
+                        repository.setHeldPackage(null)
                     }
                 }
-            } ?: mutableListOf<Int>().apply {
-                if (lastFrequency > 0) {
-                    add(lastFrequency)
-                }
+            } else {
+                // Reset HELD and service if service can't be selected
+                repository.setHeldPackage(null)
+                repository.setSelectedService(null)
             }
-        } else {
-            frequency.list
+
+            res
         }
+    }
 
-        val freqKhz = frequencyList.firstOrNull() ?: return
+    override suspend fun tune(frequency: PhyFrequency) {
+        withContext(Dispatchers.Main) {
+            val frequencyList: List<Int> = if (frequency.list.isEmpty()) {
+                val lastFrequency = settings.lastFrequency
+                settings.frequencyLocation?.let {
+                    it.frequencyList.toMutableList().apply {
+                        if (lastFrequency > 0) {
+                            remove(lastFrequency)
+                            add(0, lastFrequency)
+                        }
+                    }
+                } ?: mutableListOf<Int>().apply {
+                    if (lastFrequency > 0) {
+                        add(lastFrequency)
+                    }
+                }
+            } else {
+                frequency.list
+            }
 
-        receiverFrequency.value = freqKhz
-        settings.lastFrequency = freqKhz
-        atsc3Module.tune(
-                freqKhz = freqKhz,
-                frequencies = frequencyList,
-                retuneOnDemod = frequency.source == PhyFrequency.Source.USER
-        )
+            val freqKhz = frequencyList.firstOrNull() ?: return@withContext
+
+            receiverFrequency.value = freqKhz
+            settings.lastFrequency = freqKhz
+
+            withContext(atsc3Scope.coroutineContext) {
+                atsc3Module.tune(
+                        freqKhz = freqKhz,
+                        frequencies = frequencyList,
+                        retuneOnDemod = frequency.source == PhyFrequency.Source.USER
+                )
+            }
+        }
     }
 
     override fun findServiceById(globalServiceId: String): AVService? {

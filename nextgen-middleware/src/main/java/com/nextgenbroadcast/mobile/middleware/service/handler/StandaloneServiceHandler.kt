@@ -11,11 +11,8 @@ import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
 import com.nextgenbroadcast.mobile.core.presentation.IMediaPlayerPresenter
 import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
 import com.nextgenbroadcast.mobile.core.presentation.IReceiverPresenter
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.cancel
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.launch
 
 internal class StandaloneServiceHandler(
         private val receiverPresenter: IReceiverPresenter,
@@ -55,7 +52,9 @@ internal class StandaloneServiceHandler(
 
             IServiceBinder.ACTION_SELECT_SERVICE -> {
                 msg.data.getParcelable(AVService::class.java, IServiceBinder.PARAM_SELECT_SERVICE)?.let {
-                    serviceController.selectService(it)
+                    runBlocking {
+                        serviceController.selectService(it)
+                    }
                 }
             }
 

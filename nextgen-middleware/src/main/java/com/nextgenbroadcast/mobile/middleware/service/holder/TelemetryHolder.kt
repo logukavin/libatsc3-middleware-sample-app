@@ -181,13 +181,13 @@ internal class TelemetryHolder(
             ITelemetryControl.CONTROL_ACTION_ACQUIRE_SERVICE -> {
                 val service = arguments[ITelemetryControl.CONTROL_ARGUMENT_SERVICE_ID]?.toIntOrNull()?.let { serviceId ->
                     arguments[ITelemetryControl.CONTROL_ARGUMENT_SERVICE_BSID]?.toIntOrNull()?.let { bsid ->
-                        receiver.findServiceBy(bsid, serviceId)
+                        receiver.findServiceById(bsid, serviceId)
                     } ?: let {
                         receiver.findActiveServiceById(serviceId)
                     }
                 }
                         ?: arguments[ITelemetryControl.CONTROL_ARGUMENT_SERVICE_NAME]?.let { serviceName ->
-                            receiver.findServiceBy(serviceName)
+                            receiver.findServiceByName(serviceName)
                         }
 
                 if (service != null) {
