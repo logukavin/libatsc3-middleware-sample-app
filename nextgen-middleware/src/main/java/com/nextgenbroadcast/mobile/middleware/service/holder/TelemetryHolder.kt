@@ -288,6 +288,6 @@ internal class TelemetryHolder(
 
         private val CONNECTION_TYPE = ConnectionType.HTTP
         private const val CONNECTION_HOST = "0.0.0.0"
-        private const val CONNECTION_PORT = 8080
+        private const val CONNECTION_PORT = 8081
     }
 }
