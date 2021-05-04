@@ -61,7 +61,7 @@ open class ServerTest {
     }
     
     companion object {
-        const val HTTP_PORT = 8080
+        const val HTTP_PORT = 8081
         const val HTTPS_PORT = 8443
         const val WS_PORT = 9998
         const val WSS_PORT = 9999

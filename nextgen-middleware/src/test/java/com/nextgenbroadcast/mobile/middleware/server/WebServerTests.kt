@@ -75,7 +75,7 @@ class WebServerTests : ServerTest() {
     @Test
     fun makeHttpCall() {
         val client = OkHttpClient.Builder().connectionSpecs(listOf(ConnectionSpec.CLEARTEXT)).build()
-        val request: Request = Request.Builder().url("http://localhost:8080/index.html").build()
+        val request: Request = Request.Builder().url("http://localhost:8081/index.html").build()
         val response = client.newCall(request).execute()
         val serverMessage = response.body?.string()
         val code = response.code
@@ -87,7 +87,7 @@ class WebServerTests : ServerTest() {
     @Test
     fun makeHttpErrorCall() {
         val client = OkHttpClient.Builder().connectionSpecs(listOf(ConnectionSpec.CLEARTEXT)).build()
-        val request: Request = Request.Builder().url("http://localhost:8080/index1.html").build()
+        val request: Request = Request.Builder().url("http://localhost:8081/index1.html").build()
         val response = client.newCall(request).execute()
         val serverMessage = response.body?.string()
         val code = response.code
