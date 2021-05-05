@@ -3,7 +3,6 @@ package com.nextgenbroadcast.mobile.middleware.sample
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.PictureInPictureParams
-import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.media.session.MediaController
@@ -11,6 +10,7 @@ import android.media.session.MediaSession
 import android.media.session.PlaybackState
 import android.os.Bundle
 import android.support.v4.media.MediaBrowserCompat
+import android.util.Log
 import android.view.View
 import android.widget.Toast
 import androidx.activity.viewModels
@@ -22,10 +22,8 @@ import com.google.android.play.core.appupdate.AppUpdateManagerFactory
 import com.google.android.play.core.install.model.AppUpdateType
 import com.google.android.play.core.install.model.UpdateAvailability
 import com.google.android.play.core.tasks.Task
-import androidx.lifecycle.asLiveData
 import androidx.lifecycle.lifecycleScope
 import com.nextgenbroadcast.mobile.core.model.AVService
-import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.presentation.IControllerPresenter
 import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.ViewViewModel
@@ -328,11 +326,18 @@ class MainActivity : BaseActivity() {
 
         // Checks that the platform will allow the specified type of update. // For a flexible update, use AppUpdateType.FLEXIBLE
         appUpdateInfoTask.addOnSuccessListener { appUpdateInfo ->
-            if (appUpdateInfo.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE && appUpdateInfo.isUpdateTypeAllowed(AppUpdateType.IMMEDIATE)) {
+            Log.i(TAG, "appUpdateInfoTask.onSuccessListener: appUpdateInfo: " + appUpdateInfo);
+            //jjustman-2021-05-04 - always push our ATSC3 sample app updates, e.g. dont gate on only && appUpdateInfo.isUpdateTypeAllowed(AppUpdateType.IMMEDIATE)
+            if (appUpdateInfo.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE) {
                 // Request the update.
                 appUpdateManager.startUpdateFlowForResult(appUpdateInfo, AppUpdateType.IMMEDIATE, this, APP_UPDATE_REQUEST_CODE)
             }
         }
+
+        appUpdateInfoTask.addOnFailureListener { failedInfo ->
+            Log.w(TAG, "appUpdateInfoTask.onFailureListener: failedInfo: "+failedInfo);
+        }
+
     }
 
     private fun getMainFragment() = supportFragmentManager.findFragmentByTag(MainFragment.TAG) as MainFragment
@@ -364,5 +369,7 @@ class MainActivity : BaseActivity() {
                 Manifest.permission.ACCESS_COARSE_LOCATION,
                 Manifest.permission.ACCESS_FINE_LOCATION
         )
+
+        val TAG: String = MainActivity::class.java.simpleName
     }
 }
