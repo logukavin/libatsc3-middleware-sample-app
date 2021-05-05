@@ -21,6 +21,7 @@ parameters:
   - name: release_notes
     displayName: Release notes
     type: string
+    default: "CI build"
 
   - name: tester_groups
     displayName: Tester groups
