@@ -179,7 +179,7 @@ internal class Atsc3Module(
         //failsafe if we don't acquire SLT
         nextSourceConfigTuneTimeoutJob = CoroutineScope(Dispatchers.Main).launch {
             Log.i(TAG, "nextSourceConfigTuneTimeoutJob: tune SLT timeout - scheduled for "+SLT_ACQUIRE_TUNE_DELAY+"ms")
-            delay(SLT_ACQUIRE_TUNE_DELAY) // either wait on this block this coroutine, or the onSlsTablePresent will invoke nextSourceConfigTuneTimeoutJob.cancel()
+            delay(SLT_ACQUIRE_TUNE_DELAY) // either wait on this block this coroutine, or the onSltTablePresent will invoke nextSourceConfigTuneTimeoutJob.cancel()
             Log.i(TAG, "nextSourceConfigTuneTimeoutJob: tune SLT timeout - invoking applyNextSourceConfig")
             applyNextSourceConfig()
         }
@@ -375,7 +375,7 @@ internal class Atsc3Module(
 
     override fun jni_getCacheDir(): File = cacheDir
 
-    override fun onSlsTablePresent(sls_payload_xml: String) {
+    override fun onSltTablePresent(slt_payload_xml: String) {
         val shouldSkip = isReconfiguring
 
         //jjustman-2021-05-05 - hack
@@ -385,11 +385,11 @@ internal class Atsc3Module(
         }
 
 
-        log("onSlsTablePresent, $sls_payload_xml, skip: $shouldSkip")
+        log("onSltTablePresent, $slt_payload_xml, skip: $shouldSkip")
 
         if (shouldSkip) return
 
-        val slt = LLSParserSLT().parseXML(sls_payload_xml)
+        val slt = LLSParserSLT().parseXML(slt_payload_xml)
         serviceLocationTable[slt.bsid] = slt
         serviceToSourceConfig[slt.bsid] = getSourceConfig()
 
