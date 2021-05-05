@@ -10,6 +10,13 @@ variables:
   - group: firebase
   - group: keystore-properties
 
+resources:
+  pipelines:
+  - pipeline: Middleware   # Name of the pipeline resource
+    source: Middleware # Name of the pipeline referenced by the pipeline resource
+    # project: FabrikamProject # Required only if the source pipeline is in another project
+    trigger: true # Run app-ci pipeline when any run of security-lib-ci completes
+
 parameters:
   - name: release_notes
     displayName: Release notes
