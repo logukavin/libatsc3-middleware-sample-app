@@ -120,6 +120,8 @@ class Atsc3MediaPlayer(
     }
 
     fun replay(requestAudioFocus: Boolean = true) {
+        playWhenReady = true
+
         if (_player == null && lastMediaUri == null) return
 
         if (requestAudioFocus && !tryRetrievedAudioFocus()) {
@@ -127,8 +129,6 @@ class Atsc3MediaPlayer(
         }
 
         cancelDelayedPlayerReset()
-
-        playWhenReady = true
 
         if (playbackState == PlaybackState.IDLE) {
             lastMediaUri?.let { uri ->
