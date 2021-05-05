@@ -36,6 +36,7 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.schedule
 
 internal class Atsc3Module(
         private val cacheDir: File
@@ -73,7 +74,9 @@ internal class Atsc3Module(
 
     private var nextSourceJob: Job? = null
 
-    private var nextSourceConfigTuneTimeoutJob: Job? = null
+    private val configurationTimer = Timer()
+    @Volatile
+    private var nextSourceConfigTuneTimeoutTask: TimerTask? = null
 
     override val rfPhyMetricsFlow = MutableSharedFlow<RfPhyStatistics>(3, 0, BufferOverflow.DROP_OLDEST)
 
@@ -127,9 +130,11 @@ internal class Atsc3Module(
                     this.source = null
                 } else {
                     setSourceConfig(result)
-                    setState(
-                            if (result > 0) Atsc3ModuleState.SCANNING else Atsc3ModuleState.TUNED
-                    )
+                    val newState = if (result > 0) Atsc3ModuleState.SCANNING else Atsc3ModuleState.TUNED
+                    setState(newState)
+                    if (newState == Atsc3ModuleState.SCANNING) {
+                        startNextSourceConfigTimeoutTask()
+                    }
                     return@withStateLock true
                 }
                 return@withStateLock false
@@ -170,19 +175,7 @@ internal class Atsc3Module(
     }
 
     private fun applySourceConfig(src: ConfigurableAtsc3Source<*>, config: Int): Int {
-        //jjustman-2021-05-05 - hack
-        if(nextSourceConfigTuneTimeoutJob?.isActive == true) {
-            nextSourceConfigTuneTimeoutJob?.cancel()
-            Log.i(TAG, "nextSourceConfigTuneTimeoutJob: canceling")
-        }
-
-        //failsafe if we don't acquire SLT
-        nextSourceConfigTuneTimeoutJob = CoroutineScope(Dispatchers.Main).launch {
-            Log.i(TAG, "nextSourceConfigTuneTimeoutJob: tune SLT timeout - scheduled for "+SLT_ACQUIRE_TUNE_DELAY+"ms")
-            delay(SLT_ACQUIRE_TUNE_DELAY) // either wait on this block this coroutine, or the onSltTablePresent will invoke nextSourceConfigTuneTimeoutJob.cancel()
-            Log.i(TAG, "nextSourceConfigTuneTimeoutJob: tune SLT timeout - invoking applyNextSourceConfig")
-            applyNextSourceConfig()
-        }
+        cancelNextSourceConfigTimeoutTask()
 
         return withStateLock {
             isReconfiguring = true
@@ -194,12 +187,39 @@ internal class Atsc3Module(
 
             if (result != IAtsc3Source.RESULT_ERROR) {
                 setSourceConfig(result)
-                setState(
-                        if (result > 0 && config == IAtsc3Source.CONFIG_DEFAULT) Atsc3ModuleState.SCANNING else Atsc3ModuleState.TUNED
-                )
+                val newState = if (result > 0 && config == IAtsc3Source.CONFIG_DEFAULT) Atsc3ModuleState.SCANNING else Atsc3ModuleState.TUNED
+                setState(newState)
+                if (newState == Atsc3ModuleState.SCANNING) {
+                    startNextSourceConfigTimeoutTask()
+                }
             }
 
             return@withStateLock result
+        }
+    }
+
+    @Synchronized
+    private fun startNextSourceConfigTimeoutTask() {
+        //failsafe if we don't acquire SLT
+        // either wait on this block this coroutine, or the onSltTablePresent will invoke nextSourceConfigTuneTimeoutJob.cancel()
+        Log.i(TAG, "nextSourceConfigTuneTimeoutJob: tune SLT timeout - scheduled for "+SLT_ACQUIRE_TUNE_DELAY+"ms")
+
+        nextSourceConfigTuneTimeoutTask = configurationTimer.schedule(SLT_ACQUIRE_TUNE_DELAY) {
+            Log.i(TAG, "nextSourceConfigTuneTimeoutJob: tune SLT timeout - invoking applyNextSourceConfig")
+
+            val currentState = getState()
+            if (currentState == Atsc3ModuleState.SCANNING) {
+                applyNextSourceConfig()
+            }
+        }
+    }
+
+    @Synchronized
+    private fun cancelNextSourceConfigTimeoutTask() {
+        nextSourceConfigTuneTimeoutTask?.let {
+            Log.i(TAG, "nextSourceConfigTuneTimeoutJob: canceling")
+            it.cancel()
+            nextSourceConfigTuneTimeoutTask = null
         }
     }
 
@@ -313,6 +333,7 @@ internal class Atsc3Module(
         setState(Atsc3ModuleState.IDLE)
         isReconfiguring = false
         clear()
+        cancelNextSourceConfigTimeoutTask()
     }
 
     fun getSelectedServiceMediaUri(): String? {
@@ -378,12 +399,7 @@ internal class Atsc3Module(
     override fun onSltTablePresent(slt_payload_xml: String) {
         val shouldSkip = isReconfiguring
 
-        //jjustman-2021-05-05 - hack
-        if(nextSourceConfigTuneTimeoutJob?.isActive == true) {
-            nextSourceConfigTuneTimeoutJob?.cancel()
-            Log.i(TAG, "nextSourceConfigTuneTimeoutJob: canceling")
-        }
-
+        cancelNextSourceConfigTimeoutTask()
 
         log("onSltTablePresent, $slt_payload_xml, skip: $shouldSkip")
 
