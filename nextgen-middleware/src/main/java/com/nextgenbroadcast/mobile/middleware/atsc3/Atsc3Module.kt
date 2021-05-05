@@ -34,6 +34,7 @@ import org.ngbp.libatsc3.middleware.android.phy.models.RfPhyStatistics
 import java.io.File
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 
 internal class Atsc3Module(
@@ -71,6 +72,8 @@ internal class Atsc3Module(
     private var listener: Atsc3ModuleListener? = null
 
     private var nextSourceJob: Job? = null
+
+    private var nextSourceConfigTuneTimeoutJob: Job? = null
 
     override val rfPhyMetricsFlow = MutableSharedFlow<RfPhyStatistics>(3, 0, BufferOverflow.DROP_OLDEST)
 
@@ -167,6 +170,20 @@ internal class Atsc3Module(
     }
 
     private fun applySourceConfig(src: ConfigurableAtsc3Source<*>, config: Int): Int {
+        //jjustman-2021-05-05 - hack
+        if(nextSourceConfigTuneTimeoutJob?.isActive == true) {
+            nextSourceConfigTuneTimeoutJob?.cancel()
+            Log.i(TAG, "nextSourceConfigTuneTimeoutJob: canceling")
+        }
+
+        //failsafe if we don't acquire SLT
+        nextSourceConfigTuneTimeoutJob = CoroutineScope(Dispatchers.Main).launch {
+            Log.i(TAG, "nextSourceConfigTuneTimeoutJob: tune SLT timeout - scheduled for "+SLT_ACQUIRE_TUNE_DELAY+"ms")
+            delay(SLT_ACQUIRE_TUNE_DELAY) // either wait on this block this coroutine, or the onSlsTablePresent will invoke nextSourceConfigTuneTimeoutJob.cancel()
+            Log.i(TAG, "nextSourceConfigTuneTimeoutJob: tune SLT timeout - invoking applyNextSourceConfig")
+            applyNextSourceConfig()
+        }
+
         return withStateLock {
             isReconfiguring = true
             val result = try {
@@ -361,6 +378,13 @@ internal class Atsc3Module(
     override fun onSlsTablePresent(sls_payload_xml: String) {
         val shouldSkip = isReconfiguring
 
+        //jjustman-2021-05-05 - hack
+        if(nextSourceConfigTuneTimeoutJob?.isActive == true) {
+            nextSourceConfigTuneTimeoutJob?.cancel()
+            Log.i(TAG, "nextSourceConfigTuneTimeoutJob: canceling")
+        }
+
+
         log("onSlsTablePresent, $sls_payload_xml, skip: $shouldSkip")
 
         if (shouldSkip) return
@@ -538,6 +562,8 @@ internal class Atsc3Module(
 
     companion object {
         val TAG: String = Atsc3Module::class.java.simpleName
+
+        private val SLT_ACQUIRE_TUNE_DELAY = TimeUnit.SECONDS.toMillis(20)
 
         private const val CONTENT_TYPE_DASH = "application/dash+xml"
         private const val CONTENT_TYPE_SGDD = "application/vnd.oma.bcast.sgdd+xml"
