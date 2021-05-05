@@ -13,7 +13,7 @@ apply plugin: 'com.google.firebase.firebase-perf'
 apply plugin: 'com.github.triplet.play'
 
 def appVersionCode = project.hasProperty('versionCode') ? versionCode.toInteger() : 4
-def appVersion = "1.0.3"
+def appVersion = "1.0.4"
 
 def getCertPropertyCode(propertyName) {
     if (project.hasProperty(propertyName)) {
