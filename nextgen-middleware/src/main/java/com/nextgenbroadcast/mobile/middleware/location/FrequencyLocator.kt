@@ -53,6 +53,9 @@ class FrequencyLocator : IFrequencyLocator {
                 }?.accessToken
             }?.let { token ->
                 val frequenciesRequest = SinclairPlatform(BuildConfig.SinclairPlatformUrl).frequenciesRequest(token, latitude, longitude)
+
+                Log.d(TAG, "getFrequenciesByLocation, frequenciesRequest is: " + frequenciesRequest)
+
                 httpClient.newCall(frequenciesRequest).await { response ->
                     response.body?.let { body ->
                         Gson().fromJson<List<Station>?>(body.string(), object : TypeToken<List<Station>?>() {}.type)
@@ -61,6 +64,7 @@ class FrequencyLocator : IFrequencyLocator {
             }
 
             if (!stations.isNullOrEmpty()) {
+                Log.i(TAG, "getFrequenciesByLocation, returning stations:" + stations)
                 return stations.map { station ->
                     station.frequency * 1000
                 }.distinct()
@@ -69,6 +73,7 @@ class FrequencyLocator : IFrequencyLocator {
             Log.d(TAG, "Error on frequency request", e)
         }
 
+        Log.d(TAG, "getFrequenciesByLocation, returning emptyList()")
         return emptyList()
     }
 
