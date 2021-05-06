@@ -25,6 +25,7 @@ import com.nextgenbroadcast.mobile.middleware.telemetry.TelemetryBroker
 import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIoThing
 import com.nextgenbroadcast.mobile.middleware.telemetry.control.AWSIoTelemetryControl
 import com.nextgenbroadcast.mobile.middleware.telemetry.control.ITelemetryControl
+import com.nextgenbroadcast.mobile.middleware.telemetry.control.UdpTelemetryControl
 import com.nextgenbroadcast.mobile.middleware.telemetry.control.WebTelemetryControl
 import com.nextgenbroadcast.mobile.middleware.telemetry.reader.BatteryTelemetryReader
 import com.nextgenbroadcast.mobile.middleware.telemetry.reader.GPSTelemetryReader
@@ -95,7 +96,8 @@ internal class TelemetryHolder(
         remoteControl = RemoteControlBroker(
                 listOf(
                         //AWSIoTelemetryControl(thing),
-                        //WebTelemetryControl()
+                        //WebTelemetryControl(),
+                        UdpTelemetryControl(CONNECTION_HOST, CONNECTION_UDP_PORT)
                 ),
                 ::executeCommand
         ).apply {
@@ -135,7 +137,7 @@ internal class TelemetryHolder(
     }
 
     fun notifyWebServerStarted(server: IMiddlewareWebServer) {
-        server.addConnection(CONNECTION_TYPE, CONNECTION_HOST, CONNECTION_PORT)
+        server.addConnection(CONNECTION_TYPE, CONNECTION_HOST, CONNECTION_TCP_PORT)
 
         remoteControl?.addControl(WebTelemetryControl(server))
         telemetryBroker?.addWriter(WebTelemetryWriter(server))
@@ -288,6 +290,7 @@ internal class TelemetryHolder(
 
         private val CONNECTION_TYPE = ConnectionType.HTTP
         private const val CONNECTION_HOST = "0.0.0.0"
-        private const val CONNECTION_PORT = 8081
+        private const val CONNECTION_TCP_PORT = 8081
+        private const val CONNECTION_UDP_PORT = 6969
     }
 }
