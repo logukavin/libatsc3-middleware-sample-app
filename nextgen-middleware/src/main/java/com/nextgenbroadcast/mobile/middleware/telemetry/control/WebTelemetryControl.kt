@@ -1,6 +1,5 @@
 package com.nextgenbroadcast.mobile.middleware.telemetry.control
 
-import com.nextgenbroadcast.mobile.middleware.gateway.web.ConnectionType
 import com.nextgenbroadcast.mobile.middleware.server.web.IMiddlewareWebServer
 import com.nextgenbroadcast.mobile.middleware.telemetry.entity.TelemetryControl
 import kotlinx.coroutines.channels.Channel
