@@ -46,8 +46,13 @@ internal class AWSIoThing(
         publish(topic, gson.toJson(payload))
     }
 
+    //jjustman-2021-05-06 - adding try/catch for 05-06 06:53:17.405 12729 18824 E AndroidRuntime: com.amazonaws.services.iot.client.AWSIotException: com.amazonaws.services.iot.client.core.AwsIotRetryableException: Client is not connected (32104)
+    //                      this can occur if we are pushing events with a stale MQTT connection and have exceeded the AWSIot internal publishQueue.size() limited by client.getMaxOfflineQueueSize()
+
     suspend fun publish(topic: String, payload: String) {
-        requireClient().let { client ->
+
+        val client = requireClient()
+        try {
             if (client.connectionStatus != AWSIotConnectionStatus.DISCONNECTED) {
                 client.publish(
                         LoggingAWSIotMessage(
@@ -56,6 +61,9 @@ internal class AWSIoThing(
                         ), 1000
                 )
             }
+        } catch (e: Exception) {
+            LOG.w(TAG, "publish command error, calling close() to clear out thingAwsIotClient: " + thingAwsIotClient + ", connectionStatus is: " + thingAwsIotClient?.connectionStatus?.name, e)
+            close()
         }
     }
 
@@ -73,7 +81,7 @@ internal class AWSIoThing(
                 )
             }
         } catch (e: Exception) {
-            LOG.d(TAG, "Receiving command error", e)
+            LOG.w(TAG, "subscribeCommandsFlow error", e)
         }
     }
 
@@ -242,6 +250,7 @@ internal class AWSIoThing(
         return null
     }
 
+    //client.maxOfflineQueueSize(AWSIOT_MAX_OFFLINE_QUEUE_SIZE)
     private suspend fun createAWSIoTClient(keyStore: KeyStore, keyPassword: String, onClose: () -> Unit = {}): AWSIotMqttClient {
         return object : AWSIotMqttClient(BuildConfig.AWSIoTCustomerUrl, clientId, keyStore, keyPassword) {
             override fun onConnectionClosed() {
@@ -259,6 +268,19 @@ internal class AWSIoThing(
                 onClose()
             }
         }.also { client ->
+
+            //jjustman-2021-05-06 - default max connection retries for AWSIoT is set to 5, we will use a number slightly larger than 5...
+            client.setMaxConnectionRetries(AWSIOT_MAX_CONNECTION_RETRIES);
+
+            //jjustman-2021-05-06 - NOTE: method docs indicate keepAliveInterval is 30s,
+            //          but com.amazonaws.services.iot.client.AWSIotConfig.KEEP_ALIVE_INTERVAL
+            //          is actually 600,000 (ms) -> 5 minutes, so set it manually here
+
+            client.setMaxOfflineQueueSize(AWSIOT_MAX_OFFLINE_QUEUE_SIZE)
+
+            client.setKeepAliveInterval(AWSIOT_KEEPALIVE_INTERVAL_MS)
+            client.setNumOfClientThreads(AWSIOT_NUM_CLIENT_THREADS)
+
             suspendCancellableCoroutine<Any> { cont ->
                 try {
                     client.connect()
@@ -348,5 +370,12 @@ internal class AWSIoThing(
 
         private const val AWSIOT_TOPIC_CONTROL = "control/$AWSIOT_FORMAT_SERIAL"
         private const val AWSIOT_TOPIC_EVENT = "telemetry/$AWSIOT_FORMAT_SERIAL"
+
+        private const val AWSIOT_MAX_CONNECTION_RETRIES = Int.MAX_VALUE -1;
+        private const val AWSIOT_MAX_OFFLINE_QUEUE_SIZE = 1024;
+
+        private const val AWSIOT_KEEPALIVE_INTERVAL_MS = 30000;
+        private const val AWSIOT_NUM_CLIENT_THREADS = 5;
+
     }
 }
