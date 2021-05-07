@@ -251,7 +251,8 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
                 ACTION_DEVICE_ATTACHED -> onDeviceAttached(
                         intent.getParcelableExtra(EXTRA_DEVICE),
-                        intent.getIntExtra(EXTRA_DEVICE_TYPE, Atsc3Source.DEVICE_TYPE_AUTO)
+                        intent.getIntExtra(EXTRA_DEVICE_TYPE, Atsc3Source.DEVICE_TYPE_AUTO),
+                        intent.getBooleanExtra(EXTRA_FORCE_OPEN, true)
                 )
 
                 ACTION_DEVICE_DETACHED -> onDeviceDetached(intent.getParcelableExtra(EXTRA_DEVICE))
@@ -260,7 +261,8 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
                     if (granted) {
                         onDevicePermissionGranted(
                                 intent.getParcelableExtra(EXTRA_DEVICE),
-                                intent.getIntExtra(EXTRA_DEVICE_TYPE, Atsc3Source.DEVICE_TYPE_AUTO)
+                                intent.getIntExtra(EXTRA_DEVICE_TYPE, Atsc3Source.DEVICE_TYPE_AUTO),
+                                intent.getBooleanExtra(EXTRA_FORCE_OPEN, true)
                         )
                     }
                 }
@@ -345,15 +347,15 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         unregisterDeviceReceiver()
 
         sourcePath?.let {
-            atsc3Receiver.openRoute(routePathToSource(sourcePath))
+            atsc3Receiver.openRoute(routePathToSource(sourcePath), true)
         }
     }
 
-    private fun openRoute(device: UsbDevice, deviceType: Int) {
+    private fun openRoute(device: UsbDevice, deviceType: Int, forceOpen: Boolean) {
         startForeground()
         unregisterDeviceReceiver()
 
-        atsc3Receiver.openRoute(UsbAtsc3Source(usbManager, device, deviceType))
+        atsc3Receiver.openRoute(UsbAtsc3Source(usbManager, device, deviceType), forceOpen)
 
         // Register BroadcastReceiver to detect when device is disconnected
         registerDeviceReceiver(device)
@@ -382,7 +384,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         stopSelf()
     }
 
-    private fun onDeviceAttached(device: UsbDevice?, deviceType: Int) {
+    private fun onDeviceAttached(device: UsbDevice?, deviceType: Int, forceOpen: Boolean) {
         if (device == null) {
             if (!isForeground && !isBinded) {
                 stopSelf()
@@ -392,9 +394,9 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
         //TODO: process case with second connected device
         if (usbManager.hasPermission(device)) {
-            openRoute(device, deviceType)
+            openRoute(device, deviceType, forceOpen)
         } else {
-            requestDevicePermission(device, deviceType)
+            requestDevicePermission(device, deviceType, forceOpen)
         }
     }
 
@@ -402,10 +404,10 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         closeRoute()
     }
 
-    private fun onDevicePermissionGranted(device: UsbDevice?, deviceType: Int) {
+    private fun onDevicePermissionGranted(device: UsbDevice?, deviceType: Int, forceOpen: Boolean) {
         device?.let {
             // open device using a new Intent to start Service as foreground
-            startForDevice(this, device, deviceType)
+            startForDevice(this, device, deviceType, forceOpen)
         }
     }
 
@@ -424,10 +426,11 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         }
     }
 
-    private fun requestDevicePermission(device: UsbDevice, deviceType: Int) {
+    private fun requestDevicePermission(device: UsbDevice, deviceType: Int, forceOpen: Boolean) {
         val intent = Intent(this, clazz).apply {
             action = ACTION_USB_PERMISSION
             putExtra(EXTRA_DEVICE_TYPE, deviceType)
+            putExtra(EXTRA_FORCE_OPEN, forceOpen)
         }
         usbManager.requestPermission(device, PendingIntent.getService(this, 0, intent, 0))
     }
@@ -514,6 +517,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         const val EXTRA_DEVICE_TYPE = "device_type"
         const val EXTRA_ROUTE_PATH = "route_path"
         const val EXTRA_PLAY_AUDIO_ON_BOARD = "play_audio_on_board"
+        const val EXTRA_FORCE_OPEN = "force_open"
 
         val sourceList = listOf(
                 Triple("las", "srt://las.srt.atsc3.com:31350?passphrase=A166AC45-DB7C-4B68-B957-09B8452C76A4", "A166AC45-DB7C-4B68-B957-09B8452C76A4"),
@@ -534,10 +538,11 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
             }
         }
 
-        fun startForDevice(context: Context, device: UsbDevice, deviceType: Int) {
+        fun startForDevice(context: Context, device: UsbDevice, deviceType: Int, forceOpen: Boolean = true) {
             newIntent(context, ACTION_DEVICE_ATTACHED).let { serviceIntent ->
                 serviceIntent.putExtra(EXTRA_DEVICE, device)
                 serviceIntent.putExtra(EXTRA_DEVICE_TYPE, deviceType)
+                serviceIntent.putExtra(EXTRA_FORCE_OPEN, forceOpen)
                 ContextCompat.startForegroundService(context, serviceIntent)
             }
         }

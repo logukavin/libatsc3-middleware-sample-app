@@ -16,7 +16,7 @@ class Atsc3DeviceActivity : Activity() {
             DeviceUtils.dumpDevice(TAG, device, action)
 
             if (action == UsbManager.ACTION_USB_DEVICE_ATTACHED) {
-                startAtsc3ServiceForDevice(this, device)
+                startAtsc3ServiceForDevice(this, device, true)
             }
         }
 
