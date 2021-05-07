@@ -145,16 +145,20 @@ internal class ServiceControllerImpl(
         repository.setAlertList(list)
     }
 
-    override suspend fun openRoute(source: IAtsc3Source): Boolean {
+    override suspend fun openRoute(source: IAtsc3Source, force: Boolean): Boolean {
         return withContext(Dispatchers.Main) {
-            closeRoute()
-
             atsc3Scope.async {
-                if (atsc3Module.connect(source)) {
-                    if (source is ITunableSource) {
-                        tune(PhyFrequency.default(PhyFrequency.Source.AUTO))
+                if (force || atsc3Module.isIdle()) {
+                    launch(Dispatchers.Main) {
+                        clearRouteData()
                     }
-                    return@async true
+
+                    if (atsc3Module.connect(source)) {
+                        if (source is ITunableSource) {
+                            tune(PhyFrequency.default(PhyFrequency.Source.AUTO))
+                        }
+                        return@async true
+                    }
                 }
                 return@async false
             }.await()
@@ -168,18 +172,22 @@ internal class ServiceControllerImpl(
     }
 
     override suspend fun closeRoute() {
-        withContext(Dispatchers.Main) {
-            withContext(atsc3Scope.coroutineContext) {
-                atsc3Module.close()
-            }
-
-            atsc3Analytics.finishSession()
-
-            cancelMediaUrlAssignment()
-
-            serviceGuideReader.clearAll()
-            repository.reset()
+        withContext(atsc3Scope.coroutineContext) {
+            atsc3Module.close()
         }
+
+        withContext(Dispatchers.Main) {
+            clearRouteData()
+        }
+    }
+
+    private fun clearRouteData() {
+        atsc3Analytics.finishSession()
+
+        cancelMediaUrlAssignment()
+
+        serviceGuideReader.clearAll()
+        repository.reset()
     }
 
     override suspend fun selectService(service: AVService): Boolean {
