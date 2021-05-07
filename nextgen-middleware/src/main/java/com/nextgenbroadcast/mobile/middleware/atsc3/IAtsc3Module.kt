@@ -15,4 +15,5 @@ interface IAtsc3Module {
     fun selectService(bsid: Int, serviceId: Int): Boolean
     fun stop()
     fun close()
+    fun isIdle(): Boolean
 }

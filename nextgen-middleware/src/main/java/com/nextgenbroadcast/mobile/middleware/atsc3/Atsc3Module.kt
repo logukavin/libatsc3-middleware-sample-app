@@ -329,6 +329,10 @@ internal class Atsc3Module(
         reset()
     }
 
+    override fun isIdle(): Boolean {
+        return getState() == Atsc3ModuleState.IDLE
+    }
+
     private fun reset() {
         setState(Atsc3ModuleState.IDLE)
         isReconfiguring = false
