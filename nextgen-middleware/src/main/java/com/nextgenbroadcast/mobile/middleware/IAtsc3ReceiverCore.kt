@@ -6,7 +6,7 @@ import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.IAtsc3Source
 
 internal interface IAtsc3ReceiverCore {
-    fun openRoute(source: IAtsc3Source, block: suspend (result: Boolean) -> Unit = {})
+    fun openRoute(source: IAtsc3Source, force: Boolean = false, onOpen: suspend (result: Boolean) -> Unit = {})
     fun closeRoute()
     fun tune(frequency: PhyFrequency)
     fun selectService(service: AVService, block: suspend (result: Boolean) -> Unit = {})
