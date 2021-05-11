@@ -68,7 +68,7 @@ internal class Atsc3ReceiverCore(
     }
 
     fun isIdle(): Boolean {
-        return atsc3Module.getState() == Atsc3ModuleState.IDLE
+        return atsc3Module.isIdle()
     }
 
     fun createViewPresentation(downloadManager: IDownloadManager, ignoreAudioServiceMedia: Boolean,
@@ -129,10 +129,10 @@ internal class Atsc3ReceiverCore(
         return Triple(web, rpc, stateScope)
     }
 
-    override fun openRoute(source: IAtsc3Source, block: suspend (result: Boolean) -> Unit) {
+    override fun openRoute(source: IAtsc3Source, force: Boolean, onOpen: suspend (result: Boolean) -> Unit) {
         coreScope.launch {
-            val result = serviceController.openRoute(source)
-            block(result)
+            val result = serviceController.openRoute(source, force)
+            onOpen(result)
         }
     }
 

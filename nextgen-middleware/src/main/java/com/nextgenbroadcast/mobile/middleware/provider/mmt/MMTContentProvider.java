@@ -25,6 +25,7 @@ import com.nextgenbroadcast.mobile.player.MMTConstants;
 import com.nextgenbroadcast.mobile.core.model.AVService;
 import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverCore;
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.SLTConstants;
+import com.nextgenbroadcast.mobile.middleware.atsc3.buffer.Atsc3RingBuffer;
 
 import org.ngbp.libatsc3.middleware.Atsc3NdkMediaMMTBridge;
 import org.ngbp.libatsc3.middleware.android.ATSC3PlayerFlags;
@@ -37,7 +38,8 @@ import org.ngbp.libatsc3.middleware.android.mmt.models.MMTAudioDecoderConfigurat
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.concurrent.ConcurrentLinkedDeque;
+import java.nio.ByteBuffer;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMediaMMTBridgeCallbacks {
@@ -45,29 +47,33 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
 
     //jjustman-2020-12-23 - give the a/v/s decoder some time to decode frames, otherwise we will stall at startup
     //jjustman-2021-01-13 - TODO: remove me
-    public static final long PTS_OFFSET_US = 266000L;
+    public static final long PTS_OFFSET_US = 0L;
+    private static final int FRAGMENT_BUFFER_MAX_PAGE_COUNT = 320;
+    private static final int FRAGMENT_BUFFER_PAGE_SIZE = 16 * 1024;
+    private static final int FRAGMENT_BUFFER_SIZE = FRAGMENT_BUFFER_MAX_PAGE_COUNT * FRAGMENT_BUFFER_PAGE_SIZE;
 
     private static final String[] COLUMNS = {OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE};
 
     private final AtomicInteger mSessionCount = new AtomicInteger();
-    private final ConcurrentLinkedDeque<MMTFileDescriptor> descriptors = new ConcurrentLinkedDeque<>();
+    private final CopyOnWriteArrayList<MMTFileDescriptor> descriptors = new CopyOnWriteArrayList<>();
 
     private Atsc3ReceiverCore atsc3ReceiverCore;
     private Atsc3NdkMediaMMTBridge atsc3NdkMediaMMTBridge;
-    private HandlerThread mHandlerThread;
     private Handler mHandler;
     private StorageManager mStorageManager;
 
     private boolean FirstMfuBufferVideoKeyframeSent = false;
+
+    private final ByteBuffer fragmentBuffer = ByteBuffer.allocateDirect(FRAGMENT_BUFFER_SIZE);
 
     @Override
     public boolean onCreate() {
         MmtPacketIdContext.Initialize();
 
         atsc3ReceiverCore = Atsc3ReceiverStandalone.get(getContext());
-        atsc3NdkMediaMMTBridge = new Atsc3NdkMediaMMTBridge(this);
+        atsc3NdkMediaMMTBridge = new Atsc3NdkMediaMMTBridge(this, fragmentBuffer, FRAGMENT_BUFFER_MAX_PAGE_COUNT);
 
-        mHandlerThread = new HandlerThread("mmt-content-provider");
+        HandlerThread mHandlerThread = new HandlerThread("mmt-content-provider");
         mHandlerThread.start();
 
         mHandler = new Handler(mHandlerThread.getLooper());
@@ -154,15 +160,28 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
         final int fileMode = modeToMode(mode);
         try {
             mSessionCount.incrementAndGet();
+            //TODO: temporary solution
+            if (!ATSC3PlayerFlags.ATSC3PlayerStartPlayback) {
+                ATSC3PlayerFlags.ATSC3PlayerStartPlayback = true;
 
+                //jjustman-2021-01-13 - HACK
+                MMTClockAnchor.SystemClockAnchor = 0;
+                MMTClockAnchor.MfuClockAnchor = 0;
+            }
+
+            ByteBuffer buffer = fragmentBuffer.duplicate();
+            Atsc3RingBuffer fragmentBuff = new Atsc3RingBuffer(buffer, FRAGMENT_BUFFER_PAGE_SIZE);
             boolean audioOnly = service.getCategory() == SLTConstants.SERVICE_CATEGORY_AO;
-            MMTFileDescriptor descriptor = new MMTFileDescriptor(audioOnly) {
+
+            MMTFileDescriptor descriptor = new MMTFileDescriptor(service.getId(), fragmentBuff, audioOnly) {
                 @Override
                 public void onRelease() {
                     super.onRelease();
 
-                    mSessionCount.decrementAndGet();
+                    int sessionCount = mSessionCount.decrementAndGet();
                     descriptors.remove(this);
+
+                    ATSC3PlayerFlags.ATSC3PlayerStartPlayback = (sessionCount > 0);
                 }
             };
 
@@ -235,218 +254,222 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
 
     @Override
     public void pushMfuByteBufferFragment(MfuByteBufferFragment mfuByteBufferFragment) {
-        if (isActive()) {
-            if (!ATSC3PlayerFlags.ATSC3PlayerStartPlayback) {
-                ATSC3PlayerFlags.ATSC3PlayerStartPlayback = true;
-
-                //jjustman-2021-01-13 - HACK
-                MMTClockAnchor.SystemClockAnchor = 0;
-                MMTClockAnchor.MfuClockAnchor = 0;
-            }
-
-            PushMfuByteBufferFragment(mfuByteBufferFragment);
-        } else if (ATSC3PlayerFlags.ATSC3PlayerStartPlayback) {
-            ATSC3PlayerFlags.ATSC3PlayerStartPlayback = false;
-            mfuByteBufferFragment.unreferenceByteBuffer();
-        }
+//        if (isActive()) {
+//            if (!ATSC3PlayerFlags.ATSC3PlayerStartPlayback) {
+//                ATSC3PlayerFlags.ATSC3PlayerStartPlayback = true;
+//
+//                //jjustman-2021-01-13 - HACK
+//                MMTClockAnchor.SystemClockAnchor = 0;
+//                MMTClockAnchor.MfuClockAnchor = 0;
+//            }
+//
+//            PushMfuByteBufferFragment(mfuByteBufferFragment);
+//        } else if (ATSC3PlayerFlags.ATSC3PlayerStartPlayback) {
+//            ATSC3PlayerFlags.ATSC3PlayerStartPlayback = false;
+//            mfuByteBufferFragment.unreferenceByteBuffer();
+//        }
     }
 
     @Override
     public void pushMpuMetadata_HEVC_NAL_Payload(MpuMetadata_HEVC_NAL_Payload mpuMetadata_hevc_nal_payload) {
-        if (isActive()) {
-            if (!ATSC3PlayerFlags.ATSC3PlayerStartPlayback) {
-                ATSC3PlayerFlags.ATSC3PlayerStartPlayback = true;
-            }
-
-            InitMpuMetadata_HEVC_NAL_Payload(mpuMetadata_hevc_nal_payload);
-
-        } else if (ATSC3PlayerFlags.ATSC3PlayerStartPlayback) {
-            ATSC3PlayerFlags.ATSC3PlayerStartPlayback = false;
-            mpuMetadata_hevc_nal_payload.releaseByteBuffer();
-        }
-    }
-
-    @Override
-    public void pushAudioDecoderConfigurationRecord(MMTAudioDecoderConfigurationRecord mmtAudioDecoderConfigurationRecord) {
-        descriptors.forEach(descriptor -> {
-            descriptor.pushAudioDecoderConfigurationRecord(mmtAudioDecoderConfigurationRecord);
-        });
+//        if (isActive()) {
+//            if (!ATSC3PlayerFlags.ATSC3PlayerStartPlayback) {
+//                ATSC3PlayerFlags.ATSC3PlayerStartPlayback = true;
+//            }
+//
+//            InitMpuMetadata_HEVC_NAL_Payload(mpuMetadata_hevc_nal_payload);
+//
+//        } else if (ATSC3PlayerFlags.ATSC3PlayerStartPlayback) {
+//            ATSC3PlayerFlags.ATSC3PlayerStartPlayback = false;
+//            mpuMetadata_hevc_nal_payload.releaseByteBuffer();
+//        }
     }
 
     private boolean isActive() {
         return mSessionCount.get() > 0;
     }
 
-    private void InitMpuMetadata_HEVC_NAL_Payload(MpuMetadata_HEVC_NAL_Payload payload) {
-        descriptors.forEach(descriptor -> {
-            descriptor.InitMpuMetadata_HEVC_NAL_Payload(payload);
-        });
-    }
-
-    private void PushMfuByteBufferFragment(MfuByteBufferFragment mfuByteBufferFragment) {
-        descriptors.forEach(descriptor -> {
-            descriptor.PushMfuByteBufferFragment(mfuByteBufferFragment);
-        });
-
-        if (MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us == 0 || MmtPacketIdContext.audio_packet_statistics.extracted_sample_duration_us == 0) {
-            Log.d("MMTDataBuffer", String.format("PushMfuByteBufferFragment:WARN:packet_id: %d, mpu_sequence_number: %d, video.duration_us: %d, audio.duration_us: %d, missing extracted_sample_duration",
-                    mfuByteBufferFragment.packet_id, mfuByteBufferFragment.mpu_sequence_number,
-                    MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us,
-                    MmtPacketIdContext.audio_packet_statistics.extracted_sample_duration_us));
-        }
-
-        //jjustman-2020-12-02 - TODO: fix me
-        if (MmtPacketIdContext.video_packet_id == mfuByteBufferFragment.packet_id) {
-            addVideoFragment(mfuByteBufferFragment);
-            if (mfuByteBufferFragment.sample_number == 1) {
-                Log.d("MMTContentProvider", String.format("PushMfuByteBufferFragment:\tV\tpacket_id\t%d\tmpu_sequence_number\t%d\tduration_us\t%d\tsafe_mfu_presentation_time_us_computed\t%d\tmfuBufferQueue size\t%d",
-                        mfuByteBufferFragment.packet_id, mfuByteBufferFragment.mpu_sequence_number,
-                        MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us,
-                        mfuByteBufferFragment.get_safe_mfu_presentation_time_uS_computed(),
-                        maxQueueSize()/*mfuBufferQueue.size()*/));
+    //TODO: rewrite with ring-buffer?
+    @Override
+    public void pushAudioDecoderConfigurationRecord(MMTAudioDecoderConfigurationRecord mmtAudioDecoderConfigurationRecord) {
+        try {
+            for (int i = 0; i < descriptors.size(); i++) {
+                descriptors.get(i).pushAudioDecoderConfigurationRecord(mmtAudioDecoderConfigurationRecord);
             }
-        } else if (MmtPacketIdContext.audio_packet_id == mfuByteBufferFragment.packet_id) {
-            addAudioFragment(mfuByteBufferFragment);
-            if (mfuByteBufferFragment.sample_number == 1) {
-                Log.d("MMTContentProvider", String.format("PushMfuByteBufferFragment:\tA\tpacket_id\t%d\tmpu_sequence_number\t%d\tduration_us\t%d\tsafe_mfu_presentation_time_us_computed\t%d\tmfuBufferQueue size\t%d",
-                        mfuByteBufferFragment.packet_id, mfuByteBufferFragment.mpu_sequence_number,
-                        MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us,
-                        mfuByteBufferFragment.get_safe_mfu_presentation_time_uS_computed(),
-                        maxQueueSize()/*mfuBufferQueue.size()*/));
-            }
-        } else if (MmtPacketIdContext.stpp_packet_id == mfuByteBufferFragment.packet_id) {
-            addSubtitleFragment(mfuByteBufferFragment);
-            Log.d("MMTContentProvider", String.format("PushMfuByteBufferFragment:\tS\tpacket_id\t%d\tmpu_sequence_number\t%d\tduration_us\t%d\tsafe_mfu_presentation_time_us_computed\t%d\tmfuBufferQueue size\t%d",
-                    mfuByteBufferFragment.packet_id, mfuByteBufferFragment.mpu_sequence_number,
-                    MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us,
-                    mfuByteBufferFragment.get_safe_mfu_presentation_time_uS_computed(),
-                    maxQueueSize()/*mfuBufferQueue.size()*/));
+        } catch (IndexOutOfBoundsException e) {
+            // ignore
         }
     }
 
-    private void addVideoFragment(MfuByteBufferFragment mfuByteBufferFragment) {
-        //jjustman-2020-12-09 - hacks to make sure we don't fall too far behind wall-clock
-//        if(mfuBufferQueue.size() > 120) {
-//            Log.w("MMTDataBuffer", String.format("addVideoFragment: V: clearing queue, length: %d", mfuBufferQueue.size()));
-//            mfuBufferQueue.clear();
+    //TODO: do we need this?
+//    private void InitMpuMetadata_HEVC_NAL_Payload(MpuMetadata_HEVC_NAL_Payload payload) {
+////        descriptors.forEach(descriptor -> {
+////            descriptor.InitMpuMetadata_HEVC_NAL_Payload(payload);
+////        });
+//    }
+//
+//    private void PushMfuByteBufferFragment(MfuByteBufferFragment mfuByteBufferFragment) {
+////        descriptors.forEach(descriptor -> {
+////            descriptor.PushMfuByteBufferFragment(mfuByteBufferFragment);
+////        });
+//
+//        if (MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us == 0 || MmtPacketIdContext.getAudioPacketStatistic(mfuByteBufferFragment.packet_id).extracted_sample_duration_us == 0) {
+//            Log.d("MMTDataBuffer", String.format("PushMfuByteBufferFragment:WARN:packet_id: %d, mpu_sequence_number: %d, video.duration_us: %d, audio.duration_us: %d, missing extracted_sample_duration",
+//                    mfuByteBufferFragment.packet_id, mfuByteBufferFragment.mpu_sequence_number,
+//                    MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us,
+//                    MmtPacketIdContext.getAudioPacketStatistic(mfuByteBufferFragment.packet_id).extracted_sample_duration_us));
 //        }
-
-        if (isKeySample(mfuByteBufferFragment)) {
-            if (!FirstMfuBufferVideoKeyframeSent) {
-                Log.d("MMTContentProvider", String.format("addVideoFragment: V: pushing FIRST: queueSize: %d, sampleNumber: %d, size: %d, mpuPresentationTimeUs: %d",
-                        maxQueueSize()/*mfuBufferQueue.size()*/,
-                        mfuByteBufferFragment.sample_number,
-                        mfuByteBufferFragment.bytebuffer_length,
-                        mfuByteBufferFragment.mpu_presentation_time_uS_from_SI));
-            }
-            FirstMfuBufferVideoKeyframeSent = true;
-
-            MmtPacketIdContext.video_packet_statistics.video_mfu_i_frame_count++;
-        } else {
-            MmtPacketIdContext.video_packet_statistics.video_mfu_pb_frame_count++;
-        }
-
-        if (mfuByteBufferFragment.mfu_fragment_count_expected == mfuByteBufferFragment.mfu_fragment_count_rebuilt) {
-            MmtPacketIdContext.video_packet_statistics.complete_mfu_samples_count++;
-        } else {
-            MmtPacketIdContext.video_packet_statistics.corrupt_mfu_samples_count++;
-        }
-
-        //TODO: jjustman-2019-10-23: manual missing statistics, context callback doesn't compute this properly yet.
-        if (MmtPacketIdContext.video_packet_statistics.last_mpu_sequence_number != mfuByteBufferFragment.mpu_sequence_number) {
-            MmtPacketIdContext.video_packet_statistics.total_mpu_count++;
-            //compute trailing mfu's missing
-
-            //compute leading mfu's missing
-            if (mfuByteBufferFragment.sample_number > 1) {
-                MmtPacketIdContext.video_packet_statistics.missing_mfu_samples_count += (mfuByteBufferFragment.sample_number - 1);
-            }
-        } else {
-            MmtPacketIdContext.video_packet_statistics.missing_mfu_samples_count += mfuByteBufferFragment.sample_number - (1 + MmtPacketIdContext.video_packet_statistics.last_mfu_sample_number);
-        }
-
-        MmtPacketIdContext.video_packet_statistics.last_mfu_sample_number = mfuByteBufferFragment.sample_number;
-        MmtPacketIdContext.video_packet_statistics.last_mpu_sequence_number = mfuByteBufferFragment.mpu_sequence_number;
-
-        //todo - build mpu stats from tail of mfuBufferQueueVideo
-
-        MmtPacketIdContext.video_packet_statistics.total_mfu_samples_count++;
-
-        if ((MmtPacketIdContext.video_packet_statistics.total_mfu_samples_count % DebuggingFlags.DEBUG_LOG_MFU_STATS_FRAME_COUNT) == 0) {
-            Log.d("MMTDataBuffer",
-                    String.format("pushMfuByteBufferFragment: V: appending MFU: mpu_sequence_number: %d, sampleNumber: %d, size: %d, mpuPresentationTimeUs: %d, queueSize: %d",
-                            mfuByteBufferFragment.mpu_sequence_number,
-                            mfuByteBufferFragment.sample_number,
-                            mfuByteBufferFragment.bytebuffer_length,
-                            mfuByteBufferFragment.get_safe_mfu_presentation_time_uS_computed(),
-                            maxQueueSize()/*mfuBufferQueue.size()*/));
-        }
-    }
-
-    private void addAudioFragment(MfuByteBufferFragment mfuByteBufferFragment) {
-
-        //jjustman-2020-12-09 - hacks to make sure we don't fall too far behind wall-clock
-//        if(mfuBufferQueue.size() > 120) {
-//            Log.w("MMTDataBuffer", String.format("addAudioFragment: A: clearing queue, length: %d",mfuBufferQueue.size()));
-//            mfuBufferQueue.clear();
+//
+//        //jjustman-2020-12-02 - TODO: fix me
+//        if (MmtPacketIdContext.video_packet_id == mfuByteBufferFragment.packet_id) {
+//            addVideoFragment(mfuByteBufferFragment);
+//            if (mfuByteBufferFragment.sample_number == 1) {
+//                Log.d("MMTContentProvider", String.format("PushMfuByteBufferFragment:\tV\tpacket_id\t%d\tmpu_sequence_number\t%d\tduration_us\t%d\tsafe_mfu_presentation_time_us_computed\t%d\tmfuBufferQueue size\t%d",
+//                        mfuByteBufferFragment.packet_id, mfuByteBufferFragment.mpu_sequence_number,
+//                        MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us,
+//                        mfuByteBufferFragment.get_safe_mfu_presentation_time_uS_computed(),
+//                        maxQueueSize()/*mfuBufferQueue.size()*/));
+//            }
+//        } else if (MmtPacketIdContext.isAudioPacket(mfuByteBufferFragment.packet_id)) {
+//            addAudioFragment(mfuByteBufferFragment);
+//            if (mfuByteBufferFragment.sample_number == 1) {
+//                Log.d("MMTContentProvider", String.format("PushMfuByteBufferFragment:\tA\tpacket_id\t%d\tmpu_sequence_number\t%d\tduration_us\t%d\tsafe_mfu_presentation_time_us_computed\t%d\tmfuBufferQueue size\t%d",
+//                        mfuByteBufferFragment.packet_id, mfuByteBufferFragment.mpu_sequence_number,
+//                        MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us,
+//                        mfuByteBufferFragment.get_safe_mfu_presentation_time_uS_computed(),
+//                        maxQueueSize()/*mfuBufferQueue.size()*/));
+//            }
+//        } else if (MmtPacketIdContext.stpp_packet_id == mfuByteBufferFragment.packet_id) {
+//            addSubtitleFragment(mfuByteBufferFragment);
+//            Log.d("MMTContentProvider", String.format("PushMfuByteBufferFragment:\tS\tpacket_id\t%d\tmpu_sequence_number\t%d\tduration_us\t%d\tsafe_mfu_presentation_time_us_computed\t%d\tmfuBufferQueue size\t%d",
+//                    mfuByteBufferFragment.packet_id, mfuByteBufferFragment.mpu_sequence_number,
+//                    MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us,
+//                    mfuByteBufferFragment.get_safe_mfu_presentation_time_uS_computed(),
+//                    maxQueueSize()/*mfuBufferQueue.size()*/));
 //        }
-
-        if (mfuByteBufferFragment.mfu_fragment_count_expected == mfuByteBufferFragment.mfu_fragment_count_rebuilt) {
-            MmtPacketIdContext.audio_packet_statistics.complete_mfu_samples_count++;
-        } else {
-            MmtPacketIdContext.audio_packet_statistics.corrupt_mfu_samples_count++;
-        }
-
-        //todo - build mpu stats from tail of mfuBufferQueueVideo
-
-        MmtPacketIdContext.audio_packet_statistics.total_mfu_samples_count++;
-
-        if (MmtPacketIdContext.audio_packet_statistics.last_mpu_sequence_number != mfuByteBufferFragment.mpu_sequence_number) {
-            MmtPacketIdContext.audio_packet_statistics.total_mpu_count++;
-            //compute trailing mfu's missing
-
-            //compute leading mfu's missing
-            if (mfuByteBufferFragment.sample_number > 1) {
-                MmtPacketIdContext.audio_packet_statistics.missing_mfu_samples_count += (mfuByteBufferFragment.sample_number - 1);
-            }
-        } else {
-            MmtPacketIdContext.audio_packet_statistics.missing_mfu_samples_count += mfuByteBufferFragment.sample_number - (1 + MmtPacketIdContext.audio_packet_statistics.last_mfu_sample_number);
-        }
-
-        MmtPacketIdContext.audio_packet_statistics.last_mfu_sample_number = mfuByteBufferFragment.sample_number;
-        MmtPacketIdContext.audio_packet_statistics.last_mpu_sequence_number = mfuByteBufferFragment.mpu_sequence_number;
-
-
-        if ((MmtPacketIdContext.audio_packet_statistics.total_mfu_samples_count % DebuggingFlags.DEBUG_LOG_MFU_STATS_FRAME_COUNT) == 0) {
-
-            Log.d("MMTDataBuffer", String.format("pushMfuByteBufferFragment: A: appending MFU: mpu_sequence_number: %d, sampleNumber: %d, size: %d, mpuPresentationTimeUs: %d, queueSize: %d",
-                    mfuByteBufferFragment.mpu_sequence_number,
-                    mfuByteBufferFragment.sample_number,
-                    mfuByteBufferFragment.bytebuffer_length,
-                    mfuByteBufferFragment.get_safe_mfu_presentation_time_uS_computed(),
-                    maxQueueSize()/*mfuBufferQueue.size()*/));
-        }
-    }
-
-    private void addSubtitleFragment(MfuByteBufferFragment mfuByteBufferFragment) {
-        if (!FirstMfuBufferVideoKeyframeSent) {
-            return;
-        }
-
-        MmtPacketIdContext.stpp_packet_statistics.total_mfu_samples_count++;
-    }
-
-    private boolean isKeySample(MfuByteBufferFragment fragment) {
-        return fragment.sample_number == 1;
-    }
-
-    private int maxQueueSize() {
-        final AtomicInteger maxSize = new AtomicInteger(0);
-        descriptors.forEach(descriptor -> {
-            int size = descriptor.getQueueSize();
-            if (size > maxSize.get()) maxSize.set(size);
-        });
-
-        return maxSize.get();
-    }
+//    }
+//
+//    private void addVideoFragment(MfuByteBufferFragment mfuByteBufferFragment) {
+//        //jjustman-2020-12-09 - hacks to make sure we don't fall too far behind wall-clock
+////        if(mfuBufferQueue.size() > 120) {
+////            Log.w("MMTDataBuffer", String.format("addVideoFragment: V: clearing queue, length: %d", mfuBufferQueue.size()));
+////            mfuBufferQueue.clear();
+////        }
+//
+//        if (isKeySample(mfuByteBufferFragment)) {
+//            if (!FirstMfuBufferVideoKeyframeSent) {
+//                Log.d("MMTContentProvider", String.format("addVideoFragment: V: pushing FIRST: queueSize: %d, sampleNumber: %d, size: %d, mpuPresentationTimeUs: %d",
+//                        maxQueueSize()/*mfuBufferQueue.size()*/,
+//                        mfuByteBufferFragment.sample_number,
+//                        mfuByteBufferFragment.bytebuffer_length,
+//                        mfuByteBufferFragment.mpu_presentation_time_uS_from_SI));
+//            }
+//            FirstMfuBufferVideoKeyframeSent = true;
+//
+//            MmtPacketIdContext.video_packet_statistics.video_mfu_i_frame_count++;
+//        } else {
+//            MmtPacketIdContext.video_packet_statistics.video_mfu_pb_frame_count++;
+//        }
+//
+//        if (mfuByteBufferFragment.mfu_fragment_count_expected == mfuByteBufferFragment.mfu_fragment_count_rebuilt) {
+//            MmtPacketIdContext.video_packet_statistics.complete_mfu_samples_count++;
+//        } else {
+//            MmtPacketIdContext.video_packet_statistics.corrupt_mfu_samples_count++;
+//        }
+//
+//        //TODO: jjustman-2019-10-23: manual missing statistics, context callback doesn't compute this properly yet.
+//        if (MmtPacketIdContext.video_packet_statistics.last_mpu_sequence_number != mfuByteBufferFragment.mpu_sequence_number) {
+//            MmtPacketIdContext.video_packet_statistics.total_mpu_count++;
+//            //compute trailing mfu's missing
+//
+//            //compute leading mfu's missing
+//            if (mfuByteBufferFragment.sample_number > 1) {
+//                MmtPacketIdContext.video_packet_statistics.missing_mfu_samples_count += (mfuByteBufferFragment.sample_number - 1);
+//            }
+//        } else {
+//            MmtPacketIdContext.video_packet_statistics.missing_mfu_samples_count += mfuByteBufferFragment.sample_number - (1 + MmtPacketIdContext.video_packet_statistics.last_mfu_sample_number);
+//        }
+//
+//        MmtPacketIdContext.video_packet_statistics.last_mfu_sample_number = mfuByteBufferFragment.sample_number;
+//        MmtPacketIdContext.video_packet_statistics.last_mpu_sequence_number = mfuByteBufferFragment.mpu_sequence_number;
+//
+//        //todo - build mpu stats from tail of mfuBufferQueueVideo
+//
+//        MmtPacketIdContext.video_packet_statistics.total_mfu_samples_count++;
+//
+//        if ((MmtPacketIdContext.video_packet_statistics.total_mfu_samples_count % DebuggingFlags.DEBUG_LOG_MFU_STATS_FRAME_COUNT) == 0) {
+//            Log.d("MMTDataBuffer",
+//                    String.format("pushMfuByteBufferFragment: V: appending MFU: mpu_sequence_number: %d, sampleNumber: %d, size: %d, mpuPresentationTimeUs: %d, queueSize: %d",
+//                            mfuByteBufferFragment.mpu_sequence_number,
+//                            mfuByteBufferFragment.sample_number,
+//                            mfuByteBufferFragment.bytebuffer_length,
+//                            mfuByteBufferFragment.get_safe_mfu_presentation_time_uS_computed(),
+//                            maxQueueSize()/*mfuBufferQueue.size()*/));
+//        }
+//    }
+//
+//    private void addAudioFragment(MfuByteBufferFragment mfuByteBufferFragment) {
+//
+//        //jjustman-2020-12-09 - hacks to make sure we don't fall too far behind wall-clock
+////        if(mfuBufferQueue.size() > 120) {
+////            Log.w("MMTDataBuffer", String.format("addAudioFragment: A: clearing queue, length: %d",mfuBufferQueue.size()));
+////            mfuBufferQueue.clear();
+////        }
+//
+//        MmtPacketIdContext.MmtMfuStatistics mmtAudioStatistics = MmtPacketIdContext.getAudioPacketStatistic(mfuByteBufferFragment.packet_id);
+//
+//        if (mfuByteBufferFragment.mfu_fragment_count_expected == mfuByteBufferFragment.mfu_fragment_count_rebuilt) {
+//            mmtAudioStatistics.complete_mfu_samples_count++;
+//        } else {
+//            mmtAudioStatistics.corrupt_mfu_samples_count++;
+//        }
+//
+//        //todo - build mpu stats from tail of mfuBufferQueueVideo
+//
+//        mmtAudioStatistics.total_mfu_samples_count++;
+//
+//        if (mmtAudioStatistics.last_mpu_sequence_number != mfuByteBufferFragment.mpu_sequence_number) {
+//            mmtAudioStatistics.total_mpu_count++;
+//            //compute trailing mfu's missing
+//
+//            //compute leading mfu's missing
+//            if (mfuByteBufferFragment.sample_number > 1) {
+//                mmtAudioStatistics.missing_mfu_samples_count += (mfuByteBufferFragment.sample_number - 1);
+//            }
+//        } else {
+//            mmtAudioStatistics.missing_mfu_samples_count += mfuByteBufferFragment.sample_number - (1 + mmtAudioStatistics.last_mfu_sample_number);
+//        }
+//
+//        mmtAudioStatistics.last_mfu_sample_number = mfuByteBufferFragment.sample_number;
+//        mmtAudioStatistics.last_mpu_sequence_number = mfuByteBufferFragment.mpu_sequence_number;
+//
+//
+//        if ((mmtAudioStatistics.total_mfu_samples_count % DebuggingFlags.DEBUG_LOG_MFU_STATS_FRAME_COUNT) == 0) {
+//
+//            Log.d("MMTDataBuffer", String.format("pushMfuByteBufferFragment: A: appending MFU: mpu_sequence_number: %d, sampleNumber: %d, size: %d, mpuPresentationTimeUs: %d, queueSize: %d",
+//                    mfuByteBufferFragment.mpu_sequence_number,
+//                    mfuByteBufferFragment.sample_number,
+//                    mfuByteBufferFragment.bytebuffer_length,
+//                    mfuByteBufferFragment.get_safe_mfu_presentation_time_uS_computed(),
+//                    maxQueueSize()/*mfuBufferQueue.size()*/));
+//        }
+//    }
+//
+//    private void addSubtitleFragment(MfuByteBufferFragment mfuByteBufferFragment) {
+//        if (!FirstMfuBufferVideoKeyframeSent) {
+//            return;
+//        }
+//
+//        MmtPacketIdContext.stpp_packet_statistics.total_mfu_samples_count++;
+//    }
+//
+//    private boolean isKeySample(MfuByteBufferFragment fragment) {
+//        return fragment.sample_number == 1;
+//    }
+//
+//    private int maxQueueSize() {
+//        int maxSize = 0;
+//
+//        return maxSize;
+//    }
 }

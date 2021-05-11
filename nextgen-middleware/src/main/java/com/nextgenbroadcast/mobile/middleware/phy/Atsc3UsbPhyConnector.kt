@@ -15,7 +15,7 @@ class Atsc3UsbPhyConnector {
             } != null
         }?.let { device ->
             // open device using a new Intent to start Service as foreground
-            startAtsc3ServiceForDevice(context, device)
+            startAtsc3ServiceForDevice(context, device, false)
         }
 
         return true
