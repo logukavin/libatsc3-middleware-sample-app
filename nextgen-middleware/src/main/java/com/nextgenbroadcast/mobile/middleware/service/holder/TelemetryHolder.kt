@@ -4,6 +4,7 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.hardware.Sensor
 import android.hardware.SensorManager
 import android.media.AudioManager
@@ -17,9 +18,14 @@ import com.nextgenbroadcast.mobile.middleware.BuildConfig
 import com.nextgenbroadcast.mobile.middleware.ServiceDialogActivity
 import com.nextgenbroadcast.mobile.middleware.encryptedSharedPreferences
 import com.nextgenbroadcast.mobile.middleware.gateway.web.ConnectionType
+import com.nextgenbroadcast.mobile.middleware.repository.TelemetrySharedPreferences
+import com.nextgenbroadcast.mobile.middleware.repository.TelemetrySharedPreferences.Companion.DEBUG_KEY
+import com.nextgenbroadcast.mobile.middleware.repository.TelemetrySharedPreferences.Companion.PHY_KEY
 import com.nextgenbroadcast.mobile.middleware.server.web.IMiddlewareWebServer
 import com.nextgenbroadcast.mobile.middleware.service.Atsc3ForegroundService
 import com.nextgenbroadcast.mobile.middleware.telemetry.ReceiverTelemetry
+import com.nextgenbroadcast.mobile.middleware.telemetry.ReceiverTelemetry.INFO_DEBUG
+import com.nextgenbroadcast.mobile.middleware.telemetry.ReceiverTelemetry.INFO_PHY
 import com.nextgenbroadcast.mobile.middleware.telemetry.RemoteControlBroker
 import com.nextgenbroadcast.mobile.middleware.telemetry.TelemetryBroker
 import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIoThing
@@ -72,6 +78,10 @@ internal class TelemetryHolder(
     val telemetryDelay: StateFlow<Map<String, Long>>
         get() = telemetryBroker?.readersDelay ?: MutableStateFlow(emptyMap())
 
+    private val sharedPreferences: SharedPreferences by lazy {
+        context.getSharedPreferences(TelemetrySharedPreferences.SHARED_PREFERENCES_NAME, Context.MODE_PRIVATE)
+    }
+
     fun open() {
         telemetryBroker = TelemetryBroker(
                 listOf(
@@ -111,6 +121,12 @@ internal class TelemetryHolder(
                 LOG.e(TAG, "Can't create Telemetry because Firebase ID not received.", task.exception)
             }
         }
+
+        _debugInfoSettings.value = mutableMapOf<String, Boolean>().apply {
+            put(INFO_DEBUG, sharedPreferences.getBoolean(DEBUG_KEY, false))
+            put(INFO_PHY, sharedPreferences.getBoolean(PHY_KEY, false))
+        }
+
     }
 
     fun close() {
@@ -246,6 +262,7 @@ internal class TelemetryHolder(
                 _debugInfoSettings.value = mutableMapOf<String, Boolean>().apply {
                     arguments.forEach { (key, value) ->
                         put(key, value.toBoolean())
+                        sharedPreferences.edit().putBoolean(key, value.toBoolean()).apply()
                     }
                 }
             }
