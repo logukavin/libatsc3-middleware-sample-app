@@ -84,6 +84,9 @@ class Atsc3MediaPlayer(
     }
 
     fun play(mediaUri: Uri, mimeType: String? = null, requestAudioFocus: Boolean = true) {
+
+        Log.i(TAG, String.format("play: with mediaUri: %s and mimeType: %s, requestAudioFocus: %s", mediaUri, mimeType, requestAudioFocus))
+
         reset()
 
         lastMediaUri = mediaUri
@@ -120,6 +123,9 @@ class Atsc3MediaPlayer(
     }
 
     fun replay(requestAudioFocus: Boolean = true) {
+        Log.i(TAG, String.format("replay: with requestAudioFocus: %s", requestAudioFocus));
+
+
         playWhenReady = true
 
         if (_player == null && lastMediaUri == null) return
@@ -368,6 +374,8 @@ class Atsc3MediaPlayer(
     }
 
     companion object {
+        val TAG: String = Atsc3MediaPlayer::class.java.simpleName
+
         private val PLAYER_RESET_DELAY = TimeUnit.SECONDS.toMillis(30)
     }
 }

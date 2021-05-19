@@ -75,11 +75,16 @@ class ReceiverPlayerView @JvmOverloads constructor(
 
     fun play(mediaUri: Uri) {
         val mimeType = context.contentResolver.getType(mediaUri)
-        if (mimeType == MMTConstants.MIME_MMT_AUDIO) {
-            stop()
-            atsc3Player.clearSavedState()
-            return
-        }
+        Log.i(TAG, String.format("play: with mediaUri: %s and mimeType: %s", mediaUri, mimeType))
+
+        //jjustman-2021-05-19 - dead code from MDI integration testing...
+        // DONT stop and re-play as we don't pin the Atsc3NdkMediaMMTBridge context yet
+        //  @viktor?
+        //        if (mimeType == MMTConstants.MIME_MMT_AUDIO) {
+        //            stop()
+        //            atsc3Player.clearSavedState()
+        //            return; //why??
+        //        }
 
         atsc3Player.play(mediaUri, mimeType)
 

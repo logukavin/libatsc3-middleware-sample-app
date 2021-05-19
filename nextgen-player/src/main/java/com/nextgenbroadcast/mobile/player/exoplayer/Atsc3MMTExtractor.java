@@ -53,7 +53,7 @@ public class Atsc3MMTExtractor implements Extractor {
 
     @Override
     public int read(ExtractorInput input, PositionHolder seekPosition) throws IOException, InterruptedException {
-        Log.d("Atsc3MMTExtractor",String.format("read with input: %s, position: %d", input, input.getPosition()));
+        Log.d("Atsc3MMTExtractor", String.format("read: enter: with input: %s, position: %d", input, input.getPosition()));
 
         if (input.getPosition() == 0) {
             if (!readMMTHeader(input)) {
@@ -63,6 +63,9 @@ public class Atsc3MMTExtractor implements Extractor {
         maybeOutputFormat(input);
         int sampleReadResult = readSample(input);
         maybeOutputSeekMap();
+
+        Log.d("Atsc3MMTExtractor",String.format("read: exit: sampleReadResult: %d", sampleReadResult));
+
         return sampleReadResult;
     }
 

@@ -503,6 +503,7 @@ internal class Atsc3Module(
     }
 
     override fun routeDash_force_player_reload_mpd(serviceID: Int) {
+        Log.i(TAG, String.format("routeDash_force_player_reload_mpd with serviceId: ", serviceID));
         if (getState() == Atsc3ModuleState.SCANNING) return
 
         if (serviceID == selectedServiceId) {
