@@ -146,6 +146,9 @@ public class Atsc3ContentDataSource extends BaseDataSource implements DataSource
             bytesRemaining -= bytesRead;
         }
         bytesTransferred(bytesRead);
+
+        Log.d("Atsc3ContentDataSource",String.format("read: exit with bytesRead: %d", bytesRead));
+
         return bytesRead;
     }
 

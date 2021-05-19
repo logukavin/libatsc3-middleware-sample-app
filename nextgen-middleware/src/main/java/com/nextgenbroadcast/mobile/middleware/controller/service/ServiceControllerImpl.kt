@@ -126,6 +126,7 @@ internal class ServiceControllerImpl(
     }
 
     override fun onServiceMediaReady(mediaUrl: MediaUrl, delayBeforePlayMs: Long) {
+        Log.e(TAG, String.format("onServiceMediaReady with mediaUrl: %s, delayBeforePlayMs: %d", mediaUrl, delayBeforePlayMs))
         if (delayBeforePlayMs > 0) {
             setMediaUrlWithDelay(mediaUrl, delayBeforePlayMs)
         } else {
@@ -324,5 +325,6 @@ internal class ServiceControllerImpl(
 
     companion object {
         private const val BA_LOADING_TIMEOUT = 5000L
+        val TAG: String = ServiceControllerImpl::class.java.simpleName
     }
 }
