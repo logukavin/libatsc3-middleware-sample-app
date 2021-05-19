@@ -53,6 +53,8 @@ public class Atsc3MMTExtractor implements Extractor {
 
     @Override
     public int read(ExtractorInput input, PositionHolder seekPosition) throws IOException, InterruptedException {
+        Log.d("Atsc3MMTExtractor",String.format("read with input: %s, position: %d", input, input.getPosition()));
+
         if (input.getPosition() == 0) {
             if (!readMMTHeader(input)) {
                 throw new ParserException("Could not find MMT header.");
@@ -138,6 +140,9 @@ public class Atsc3MMTExtractor implements Extractor {
                 }
                 currentSampleBytesRemaining -= skipped;
             }
+
+            //jjustman-2021-05-18 - on DU loss, clamp this to zero so we don't go negative...
+            currentSampleBytesRemaining = Math.max(0, currentSampleBytesRemaining);
 
             return Extractor.RESULT_CONTINUE;
         }

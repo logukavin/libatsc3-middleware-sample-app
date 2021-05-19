@@ -19,8 +19,9 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
     public static final String TAG = MMTFileDescriptor.class.getSimpleName();
 
     private static final int MAX_QUEUE_SIZE = 120;
-    private static final int MAX_FIRST_MFU_WAIT_TIME = 5000;
-    private static final int MAX_KEY_FRAME_WAIT_TIME = 5000;
+
+    private static final int MAX_FIRST_MFU_HEVC_NAL_WAIT_TIME_MS = 5000;
+    private static final int MAX_KEY_FRAME_WAIT_TIME_MS = 2000;     //jjustman-2021-05-11 - reduce this value down to 2000ms, as multi-plp MMT V/A should start with robust audio essence sooner...
 
     private static final byte RING_BUFFER_PAGE_INIT = 1;
     private static final byte RING_BUFFER_PAGE_FRAGMENT = 2;
@@ -29,7 +30,18 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
 
     private final int serviceId;
     private final Atsc3RingBuffer ringBuffer;
-    private final ByteBuffer pageBuffer = ByteBuffer.allocate(150 * 1024);
+    private final ByteBuffer pageBuffer = ByteBuffer.allocate(100 * 1024 * 60);  //jjustman-2021-05-18 - set our ringbuffer size to be 6.1MB -> ~50Mbit/sec which is 1/4 second of full SDIO bw for MarkONE upper bound
+    //153,600 KB -> 1,228,800 kB which means we will need a spin service interval less than 0.025 s (25ms) @ theoretical rate of 50Mbit/sec
+
+    private static final int SPINLOCK_AUDIO_CONFIGURATION_MAP_SLEEP_DURATION_MS = 500;
+    private static final int SPINLOCK_PAGEBUFFER_ONREAD_MPU_METADATA_NAL_SLEEP_DURATION_MS = 500;
+    private static final int SPINLOCK_READ_BUFFER_FULLY_SLEEP_DURATION_MS = 500;
+                                                                                                //jjustman-2021-05-11 - this should really be < 10ms -
+                                                                                                // or rather have the NDK / JNI side use IPC shared mmap'd memory, so we can properly block on the file descriptor between the FuseTask and our NDK impl
+                                                                                                // ala mmap'd ip with FD's https://developer.android.com/ndk/reference/group/memory#asharedmemory_create
+                                                                                                // https://developer.android.com/ndk/reference/group/memory
+
+
     private final byte[] header = {(byte) 0xAC, 0x40, (byte) 0xFF, (byte) 0xFF, 0x00, 0x00, 0x00};
     private final ByteBuffer sampleHeaderBuffer = ByteBuffer.allocate(MMTConstants.SIZE_SAMPLE_HEADER);
     private final ArrayMap<Integer, MMTAudioDecoderConfigurationRecord> audioConfigurationMap = new ArrayMap<>();
@@ -63,44 +75,85 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
         //return AssetFileDescriptor.UNKNOWN_LENGTH;
     }
 
+    /*
+    jjustman-2021-05-11:
+
+        https://developer.android.com/reference/java/io/FileInputStream#read()
+
+        public int read ()
+            Reads a byte of data from this input stream. This method blocks if no input is yet available.
+
+       avoid the following kernel spin:
+
+           2021-05-11 19:43:55.751 5083-5498/com.nextgenbroadcast.mobile.middleware.sample E/MMTFileDescriptor: onRead: offset: 0, size: 16384
+            2021-05-11 19:43:55.751 5083-5498/com.nextgenbroadcast.mobile.middleware.sample I/MMTFileDescriptor: in scanMpuMetadata, loopCount: 0
+
+     */
     @Override
     public int onRead(long offset, int size, byte[] data) throws ErrnoException {
-        if (!isActive) throw new ErrnoException("onRead", OsConstants.EIO);
+        if (!isActive) {
+            Log.e(TAG ,String.format("onRead !isActive"));
+            throw new ErrnoException("onRead", OsConstants.EIO);
+        }
 
-        if (size == 0) return 0;
+        Log.e(TAG ,String.format("onRead: offset: %d, size: %d", offset, size));
+
+        if (size == 0) {
+            Log.w(TAG ,String.format("onRead: requested size is 0, returning 0!"));
+            return 0;
+        }
 
         try {
-            final int bytesRead;
+            int bytesRead = 0;
             if (sendFileHeader) {
                 if (!audioOnly) {
-                    if (!hasMpuMetadata()) {
+
+                    //jjustman-2021-05-18 - spinlock as we need HEVC_NAL
+                    while (isActive && !hasMpuMetadataHEVC_NAL()) {
                         if (mpuWaitingStartTime == 0) {
                             mpuWaitingStartTime = System.currentTimeMillis();
                         }
 
+                        //jjustman-2021-05-11 - this will mean that we _MUST_ decode our HEVC nal (comprised of ISOBMFF init box, e.g. MPU metadata - mpu_fragment_type = 0x00), not as painful, as this is in carousel for every GOP
+
                         scanMpuMetadata(pageBuffer);
 
-                        if (!hasMpuMetadata()) {
-                            if ((System.currentTimeMillis() - mpuWaitingStartTime) < MAX_FIRST_MFU_WAIT_TIME) {
-                                return 0;
-                            } else {
-                                throw new ErrnoException("onRead", OsConstants.EIO);
+                        if (!hasMpuMetadataHEVC_NAL()) {
+                            long currentMpuWaitingTime = System.currentTimeMillis() - mpuWaitingStartTime;
+
+                            if(SPINLOCK_PAGEBUFFER_ONREAD_MPU_METADATA_NAL_SLEEP_DURATION_MS > 250) {
+                                Log.d(TAG, String.format("onRead: !hasMpuMetadata, spin with currentMpuWaitingTime: %d, MAX_FIRST_MFU_WAIT_TIME: %d", currentMpuWaitingTime, MAX_FIRST_MFU_HEVC_NAL_WAIT_TIME_MS));
                             }
+
+                            Thread.sleep(SPINLOCK_PAGEBUFFER_ONREAD_MPU_METADATA_NAL_SLEEP_DURATION_MS);
                         }
                     }
 
-                    if (keyFrameWaitingStartTime == 0) {
-                        keyFrameWaitingStartTime = System.currentTimeMillis();
-                    }
-
-                    if (!skipUntilKeyFrame(pageBuffer) && (System.currentTimeMillis() - keyFrameWaitingStartTime) < MAX_KEY_FRAME_WAIT_TIME) {
-                        return 0;
-                    }
+//jjustman-2021-05-18 - todo - reimpl for max waiting time, and skip if we don't have a starting keyframe
+//                    if (keyFrameWaitingStartTime == 0) {
+//                        keyFrameWaitingStartTime = System.currentTimeMillis();
+//                    }
+//
+//                    Boolean skipUntilKeyFrameFlag = skipUntilKeyFrame(pageBuffer);
+//
+//                    long currentKeyFrameWaitingTime = (System.currentTimeMillis() - keyFrameWaitingStartTime);
+//                    if (!skipUntilKeyFrameFlag && currentKeyFrameWaitingTime < MAX_KEY_FRAME_WAIT_TIME_MS) {
+//                        Log.i(TAG, String.format("onRead: !skipUntilKeyFrameFlag && currentKeyFrameWaitingTime is: %d, MAX_KEY_FRAME_WAIT_TIME: %d, returning 0", currentKeyFrameWaitingTime, MAX_KEY_FRAME_WAIT_TIME_MS));
+//                        return 0;
+//                    }
                 }
 
                 //TODO: we need better criteria
-                if (audioConfigurationMap.isEmpty()) {
-                    return 0;
+//                if (audioConfigurationMap.isEmpty()) {
+//                    Log.w(TAG ,String.format("onRead: audioConfigurationMap.isEmpty! returning 0"));
+//                    return 0;
+//                }
+
+                while(isActive && audioConfigurationMap.isEmpty()) {
+                    if(SPINLOCK_AUDIO_CONFIGURATION_MAP_SLEEP_DURATION_MS > 250) {
+                        Log.i(TAG, String.format("onRead: audioConfigurationMap.isEmpty(), spinning: %d", SPINLOCK_AUDIO_CONFIGURATION_MAP_SLEEP_DURATION_MS));
+                    }
+                    Thread.sleep(SPINLOCK_AUDIO_CONFIGURATION_MAP_SLEEP_DURATION_MS);
                 }
 
                 if (headerBuffer == null) {
@@ -113,16 +166,38 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
 
                 sendFileHeader = headerBuffer.remaining() > 0;
 
-                bytesRead = readBufferFully(bytesToRead, size - bytesToRead, data) + bytesToRead;
+                while(isActive) {
+                    bytesRead = readBufferFully(bytesToRead, size - bytesToRead, data) + bytesToRead;
+                    if(bytesRead != 0) break;
+
+                    if (SPINLOCK_READ_BUFFER_FULLY_SLEEP_DURATION_MS > 250) {
+                        Log.i(TAG, String.format("onRead: readBufferFully, sendFileHeader, offset: %d, readLength: %d, data: %d, spinning: %d", bytesToRead, (size - bytesToRead), SPINLOCK_READ_BUFFER_FULLY_SLEEP_DURATION_MS));
+                    }
+                    Thread.sleep(SPINLOCK_READ_BUFFER_FULLY_SLEEP_DURATION_MS);
+                }
             } else {
-                bytesRead = readBufferFully(0, size, data);
+                while(isActive) {
+                    bytesRead = readBufferFully(0, size, data);
+                    if(bytesRead != 0) break;
+
+
+                    if(SPINLOCK_READ_BUFFER_FULLY_SLEEP_DURATION_MS > 250) {
+                        Log.i(TAG, String.format("onRead: readBufferFully, !sendFileHeader, offset: 0, readLength: %d, spinning: %d", size, SPINLOCK_READ_BUFFER_FULLY_SLEEP_DURATION_MS));
+                    }
+                    Thread.sleep(SPINLOCK_READ_BUFFER_FULLY_SLEEP_DURATION_MS);
+                }
             }
 
-            if (bytesRead < 0) throw new ErrnoException("onRead", OsConstants.EIO);
+            if (bytesRead < 0) {
+                Log.e(TAG, String.format("bytesRead < 0, actual value is: %d", bytesRead));
+                throw new ErrnoException("onRead", OsConstants.EIO);
+            }
+
+            Log.d(TAG, String.format("onRead: complete: returning bytesRead: %d", bytesRead));
 
             return bytesRead;
         } catch (Exception e) {
-            Log.d(TAG, "onRead", e);
+            Log.e(TAG, "Exception: onRead, rethrowing", e);
 
             throw new ErrnoException("onRead", OsConstants.EIO, e);
         }
@@ -204,6 +279,10 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
     }
 
     private int readBufferFully(int offset, int readLength, byte[] buffer) {
+        int loopCount;
+
+        Log.e(TAG, String.format("readBufferFully, offset: %d, readLength: %d", offset, readLength));
+
         int bytesAlreadyRead = 0;
 
         if (readSampleHeader) {
@@ -211,7 +290,9 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
         }
 
         while (bytesAlreadyRead < readLength) {
+
             int bytesRead = readBuffer(offset + bytesAlreadyRead, readLength - bytesAlreadyRead, buffer);
+            Log.d(TAG, String.format("readBufferFully, loop: bytesAlreadyRead: %d, readLength: %d, bytesRead: %d", bytesAlreadyRead, readLength, bytesRead));
 
             if (bytesRead == 0) {
                 // Fill with an empty packet to avoid unfilled answer that leads to EOF
@@ -235,6 +316,8 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
     }
 
     private int readBuffer(int offset, int readLength, byte[] buffer) {
+        Log.d(TAG, String.format("readBuffer, offset: %d, readLength: %d", offset, readLength));
+
         if (readLength == 0) {
             return 0;
         }
@@ -255,7 +338,10 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
     }
 
     private void scanMpuMetadata(ByteBuffer buffer) {
+        int loopCount = 0;
         while (true) {
+            Log.i(TAG, String.format("in scanMpuMetadata, loopCount: %d", loopCount++));
+
             int bufferLen = ringBuffer.readNextPage(buffer);
             if (bufferLen <= 0) {
                 buffer.limit(0);
@@ -273,6 +359,8 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
                 ByteBuffer init = ByteBuffer.allocate(bufferLen);
                 init.put(buffer.array(), buffer.position() + Atsc3RingBuffer.RING_BUFFER_PAGE_HEADER_FRAGMENT, bufferLen);
                 InitMpuMetadata_HEVC_NAL_Payload = init;
+                Log.d(TAG, String.format("in scanMpuMetadata, loopCount: %d", loopCount++));
+
             }
 
             buffer.limit(0);
@@ -282,10 +370,15 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
     }
 
     private int readFragment(int offset, int readLength, byte[] buffer, ByteBuffer tailBuffer) {
+        Log.d(TAG, String.format("readFragment enter, offset: %d, readLength: %d", offset, readLength));
+
         // we must read at leas page header
         if (readLength < Atsc3RingBuffer.RING_BUFFER_PAGE_HEADER_SIZE) return 0;
+        int loopCount = 0;
 
         while (true) {
+            Log.i(TAG, String.format("in readFragment, loopCount: %d", loopCount++));
+
             // read next fragment
             final int pageSize = ringBuffer.readNextPage(offset, readLength, buffer, tailBuffer);
             if (pageSize == -2) continue; // we skipped page in some reason, let's try again
@@ -365,12 +458,16 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
         return bytesToRead;
     }
 
-    private boolean hasMpuMetadata() {
+    private boolean hasMpuMetadataHEVC_NAL() {
         return InitMpuMetadata_HEVC_NAL_Payload != null;
     }
 
     private boolean skipUntilKeyFrame(ByteBuffer buffer) {
+        int loopCount = 0;
+
         while (true) {
+            Log.i(TAG, String.format("in skipUntilKeyFrame, loopCount: %d", loopCount++));
+
             int bufferLen = ringBuffer.readNextPage(buffer);
             if (bufferLen <= 0) {
                 buffer.limit(0);
