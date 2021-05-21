@@ -1,6 +1,5 @@
 package com.nextgenbroadcast.mobile.middleware.telemetry
 
-import android.util.Log
 import androidx.annotation.MainThread
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.middleware.telemetry.entity.TelemetryEvent
@@ -166,24 +165,20 @@ class TelemetryBroker(
 
     @MainThread
     fun setReadersEnabled(enabled: Boolean) {
-        Log.d(TAG, "-------------------------- setReadersEnable all $enabled")
         setReaderEnabled(enabled, readers.map { it.name })
     }
 
     @MainThread
     fun setReaderEnabled(enabled: Boolean, nameList: List<String>) {
-        Log.d(TAG, "-----------------2--------- setReadersEnable all $enabled $nameList")
         setReaderEnabled(enabled, *nameList.toTypedArray())
     }
 
     @MainThread
     fun setReaderEnabled(enabled: Boolean/*TODO:, delayMils: Long*/, vararg names: String) {
-        Log.d(TAG, "-----------------3--------- setReadersEnable all $enabled $names")
         val map = _readersEnabled.value.toMutableMap()
         var changed = false
 
         names.forEach { name ->
-            Log.d(TAG, "-----------------4---------  $enabled $name")
             if (enabled) {
                 readers.forEach { reader ->
                     if (reader.name.startsWith(name)) {
