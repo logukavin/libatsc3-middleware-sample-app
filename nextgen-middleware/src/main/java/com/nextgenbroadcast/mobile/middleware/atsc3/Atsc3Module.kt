@@ -443,7 +443,12 @@ internal class Atsc3Module(
         val services = serviceLocationTable
                 .toSortedMap(compareBy { serviceToSourceConfig[it] })
                 .values.flatMap { it.services }
-        fireServiceLocationTableChanged(services, serviceLocationTableUrls.elements()?.nextElement() ?: SparseArray<String>())
+        try {
+            fireServiceLocationTableChanged(services, serviceLocationTableUrls.elements()?.nextElement()
+                    ?: SparseArray<String>())
+        } catch (ex: Exception) {
+            log("processServiceLocationTableAndNotifyListener: exception: $ex")
+        }
 
         if (suspendedServiceSelection) {
             CoroutineScope(Dispatchers.Main).launch {
@@ -564,7 +569,7 @@ internal class Atsc3Module(
 
     //////////////////////////////////////////////////////////////
 
-    //jjustman-2021-05-19 - TODO: fix me to pass a proper collection of urls for <bsid, slt.groupId, SLTConstants.URL_TYPE_REPORT_SERVER>
+    //jjustman-2021-05-19 - TODO: fix me to pass a proper collection of urls for <frequency, bsid, slt.groupId, SLTConstants.URL_TYPE_REPORT_SERVER> := { <XML> }
     private fun fireServiceLocationTableChanged(services: List<Atsc3Service>, urls: SparseArray<String>) {
         log("fireServiceLocationTableChanged, services: $services, urls: $urls");
 
