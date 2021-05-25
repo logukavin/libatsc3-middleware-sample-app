@@ -227,9 +227,12 @@ class TelemetryBroker(
         readers.forEach { reader ->
             if (reader.name.startsWith(name)) {
                 if (reader.delayMils != delayMils) {
+                    val wasStarted = readerJobs.containsKey(reader)
                     readerJobs[reader]?.cancel()
                     reader.delayMils = delayMils
-                    coroutineScope.launchReader(reader)
+                    if (wasStarted) {
+                        coroutineScope.launchReader(reader)
+                    }
                 }
             }
         }

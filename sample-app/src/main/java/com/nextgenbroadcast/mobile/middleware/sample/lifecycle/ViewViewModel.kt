@@ -13,8 +13,8 @@ class ViewViewModel : ViewModel() {
     val currentServiceTitle = MutableLiveData<String>()
     val isPlaying = MutableLiveData<Boolean>()
 
-    val showDebugInfo = MutableLiveData(true)
-    val showPhyInfo = MutableLiveData(false)
+    val showDebugInfo = MutableLiveData<Boolean>()
+    val showPhyInfo = MutableLiveData<Boolean>()
 
     val debugData = MutableLiveData<String>()
 
