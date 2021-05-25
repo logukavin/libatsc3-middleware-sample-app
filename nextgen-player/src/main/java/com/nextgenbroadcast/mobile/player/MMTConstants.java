@@ -11,8 +11,7 @@ public final class MMTConstants {
             + Integer.BYTES     /* sample size */
             + Integer.BYTES     /* sample id */
             + Long.BYTES        /* sample presentation time */
-            + Byte.BYTES        /* is key frame */
-            + Byte.BYTES;       /* payload offset */
+            + Byte.BYTES;       /* is key frame */
 
     public static final int HEADER_SIZE =
             Integer.BYTES       /* full header size */
@@ -44,7 +43,6 @@ public final class MMTConstants {
 
     public static final byte[] mmtSignature = "#!MMT\n".getBytes(StandardCharsets.UTF_8);
 
-    public static final int TRACK_TYPE_EMPTY = -2;
     public static final int TRACK_TYPE_UNKNOWN = -1;
     public static final int TRACK_TYPE_AUDIO = 1;
     public static final int TRACK_TYPE_VIDEO = 2;
