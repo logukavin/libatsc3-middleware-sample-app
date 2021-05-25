@@ -4,7 +4,6 @@ import android.content.ContentResolver;
 import android.content.Context;
 import android.content.res.AssetFileDescriptor;
 import android.net.Uri;
-import android.util.Log;
 
 import androidx.annotation.Nullable;
 
@@ -12,7 +11,6 @@ import com.google.android.exoplayer2.C;
 import com.google.android.exoplayer2.upstream.BaseDataSource;
 import com.google.android.exoplayer2.upstream.DataSpec;
 import com.google.android.exoplayer2.upstream.TransferListener;
-import com.nextgenbroadcast.mmt.exoplayer2.ext.DataSource2;
 
 import java.io.EOFException;
 import java.io.FileInputStream;
