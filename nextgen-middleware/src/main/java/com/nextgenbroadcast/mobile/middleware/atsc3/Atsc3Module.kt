@@ -216,7 +216,7 @@ internal class Atsc3Module(
                 applyNextSourceConfig()
             } else if (currentState != Atsc3ModuleState.IDLE) {
                 if (serviceLocationTable.isEmpty()) {
-                    stop() // maybe we should close it?
+                   // stop() - don't stop phy here to let it beeing reconfigured
                 } else {
                     finishReconfiguration()
                 }
