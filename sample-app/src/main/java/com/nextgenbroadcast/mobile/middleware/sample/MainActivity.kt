@@ -139,13 +139,6 @@ class MainActivity : BaseActivity() {
         Log.w(TAG, "onStop() invoked - our activity is no longer visible");
 
         super.onStop()
-    }
-
-    //jjustman-2021-05-19 - move our mediaController unregistration and unbinding only to onDestroy, otherwise
-    override fun onDestroy() {
-        Log.w(TAG, "onDestroy() invoked");
-
-        super.onDestroy()
 
         mediaController?.unregisterCallback(mediaControllerCallback)
 

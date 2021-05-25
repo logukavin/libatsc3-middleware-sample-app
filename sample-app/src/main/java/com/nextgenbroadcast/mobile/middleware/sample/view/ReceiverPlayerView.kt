@@ -5,10 +5,10 @@ import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.util.AttributeSet
-import android.util.Log
 import com.google.android.exoplayer2.Player
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
 import com.google.android.exoplayer2.ui.PlayerView
+import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.RMPViewModel
 import com.nextgenbroadcast.mobile.player.Atsc3MediaPlayer
@@ -53,7 +53,7 @@ class ReceiverPlayerView @JvmOverloads constructor(
             }
 
             override fun onPlayerError(error: Exception) {
-                Log.d(TAG, error.message ?: "")
+                LOG.d(TAG, error.message ?: "")
             }
 
             override fun onPlaybackSpeedChanged(speed: Float) {
@@ -75,16 +75,16 @@ class ReceiverPlayerView @JvmOverloads constructor(
 
     fun play(mediaUri: Uri) {
         val mimeType = context.contentResolver.getType(mediaUri)
-        Log.i(TAG, String.format("play: with mediaUri: %s and mimeType: %s", mediaUri, mimeType))
 
-        //jjustman-2021-05-19 - dead code from MDI integration testing...
-        // DONT stop and re-play as we don't pin the Atsc3NdkMediaMMTBridge context yet
-        //  @viktor?
-        //        if (mimeType == MMTConstants.MIME_MMT_AUDIO) {
-        //            stop()
-        //            atsc3Player.clearSavedState()
-        //            return; //why??
-        //        }
+        LOG.i(TAG, String.format("play: with mediaUri: %s and mimeType: %s", mediaUri, mimeType))
+
+        // AO service content will be played out with ForegroundService embedded player which is
+        // indicated on binding service with flag EXTRA_PLAY_AUDIO_ON_BOARD
+        if (mimeType == MMTConstants.MIME_MMT_AUDIO) {
+            stop()
+            atsc3Player.clearSavedState()
+            return
+        }
 
         atsc3Player.play(mediaUri, mimeType)
 

@@ -1,6 +1,7 @@
 package com.nextgenbroadcast.mobile.middleware.sample.lifecycle
 
 import android.app.Application
+import android.net.Uri
 import android.text.Html
 import androidx.lifecycle.*
 import com.nextgenbroadcast.mobile.core.model.AppData
@@ -10,6 +11,8 @@ import com.nextgenbroadcast.mobile.core.presentation.IMediaPlayerPresenter
 import com.nextgenbroadcast.mobile.core.presentation.IReceiverPresenter
 import com.nextgenbroadcast.mobile.core.presentation.IUserAgentPresenter
 import com.nextgenbroadcast.mobile.middleware.sample.R
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
 
 @Deprecated("Use the ReceiverContentResolver instead")
 class ReceiverViewModel(
@@ -19,6 +22,7 @@ class ReceiverViewModel(
         private val playerPresenter: IMediaPlayerPresenter
 ) : AndroidViewModel(application) {
     private val _appDataLog = MediatorLiveData<CharSequence>()
+    private val _mediaUri = MutableLiveData<Uri?>()
 
     val appData = MutableLiveData<AppData>(null)
     val receiverState = MutableLiveData(ReceiverState.idle())
@@ -42,10 +46,17 @@ class ReceiverViewModel(
 
     init {
         _appDataLog.addSource(/*agentPresenter.appData.asLiveData()*/appData) { data ->
-            _appDataLog.value = formatLog(data, playerPresenter.rmpMediaUri.value?.toString())
+            _appDataLog.value = formatLog(data, /*playerPresenter.rmpMediaUri.value?.toString()*/_mediaUri.value?.toString())
         }
-        _appDataLog.addSource(playerPresenter.rmpMediaUri.asLiveData()) { uri ->
+        _appDataLog.addSource(/*playerPresenter.rmpMediaUri.asLiveData()*/_mediaUri) { uri ->
             _appDataLog.value = formatLog(/*agentPresenter.appData.value*/appData.value, uri?.toString())
+        }
+
+        // we must collect data in viewModelScope instead of asLiveData() because VM life cycle is different from Fragment ones
+        viewModelScope.launch {
+            playerPresenter.rmpMediaUri.collect {
+                _mediaUri.value = it
+            }
         }
     }
 
