@@ -9,10 +9,11 @@ import android.hardware.Sensor
 import android.hardware.SensorManager
 import android.media.AudioManager
 import android.net.wifi.WifiManager
-import android.util.Log
+import androidx.core.content.edit
 import androidx.media.MediaBrowserServiceCompat
 import com.google.firebase.installations.FirebaseInstallations
 import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.core.model.PhyFrequency
 import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverCore
@@ -20,12 +21,9 @@ import com.nextgenbroadcast.mobile.middleware.BuildConfig
 import com.nextgenbroadcast.mobile.middleware.ServiceDialogActivity
 import com.nextgenbroadcast.mobile.middleware.encryptedSharedPreferences
 import com.nextgenbroadcast.mobile.middleware.gateway.web.ConnectionType
-import com.nextgenbroadcast.mobile.middleware.repository.TelemetrySharedPreferences
 import com.nextgenbroadcast.mobile.middleware.server.web.IMiddlewareWebServer
 import com.nextgenbroadcast.mobile.middleware.service.Atsc3ForegroundService
 import com.nextgenbroadcast.mobile.middleware.telemetry.ReceiverTelemetry
-import com.nextgenbroadcast.mobile.middleware.telemetry.ReceiverTelemetry.INFO_DEBUG
-import com.nextgenbroadcast.mobile.middleware.telemetry.ReceiverTelemetry.INFO_PHY
 import com.nextgenbroadcast.mobile.middleware.telemetry.RemoteControlBroker
 import com.nextgenbroadcast.mobile.middleware.telemetry.TelemetryBroker
 import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIoThing
@@ -42,16 +40,21 @@ import com.nextgenbroadcast.mobile.middleware.telemetry.task.WiFiInfoTelemetryTa
 import com.nextgenbroadcast.mobile.middleware.telemetry.writer.AWSIoTelemetryWriter
 import com.nextgenbroadcast.mobile.middleware.telemetry.writer.FileTelemetryWriter
 import com.nextgenbroadcast.mobile.middleware.telemetry.writer.WebTelemetryWriter
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
-import org.json.JSONObject
+import kotlinx.coroutines.launch
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.system.exitProcess
+
+private typealias PrefsMap = Map<String, Boolean>
 
 internal class TelemetryHolder(
         private val context: Context,
         private val receiver: Atsc3ReceiverCore
 ) {
+    private val gson = Gson()
     private val sensorManager: SensorManager by lazy {
         context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
     }
@@ -64,44 +67,37 @@ internal class TelemetryHolder(
     private val wifiManager: WifiManager by lazy {
         context.getSystemService(MediaBrowserServiceCompat.WIFI_SERVICE) as WifiManager
     }
+    private val sharedPreferences: SharedPreferences by lazy {
+        context.getSharedPreferences(SHARED_PREFERENCES_NAME, Context.MODE_PRIVATE)
+    }
 
     private var telemetryBroker: TelemetryBroker? = null
     private var remoteControl: RemoteControlBroker? = null
     private var awsIoThing: AWSIoThing? = null
 
-    private val _debugInfoSettings = MutableStateFlow(mapOf(
-            ReceiverTelemetry.INFO_DEBUG to true
-    ))
+    private val _debugInfoSettings: MutableStateFlow<PrefsMap>
+
+    init {
+        _debugInfoSettings = MutableStateFlow(
+                readPrefsMap(PREF_DEBUG_INFO_KEY).toMutableMap().apply {
+                    if (isEmpty()) {
+                        put(ReceiverTelemetry.INFO_DEBUG, true)
+                    }
+                }.toMap()
+        ).also { flow ->
+            CoroutineScope(Dispatchers.Main).launch {
+                flow.collect { infoPrefs ->
+                    storePrefsMap(PREF_DEBUG_INFO_KEY, infoPrefs)
+                }
+            }
+        }
+    }
 
     val debugInfoSettings = _debugInfoSettings.asStateFlow()
     val telemetryEnabled: StateFlow<Map<String, Boolean>>
         get() = telemetryBroker?.readersEnabled ?: MutableStateFlow(emptyMap())
     val telemetryDelay: StateFlow<Map<String, Long>>
         get() = telemetryBroker?.readersDelay ?: MutableStateFlow(emptyMap())
-
-    private val sharedPreferences: SharedPreferences by lazy {
-        context.getSharedPreferences(TelemetrySharedPreferences.SHARED_PREFERENCES_NAME, Context.MODE_PRIVATE)
-    }
-
-    val gson = Gson()
-
-    fun getTelemetrySettings(): Map<String, Boolean> {
-        val storedHashMapString: String? = sharedPreferences.getString(TelemetrySharedPreferences.TELEMETRY_KEY, "")
-        val outputMap = mutableMapOf<String, Boolean>()
-        if (!storedHashMapString.isNullOrEmpty()) {
-            try {
-                val jsonObject = JSONObject(storedHashMapString)
-                val iterator = jsonObject.keys()
-                while (iterator.hasNext()) {
-                    val key: String = iterator.next()
-                    outputMap[key] = jsonObject.get(key) as Boolean
-                }
-            } catch (e: java.lang.Exception) {
-                Log.d(TAG, "Restored telemetry settings error:$e");
-            }
-        }
-        return outputMap.toMap()
-    }
 
     fun open() {
         telemetryBroker = TelemetryBroker(
@@ -122,6 +118,17 @@ internal class TelemetryHolder(
                 )
         ).apply {
             //start() do not start Telemetry with application, use switch in Settings dialog or AWS command
+        }.also { broker ->
+            val enabledReaderNames = readPrefsMap(PREF_PHY_INFO_KEY).filterValues { it }.keys.toList()
+            if (enabledReaderNames.isNotEmpty()) {
+                broker.setReaderEnabled(true, enabledReaderNames)
+            }
+
+            CoroutineScope(Dispatchers.Main).launch {
+                broker.readersEnabled.collect { readerPref ->
+                    storePrefsMap(PREF_PHY_INFO_KEY, readerPref)
+                }
+            }
         }
 
         remoteControl = RemoteControlBroker(
@@ -143,15 +150,6 @@ internal class TelemetryHolder(
             }
         }
 
-        getTelemetrySettings().forEach { (name, isEnable) ->
-            setTelemetryEnabled(isEnable, name)
-        }
-
-        _debugInfoSettings.value = mutableMapOf<String, Boolean>().apply {
-            put(INFO_DEBUG, sharedPreferences.getBoolean(TelemetrySharedPreferences.DEBUG_KEY, false))
-            put(INFO_PHY, sharedPreferences.getBoolean(TelemetrySharedPreferences.PHY_KEY, false))
-        }
-
     }
 
     fun close() {
@@ -165,14 +163,18 @@ internal class TelemetryHolder(
         awsIoThing = null
     }
 
-    fun setAllEnabled(enabled: Boolean) {
-        telemetryBroker?.setReadersEnabled(enabled)
-        saveTelemetrySettingsInSharedPreferences()
+    fun setInfoVisible(enabled: Boolean, name: String) {
+        _debugInfoSettings.value = _debugInfoSettings.value.toMutableMap().apply {
+            put(name, enabled)
+        }
     }
 
-    fun setTelemetryEnabled(enabled: Boolean, name: String) {
-        telemetryBroker?.setReaderEnabled(enabled, name)
-        saveTelemetrySettingsInSharedPreferences()
+    fun setTelemetryEnabled(enabled: Boolean, name: String? = null) {
+        if (name != null) {
+            telemetryBroker?.setReaderEnabled(enabled, name)
+        } else {
+            telemetryBroker?.setReadersEnabled(enabled)
+        }
     }
 
     fun setTelemetryDelay(delayMils: Long, name: String) {
@@ -284,14 +286,12 @@ internal class TelemetryHolder(
                         telemetryBroker?.setReadersEnabled(enabled)
                     }
                 }
-                saveTelemetrySettingsInSharedPreferences()
             }
 
             ITelemetryControl.CONTROL_ACTION_SHOW_DEBUG_INFO -> {
                 _debugInfoSettings.value = mutableMapOf<String, Boolean>().apply {
                     arguments.forEach { (key, value) ->
                         put(key, value.toBoolean())
-                        sharedPreferences.edit().putBoolean(key, value.toBoolean()).apply()
                     }
                 }
             }
@@ -329,8 +329,16 @@ internal class TelemetryHolder(
 
     }
 
-    private fun saveTelemetrySettingsInSharedPreferences() {
-        sharedPreferences.edit().putString(TelemetrySharedPreferences.TELEMETRY_KEY, gson.toJson(telemetryEnabled.value)).apply()
+    private fun readPrefsMap(key: String): PrefsMap {
+        return sharedPreferences.getString(key, null)?.let { prefs ->
+            gson.fromJson(prefs, object : TypeToken<PrefsMap?>() {}.type)
+        } ?: emptyMap()
+    }
+
+    private fun storePrefsMap(key: String, map: PrefsMap) {
+        sharedPreferences.edit {
+            putString(key, gson.toJson(map))
+        }
     }
 
     companion object {
@@ -342,5 +350,9 @@ internal class TelemetryHolder(
         private const val CONNECTION_HOST = "0.0.0.0"
         private const val CONNECTION_TCP_PORT = 8081
         private const val CONNECTION_UDP_PORT = 6969
+
+        const val SHARED_PREFERENCES_NAME = "telemetry_pref"
+        const val PREF_DEBUG_INFO_KEY = "telemetry_info_debug"
+        const val PREF_PHY_INFO_KEY = "telemetry_info_phy"
     }
 }

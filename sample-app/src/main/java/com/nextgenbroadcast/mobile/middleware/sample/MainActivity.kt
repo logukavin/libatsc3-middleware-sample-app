@@ -241,11 +241,6 @@ class MainActivity : BaseActivity() {
                     }
                 }
 
-                //TODO: share status
-//            showDebugInfo.distinctUntilChanged().observe(this@MainActivity) { showDebugInfo ->
-//                if (showDebugInfo != null)
-//            }
-
                 launch {
                     controllerPresenter.telemetryEnabled.collect { enableMap ->
                         val distValues = enableMap.values.distinct()
@@ -263,16 +258,30 @@ class MainActivity : BaseActivity() {
                 }
             }
 
+            showDebugInfo.observe(this@MainActivity) { showDebugInfo ->
+                if (showDebugInfo != null) {
+                    val actualValue = controllerPresenter.debugInfoSettings.value[ReceiverTelemetry.INFO_DEBUG]
+                    setIfChanged(actualValue, showDebugInfo) { enabled ->
+                        controllerPresenter.setDebugInfoVisible(ReceiverTelemetry.INFO_DEBUG, enabled)
+                    }
+                }
+            }
+
+            showPhyInfo.observe(this@MainActivity) { showPhyInfo ->
+                if (showPhyInfo != null) {
+                    val actualValue = controllerPresenter.debugInfoSettings.value[ReceiverTelemetry.INFO_PHY]
+                    setIfChanged(actualValue, showPhyInfo) { enabled ->
+                        controllerPresenter.setDebugInfoVisible(ReceiverTelemetry.INFO_PHY, enabled)
+                    }
+                }
+            }
+
             enableTelemetry.observe(this@MainActivity) { enableTelemetry ->
                 if (enableTelemetry != null) {
                     val actualValue = controllerPresenter.telemetryEnabled.value.distinctValue()
                     // switch must be On if telemetry partially switched On. We allow only switching off partially active telemetry
-                    if (actualValue != null) {
-                        if (actualValue != enableTelemetry) {
-                            controllerPresenter.setTelemetryEnabled(enableTelemetry)
-                        }
-                    } else if (!enableTelemetry) {
-                        controllerPresenter.setTelemetryEnabled(false)
+                    setIfChanged(actualValue, enableTelemetry) { enabled ->
+                        controllerPresenter.setTelemetryEnabled(enabled)
                     }
                 }
             }
@@ -281,12 +290,8 @@ class MainActivity : BaseActivity() {
                 if (sensorEnabled != null) {
                     val actualValue = controllerPresenter.telemetryEnabled.value.distinctValue(ReceiverTelemetry.TELEMETRY_SENSORS)
                     // switch must be On if if one of sensors is active. We allow only switching off partially active sensors
-                    if (actualValue != null) {
-                        if (actualValue != sensorEnabled) {
-                            controllerPresenter.setTelemetryEnabled(ReceiverTelemetry.TELEMETRY_SENSORS, sensorEnabled)
-                        }
-                    } else if (!sensorEnabled) {
-                        controllerPresenter.setTelemetryEnabled(ReceiverTelemetry.TELEMETRY_SENSORS, false)
+                    setIfChanged(actualValue, sensorEnabled) { enabled ->
+                        controllerPresenter.setTelemetryEnabled(ReceiverTelemetry.TELEMETRY_SENSORS, enabled)
                     }
                 }
             }
@@ -305,6 +310,16 @@ class MainActivity : BaseActivity() {
                     controllerPresenter.setTelemetryUpdateDelay(ReceiverTelemetry.TELEMETRY_LOCATION, frequencyType.delay())
                 }
             }
+        }
+    }
+
+    private fun setIfChanged(actual: Boolean?, new: Boolean, block: (value: Boolean) -> Unit) {
+        if (actual != null) {
+            if (actual != new) {
+                block(new)
+            }
+        } else if (!new) {
+            block(false)
         }
     }
 

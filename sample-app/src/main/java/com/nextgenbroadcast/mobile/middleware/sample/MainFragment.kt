@@ -3,7 +3,6 @@ package com.nextgenbroadcast.mobile.middleware.sample
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
-import android.content.SharedPreferences
 import android.net.Uri
 import android.os.Bundle
 import android.view.GestureDetector
@@ -28,9 +27,6 @@ import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.presentation.ApplicationState
-import com.nextgenbroadcast.mobile.middleware.repository.TelemetrySharedPreferences
-import com.nextgenbroadcast.mobile.middleware.repository.TelemetrySharedPreferences.Companion.DEBUG_KEY
-import com.nextgenbroadcast.mobile.middleware.repository.TelemetrySharedPreferences.Companion.PHY_KEY
 import com.nextgenbroadcast.mobile.middleware.sample.core.SwipeGestureDetector
 import com.nextgenbroadcast.mobile.middleware.sample.core.mapWith
 import com.nextgenbroadcast.mobile.middleware.sample.databinding.FragmentMainBinding
@@ -74,11 +70,10 @@ class MainFragment : Fragment(), ReceiverContentResolver.Listener {
         val path = uri?.let { FileUtils.getPath(requireContext(), uri) }
         path?.let { openRoute(requireContext(), path) }
     }
-    private lateinit var sharedPreferences: SharedPreferences
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
-        sharedPreferences = context.getSharedPreferences(TelemetrySharedPreferences.SHARED_PREFERENCES_NAME, Context.MODE_PRIVATE)
+
         requireActivity().onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 if (user_agent_web_view.checkContentVisible()) {
@@ -188,12 +183,7 @@ class MainFragment : Fragment(), ReceiverContentResolver.Listener {
             showPopupSettingsMenu(settings_button)
         }
 
-        viewViewModel.showDebugInfo.value = sharedPreferences.getBoolean(DEBUG_KEY, true)
-        viewViewModel.showPhyInfo.value = sharedPreferences.getBoolean(PHY_KEY, true)
-
         viewViewModel.showPhyInfo.mapWith(viewViewModel.showDebugInfo) { (showPhy, showInfo) ->
-            sharedPreferences.edit().putBoolean(DEBUG_KEY, showInfo?:true).apply()
-            sharedPreferences.edit().putBoolean(PHY_KEY, showPhy?:true).apply()
             (showInfo ?: true) && (showPhy ?: false)
         }.observe(viewLifecycleOwner) { phyInfoEnabled ->
             if (phyInfoEnabled == true) {
