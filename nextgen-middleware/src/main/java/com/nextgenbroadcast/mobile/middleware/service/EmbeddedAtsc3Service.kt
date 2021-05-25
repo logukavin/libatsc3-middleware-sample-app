@@ -107,8 +107,12 @@ class EmbeddedAtsc3Service : Atsc3ForegroundService() {
             override val telemetryDelay = telemetryHolder.telemetryDelay.asReadOnly()
             override val debugInfoSettings = telemetryHolder.debugInfoSettings.asReadOnly()
 
+            override fun setDebugInfoVisible(type: String, visible: Boolean) {
+                telemetryHolder.setInfoVisible(visible, type)
+            }
+
             override fun setTelemetryEnabled(enabled: Boolean) {
-                telemetryHolder.setAllEnabled(enabled)
+                telemetryHolder.setTelemetryEnabled(enabled)
             }
 
             override fun setTelemetryEnabled(type: String, enabled: Boolean) {

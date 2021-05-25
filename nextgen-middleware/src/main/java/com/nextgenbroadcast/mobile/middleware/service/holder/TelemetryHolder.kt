@@ -4,12 +4,16 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.hardware.Sensor
 import android.hardware.SensorManager
 import android.media.AudioManager
 import android.net.wifi.WifiManager
+import androidx.core.content.edit
 import androidx.media.MediaBrowserServiceCompat
 import com.google.firebase.installations.FirebaseInstallations
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.core.model.PhyFrequency
 import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverCore
@@ -36,15 +40,21 @@ import com.nextgenbroadcast.mobile.middleware.telemetry.task.WiFiInfoTelemetryTa
 import com.nextgenbroadcast.mobile.middleware.telemetry.writer.AWSIoTelemetryWriter
 import com.nextgenbroadcast.mobile.middleware.telemetry.writer.FileTelemetryWriter
 import com.nextgenbroadcast.mobile.middleware.telemetry.writer.WebTelemetryWriter
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.system.exitProcess
+
+private typealias PrefsMap = Map<String, Boolean>
 
 internal class TelemetryHolder(
         private val context: Context,
         private val receiver: Atsc3ReceiverCore
 ) {
+    private val gson = Gson()
     private val sensorManager: SensorManager by lazy {
         context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
     }
@@ -57,14 +67,31 @@ internal class TelemetryHolder(
     private val wifiManager: WifiManager by lazy {
         context.getSystemService(MediaBrowserServiceCompat.WIFI_SERVICE) as WifiManager
     }
+    private val sharedPreferences: SharedPreferences by lazy {
+        context.getSharedPreferences(SHARED_PREFERENCES_NAME, Context.MODE_PRIVATE)
+    }
 
     private var telemetryBroker: TelemetryBroker? = null
     private var remoteControl: RemoteControlBroker? = null
     private var awsIoThing: AWSIoThing? = null
 
-    private val _debugInfoSettings = MutableStateFlow(mapOf(
-            ReceiverTelemetry.INFO_DEBUG to true
-    ))
+    private val _debugInfoSettings: MutableStateFlow<PrefsMap>
+
+    init {
+        _debugInfoSettings = MutableStateFlow(
+                readPrefsMap(PREF_DEBUG_INFO_KEY).toMutableMap().apply {
+                    if (isEmpty()) {
+                        put(ReceiverTelemetry.INFO_DEBUG, true)
+                    }
+                }.toMap()
+        ).also { flow ->
+            CoroutineScope(Dispatchers.Main).launch {
+                flow.collect { infoPrefs ->
+                    storePrefsMap(PREF_DEBUG_INFO_KEY, infoPrefs)
+                }
+            }
+        }
+    }
 
     val debugInfoSettings = _debugInfoSettings.asStateFlow()
     val telemetryEnabled: StateFlow<Map<String, Boolean>>
@@ -91,6 +118,17 @@ internal class TelemetryHolder(
                 )
         ).apply {
             //start() do not start Telemetry with application, use switch in Settings dialog or AWS command
+        }.also { broker ->
+            val enabledReaderNames = readPrefsMap(PREF_PHY_INFO_KEY).filterValues { it }.keys.toList()
+            if (enabledReaderNames.isNotEmpty()) {
+                broker.setReaderEnabled(true, enabledReaderNames)
+            }
+
+            CoroutineScope(Dispatchers.Main).launch {
+                broker.readersEnabled.collect { readerPref ->
+                    storePrefsMap(PREF_PHY_INFO_KEY, readerPref)
+                }
+            }
         }
 
         remoteControl = RemoteControlBroker(
@@ -111,6 +149,7 @@ internal class TelemetryHolder(
                 LOG.e(TAG, "Can't create Telemetry because Firebase ID not received.", task.exception)
             }
         }
+
     }
 
     fun close() {
@@ -124,12 +163,18 @@ internal class TelemetryHolder(
         awsIoThing = null
     }
 
-    fun setAllEnabled(enabled: Boolean) {
-        telemetryBroker?.setReadersEnabled(enabled)
+    fun setInfoVisible(enabled: Boolean, name: String) {
+        _debugInfoSettings.value = _debugInfoSettings.value.toMutableMap().apply {
+            put(name, enabled)
+        }
     }
 
-    fun setTelemetryEnabled(enabled: Boolean, name: String) {
-        telemetryBroker?.setReaderEnabled(enabled, name)
+    fun setTelemetryEnabled(enabled: Boolean, name: String? = null) {
+        if (name != null) {
+            telemetryBroker?.setReaderEnabled(enabled, name)
+        } else {
+            telemetryBroker?.setReadersEnabled(enabled)
+        }
     }
 
     fun setTelemetryDelay(delayMils: Long, name: String) {
@@ -234,6 +279,7 @@ internal class TelemetryHolder(
 
                 arguments[ITelemetryControl.CONTROL_ARGUMENT_ENABLE]?.let {
                     val enabled = it.toBoolean()
+
                     if (telemetryNameList != null) {
                         telemetryBroker?.setReaderEnabled(enabled, telemetryNameList)
                     } else {
@@ -283,6 +329,18 @@ internal class TelemetryHolder(
 
     }
 
+    private fun readPrefsMap(key: String): PrefsMap {
+        return sharedPreferences.getString(key, null)?.let { prefs ->
+            gson.fromJson(prefs, object : TypeToken<PrefsMap?>() {}.type)
+        } ?: emptyMap()
+    }
+
+    private fun storePrefsMap(key: String, map: PrefsMap) {
+        sharedPreferences.edit {
+            putString(key, gson.toJson(map))
+        }
+    }
+
     companion object {
         val TAG: String = TelemetryHolder::class.java.simpleName
 
@@ -292,5 +350,9 @@ internal class TelemetryHolder(
         private const val CONNECTION_HOST = "0.0.0.0"
         private const val CONNECTION_TCP_PORT = 8081
         private const val CONNECTION_UDP_PORT = 6969
+
+        const val SHARED_PREFERENCES_NAME = "telemetry_pref"
+        const val PREF_DEBUG_INFO_KEY = "telemetry_info_debug"
+        const val PREF_PHY_INFO_KEY = "telemetry_info_phy"
     }
 }
