@@ -52,7 +52,6 @@ internal class Atsc3Module(
     private var lastTunedFreqList: List<Int> = emptyList()
 
     private val serviceLocationTable = ConcurrentHashMap<Int, Atsc3ServiceLocationTable>()
-    private val serviceLocationTableUrls = ConcurrentHashMap<Int, SparseArray<String>>()
 
     private val serviceToSourceConfig = ConcurrentHashMap<Int, Int>()
     private val packageMap = HashMap<String, Atsc3Application>()
@@ -211,15 +210,16 @@ internal class Atsc3Module(
         Log.i(TAG, "nextSourceConfigTuneTimeoutJob: tune SLT timeout - scheduled for "+SLT_ACQUIRE_TUNE_DELAY+"ms")
 
         nextSourceConfigTuneTimeoutTask = configurationTimer.schedule(SLT_ACQUIRE_TUNE_DELAY) {
-
             val currentState = getState()
-
+            log("nextSourceConfigTuneTimeoutJob: tune SLT timeout - currentState: $currentState, invoking applyNextSourceConfig")
             if (currentState == Atsc3ModuleState.SCANNING) {
-                Log.i(TAG, "nextSourceConfigTuneTimeoutJob: tune SLT timeout - currentState: $currentState, invoking applyNextSourceConfig")
-
                 applyNextSourceConfig()
-            } else {
-                processServiceLocationTableAndNotifyListener()
+            } else if (currentState != Atsc3ModuleState.IDLE) {
+                if (serviceLocationTable.isEmpty()) {
+                    stop() // maybe we should close it?
+                } else {
+                    finishReconfiguration()
+                }
             }
         }
     }
@@ -418,24 +418,38 @@ internal class Atsc3Module(
     override fun jni_getCacheDir(): File = cacheDir
 
     override fun onSltTablePresent(slt_payload_xml: String) {
-        val currentState = getState()
         val shouldSkip = isReconfiguring
 
         cancelNextSourceConfigTimeoutTask()
 
-        log("onSltTablePresent, currentState: $currentState, skip: $shouldSkip, slt_xml:\n$slt_payload_xml")
-
-        if (shouldSkip) return
+        if (shouldSkip) {
+            log("onSltTablePresent, currentState: uncertain, skip: $shouldSkip, slt_xml:\n$slt_payload_xml")
+            return
+        }
 
         val slt = LLSParserSLT().parseXML(slt_payload_xml)
         serviceLocationTable[slt.bsid] = slt
-        serviceLocationTableUrls[slt.bsid] = slt.urls;
         serviceToSourceConfig[slt.bsid] = getSourceConfig()
+
+        // getState() is blocking method and must not be called if isReconfiguring = true
+        val currentState = getState()
+
+        log("onSltTablePresent, currentState: $currentState, skip: $shouldSkip, slt_xml:\n$slt_payload_xml")
 
         if (currentState == Atsc3ModuleState.SCANNING) {
             applyNextSourceConfig()
         } else if (currentState != Atsc3ModuleState.IDLE) {
-            processServiceLocationTableAndNotifyListener();
+            finishReconfiguration()
+        }
+    }
+
+    private fun finishReconfiguration() {
+        processServiceLocationTableAndNotifyListener()
+
+        if (suspendedServiceSelection) {
+            CoroutineScope(Dispatchers.Main).launch {
+                internalSelectService(selectedServiceBsid, selectedServiceId)
+            }
         }
     }
 
@@ -443,18 +457,10 @@ internal class Atsc3Module(
         val services = serviceLocationTable
                 .toSortedMap(compareBy { serviceToSourceConfig[it] })
                 .values.flatMap { it.services }
-        try {
-            fireServiceLocationTableChanged(services, serviceLocationTableUrls.elements()?.nextElement()
-                    ?: SparseArray<String>())
-        } catch (ex: Exception) {
-            log("processServiceLocationTableAndNotifyListener: exception: $ex")
-        }
 
-        if (suspendedServiceSelection) {
-            CoroutineScope(Dispatchers.Main).launch {
-                internalSelectService(selectedServiceBsid, selectedServiceId)
-            }
-        }
+        val urls = serviceLocationTable.mapValues { it.value.urls }
+
+        fireServiceLocationTableChanged(services, urls.values.first())
     }
 
     override fun onAeatTablePresent(aeatPayloadXML: String) {
