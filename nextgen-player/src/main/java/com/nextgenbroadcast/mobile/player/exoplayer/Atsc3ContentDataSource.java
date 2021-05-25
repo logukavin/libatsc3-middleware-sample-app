@@ -23,7 +23,7 @@ import java.nio.channels.FileChannel;
 /*
     based on ContentDataSource
  */
-public class Atsc3ContentDataSource extends BaseDataSource implements DataSource2 {
+public class Atsc3ContentDataSource extends BaseDataSource {
 
     /**
      * Thrown when an {@link IOException} is encountered reading from a content URI.
@@ -112,7 +112,7 @@ public class Atsc3ContentDataSource extends BaseDataSource implements DataSource
 
     @Override
     public int read(byte[] buffer, int offset, int readLength) throws Atsc3ContentDataSource.Atsc3ContentDataSourceException {
-        Log.d("Atsc3ContentDataSource",String.format("read with offset: %d, readLength: %d, bytesRemaining: %d", offset, readLength, bytesRemaining));
+        //Log.d("Atsc3ContentDataSource",String.format("read with offset: %d, readLength: %d, bytesRemaining: %d", offset, readLength, bytesRemaining));
 
 
         if (readLength == 0) {
@@ -138,7 +138,7 @@ public class Atsc3ContentDataSource extends BaseDataSource implements DataSource
 //            }
 //            return C.RESULT_END_OF_INPUT;
 
-            Log.d("Atsc3ContentDataSource",String.format("after read wtih bytesRead == -1, returning 0"));
+            //Log.d("Atsc3ContentDataSource",String.format("after read wtih bytesRead == -1, returning 0"));
 
             return 0;
         }
@@ -147,18 +147,9 @@ public class Atsc3ContentDataSource extends BaseDataSource implements DataSource
         }
         bytesTransferred(bytesRead);
 
-        Log.d("Atsc3ContentDataSource",String.format("read: exit with bytesRead: %d", bytesRead));
+        //Log.d("Atsc3ContentDataSource",String.format("read: exit with bytesRead: %d", bytesRead));
 
         return bytesRead;
-    }
-
-    @Override
-    public int skip(int length) throws Atsc3ContentDataSource.Atsc3ContentDataSourceException {
-        try {
-            return (int) inputStream.skip(length);
-        } catch (IOException e) {
-            throw new Atsc3ContentDataSource.Atsc3ContentDataSourceException(e);
-        }
     }
 
     @Override
