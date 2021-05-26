@@ -93,11 +93,11 @@ internal class MediaHolder(
     }
 
     fun selectMediaService(service: AVService) {
+        player.reset()
+
         receiver.selectService(service) { result ->
             withContext(Dispatchers.Main) {
                 if (result) {
-                    player.reset()
-
                     mediaSession.setMetadata(MediaMetadataCompat.Builder()
                             .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, service.globalId)
                             .putString(MediaMetadataCompat.METADATA_KEY_TITLE, service.shortName)
