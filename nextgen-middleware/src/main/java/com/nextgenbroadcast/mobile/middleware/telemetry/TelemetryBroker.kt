@@ -137,7 +137,6 @@ class TelemetryBroker(
 
         // order is important
         isStarted = false
-        _readersEnabled.value = readers.map { it.name to false }.toMap()
     }
 
     @MainThread
