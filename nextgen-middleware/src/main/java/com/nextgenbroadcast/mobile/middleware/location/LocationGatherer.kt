@@ -5,6 +5,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
 import android.location.Criteria
+import android.location.Criteria.ACCURACY_COARSE
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
@@ -12,6 +13,7 @@ import android.os.Bundle
 import android.util.Log
 import androidx.core.content.ContextCompat
 import com.nextgenbroadcast.mobile.middleware.service.init.FrequencyInitializer
+import com.nextgenbroadcast.mobile.middleware.telemetry.reader.GPSTelemetryReader
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -31,13 +33,38 @@ class LocationGatherer {
 
             val locationManager = (context.getSystemService(Context.LOCATION_SERVICE) as LocationManager)
 
+            Log.d(TAG, "getLastLocation() - before getNewestLastKnownLocation")
             getNewestLastKnownLocation(locationManager)?.let {
+                Log.d(TAG, "getLastLocation() - before cont.resume(it)")
+
                 cont.resume(it)
+                Log.d(TAG, "getLastLocation() - before @suspendCancellableCoroutine")
                 return@suspendCancellableCoroutine
             }
+            Log.d(TAG, "getLastLocation() - after getNewestLastKnownLocation")
 
             try {
-                locationManager.getBestProvider(Criteria(), true)?.let { provider ->
+
+                locationManager.getProviders(false).forEach {
+                    var providerInstance = locationManager.getProvider(it)
+                    Log.d(TAG, "getLastLocation() - locationManager.getProviders with provider: $it, enabled: ${locationManager.isProviderEnabled(it)}, provider: ${providerInstance}")
+
+                }
+
+
+                /* jjustman-2021-05-25 - we need to invoke full setAccuracy due to
+                    Unresolved reference. None of the following candidates is applicable because of receiver type mismatch:
+                    public operator fun <T, R> DeepRecursiveFunction<TypeVariable(T), TypeVariable(R)>.invoke(value: TypeVariable(T)): TypeVariable(R) defined in kotlin
+                */
+
+                val providerCriteria = Criteria()
+                providerCriteria.setAccuracy(ACCURACY_COARSE)
+
+                Log.d(TAG, "getLastLocation() - locationManager.getBestProvider with criteria: $providerCriteria")
+
+                locationManager.getBestProvider(providerCriteria, true)?.let { provider ->
+                    Log.d(TAG, "getLastLocation() - locationManager.getBestProvider returned providers: $provider")
+
                     val locationListener = object : LocationListener {
                         override fun onLocationChanged(location: Location?) {
                             locationManager.removeUpdates(this)
@@ -85,6 +112,8 @@ class LocationGatherer {
         locationManager.getProviders(true).forEach { provider ->
             try {
                 locationManager.getLastKnownLocation(provider)?.let { location ->
+                    Log.d(TAG, "getNewestLastKnownLocation: locationManager.getProviders: provider: $provider, location: $location, accuracy: ${location.accuracy} elapsedRealtimeNanos: ${location.elapsedRealtimeNanos}");
+
                     bestLocation?.let { lastLocation ->
                         if (location.elapsedRealtimeNanos < lastLocation.elapsedRealtimeNanos) {
                             bestLocation = location
@@ -98,6 +127,13 @@ class LocationGatherer {
             }
         }
 
+
+        Log.i(TAG, "getNewestLastKnownLocation: bestLocation returning: $bestLocation, accuracy: ${bestLocation?.accuracy} elapsedRealtimeNanos: ${bestLocation?.elapsedRealtimeNanos}")
+
         return bestLocation
+    }
+
+    companion object {
+        val TAG = LocationGatherer::class.java.simpleName
     }
 }

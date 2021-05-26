@@ -54,7 +54,7 @@ class MainActivity : BaseActivity() {
                 binder.receiverPresenter
         )
 
-        getMainFragment().onBind(factory)
+        getMainFragment()?.onBind(factory)
 
         binder.controllerPresenter?.let { controllerPresenter ->
             bindControlPresenter(controllerPresenter)
@@ -66,7 +66,7 @@ class MainActivity : BaseActivity() {
         controlerPresentationJob?.cancel()
         controlerPresentationJob = null
 
-        getMainFragment().onUnbind()
+        getMainFragment()?.onUnbind()
     }
 
     override fun onSourcesAvailable(sources: List<MediaBrowserCompat.MediaItem>) {
@@ -136,6 +136,8 @@ class MainActivity : BaseActivity() {
     }
 
     override fun onStop() {
+        Log.w(TAG, "onStop() invoked - our activity is no longer visible");
+
         super.onStop()
 
         mediaController?.unregisterCallback(mediaControllerCallback)
@@ -355,7 +357,7 @@ class MainActivity : BaseActivity() {
 
     }
 
-    private fun getMainFragment() = supportFragmentManager.findFragmentByTag(MainFragment.TAG) as MainFragment
+    private fun getMainFragment() = supportFragmentManager.findFragmentByTag(MainFragment.TAG) as? MainFragment
 
     private val mediaControllerCallback = object : MediaController.Callback() {
         override fun onQueueChanged(queue: MutableList<MediaSession.QueueItem>?) {

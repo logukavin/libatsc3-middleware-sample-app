@@ -52,6 +52,7 @@ internal class Atsc3Module(
     private var lastTunedFreqList: List<Int> = emptyList()
 
     private val serviceLocationTable = ConcurrentHashMap<Int, Atsc3ServiceLocationTable>()
+
     private val serviceToSourceConfig = ConcurrentHashMap<Int, Int>()
     private val packageMap = HashMap<String, Atsc3Application>()
 
@@ -151,6 +152,8 @@ internal class Atsc3Module(
     @Synchronized
     private fun applyNextSourceConfig() {
         val job = nextSourceJob
+        log("applyNextSourceConfig with job: $job, isActive: "+job?.isActive)
+
         if (job != null && job.isActive) {
             return
         }
@@ -177,6 +180,8 @@ internal class Atsc3Module(
     private fun applySourceConfig(src: ConfigurableAtsc3Source<*>, config: Int): Int {
         cancelNextSourceConfigTimeoutTask()
 
+        log("applySourceConfig with src: $src, config: $config");
+
         return withStateLock {
             isReconfiguring = true
             val result = try {
@@ -186,12 +191,12 @@ internal class Atsc3Module(
             }
 
             if (result != IAtsc3Source.RESULT_ERROR) {
+                startNextSourceConfigTimeoutTask()
+
+                //jjustman-2021-05-19 - this is not quite true, we shouldn't actually set our "new" state until either onSls or onSourceConfigTimeout occurs..
                 setSourceConfig(result)
                 val newState = if (result > 0 && config == IAtsc3Source.CONFIG_DEFAULT) Atsc3ModuleState.SCANNING else Atsc3ModuleState.TUNED
                 setState(newState)
-                if (newState == Atsc3ModuleState.SCANNING) {
-                    startNextSourceConfigTimeoutTask()
-                }
             }
 
             return@withStateLock result
@@ -205,11 +210,16 @@ internal class Atsc3Module(
         Log.i(TAG, "nextSourceConfigTuneTimeoutJob: tune SLT timeout - scheduled for "+SLT_ACQUIRE_TUNE_DELAY+"ms")
 
         nextSourceConfigTuneTimeoutTask = configurationTimer.schedule(SLT_ACQUIRE_TUNE_DELAY) {
-            Log.i(TAG, "nextSourceConfigTuneTimeoutJob: tune SLT timeout - invoking applyNextSourceConfig")
-
             val currentState = getState()
+            log("nextSourceConfigTuneTimeoutJob: tune SLT timeout - currentState: $currentState, invoking applyNextSourceConfig")
             if (currentState == Atsc3ModuleState.SCANNING) {
                 applyNextSourceConfig()
+            } else if (currentState != Atsc3ModuleState.IDLE) {
+                if (serviceLocationTable.isEmpty()) {
+                   // stop() - don't stop phy here to let it beeing reconfigured
+                } else {
+                    finishReconfiguration()
+                }
             }
         }
     }
@@ -289,18 +299,25 @@ internal class Atsc3Module(
 
     @MainThread
     private fun internalSelectService(bsid: Int, serviceId: Int): Boolean {
+        log("internalSelectService: enter: with bsid: $bsid, serviceId: $serviceId");
+
         selectedServiceSLSProtocol = atsc3NdkApplicationBridge.atsc3_slt_selectService(serviceId)
+        log("internalSelectService: after atsc3NdkApplicationBridge.atsc3_slt_selectService with serviceId: $serviceId, selectedServiceSLSProtocol is: $selectedServiceSLSProtocol");
 
         //TODO: temporary test solution
         if (!tmpAdditionalServiceOpened) {
             serviceLocationTable[bsid]?.services?.firstOrNull {
                 it.serviceCategory == SLTConstants.SERVICE_CATEGORY_ESG
             }?.let { service ->
+                log("internalSelectService, calling atsc3_slt_alc_select_additional_service with service.serviceId: $service.serviceId");
+
                 tmpAdditionalServiceOpened = atsc3NdkApplicationBridge.atsc3_slt_alc_select_additional_service(service.serviceId) > 0
             }
         }
 
         if (selectedServiceSLSProtocol == SLS_PROTOCOL_MMT) {
+            log("internalSelectService, calling listener?.onServiceMediaReady for MMT, listener: $listener, serviceId: $serviceId, bsid: $bsid")
+
             listener?.onServiceMediaReady(MediaUrl(SCHEME_MMT + serviceId, bsid, serviceId), 0)
         }
 
@@ -405,29 +422,45 @@ internal class Atsc3Module(
 
         cancelNextSourceConfigTimeoutTask()
 
-        log("onSltTablePresent, $slt_payload_xml, skip: $shouldSkip")
-
-        if (shouldSkip) return
+        if (shouldSkip) {
+            log("onSltTablePresent, currentState: uncertain, skip: $shouldSkip, slt_xml:\n$slt_payload_xml")
+            return
+        }
 
         val slt = LLSParserSLT().parseXML(slt_payload_xml)
         serviceLocationTable[slt.bsid] = slt
         serviceToSourceConfig[slt.bsid] = getSourceConfig()
 
+        // getState() is blocking method and must not be called if isReconfiguring = true
         val currentState = getState()
+
+        log("onSltTablePresent, currentState: $currentState, skip: $shouldSkip, slt_xml:\n$slt_payload_xml")
+
         if (currentState == Atsc3ModuleState.SCANNING) {
             applyNextSourceConfig()
         } else if (currentState != Atsc3ModuleState.IDLE) {
-            val services = serviceLocationTable
-                    .toSortedMap(compareBy { serviceToSourceConfig[it] })
-                    .values.flatMap { it.services }
-            fireServiceLocationTableChanged(services, slt.urls)
+            finishReconfiguration()
+        }
+    }
 
-            if (suspendedServiceSelection) {
-                CoroutineScope(Dispatchers.Main).launch {
-                    internalSelectService(selectedServiceBsid, selectedServiceId)
-                }
+    private fun finishReconfiguration() {
+        processServiceLocationTableAndNotifyListener()
+
+        if (suspendedServiceSelection) {
+            CoroutineScope(Dispatchers.Main).launch {
+                internalSelectService(selectedServiceBsid, selectedServiceId)
             }
         }
+    }
+
+    private fun processServiceLocationTableAndNotifyListener() {
+        val services = serviceLocationTable
+                .toSortedMap(compareBy { serviceToSourceConfig[it] })
+                .values.flatMap { it.services }
+
+        val urls = serviceLocationTable.mapValues { it.value.urls }
+
+        fireServiceLocationTableChanged(services, urls.values.first())
     }
 
     override fun onAeatTablePresent(aeatPayloadXML: String) {
@@ -503,6 +536,7 @@ internal class Atsc3Module(
     }
 
     override fun routeDash_force_player_reload_mpd(serviceID: Int) {
+        Log.i(TAG, String.format("routeDash_force_player_reload_mpd with serviceId: ", serviceID));
         if (getState() == Atsc3ModuleState.SCANNING) return
 
         if (serviceID == selectedServiceId) {
@@ -541,7 +575,10 @@ internal class Atsc3Module(
 
     //////////////////////////////////////////////////////////////
 
+    //jjustman-2021-05-19 - TODO: fix me to pass a proper collection of urls for <frequency, bsid, slt.groupId, SLTConstants.URL_TYPE_REPORT_SERVER> := { <XML> }
     private fun fireServiceLocationTableChanged(services: List<Atsc3Service>, urls: SparseArray<String>) {
+        log("fireServiceLocationTableChanged, services: $services, urls: $urls");
+
         listener?.onServiceLocationTableChanged(
                 Collections.unmodifiableList(services),
                 urls[SLTConstants.URL_TYPE_REPORT_SERVER]

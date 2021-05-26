@@ -154,6 +154,15 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
         final int fileMode = modeToMode(mode);
         try {
             mSessionCount.incrementAndGet();
+            //TODO: temporary solution
+            //jjustman-2021-05-24 - TODO: fix this
+            if (!ATSC3PlayerFlags.ATSC3PlayerStartPlayback) {
+                ATSC3PlayerFlags.ATSC3PlayerStartPlayback = true;
+
+                //jjustman-2021-01-13 - HACK
+                MMTClockAnchor.SystemClockAnchor = 0;
+                MMTClockAnchor.MfuClockAnchor = 0;
+            }
 
             boolean audioOnly = service.getCategory() == SLTConstants.SERVICE_CATEGORY_AO;
             MMTFileDescriptor descriptor = new MMTFileDescriptor(audioOnly) {
@@ -161,8 +170,10 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
                 public void onRelease() {
                     super.onRelease();
 
-                    mSessionCount.decrementAndGet();
+                    int sessionCount = mSessionCount.decrementAndGet();
                     descriptors.remove(this);
+
+                    ATSC3PlayerFlags.ATSC3PlayerStartPlayback = (sessionCount > 0);
                 }
             };
 
@@ -268,6 +279,9 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
 
     @Override
     public void pushAudioDecoderConfigurationRecord(MMTAudioDecoderConfigurationRecord mmtAudioDecoderConfigurationRecord) {
+        if(MmtPacketIdContext.selected_audio_packet_id == -1) {
+            MmtPacketIdContext.selected_audio_packet_id = mmtAudioDecoderConfigurationRecord.packet_id; //jjustman-2021-05-24 - todo: pick min()
+        }
         descriptors.forEach(descriptor -> {
             descriptor.pushAudioDecoderConfigurationRecord(mmtAudioDecoderConfigurationRecord);
         });
@@ -288,11 +302,11 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
             descriptor.PushMfuByteBufferFragment(mfuByteBufferFragment);
         });
 
-        if (MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us == 0 || MmtPacketIdContext.audio_packet_statistics.extracted_sample_duration_us == 0) {
+        if (MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us == 0 || MmtPacketIdContext.getAudioPacketStatistic(mfuByteBufferFragment.packet_id).extracted_sample_duration_us == 0) {
             Log.d("MMTDataBuffer", String.format("PushMfuByteBufferFragment:WARN:packet_id: %d, mpu_sequence_number: %d, video.duration_us: %d, audio.duration_us: %d, missing extracted_sample_duration",
                     mfuByteBufferFragment.packet_id, mfuByteBufferFragment.mpu_sequence_number,
                     MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us,
-                    MmtPacketIdContext.audio_packet_statistics.extracted_sample_duration_us));
+                    MmtPacketIdContext.getAudioPacketStatistic(mfuByteBufferFragment.packet_id).extracted_sample_duration_us));
         }
 
         //jjustman-2020-12-02 - TODO: fix me
@@ -305,7 +319,7 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
                         mfuByteBufferFragment.get_safe_mfu_presentation_time_uS_computed(),
                         maxQueueSize()/*mfuBufferQueue.size()*/));
             }
-        } else if (MmtPacketIdContext.audio_packet_id == mfuByteBufferFragment.packet_id) {
+        } else if (MmtPacketIdContext.selected_audio_packet_id == mfuByteBufferFragment.packet_id) {
             addAudioFragment(mfuByteBufferFragment);
             if (mfuByteBufferFragment.sample_number == 1) {
                 Log.d("MMTContentProvider", String.format("PushMfuByteBufferFragment:\tA\tpacket_id\t%d\tmpu_sequence_number\t%d\tduration_us\t%d\tsafe_mfu_presentation_time_us_computed\t%d\tmfuBufferQueue size\t%d",
@@ -392,32 +406,32 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
 //        }
 
         if (mfuByteBufferFragment.mfu_fragment_count_expected == mfuByteBufferFragment.mfu_fragment_count_rebuilt) {
-            MmtPacketIdContext.audio_packet_statistics.complete_mfu_samples_count++;
+            MmtPacketIdContext.getAudioPacketStatistic(mfuByteBufferFragment.packet_id).complete_mfu_samples_count++;
         } else {
-            MmtPacketIdContext.audio_packet_statistics.corrupt_mfu_samples_count++;
+            MmtPacketIdContext.getAudioPacketStatistic(mfuByteBufferFragment.packet_id).corrupt_mfu_samples_count++;
         }
 
         //todo - build mpu stats from tail of mfuBufferQueueVideo
 
-        MmtPacketIdContext.audio_packet_statistics.total_mfu_samples_count++;
+        MmtPacketIdContext.getAudioPacketStatistic(mfuByteBufferFragment.packet_id).total_mfu_samples_count++;
 
-        if (MmtPacketIdContext.audio_packet_statistics.last_mpu_sequence_number != mfuByteBufferFragment.mpu_sequence_number) {
-            MmtPacketIdContext.audio_packet_statistics.total_mpu_count++;
+        if (MmtPacketIdContext.getAudioPacketStatistic(mfuByteBufferFragment.packet_id).last_mpu_sequence_number != mfuByteBufferFragment.mpu_sequence_number) {
+            MmtPacketIdContext.getAudioPacketStatistic(mfuByteBufferFragment.packet_id).total_mpu_count++;
             //compute trailing mfu's missing
 
             //compute leading mfu's missing
             if (mfuByteBufferFragment.sample_number > 1) {
-                MmtPacketIdContext.audio_packet_statistics.missing_mfu_samples_count += (mfuByteBufferFragment.sample_number - 1);
+                MmtPacketIdContext.getAudioPacketStatistic(mfuByteBufferFragment.packet_id).missing_mfu_samples_count += (mfuByteBufferFragment.sample_number - 1);
             }
         } else {
-            MmtPacketIdContext.audio_packet_statistics.missing_mfu_samples_count += mfuByteBufferFragment.sample_number - (1 + MmtPacketIdContext.audio_packet_statistics.last_mfu_sample_number);
+            MmtPacketIdContext.getAudioPacketStatistic(mfuByteBufferFragment.packet_id).missing_mfu_samples_count += mfuByteBufferFragment.sample_number - (1 + MmtPacketIdContext.getAudioPacketStatistic(mfuByteBufferFragment.packet_id).last_mfu_sample_number);
         }
 
-        MmtPacketIdContext.audio_packet_statistics.last_mfu_sample_number = mfuByteBufferFragment.sample_number;
-        MmtPacketIdContext.audio_packet_statistics.last_mpu_sequence_number = mfuByteBufferFragment.mpu_sequence_number;
+        MmtPacketIdContext.getAudioPacketStatistic(mfuByteBufferFragment.packet_id).last_mfu_sample_number = mfuByteBufferFragment.sample_number;
+        MmtPacketIdContext.getAudioPacketStatistic(mfuByteBufferFragment.packet_id).last_mpu_sequence_number = mfuByteBufferFragment.mpu_sequence_number;
 
 
-        if ((MmtPacketIdContext.audio_packet_statistics.total_mfu_samples_count % DebuggingFlags.DEBUG_LOG_MFU_STATS_FRAME_COUNT) == 0) {
+        if ((MmtPacketIdContext.getAudioPacketStatistic(mfuByteBufferFragment.packet_id).total_mfu_samples_count % DebuggingFlags.DEBUG_LOG_MFU_STATS_FRAME_COUNT) == 0) {
 
             Log.d("MMTDataBuffer", String.format("pushMfuByteBufferFragment: A: appending MFU: mpu_sequence_number: %d, sampleNumber: %d, size: %d, mpuPresentationTimeUs: %d, queueSize: %d",
                     mfuByteBufferFragment.mpu_sequence_number,

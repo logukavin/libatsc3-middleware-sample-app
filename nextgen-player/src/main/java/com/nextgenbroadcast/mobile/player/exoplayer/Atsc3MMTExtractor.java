@@ -21,6 +21,8 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 
 public class Atsc3MMTExtractor implements Extractor {
+    public static final String TAG = Atsc3MMTExtractor.class.getSimpleName();
+
     private ExtractorOutput extractorOutput;
 
     private int currentSampleBytesRemaining;
@@ -51,6 +53,8 @@ public class Atsc3MMTExtractor implements Extractor {
 
     @Override
     public int read(ExtractorInput input, PositionHolder seekPosition) throws IOException, InterruptedException {
+        //Log.d("Atsc3MMTExtractor", String.format("read: enter: with input: %s, position: %d", input, input.getPosition()));
+
         if (input.getPosition() == 0) {
             if (!readMMTHeader(input)) {
                 throw new ParserException("Could not find MMT header.");
@@ -59,6 +63,9 @@ public class Atsc3MMTExtractor implements Extractor {
         maybeOutputFormat(input);
         int sampleReadResult = readSample(input);
         maybeOutputSeekMap();
+
+        //Log.d("Atsc3MMTExtractor",String.format("read: exit: sampleReadResult: %d", sampleReadResult));
+
         return sampleReadResult;
     }
 
@@ -167,6 +174,8 @@ public class Atsc3MMTExtractor implements Extractor {
                 currentSampleSize,
                 /* offset= */ 0,
                 /* encryptionData= */ null);
+
+        Log.d(TAG, String.format("readSample: returning after trackOutput.sampleMetadata, currentSampleTimeUs: %d, currentSampleSize: %d", currentSampleTimeUs, currentSampleSize));
 
         return Extractor.RESULT_CONTINUE;
     }
