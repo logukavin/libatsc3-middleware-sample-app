@@ -1,5 +1,6 @@
 package com.nextgenbroadcast.mobile.middleware.repository
 
+import android.util.Log
 import com.nextgenbroadcast.mobile.core.atsc3.MediaUrl
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.alerts.AeaTable
@@ -58,6 +59,7 @@ internal class RepositoryImpl : IRepository {
     }
 
     override fun setMediaUrl(mediaUrl: MediaUrl?) {
+        Log.e(TAG, String.format("setMediaUrl: %s", mediaUrl));
         routeMediaUrl.value = mediaUrl
     }
 
@@ -82,5 +84,9 @@ internal class RepositoryImpl : IRepository {
         heldPackage.value = null
         routeMediaUrl.value = null
         alertsForNotify.value = emptyList()
+    }
+
+    companion object {
+        val TAG: String = RepositoryImpl::class.java.simpleName
     }
 }
