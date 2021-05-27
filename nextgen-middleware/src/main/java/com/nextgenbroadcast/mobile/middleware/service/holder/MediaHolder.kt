@@ -100,6 +100,7 @@ internal class MediaHolder(
                 if (result) {
                     mediaSession.setMetadata(MediaMetadataCompat.Builder()
                             .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, service.globalId)
+                            .putLong(MediaMetadataCompat.METADATA_KEY_DISC_NUMBER, service.category.toLong())
                             .putString(MediaMetadataCompat.METADATA_KEY_TITLE, service.shortName)
                             .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, "${service.majorChannelNo}-${service.minorChannelNo}")
                             .build())

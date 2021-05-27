@@ -3,8 +3,11 @@ package com.nextgenbroadcast.mobile.middleware.sample
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.PictureInPictureParams
+import android.content.ActivityNotFoundException
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Configuration
+import android.media.MediaMetadata
 import android.media.session.MediaController
 import android.media.session.MediaSession
 import android.media.session.PlaybackState
@@ -26,6 +29,7 @@ import androidx.lifecycle.lifecycleScope
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.presentation.IControllerPresenter
 import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
+import com.nextgenbroadcast.mobile.middleware.getApkBaseServicePackage
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.ViewViewModel
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.factory.UserAgentViewModelFactory
 import com.nextgenbroadcast.mobile.middleware.service.media.MediaSessionConstants
@@ -374,6 +378,30 @@ class MainActivity : BaseActivity() {
 
         override fun onSessionDestroyed() {
             mediaController?.unregisterCallback(this)
+        }
+
+        override fun onMetadataChanged(metadata: MediaMetadata?) {
+            metadata?.let {
+                val serviceCategory = metadata.getLong(MediaMetadata.METADATA_KEY_DISC_NUMBER).toInt()
+                metadata.getString(MediaMetadata.METADATA_KEY_MEDIA_ID)?.let { serviceGlobalId ->
+                    val appPackage = getApkBaseServicePackage(serviceCategory, serviceGlobalId)
+                    if (appPackage != null) {
+                        val started: Boolean = packageManager.getLaunchIntentForPackage(appPackage)?.let { intent ->
+                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            try {
+                                startActivity(intent)
+                                true
+                            } catch (e: ActivityNotFoundException) {
+                                false
+                            }
+                        } ?: false
+
+                        if (!started) {
+                            Toast.makeText(this@MainActivity, getString(R.string.message_service_apk_not_found, appPackage), Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            }
         }
     }
 
