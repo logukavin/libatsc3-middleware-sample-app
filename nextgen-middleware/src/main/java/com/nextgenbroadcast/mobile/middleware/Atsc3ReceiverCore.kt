@@ -156,6 +156,12 @@ internal class Atsc3ReceiverCore(
         }
     }
 
+    override fun cancelScanning() {
+        coreScope.launch {
+            serviceController.cancelScanning()
+        }
+    }
+
     override fun getReceiverState(): ReceiverState {
         return serviceController.receiverState.value
     }

@@ -176,7 +176,17 @@ class MainFragment : Fragment(), ReceiverContentResolver.Listener {
 
         setFragmentResultListener(SettingsDialog.REQUEST_KEY_FREQUENCY) { _, bundle ->
             val freqKhz = bundle.getInt(SettingsDialog.PARAM_FREQUENCY, 0)
-            receiverContentResolver.tuneReceiver(freqKhz)
+            receiverContentResolver.tune(freqKhz)
+        }
+
+        setFragmentResultListener(SettingsDialog.REQUEST_KEY_SCAN_RANGE) { _, bundle ->
+            bundle.getIntegerArrayList(SettingsDialog.PARAM_FREQUENCY)?.let { freqKhzList ->
+                receiverContentResolver.tune(freqKhzList)
+            }
+        }
+
+        cancel_scan_btn.setOnClickListener {
+            receiverContentResolver.tune(-1 /* cancel tuning */)
         }
 
         settings_button.setOnClickListener {

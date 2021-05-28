@@ -43,6 +43,9 @@ class ReceiverViewModel(
             else -> ""
         }
     }
+    val isCancelable = receiverState.map { receiverState ->
+        receiverState.state == ReceiverState.State.SCANNING
+    }
 
     init {
         _appDataLog.addSource(/*agentPresenter.appData.asLiveData()*/appData) { data ->

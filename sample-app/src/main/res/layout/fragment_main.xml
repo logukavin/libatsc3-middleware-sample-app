@@ -41,12 +41,27 @@
                 android:layout_height="wrap_content"
                 android:text="@{receiverModel.stateDescription}"
                 android:textColor="@color/white"
-                android:layout_marginBottom="20dp"
+                android:layout_margin="20dp"
                 app:layout_constraintBottom_toTopOf="@+id/progress_bar"
-                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintEnd_toStartOf="@+id/cancel_scan_btn"
+                app:layout_constraintHorizontal_chainStyle="packed"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
                 app:layout_constraintVertical_chainStyle="packed" />
+
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/cancel_scan_btn"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
+                android:text="@string/receiver_scanning_cancel_btn"
+                android:textAllCaps="false"
+                android:visibility="@{receiverModel.isCancelable ? View.VISIBLE : View.GONE }"
+                app:layout_constraintBottom_toBottomOf="@+id/state_description"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toEndOf="@+id/state_description"
+                app:layout_constraintTop_toTopOf="@+id/state_description" />
 
             <ProgressBar
                 android:id="@+id/progress_bar"
