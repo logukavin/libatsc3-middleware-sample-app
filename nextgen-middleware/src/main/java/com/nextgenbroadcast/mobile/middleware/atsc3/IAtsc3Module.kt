@@ -8,8 +8,10 @@ interface IAtsc3Module {
     val rfPhyMetricsFlow: SharedFlow<RfPhyStatistics>
 
     fun setListener(listener: Atsc3ModuleListener?)
-    fun tune(freqKhz: Int, frequencies: List<Int>, retuneOnDemod: Boolean)
+
+    fun tune(frequencyList: List<Int>, retuneOnDemod: Boolean)
     fun connect(source: IAtsc3Source): Boolean
+    fun cancelScanning()
     fun selectAdditionalService(serviceId: Int): Boolean
     fun isServiceSelected(bsid: Int, serviceId: Int): Boolean
     fun selectService(bsid: Int, serviceId: Int): Boolean

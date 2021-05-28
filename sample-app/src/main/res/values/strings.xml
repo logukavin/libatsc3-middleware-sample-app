@@ -8,6 +8,7 @@
     <string name="settings_title">Settings</string>
     <string name="settings_frequency_hint">Receiver frequency in MHz</string>
     <string name="settings_apply_btn">Tune</string>
+    <string name="settings_scan_btn">Scan range</string>
     <string name="settings_enable_debug_info">Enable Debug Information</string>
     <string name="settings_enable_phy_info">Enable Phy Information</string>
     <string name="settings_enable_sensor_telemetry">Sensors</string>
@@ -17,5 +18,6 @@
     <string name="receiver_status_idle">Source not selected</string>
     <string name="receiver_status_scanning">Scanning %d/%d…</string>
     <string name="receiver_status_tuning">Tuning…</string>
+    <string name="receiver_scanning_cancel_btn">cancel</string>
     <string name="message_service_apk_not_found">Application with package name %s is unavailable</string>
 </resources>

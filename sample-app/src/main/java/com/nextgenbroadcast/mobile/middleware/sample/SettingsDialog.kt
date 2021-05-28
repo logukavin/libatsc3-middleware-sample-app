@@ -11,6 +11,9 @@ import androidx.databinding.DataBindingUtil
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.setFragmentResult
+import com.nextgenbroadcast.mobile.middleware.atsc3.utils.iterateDocument
+import com.nextgenbroadcast.mobile.middleware.atsc3.utils.iterateSubTags
+import com.nextgenbroadcast.mobile.middleware.atsc3.utils.readTextTag
 import com.nextgenbroadcast.mobile.middleware.sample.databinding.DialogSettingsBinding
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.ViewViewModel
 import com.nextgenbroadcast.mobile.middleware.telemetry.reader.LocationFrequencyType
@@ -79,7 +82,7 @@ class SettingsDialog : DialogFragment() {
 
         view.frequencyEditText.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_DONE) {
-                done()
+                tuneAndDismiss()
                 return@setOnEditorActionListener true
             }
             return@setOnEditorActionListener false
@@ -90,27 +93,46 @@ class SettingsDialog : DialogFragment() {
             if (freqKhz > 0) {
                 view.frequencyEditText.setText((freqKhz / 1000).toString())
             }
-
-            val enablePHYDebugInformationChecked = args.getBoolean(PARAM_PHY_DEBUG_INFORMATION_CHECKED, false)
-            view.enablePHYDebuggingInformation.setChecked(enablePHYDebugInformationChecked)
         }
 
-        view.applyButton.setOnClickListener {
-            done()
+        view.tune_btn.setOnClickListener {
+            tuneAndDismiss()
+        }
+
+        view.scan_range_btn.setOnClickListener {
+            scanAndDismiss()
         }
 
         return view
     }
 
-    private fun done() {
+    private fun tuneAndDismiss() {
         val freqKhz = frequencyEditText.text.toString().toIntOrNull()?.let { it * 1000 } ?: 0
-        val enablePHYDebugInformationChecked = enablePHYDebuggingInformation.isChecked
 
         val result = Bundle().apply{
             putInt(PARAM_FREQUENCY, freqKhz)
-            putBoolean(PARAM_PHY_DEBUG_INFORMATION_CHECKED, enablePHYDebugInformationChecked);
         }
         setFragmentResult(REQUEST_KEY_FREQUENCY, result)
+
+        dismiss()
+    }
+
+    private fun scanAndDismiss() {
+        val frequencyList = arrayListOf<Int>()
+
+        val xrp = resources.getXml(R.xml.default_frequency_range)
+        xrp.iterateDocument {
+            xrp.iterateSubTags {
+                xrp.readTextTag()?.toIntOrNull()?.let { frequency ->
+                    frequencyList.add(frequency * 1000)
+                }
+            }
+        }
+
+        val result = Bundle().apply{
+            putIntegerArrayList(PARAM_FREQUENCY, frequencyList)
+        }
+        setFragmentResult(REQUEST_KEY_SCAN_RANGE, result)
 
         dismiss()
     }
@@ -119,9 +141,9 @@ class SettingsDialog : DialogFragment() {
         val TAG: String = SettingsDialog::class.java.simpleName
 
         const val PARAM_FREQUENCY = "param_frequency"
-        const val PARAM_PHY_DEBUG_INFORMATION_CHECKED = "param_phy_debug_information_checked"
 
         const val REQUEST_KEY_FREQUENCY = "requestKey_frequency"
+        const val REQUEST_KEY_SCAN_RANGE = "requestKey_scan_range"
 
         fun newInstance(freqKhz: Int?): SettingsDialog {
             return SettingsDialog().apply {

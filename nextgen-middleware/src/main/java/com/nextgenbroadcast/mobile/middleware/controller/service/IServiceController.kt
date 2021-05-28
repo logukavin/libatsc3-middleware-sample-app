@@ -24,6 +24,7 @@ internal interface IServiceController {
     suspend fun closeRoute()
     suspend fun tune(frequency: PhyFrequency)
     suspend fun selectService(service: AVService): Boolean
+    suspend fun cancelScanning()
 
     fun findServiceById(globalServiceId: String): AVService?
     fun getNearbyService(offset: Int): AVService?
