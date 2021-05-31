@@ -7,7 +7,6 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.entities.alerts.AeaTable
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPackage
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.SGUrl
-import com.nextgenbroadcast.mobile.middleware.atsc3.utils.XmlUtils.strToDate
 import kotlinx.coroutines.flow.MutableStateFlow
 import java.time.ZonedDateTime
 import java.util.concurrent.ConcurrentHashMap
@@ -66,8 +65,10 @@ internal class RepositoryImpl : IRepository {
     }
 
     override fun setAlertList(newAlerts: List<AeaTable>) {
-        val currentAlerts = alertsForNotify.value.associateBy({it.id}, {it}).toMutableMap()
-        val canceledIds:MutableSet<String> = mutableSetOf()
+        val currentAlerts = alertsForNotify.value.associateBy({ it.id }, { it }).toMutableMap()
+        val canceledIds: MutableSet<String> = mutableSetOf()
+        val currentTime = ZonedDateTime.now()
+
         newAlerts.forEach { aea ->
             if (aea.type == AeaTable.CANCEL_ALERT) {
                 aea.refId?.let {
@@ -78,22 +79,16 @@ internal class RepositoryImpl : IRepository {
             }
         }
 
-        currentAlerts.values.removeIf{
-            isExpired(it.expires) || canceledIds.contains(it.id)
+        currentAlerts.values.removeIf {
+            isExpired(it.expires, currentTime) || canceledIds.contains(it.id)
         }
 
         alertsForNotify.value = currentAlerts.values.toMutableList()
     }
 
-    private fun isExpired(dateText: String?): Boolean {
-        if(dateText==null) return true
-        val expireTime =  strToDate(dateText)
-        val currentTime = ZonedDateTime.now()
-        expireTime?.let {
-            if(it.isAfter(currentTime)) return false
-        }
-
-        return true
+    private fun isExpired(expireTime: ZonedDateTime?, currentTime: ZonedDateTime): Boolean {
+        if (expireTime == null) return true
+        return expireTime.isBefore(currentTime)
     }
 
     override fun reset() {
