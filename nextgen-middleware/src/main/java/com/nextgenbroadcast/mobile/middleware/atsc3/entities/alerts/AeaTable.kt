@@ -1,11 +1,13 @@
 package com.nextgenbroadcast.mobile.middleware.atsc3.entities.alerts
 
+import java.time.ZonedDateTime
+
 data class AeaTable(
         var id: String = "",
         var refId: String? = null,
         var type: String = "",
         var effective: String? = null,
-        var expires: String? = null,
+        var expires: ZonedDateTime? = null,
         var xml: String = "",
         var messages: MutableList<String>? = mutableListOf()
 ) {
