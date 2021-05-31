@@ -16,10 +16,8 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.core.model.PhyFrequency
+import com.nextgenbroadcast.mobile.middleware.*
 import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverCore
-import com.nextgenbroadcast.mobile.middleware.BuildConfig
-import com.nextgenbroadcast.mobile.middleware.ServiceDialogActivity
-import com.nextgenbroadcast.mobile.middleware.encryptedSharedPreferences
 import com.nextgenbroadcast.mobile.middleware.gateway.web.ConnectionType
 import com.nextgenbroadcast.mobile.middleware.server.web.IMiddlewareWebServer
 import com.nextgenbroadcast.mobile.middleware.service.Atsc3ForegroundService
@@ -251,7 +249,7 @@ internal class TelemetryHolder(
             ITelemetryControl.CONTROL_ACTION_RESTART_APP -> {
                 val delay = max(arguments[ITelemetryControl.CONTROL_ARGUMENT_START_DELAY]?.toLongOrNull()
                         ?: 0, 100L)
-                val intent = Intent(ServiceDialogActivity.ACTION_WATCH_TV).apply {
+                val intent = Intent(context.getString(R.string.defaultActionWatch)).apply {
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
 
