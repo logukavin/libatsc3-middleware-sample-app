@@ -1,8 +1,6 @@
 package com.nextgenbroadcast.mobile.middleware.atsc3
 
-import android.util.Log
 import android.util.SparseArray
-import androidx.annotation.MainThread
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.core.atsc3.MediaUrl
 import com.nextgenbroadcast.mobile.core.atsc3.phy.PHYStatistics
@@ -17,10 +15,7 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPacka
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.HeldXmlParser
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.service.Atsc3Service
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.service.LLSParserSLT
-import com.nextgenbroadcast.mobile.middleware.atsc3.source.ConfigurableAtsc3Source
-import com.nextgenbroadcast.mobile.middleware.atsc3.source.IAtsc3Source
-import com.nextgenbroadcast.mobile.middleware.atsc3.source.ITunableSource
-import com.nextgenbroadcast.mobile.middleware.atsc3.source.TunableConfigurableAtsc3Source
+import com.nextgenbroadcast.mobile.middleware.atsc3.source.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -52,7 +47,6 @@ internal class Atsc3Module(
     private var lastTunedFreqList: List<Int> = emptyList()
 
     private val serviceLocationTable = ConcurrentHashMap<Int, Atsc3ServiceLocationTable>()
-
     private val serviceToSourceConfig = ConcurrentHashMap<Int, Int>()
     private val packageMap = HashMap<String, Atsc3Application>()
 
@@ -207,7 +201,7 @@ internal class Atsc3Module(
     private fun startNextSourceConfigTimeoutTask() {
         //failsafe if we don't acquire SLT
         // either wait on this block this coroutine, or the onSltTablePresent will invoke nextSourceConfigTuneTimeoutJob.cancel()
-        Log.i(TAG, "nextSourceConfigTuneTimeoutJob: tune SLT timeout - scheduled for "+SLT_ACQUIRE_TUNE_DELAY+"ms")
+        LOG.i(TAG, "nextSourceConfigTuneTimeoutJob: tune SLT timeout - scheduled for $SLT_ACQUIRE_TUNE_DELAY ms")
 
         nextSourceConfigTuneTimeoutTask = configurationTimer.schedule(SLT_ACQUIRE_TUNE_DELAY) {
             val currentState = getState()
@@ -227,7 +221,7 @@ internal class Atsc3Module(
     @Synchronized
     private fun cancelNextSourceConfigTimeoutTask() {
         nextSourceConfigTuneTimeoutTask?.let {
-            Log.i(TAG, "nextSourceConfigTuneTimeoutJob: canceling")
+            LOG.i(TAG, "nextSourceConfigTuneTimeoutJob: canceling")
             it.cancel()
             nextSourceConfigTuneTimeoutTask = null
         }
@@ -297,7 +291,6 @@ internal class Atsc3Module(
         return internalSelectService(bsid, serviceId)
     }
 
-    @MainThread
     private fun internalSelectService(bsid: Int, serviceId: Int): Boolean {
         log("internalSelectService: enter: with bsid: $bsid, serviceId: $serviceId");
 
@@ -536,7 +529,7 @@ internal class Atsc3Module(
     }
 
     override fun routeDash_force_player_reload_mpd(serviceID: Int) {
-        Log.i(TAG, String.format("routeDash_force_player_reload_mpd with serviceId: ", serviceID));
+        LOG.i(TAG, "routeDash_force_player_reload_mpd with serviceId: $serviceID")
         if (getState() == Atsc3ModuleState.SCANNING) return
 
         if (serviceID == selectedServiceId) {
@@ -577,7 +570,7 @@ internal class Atsc3Module(
 
     //jjustman-2021-05-19 - TODO: fix me to pass a proper collection of urls for <frequency, bsid, slt.groupId, SLTConstants.URL_TYPE_REPORT_SERVER> := { <XML> }
     private fun fireServiceLocationTableChanged(services: List<Atsc3Service>, urls: SparseArray<String>) {
-        log("fireServiceLocationTableChanged, services: $services, urls: $urls");
+        log("fireServiceLocationTableChanged, services: $services, urls: $urls")
 
         listener?.onServiceLocationTableChanged(
                 Collections.unmodifiableList(services),
@@ -614,7 +607,7 @@ internal class Atsc3Module(
             text
         }
 
-        Log.d(TAG, msg)
+        LOG.d(TAG, msg)
     }
 
     companion object {
