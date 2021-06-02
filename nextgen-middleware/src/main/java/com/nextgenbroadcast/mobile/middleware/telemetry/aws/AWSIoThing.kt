@@ -31,6 +31,7 @@ internal class AWSIoThing(
     private val clientId = "ATSC3MobileReceiver_$serialNumber"
     private val eventTopic = AWSIOT_TOPIC_EVENT.replace(AWSIOT_FORMAT_SERIAL, clientId)
     private val controlTopic = AWSIOT_TOPIC_CONTROL.replace(AWSIOT_FORMAT_SERIAL, clientId)
+    private val globalControlTopic = AWSIOT_GLOBAL_TOPIC_CONTROL
 
     private var thingAwsIotClient: AWSIotMqttClient? = null
         set(value) {
@@ -62,7 +63,7 @@ internal class AWSIoThing(
                 )
             }
         } catch (e: Exception) {
-            LOG.w(TAG, "publish command error, calling close() to clear out thingAwsIotClient: " + thingAwsIotClient + ", connectionStatus is: " + thingAwsIotClient?.connectionStatus?.name, e)
+            LOG.w(TAG, "publish command error, calling close() to clear out thingAwsIotClient: $thingAwsIotClient, connectionStatus is: ${thingAwsIotClient?.connectionStatus?.name}", e)
             close()
         }
     }
@@ -70,15 +71,42 @@ internal class AWSIoThing(
     suspend fun subscribeCommandsFlow(commandFlow: MutableSharedFlow<TelemetryControl>) {
         val client = requireClient()
         try {
-            suspendCancellableCoroutine<AWSIotMessage?> { cont ->
-                client.subscribe(
-                        object : AWSIotTopicKtx(cont, controlTopic) {
-                            override fun onMessage(message: AWSIotMessage) {
-                                val command = gson.fromJson(message.stringPayload, TelemetryControl::class.java)
-                                commandFlow.tryEmit(command)
-                            }
-                        }
-                )
+            val payloadToControl = { payload: String? ->
+                if (payload.isNullOrBlank()) {
+                    TelemetryControl()
+                } else {
+                    gson.fromJson(payload, TelemetryControl::class.java)
+                }
+            }
+
+            supervisorScope {
+                // subscribe device specific control topic
+                launch {
+                    suspendCancellableCoroutine<AWSIotMessage?> { cont ->
+                        client.subscribe(
+                                object : AWSIotTopicKtx(cont, controlTopic) {
+                                    override fun onMessage(message: AWSIotMessage) {
+                                        commandFlow.tryEmit(payloadToControl(message.stringPayload))
+                                    }
+                                }
+                        )
+                    }
+                }
+
+                // subscribe global control topic
+                launch {
+                    suspendCancellableCoroutine<AWSIotMessage?> { cont ->
+                        client.subscribe(
+                                object : AWSIotTopicKtx(cont, globalControlTopic) {
+                                    override fun onMessage(message: AWSIotMessage) {
+                                        commandFlow.tryEmit(payloadToControl(message.stringPayload).apply {
+                                            action = message.topic.substring(message.topic.lastIndexOf("/") + 1)
+                                        })
+                                    }
+                                }
+                        )
+                    }
+                }
             }
         } catch (e: Exception) {
             LOG.w(TAG, "subscribeCommandsFlow error", e)
@@ -176,7 +204,6 @@ internal class AWSIoThing(
                     /*
                         request Certificate
                      */
-
                     val createCertificateCall = async {
                         suspendCancellableCoroutine<AWSIotMessage?> { cont ->
                             client.subscribe(
@@ -197,7 +224,6 @@ internal class AWSIoThing(
                     /*
                         register Thing
                      */
-
                     val certificateOwnershipToken = certificateCreateResponse.certificateOwnershipToken
                             ?: return@supervisorScope null
 
@@ -370,6 +396,8 @@ internal class AWSIoThing(
 
         private const val AWSIOT_TOPIC_CONTROL = "control/$AWSIOT_FORMAT_SERIAL"
         private const val AWSIOT_TOPIC_EVENT = "telemetry/$AWSIOT_FORMAT_SERIAL"
+
+        private const val AWSIOT_GLOBAL_TOPIC_CONTROL = "global/command/request/#"
 
         private const val AWSIOT_MAX_CONNECTION_RETRIES = Int.MAX_VALUE -1;
         private const val AWSIOT_MAX_OFFLINE_QUEUE_SIZE = 1024;
