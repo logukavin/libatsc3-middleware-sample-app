@@ -145,6 +145,7 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
     public ParcelFileDescriptor openFile(@NonNull Uri uri, @NonNull String mode)
             throws FileNotFoundException {
         // ContentProvider has already checked granted permissions
+        Log.i("MMTContentProvider",String.format("openFile with uri: %s, mode: %s", uri.toString(), mode));
 
         AVService service = getServiceForUri(uri);
         if (service == null) {
@@ -302,11 +303,14 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
             descriptor.PushMfuByteBufferFragment(mfuByteBufferFragment);
         });
 
-        if (MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us == 0 || MmtPacketIdContext.getAudioPacketStatistic(mfuByteBufferFragment.packet_id).extracted_sample_duration_us == 0) {
-            Log.d("MMTDataBuffer", String.format("PushMfuByteBufferFragment:WARN:packet_id: %d, mpu_sequence_number: %d, video.duration_us: %d, audio.duration_us: %d, missing extracted_sample_duration",
+        if (MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us == 0) {
+            Log.d("MMTContentProvider", String.format("PushMfuByteBufferFragment:WARN V: packet_id: %d, mpu_sequence_number: %d, video.duration_us: %d, missing extracted_sample_duration",
                     mfuByteBufferFragment.packet_id, mfuByteBufferFragment.mpu_sequence_number,
-                    MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us,
-                    MmtPacketIdContext.getAudioPacketStatistic(mfuByteBufferFragment.packet_id).extracted_sample_duration_us));
+                    MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us));
+        } else if(MmtPacketIdContext.isAudioPacket(mfuByteBufferFragment.packet_id) && MmtPacketIdContext.getAudioPacketStatistic(mfuByteBufferFragment.packet_id).extracted_sample_duration_us == 0) {
+            Log.d("MMTContentProvider", String.format("PushMfuByteBufferFragment:WARN A: packet_id: %d, mpu_sequence_number: %d, audio.duration_us: %d, missing extracted_sample_duration",
+                    mfuByteBufferFragment.packet_id, mfuByteBufferFragment.mpu_sequence_number,
+                    MmtPacketIdContext.getAudioPacketStatistic(mfuByteBufferFragment.packet_id).extracted_sample_duration_us)); //jjustman-2021-06-02: make this...not dumb? :)
         }
 
         //jjustman-2020-12-02 - TODO: fix me
@@ -399,11 +403,18 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
 
     private void addAudioFragment(MfuByteBufferFragment mfuByteBufferFragment) {
 
+        if(!MmtPacketIdContext.isAudioPacket(mfuByteBufferFragment.packet_id)) {
+           Log.w(TAG, String.format("addAudioFragment: attempted to add packet_id: %d but MmtPacketIdContext.isAudioPacket returned false!", mfuByteBufferFragment.packet_id));
+           return;
+        }
+
         //jjustman-2020-12-09 - hacks to make sure we don't fall too far behind wall-clock
-//        if(mfuBufferQueue.size() > 120) {
-//            Log.w("MMTDataBuffer", String.format("addAudioFragment: A: clearing queue, length: %d",mfuBufferQueue.size()));
-//            mfuBufferQueue.clear();
-//        }
+        //jjustman-2021-06-02 - TODO: refactor out into MMTFileDescriptor::PushMfuByteBufferFragment
+
+        //if(mfuBufferQueue.size() > 120) {
+        //    Log.w("MMTDataBuffer", String.format("addAudioFragment: A: clearing queue, length: %d",mfuBufferQueue.size()));
+        //      mfuBufferQueue.clear();
+        //    }
 
         if (mfuByteBufferFragment.mfu_fragment_count_expected == mfuByteBufferFragment.mfu_fragment_count_rebuilt) {
             MmtPacketIdContext.getAudioPacketStatistic(mfuByteBufferFragment.packet_id).complete_mfu_samples_count++;
