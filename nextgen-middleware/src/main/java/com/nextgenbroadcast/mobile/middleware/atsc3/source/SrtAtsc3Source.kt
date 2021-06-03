@@ -22,6 +22,18 @@ class SrtAtsc3Source(
         return null
     }
 
+    override fun getConfigCount() = 1
+
+    override fun getConfigByIndex(configIndex: Int): String {
+        return if (configIndex == 0) {
+            srtSource
+        } else {
+            throw IndexOutOfBoundsException("Incorrect configuration index: $configIndex")
+        }
+    }
+
+    override fun getAllConfigs(): List<String> = listOf(srtSource)
+
     override fun toString(): String {
         return "SRT Source: $srtSource"
     }

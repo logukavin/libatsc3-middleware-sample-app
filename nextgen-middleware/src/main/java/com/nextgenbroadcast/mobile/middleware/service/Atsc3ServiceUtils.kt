@@ -29,8 +29,6 @@ fun routePathToSource(path: String): IAtsc3Source {
             SrtAtsc3Source(path)
         }
     } else {
-        //TODO: temporary solution
-        val type = if (path.contains(".demux.")) PcapAtsc3Source.PcapType.DEMUXED else PcapAtsc3Source.PcapType.STLTP
-        PcapAtsc3Source(path, type)
+        PcapAtsc3Source(path)
     }
 }

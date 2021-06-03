@@ -15,7 +15,7 @@ internal class FrequencyInitializer(
 ) : IServiceInitializer {
 
     override suspend fun initialize(context: Context, components: Map<Class<*>, Pair<Int, String>>): Boolean {
-        Log.d(TAG, "FrequencyInitializer::initalize - locator.locateFrequency before method invocation, location_request_day:" + LOCATION_REQUEST_DELAY)
+        Log.d(TAG, "FrequencyInitializer::initalize - locator.locateFrequency before method invocation, location_request_day: $LOCATION_REQUEST_DELAY")
 
         val locators = components.filter { (clazz, _) ->
             IFrequencyLocator::class.java.isAssignableFrom(clazz)
@@ -49,14 +49,14 @@ internal class FrequencyInitializer(
                     val locator = instance as IFrequencyLocator
 
                     try {
-                        Log.d(TAG, "locator.locateFrequency before method invocation, location_request_day:" + LOCATION_REQUEST_DELAY)
+                        Log.d(TAG, "locator.locateFrequency before method invocation, location_request_day: $LOCATION_REQUEST_DELAY")
 
                         locator.locateFrequency(context) { location ->
-                            Log.d(TAG, "locator.locateFrequency context: "+context+", location: "+location)
+                            Log.d(TAG, "locator.locateFrequency context: $context, location: $location")
                             val prevLocation = prevFrequencyLocation?.location
                             prevLocation == null || location.distanceTo(prevLocation) > IFrequencyLocator.RECEPTION_RADIUS
                         }?.let { frequencyLocation ->
-                            Log.d(TAG,"locator.locateFrequency let: "+context+", location: "+frequencyLocation)
+                            Log.d(TAG, "locator.locateFrequency let: $context, location: $frequencyLocation")
 
                             settings.frequencyLocation = frequencyLocation
                             val frequencies = frequencyLocation.frequencyList.filter { it > 0 }
@@ -79,7 +79,7 @@ internal class FrequencyInitializer(
 
             if (!locationTaken && !frequencyApplied) {
                 withContext(Dispatchers.Main) {
-                    Log.i(TAG, "locationTaken: " + locationTaken + ", frequencyApplied: " + frequencyApplied)
+                    Log.i(TAG, "locationTaken: $locationTaken, frequencyApplied: $frequencyApplied")
                     receiver.tune(PhyFrequency.default(PhyFrequency.Source.AUTO))
                 }
             }

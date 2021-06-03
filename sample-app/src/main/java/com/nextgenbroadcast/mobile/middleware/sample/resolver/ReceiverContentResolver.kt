@@ -15,6 +15,7 @@ import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.presentation.ApplicationState
 import com.nextgenbroadcast.mobile.middleware.provider.content.ReceiverContentProvider
+import java.nio.ByteBuffer
 
 class ReceiverContentResolver(
         private val context: Context,
@@ -62,9 +63,22 @@ class ReceiverContentResolver(
         }
     }
 
-    fun tuneReceiver(freqKhz: Int) {
+    fun tune(freqKhz: Int) {
         receiverFrequencyUri.insert {
             it.put(ReceiverContentProvider.RECEIVER_FREQUENCY, freqKhz)
+        }
+    }
+
+    fun tune(freqKhzList: List<Int>) {
+        val frequencyListBytes = ByteBuffer.allocate(freqKhzList.size * Int.SIZE_BYTES).apply {
+            freqKhzList.forEach {
+                putInt(it)
+            }
+            rewind()
+        }.array()
+
+        receiverFrequencyUri.insert {
+            it.put(ReceiverContentProvider.RECEIVER_FREQUENCY_LIST, frequencyListBytes)
         }
     }
 

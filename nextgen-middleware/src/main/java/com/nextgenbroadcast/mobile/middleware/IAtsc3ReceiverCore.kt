@@ -10,6 +10,7 @@ internal interface IAtsc3ReceiverCore {
     fun closeRoute()
     fun tune(frequency: PhyFrequency)
     fun selectService(service: AVService, block: suspend (result: Boolean) -> Unit = {})
+    fun cancelScanning()
 
     fun getReceiverState(): ReceiverState
 }

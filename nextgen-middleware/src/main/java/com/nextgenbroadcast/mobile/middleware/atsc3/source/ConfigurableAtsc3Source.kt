@@ -5,7 +5,7 @@ import kotlin.collections.ArrayList
 
 abstract class ConfigurableAtsc3Source<T>(
         configs: List<T>
-): Atsc3Source() {
+): Atsc3Source() where T: Any {
     private val configList = ArrayList(configs)
     private var configIndex: Int = configs.size - 1
     private var scanning: Boolean = configs.size > 1
@@ -34,11 +34,15 @@ abstract class ConfigurableAtsc3Source<T>(
         return result
     }
 
-    fun getConfigCount(): Int {
+    override fun getConfigCount(): Int {
         return configList.size
     }
 
-    fun getAllConfigs(): List<T> {
+    override fun getConfigByIndex(configIndex: Int): T {
+        return configList[configIndex]
+    }
+
+    override fun getAllConfigs(): List<T> {
         return Collections.unmodifiableList(configList)
     }
 
@@ -49,11 +53,7 @@ abstract class ConfigurableAtsc3Source<T>(
         scanning = configIndex > 0
     }
 
-    fun getConfig(configIndex: Int): T {
-        return configList[configIndex]
-    }
-
-    fun getConfigIndex() = configIndex
+    fun getCurrentConfigIndex() = configIndex
 
     protected abstract fun applyConfig(configIndex: Int): Int
 }
