@@ -5,6 +5,10 @@ interface IAtsc3Source {
     fun close()
     fun stop()
 
+    fun getConfigCount(): Int
+    fun getConfigByIndex(configIndex: Int): Any
+    fun getAllConfigs(): List<Any>
+
     companion object {
         const val CONFIG_DEFAULT = -1
 

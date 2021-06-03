@@ -18,6 +18,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import java.nio.ByteBuffer
 
 class ReceiverContentProvider : ContentProvider() {
 
@@ -133,20 +134,41 @@ class ReceiverContentProvider : ContentProvider() {
     }
 
     override fun insert(uri: Uri, value: ContentValues?): Uri? {
-        when (uriMatcher.match(uri)) {
-            QUERY_APP_STATE -> {
-                value?.getAsString(APP_STATE_VALUE)?.let { stateStr ->
-                    receiver.viewController?.setApplicationState(ApplicationState.valueOf(stateStr))
+        if (value != null) {
+            when (uriMatcher.match(uri)) {
+                QUERY_APP_STATE -> {
+                    value.getAsString(APP_STATE_VALUE)?.let { stateStr ->
+                        receiver.viewController?.setApplicationState(ApplicationState.valueOf(stateStr))
+                    }
                 }
-            }
 
-            QUERY_RECEIVER_FREQUENCY -> {
-                value?.getAsInteger(RECEIVER_FREQUENCY)?.let { frequency ->
-                    receiver.tune(PhyFrequency.user(listOf(frequency)))
+                QUERY_RECEIVER_FREQUENCY -> {
+                    if (value.containsKey(RECEIVER_FREQUENCY)) {
+                        value.getAsInteger(RECEIVER_FREQUENCY)?.let { frequency ->
+                            if (frequency >= 0) {
+                                receiver.tune(PhyFrequency.user(listOf(frequency)))
+                            } else {
+                                receiver.cancelScanning()
+                            }
+                        }
+                    } else if (value.containsKey(RECEIVER_FREQUENCY_LIST)) {
+                        value.getAsByteArray(RECEIVER_FREQUENCY_LIST)?.let { frequencyArray ->
+                            val buff = ByteBuffer.allocate(frequencyArray.size).apply {
+                                put(frequencyArray)
+                                rewind()
+                            }
+                            val frequencyList = mutableListOf<Int>().apply {
+                                while (buff.remaining() >= Int.SIZE_BYTES) {
+                                    add(buff.int)
+                                }
+                            }
+                            receiver.tune(PhyFrequency.user(frequencyList))
+                        }
+                    }
                 }
-            }
 
-            else -> throw IllegalArgumentException("Wrong URI: $uri")
+                else -> throw IllegalArgumentException("Wrong URI: $uri")
+            }
         }
 
         return null
@@ -189,6 +211,7 @@ class ReceiverContentProvider : ContentProvider() {
         const val RECEIVER_STATE_INDEX = "receiverStateIndex"
         const val RECEIVER_STATE_COUNT = "receiverStateCount"
         const val RECEIVER_FREQUENCY = "receiverFrequency"
+        const val RECEIVER_FREQUENCY_LIST = "receiverFrequencyList"
 
         fun getUriForPath(context: Context, path: String): Uri {
             return Uri.Builder().scheme(ContentResolver.SCHEME_CONTENT)
