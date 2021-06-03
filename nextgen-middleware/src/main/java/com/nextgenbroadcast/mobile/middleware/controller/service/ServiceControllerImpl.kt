@@ -49,7 +49,7 @@ internal class ServiceControllerImpl(
         val (configIndex, configCount) = config ?: Pair(-1, -1)
         if (state == null || state == Atsc3ModuleState.IDLE) {
             ReceiverState.idle()
-        } else if (state == Atsc3ModuleState.SCANNING || (state == Atsc3ModuleState.SNIFFING && service == null)) {
+        } else if (state == Atsc3ModuleState.SCANNING || (state == Atsc3ModuleState.SNIFFING && service == null && configCount > 1)) {
             ReceiverState.scanning(configIndex, configCount)
         } else if (service == null) {
             ReceiverState.tuning(configIndex, configCount)
@@ -263,6 +263,11 @@ internal class ServiceControllerImpl(
             settings.lastFrequency = freqKhz
 
             withContext(atsc3Scope.coroutineContext) {
+                // ignore auto tune if receiver already tuned or scanning
+                if (frequency.source == PhyFrequency.Source.AUTO && !atsc3Module.isIdle()) {
+                    return@withContext
+                }
+
                 atsc3Module.tune(
                         frequencyList = frequencyList,
                         retuneOnDemod = frequency.source == PhyFrequency.Source.USER
