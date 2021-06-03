@@ -50,6 +50,7 @@ android {
             }
         }
 
+        resValue("string", "defaultActionWatch", "com.nextgenbroadcast.mobile.middleware.sample.action.watch")
         resValue("string", "nextgenMediaFileProvider", "com.nextgenbroadcast.mobile.middleware.provider.dash")
         resValue("string", "nextgenMMTContentProvider", "com.nextgenbroadcast.mobile.middleware.provider.mmt")
         resValue("string", "nextgenServicesGuideProvider", "com.nextgenbroadcast.mobile.middleware.provider.esg")

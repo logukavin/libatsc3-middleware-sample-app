@@ -8,6 +8,7 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Applicatio
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPackage
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.SGUrl
 import kotlinx.coroutines.flow.MutableStateFlow
+import java.time.ZonedDateTime
 import java.util.concurrent.ConcurrentHashMap
 
 internal class RepositoryImpl : IRepository {
@@ -64,17 +65,30 @@ internal class RepositoryImpl : IRepository {
     }
 
     override fun setAlertList(newAlerts: List<AeaTable>) {
-        val currentAlerts = alertsForNotify.value.toMutableList()
+        val currentAlerts = alertsForNotify.value.associateBy({ it.id }, { it }).toMutableMap()
+        val canceledIds: MutableSet<String> = mutableSetOf()
+        val currentTime = ZonedDateTime.now()
 
         newAlerts.forEach { aea ->
             if (aea.type == AeaTable.CANCEL_ALERT) {
-                currentAlerts.removeIf { it.id == aea.refId }
+                aea.refId?.let {
+                    canceledIds.add(it)
+                }
             } else {
-                //TODO filter aea by expires date
-                currentAlerts.add(aea)
+                currentAlerts[aea.id] = aea
             }
         }
-        alertsForNotify.value = currentAlerts
+
+        currentAlerts.values.removeIf {
+            isExpired(it.expires, currentTime) || canceledIds.contains(it.id)
+        }
+
+        alertsForNotify.value = currentAlerts.values.toMutableList()
+    }
+
+    private fun isExpired(expireTime: ZonedDateTime?, currentTime: ZonedDateTime): Boolean {
+        if (expireTime == null) return true
+        return expireTime.isBefore(currentTime)
     }
 
     override fun reset() {
