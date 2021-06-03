@@ -7,8 +7,7 @@ import org.ngbp.libatsc3.middleware.android.phy.virtual.PcapDemuxedVirtualPHYAnd
 import org.ngbp.libatsc3.middleware.android.phy.virtual.PcapSTLTPVirtualPHYAndroid
 
 class PcapAtsc3Source(
-        private val filename: String,
-        private val type: PcapType
+        private val filename: String
 ) : Atsc3Source() {
 
     enum class PcapType {
@@ -16,6 +15,8 @@ class PcapAtsc3Source(
     }
 
     override fun openPhyClient(): Atsc3NdkPHYClientBase? {
+        //TODO: temporary solution
+        val type = if (filename.contains(".demux.")) PcapType.DEMUXED else PcapType.STLTP
         try {
             when (type) {
                 PcapType.DEMUXED -> PcapDemuxedVirtualPHYAndroid()
@@ -38,8 +39,20 @@ class PcapAtsc3Source(
         return null
     }
 
+    override fun getConfigCount() = 1
+
+    override fun getConfigByIndex(configIndex: Int): String {
+        return if (configIndex == 0) {
+            filename
+        } else {
+            throw IndexOutOfBoundsException("Incorrect configuration index: $configIndex")
+        }
+    }
+
+    override fun getAllConfigs(): List<String> = listOf(filename)
+
     override fun toString(): String {
-        return "PCAP Source: filename = $filename, type = $type"
+        return "PCAP Source: filename = $filename"
     }
 
     companion object {

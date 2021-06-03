@@ -9,14 +9,14 @@ class SrtListAtsc3Source(
 ) : ConfigurableAtsc3Source<String>(srtSourceList) {
 
     override fun open(): Int {
-        return configure(-1)
+        return configure(IAtsc3Source.CONFIG_DEFAULT)
     }
 
     override fun openPhyClient(): Atsc3NdkPHYClientBase? {
         try {
             return SRTRxSTLTPVirtualPHYAndroid().apply {
                 init()
-                setSrtSourceConnectionString(getConfig(getConfigIndex()))
+                setSrtSourceConnectionString(getConfigByIndex(getCurrentConfigIndex()))
             }.also { client ->
                 client.run()
             }

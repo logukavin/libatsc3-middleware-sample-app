@@ -40,7 +40,7 @@ import kotlin.concurrent.schedule
 
 internal class Atsc3Module(
         private val cacheDir: File
-): IAtsc3Module, IAtsc3NdkApplicationBridgeCallbacks, IAtsc3NdkPHYBridgeCallbacks {
+) : IAtsc3Module, IAtsc3NdkApplicationBridgeCallbacks, IAtsc3NdkPHYBridgeCallbacks {
 
     private val atsc3NdkApplicationBridge = Atsc3NdkApplicationBridge(this)
     private val atsc3NdkPHYBridge = Atsc3NdkPHYBridge(this)
@@ -68,14 +68,17 @@ internal class Atsc3Module(
 
     @Volatile
     private var phyDemodLock: Boolean = false
+
     @Volatile
     private var isReconfiguring: Boolean = false
+
     @Volatile
     private var listener: Atsc3ModuleListener? = null
 
     private var nextSourceJob: Job? = null
 
     private val configurationTimer = Timer()
+
     @Volatile
     private var nextSourceConfigTuneTimeoutTask: TimerTask? = null
 
@@ -129,7 +132,11 @@ internal class Atsc3Module(
                     this.source = null
                 } else {
                     setSourceConfig(result)
-                    val newState = if (result > 0) Atsc3ModuleState.SCANNING else Atsc3ModuleState.SNIFFING
+                    val newState = when {
+                        result > 0 -> Atsc3ModuleState.SCANNING
+                        source.getConfigCount() > 0 -> Atsc3ModuleState.SNIFFING
+                        else -> Atsc3ModuleState.IDLE
+                    }
                     setState(newState)
                     startSourceConfigTimeoutTask()
                     return@withStateLock true
@@ -158,7 +165,7 @@ internal class Atsc3Module(
     @Synchronized
     private fun applyNextSourceConfig() {
         val job = nextSourceJob
-        log("applyNextSourceConfig with job: $job, isActive: "+job?.isActive)
+        log("applyNextSourceConfig with job: $job, isActive: ${job?.isActive}")
 
         if (job != null && job.isActive) {
             return
@@ -214,7 +221,7 @@ internal class Atsc3Module(
     private fun startSourceConfigTimeoutTask() {
         //failsafe if we don't acquire SLT
         // either wait on this block this coroutine, or the onSltTablePresent will invoke nextSourceConfigTuneTimeoutJob.cancel()
-        Log.i(TAG, "nextSourceConfigTuneTimeoutJob: tune SLT timeout - scheduled for "+SLT_ACQUIRE_TUNE_DELAY+"ms")
+        Log.i(TAG, "nextSourceConfigTuneTimeoutJob: tune SLT timeout - scheduled for $SLT_ACQUIRE_TUNE_DELAY ms")
 
         nextSourceConfigTuneTimeoutTask = configurationTimer.schedule(SLT_ACQUIRE_TUNE_DELAY) {
             val currentState = getState()
@@ -348,6 +355,7 @@ internal class Atsc3Module(
 
     override fun close() {
         source?.close()
+        source = null
 
         lastTunedFreqList = emptyList()
         setSourceConfig(IAtsc3Source.CONFIG_DEFAULT)
@@ -588,7 +596,7 @@ internal class Atsc3Module(
 
     //jjustman-2021-05-19 - TODO: fix me to pass a proper collection of urls for <frequency, bsid, slt.groupId, SLTConstants.URL_TYPE_REPORT_SERVER> := { <XML> }
     private fun fireServiceLocationTableChanged(services: List<Atsc3Service>, urls: SparseArray<String>) {
-        log("fireServiceLocationTableChanged, services: $services, urls: $urls");
+        log("fireServiceLocationTableChanged, services: $services, urls: $urls")
 
         listener?.onServiceLocationTableChanged(
                 Collections.unmodifiableList(services),
