@@ -12,6 +12,8 @@ import com.nextgenbroadcast.mobile.middleware.telemetry.entity.TelemetryPayload
 import com.nextgenbroadcast.mobile.middleware.telemetry.security.PrivateKeyReader
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.io.*
 import java.math.BigInteger
 import java.security.*
@@ -27,21 +29,15 @@ internal class AWSIoThing(
         private val assets: AssetManager
 ) {
     private val gson = Gson()
+    private val clientLock = Mutex()
 
     private val clientId = "ATSC3MobileReceiver_$serialNumber"
     private val eventTopic = AWSIOT_TOPIC_EVENT.replace(AWSIOT_FORMAT_SERIAL, clientId)
     private val controlTopic = AWSIOT_TOPIC_CONTROL.replace(AWSIOT_FORMAT_SERIAL, clientId)
     private val globalControlTopic = AWSIOT_GLOBAL_TOPIC_CONTROL
 
+    @Volatile
     private var thingAwsIotClient: AWSIotMqttClient? = null
-        set(value) {
-            synchronized(this) {
-                field?.let { client ->
-                    disconnect(client)
-                }
-                field = value
-            }
-        }
 
     suspend fun publish(topic: String, payload: TelemetryPayload) {
         publish(topic, gson.toJson(payload))
@@ -51,7 +47,6 @@ internal class AWSIoThing(
     //                      this can occur if we are pushing events with a stale MQTT connection and have exceeded the AWSIot internal publishQueue.size() limited by client.getMaxOfflineQueueSize()
 
     suspend fun publish(topic: String, payload: String) {
-
         val client = requireClient()
         try {
             if (client.connectionStatus != AWSIotConnectionStatus.DISCONNECTED) {
@@ -70,18 +65,18 @@ internal class AWSIoThing(
 
     suspend fun subscribeCommandsFlow(commandFlow: MutableSharedFlow<TelemetryControl>) {
         val client = requireClient()
-        try {
-            val payloadToControl = { payload: String? ->
-                if (payload.isNullOrBlank()) {
-                    TelemetryControl()
-                } else {
-                    gson.fromJson(payload, TelemetryControl::class.java)
-                }
+        val payloadToControl = { payload: String? ->
+            if (payload.isNullOrBlank()) {
+                TelemetryControl()
+            } else {
+                gson.fromJson(payload, TelemetryControl::class.java)
             }
+        }
 
-            supervisorScope {
-                // subscribe device specific control topic
-                launch {
+        supervisorScope {
+            // subscribe device specific control topic
+            launch {
+                try {
                     suspendCancellableCoroutine<AWSIotMessage?> { cont ->
                         client.subscribe(
                                 object : AWSIotTopicKtx(cont, controlTopic) {
@@ -91,10 +86,14 @@ internal class AWSIoThing(
                                 }
                         )
                     }
+                } catch (e: Exception) {
+                    LOG.w(TAG, "Failed subscribe topic: $controlTopic", e)
                 }
+            }
 
-                // subscribe global control topic
-                launch {
+            // subscribe global control topic
+            launch {
+                try {
                     suspendCancellableCoroutine<AWSIotMessage?> { cont ->
                         client.subscribe(
                                 object : AWSIotTopicKtx(cont, globalControlTopic) {
@@ -106,15 +105,21 @@ internal class AWSIoThing(
                                 }
                         )
                     }
+                } catch (e: Exception) {
+                    LOG.w(TAG, "Failed subscribe topic: $globalControlTopic", e)
                 }
             }
-        } catch (e: Exception) {
-            LOG.w(TAG, "subscribeCommandsFlow error", e)
         }
     }
 
-    fun close() {
-        thingAwsIotClient = null // disconnects automatically
+    suspend fun close() {
+        clientLock.withLock {
+            val client = thingAwsIotClient
+            thingAwsIotClient = null
+            client?.let {
+                disconnect(client)
+            }
+        }
     }
 
     private fun disconnect(client: AWSIotMqttClient) {
@@ -126,9 +131,14 @@ internal class AWSIoThing(
     }
 
     private suspend fun requireClient(): AWSIotMqttClient {
-        return thingAwsIotClient ?: let {
-            connect().join()
-            thingAwsIotClient ?: throw NullPointerException("AWS IoT client is NULL")
+        val client = thingAwsIotClient
+        return client ?: clientLock.withLock {
+            var localClient = thingAwsIotClient
+            if (localClient == null) {
+                connect().join()
+                localClient = thingAwsIotClient
+            }
+            localClient ?: throw NullPointerException("AWS IoT client is NULL")
         }
     }
 
@@ -189,7 +199,7 @@ internal class AWSIoThing(
     private suspend fun connectAWSIoT(certificateStream: InputStream, privateKeyStream: InputStream) {
         readKeyPair(certificateStream, privateKeyStream)?.let { (keyStore, keyPassword) ->
             thingAwsIotClient = createAWSIoTClient(keyStore, keyPassword) {
-                thingAwsIotClient = null
+                close()
             }
             LOG.i(TAG, "AWS IoT Client connected!")
         }
@@ -277,7 +287,7 @@ internal class AWSIoThing(
     }
 
     //client.maxOfflineQueueSize(AWSIOT_MAX_OFFLINE_QUEUE_SIZE)
-    private suspend fun createAWSIoTClient(keyStore: KeyStore, keyPassword: String, onClose: () -> Unit = {}): AWSIotMqttClient {
+    private suspend fun createAWSIoTClient(keyStore: KeyStore, keyPassword: String, onClose: suspend () -> Unit = {}): AWSIotMqttClient {
         return object : AWSIotMqttClient(BuildConfig.AWSIoTCustomerUrl, clientId, keyStore, keyPassword) {
             override fun onConnectionClosed() {
                 // AWSIotMqttClient doesn't cancel subscriptions on connection error, close them manually
@@ -291,22 +301,23 @@ internal class AWSIoThing(
 
                 super.onConnectionClosed()
 
-                onClose()
+                runBlocking {
+                    onClose()
+                }
             }
-        }.also { client ->
-
+        }.apply {
             //jjustman-2021-05-06 - default max connection retries for AWSIoT is set to 5, we will use a number slightly larger than 5...
-            client.setMaxConnectionRetries(AWSIOT_MAX_CONNECTION_RETRIES);
+            maxConnectionRetries = AWSIOT_MAX_CONNECTION_RETRIES;
 
             //jjustman-2021-05-06 - NOTE: method docs indicate keepAliveInterval is 30s,
             //          but com.amazonaws.services.iot.client.AWSIotConfig.KEEP_ALIVE_INTERVAL
             //          is actually 600,000 (ms) -> 5 minutes, so set it manually here
 
-            client.setMaxOfflineQueueSize(AWSIOT_MAX_OFFLINE_QUEUE_SIZE)
+            maxOfflineQueueSize = AWSIOT_MAX_OFFLINE_QUEUE_SIZE
 
-            client.setKeepAliveInterval(AWSIOT_KEEPALIVE_INTERVAL_MS)
-            client.setNumOfClientThreads(AWSIOT_NUM_CLIENT_THREADS)
-
+            keepAliveInterval = AWSIOT_KEEPALIVE_INTERVAL_MS
+            numOfClientThreads = AWSIOT_NUM_CLIENT_THREADS
+        }.also { client ->
             suspendCancellableCoroutine<Any> { cont ->
                 try {
                     client.connect()

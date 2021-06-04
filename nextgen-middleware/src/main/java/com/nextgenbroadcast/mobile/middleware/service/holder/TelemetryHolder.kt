@@ -157,7 +157,11 @@ internal class TelemetryHolder(
         remoteControl?.stop()
         remoteControl = null
 
-        awsIoThing?.close()
+        awsIoThing?.let { thing ->
+            CoroutineScope(Dispatchers.Main).launch {
+                thing.close()
+            }
+        }
         awsIoThing = null
     }
 
