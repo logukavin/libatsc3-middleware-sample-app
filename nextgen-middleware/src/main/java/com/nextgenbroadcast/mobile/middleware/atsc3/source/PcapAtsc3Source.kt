@@ -16,7 +16,7 @@ class PcapAtsc3Source(
 
     override fun openPhyClient(): Atsc3NdkPHYClientBase? {
         //TODO: temporary solution
-        val type = if (filename.contains(".demux.")) PcapType.DEMUXED else PcapType.STLTP
+        val type = if (filename.contains(".demux.") || filename.contains(".demuxed.")) PcapType.DEMUXED else PcapType.STLTP
         try {
             when (type) {
                 PcapType.DEMUXED -> PcapDemuxedVirtualPHYAndroid()

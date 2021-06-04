@@ -1,6 +1,5 @@
 package com.nextgenbroadcast.mobile.middleware.atsc3
 
-import android.util.SparseArray
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.core.atsc3.MediaUrl
 import com.nextgenbroadcast.mobile.core.atsc3.phy.PHYStatistics
@@ -32,6 +31,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.schedule
+import kotlin.math.max
 
 internal class Atsc3Module(
         private val cacheDir: File
@@ -45,6 +45,7 @@ internal class Atsc3Module(
     private var source: IAtsc3Source? = null
     private var currentSourceConfiguration: Int = IAtsc3Source.CONFIG_DEFAULT
     private var lastTunedFreqList: List<Int> = emptyList()
+    private var defaultConfiguration: Map<Any, Atsc3ServiceLocationTable>? = null
 
     private val serviceLocationTable = ConcurrentHashMap<Int, Atsc3ServiceLocationTable>()
     private val serviceToSourceConfig = ConcurrentHashMap<Int, Int>()
@@ -100,6 +101,12 @@ internal class Atsc3Module(
             if (src is TunableConfigurableAtsc3Source) {
                 src.setConfigs(frequencyList)
 
+                if (USE_PERSISTED_CONFIGURATION) {
+                    withStateLock {
+                        applyDefaultConfiguration(src)
+                    }
+                }
+
                 setSourceConfig(IAtsc3Source.CONFIG_DEFAULT)
                 applySourceConfig(src, IAtsc3Source.CONFIG_DEFAULT)
 
@@ -112,7 +119,7 @@ internal class Atsc3Module(
         }
     }
 
-    override fun connect(source: IAtsc3Source): Boolean {
+    override fun connect(source: IAtsc3Source, defaultConfig: Map<Any, Atsc3ServiceLocationTable>?): Boolean {
         log("Connecting to: $source")
 
         close()
@@ -121,9 +128,21 @@ internal class Atsc3Module(
             this.source = source
 
             return withStateLock {
+                defaultConfiguration = defaultConfig
+                if (USE_PERSISTED_CONFIGURATION) {
+                    if (source.getConfigCount() > 0) {
+                        applyDefaultConfiguration(source)
+
+                        if (source is ConfigurableAtsc3Source<*>) {
+                            val configIndex = findNextConfigIndexToSniff(source.getCurrentConfigIndex())
+                            source.initCurrentConfiguration(configIndex)
+                        }
+                    }
+                }
+
                 val result = source.open()
                 if (result == IAtsc3Source.RESULT_ERROR) {
-                    this.source = null
+                    close()
                 } else {
                     setSourceConfig(result)
                     val newState = when {
@@ -191,9 +210,19 @@ internal class Atsc3Module(
         log("applySourceConfig with src: $src, config: $config");
 
         return withStateLock {
+            if (src.getConfigCount() < 1) return@withStateLock IAtsc3Source.RESULT_ERROR
+
+            val applyNext = (config == IAtsc3Source.CONFIG_DEFAULT)
+            var nextConfigIndex = config
+            if (USE_PERSISTED_CONFIGURATION) {
+                if (applyNext) {
+                    nextConfigIndex = findNextConfigIndexToSniff(src.getCurrentConfigIndex() - 1)
+                }
+            }
+
             isReconfiguring = true
             val result = try {
-                src.configure(config)
+                src.configure(nextConfigIndex)
             } finally {
                 isReconfiguring = false
             }
@@ -202,7 +231,7 @@ internal class Atsc3Module(
                 //jjustman-2021-05-19 - this is not quite true, we shouldn't actually set our "new" state until either onSls or onSourceConfigTimeout occurs..
                 //vmatiash-2021-05-28 - refactored - we apply new configuration but to not switch to TUNED until receive SLT
                 setSourceConfig(result)
-                val newState = if (result > 0 && config == IAtsc3Source.CONFIG_DEFAULT) Atsc3ModuleState.SCANNING else Atsc3ModuleState.SNIFFING
+                val newState = if (result > 0 && applyNext) Atsc3ModuleState.SCANNING else Atsc3ModuleState.SNIFFING
                 setState(newState)
                 startSourceConfigTimeoutTask()
             }
@@ -218,6 +247,16 @@ internal class Atsc3Module(
         LOG.i(TAG, "nextSourceConfigTuneTimeoutJob: tune SLT timeout - scheduled for $SLT_ACQUIRE_TUNE_DELAY ms")
 
         nextSourceConfigTuneTimeoutTask = configurationTimer.schedule(SLT_ACQUIRE_TUNE_DELAY) {
+            // Remove SLT data for unreachable  configurations
+            //TODO: probably we don't want it
+            /*withStateLock {
+                val currentConfig = getSourceConfig()
+                serviceToSourceConfig.filterValues { it == currentConfig }.keys.forEach { bsid ->
+                    serviceLocationTable.remove(bsid)
+                    serviceToSourceConfig.remove(bsid)
+                }
+            }*/
+
             val currentState = getState()
             log("nextSourceConfigTuneTimeoutJob: tune SLT timeout - currentState: $currentState, invoking applyNextSourceConfig")
             if (currentState == Atsc3ModuleState.SCANNING) {
@@ -231,6 +270,15 @@ internal class Atsc3Module(
                 }
             }
         }
+    }
+
+    private fun findNextConfigIndexToSniff(startConfigIndex: Int): Int {
+        var nextConfigIndex = startConfigIndex
+        while (nextConfigIndex >= 0 && serviceToSourceConfig.values.contains(nextConfigIndex)) {
+            nextConfigIndex--
+        }
+        nextConfigIndex = max(nextConfigIndex, 0)
+        return nextConfigIndex
     }
 
     @Synchronized
@@ -272,7 +320,7 @@ internal class Atsc3Module(
             else -> 1
         }
 
-        listener?.onConfigurationChanged(config, configCount)
+        listener?.onConfigurationChanged(config, configCount, serviceToSourceConfig.values.contains(config))
     }
 
     override fun isServiceSelected(bsid: Int, serviceId: Int): Boolean {
@@ -282,7 +330,7 @@ internal class Atsc3Module(
     private var tmpAdditionalServiceOpened = false
 
     override fun selectService(bsid: Int, serviceId: Int): Boolean {
-        if (state != Atsc3ModuleState.TUNED || (selectedServiceBsid == bsid && selectedServiceId == serviceId)) return false
+        if (selectedServiceBsid == bsid && (selectedServiceId == serviceId || state != Atsc3ModuleState.TUNED)) return false
 
         clearHeld()
         selectedServiceSLSProtocol = -1
@@ -349,6 +397,8 @@ internal class Atsc3Module(
     override fun close() {
         source?.close()
         source = null
+
+        defaultConfiguration = null
 
         lastTunedFreqList = emptyList()
         setSourceConfig(IAtsc3Source.CONFIG_DEFAULT)
@@ -438,8 +488,10 @@ internal class Atsc3Module(
         }
 
         val slt = LLSParserSLT().parseXML(slt_payload_xml)
-        serviceLocationTable[slt.bsid] = slt
-        serviceToSourceConfig[slt.bsid] = getSourceConfig()
+        withStateLock {
+            serviceLocationTable[slt.bsid] = slt
+            serviceToSourceConfig[slt.bsid] = getSourceConfig()
+        }
 
         // getState() is blocking method and must not be called if isReconfiguring = true
         val currentState = getState()
@@ -587,8 +639,33 @@ internal class Atsc3Module(
 
     //////////////////////////////////////////////////////////////
 
+    override fun getCurrentConfiguration(): Pair<String, Map<Any, Atsc3ServiceLocationTable>>? {
+        val src = source ?: return null
+        return Pair(
+                src::class.java.simpleName,
+                serviceToSourceConfig.mapNotNull { (bsid, configIndex) ->
+                    src.getConfigByIndex(configIndex).let { config ->
+                        serviceLocationTable[bsid]?.let { slt ->
+                            config to slt
+                        }
+                    }
+                }.toMap()
+        )
+    }
+
+    private fun applyDefaultConfiguration(src: IAtsc3Source) {
+        val srcConfigs = src.getAllConfigs()
+        defaultConfiguration?.forEach { (config, slt) ->
+            val configIndex = srcConfigs.indexOf(config)
+            if (configIndex >= 0) {
+                serviceLocationTable[slt.bsid] = slt
+                serviceToSourceConfig[slt.bsid] = configIndex
+            }
+        }
+    }
+
     //jjustman-2021-05-19 - TODO: fix me to pass a proper collection of urls for <frequency, bsid, slt.groupId, SLTConstants.URL_TYPE_REPORT_SERVER> := { <XML> }
-    private fun fireServiceLocationTableChanged(services: List<Atsc3Service>, urls: SparseArray<String>) {
+    private fun fireServiceLocationTableChanged(services: List<Atsc3Service>, urls: Map<Int, String>) {
         log("fireServiceLocationTableChanged, services: $services, urls: $urls")
 
         listener?.onServiceLocationTableChanged(
@@ -646,5 +723,7 @@ internal class Atsc3Module(
         const val SLS_PROTOCOL_MMT = 2
 
         const val SCHEME_MMT = "mmt://"
+
+        private const val USE_PERSISTED_CONFIGURATION = true
     }
 }
