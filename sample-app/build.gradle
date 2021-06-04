@@ -51,6 +51,8 @@ android {
         versionName appVersion
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
+        buildConfigField("String", "BugfenderKey", "\"nPbJ6hrKCr3NsDdjybzRmWQz7RlPSIWY\"")
     }
 
     signingConfigs {
