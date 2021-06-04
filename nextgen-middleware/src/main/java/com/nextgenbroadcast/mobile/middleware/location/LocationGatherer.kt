@@ -13,7 +13,6 @@ import android.os.Bundle
 import android.util.Log
 import androidx.core.content.ContextCompat
 import com.nextgenbroadcast.mobile.middleware.service.init.FrequencyInitializer
-import com.nextgenbroadcast.mobile.middleware.telemetry.reader.GPSTelemetryReader
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -26,18 +25,18 @@ class LocationGatherer {
     suspend fun getLastLocation(context: Context): Location? {
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) return null
 
+        val locationManager = (context.getSystemService(Context.LOCATION_SERVICE) as LocationManager)
+
         return suspendCancellableCoroutine { cont ->
             cont.invokeOnCancellation {
                 cancel()
             }
 
-            val locationManager = (context.getSystemService(Context.LOCATION_SERVICE) as LocationManager)
-
             Log.d(TAG, "getLastLocation() - before getNewestLastKnownLocation")
-            getNewestLastKnownLocation(locationManager)?.let {
+            getNewestLastKnownLocation(locationManager)?.let { location ->
                 Log.d(TAG, "getLastLocation() - before cont.resume(it)")
 
-                cont.resume(it)
+                cont.resume(location)
                 Log.d(TAG, "getLastLocation() - before @suspendCancellableCoroutine")
                 return@suspendCancellableCoroutine
             }
@@ -46,9 +45,8 @@ class LocationGatherer {
             try {
 
                 locationManager.getProviders(false).forEach {
-                    var providerInstance = locationManager.getProvider(it)
+                    val providerInstance = locationManager.getProvider(it)
                     Log.d(TAG, "getLastLocation() - locationManager.getProviders with provider: $it, enabled: ${locationManager.isProviderEnabled(it)}, provider: ${providerInstance}")
-
                 }
 
 
@@ -57,8 +55,9 @@ class LocationGatherer {
                     public operator fun <T, R> DeepRecursiveFunction<TypeVariable(T), TypeVariable(R)>.invoke(value: TypeVariable(T)): TypeVariable(R) defined in kotlin
                 */
 
-                val providerCriteria = Criteria()
-                providerCriteria.setAccuracy(ACCURACY_COARSE)
+                val providerCriteria = Criteria().apply {
+                    accuracy = ACCURACY_COARSE
+                }
 
                 Log.d(TAG, "getLastLocation() - locationManager.getBestProvider with criteria: $providerCriteria")
 
