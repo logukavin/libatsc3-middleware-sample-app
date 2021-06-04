@@ -8,7 +8,7 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.entities.service.Atsc3Servic
 
 interface Atsc3ModuleListener {
     fun onStateChanged(state: Atsc3ModuleState)
-    fun onConfigurationChanged(index: Int, count: Int)
+    fun onConfigurationChanged(index: Int, count: Int, isKnown: Boolean)
 
     fun onApplicationPackageReceived(appPackage: Atsc3Application)
 

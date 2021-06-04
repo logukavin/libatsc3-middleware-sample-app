@@ -1,18 +1,18 @@
 package com.nextgenbroadcast.mobile.middleware.atsc3.entities.service
 
 import android.util.Log
-import android.util.SparseArray
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.Atsc3ServiceLocationTable
 import com.nextgenbroadcast.mobile.middleware.atsc3.utils.XmlUtils
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserException
 import java.io.IOException
 import java.util.*
+import kotlin.collections.HashMap
 
 class LLSParserSLT {
     fun parseXML(xmlPayload: String): Atsc3ServiceLocationTable {
         val services = ArrayList<Atsc3Service>()
-        val urls = SparseArray<String>()
+        val urls = HashMap<Int, String>()
         var bsid = 0
         try {
             val parser = XmlUtils.newParser(xmlPayload)

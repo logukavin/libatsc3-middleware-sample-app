@@ -3,9 +3,14 @@ package com.nextgenbroadcast.mobile.middleware.settings
 import android.content.Context
 import android.location.Location
 import androidx.core.content.edit
+import com.google.gson.Gson
+import com.google.gson.JsonParseException
+import com.google.gson.reflect.TypeToken
 import com.nextgenbroadcast.mobile.core.DateUtils
+import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.middleware.BuildConfig
 import com.nextgenbroadcast.mobile.middleware.analytics.Atsc3Analytics
+import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3Profile
 import com.nextgenbroadcast.mobile.middleware.location.FrequencyLocation
 import com.nextgenbroadcast.mobile.middleware.server.ServerConstants
 import org.json.JSONArray
@@ -17,6 +22,7 @@ internal class MiddlewareSettingsImpl private constructor(
         context: Context
 ) : IMiddlewareSettings {
     private val preferences = context.getSharedPreferences(REPOSITORY_PREFERENCE, Context.MODE_PRIVATE)
+    private val gson = Gson()
 
     override val deviceId: String
         get() = requireString(DEVICE_ID) {
@@ -54,6 +60,24 @@ internal class MiddlewareSettingsImpl private constructor(
         get() = loadInt(FREQUENCY_USER)
         set(value) {
             saveInt(FREQUENCY_USER, value)
+        }
+
+    override var receiverProfile: Atsc3Profile?
+        get() = loadString(RECEIVER_PROFILE)?.let { json ->
+            if (json.isNotBlank()) {
+                try {
+                    gson.fromJson<Atsc3Profile>(json, object : TypeToken<Atsc3Profile>() {}.type)
+                } catch (e: JsonParseException) {
+                    LOG.d(TAG, "Failed parsing receiver profile: $json", e)
+                    null
+                }
+            } else null
+        }
+        set(value) {
+            val json = value?.let {
+                gson.toJson(value)
+            } ?: ""
+            saveString(RECEIVER_PROFILE, json)
         }
 
     override val hostName = ServerConstants.HOST_NAME
@@ -123,6 +147,8 @@ internal class MiddlewareSettingsImpl private constructor(
             LocalDateTime.now().minusHours(Atsc3Analytics.MAX_HOURS_BEFORE_SEND_REPORT).minusSeconds(1)
 
     companion object {
+        val TAG: String = MiddlewareSettingsImpl::class.java.simpleName
+
         private const val REPOSITORY_PREFERENCE = "${BuildConfig.LIBRARY_PACKAGE_NAME}.preference"
         private const val DEVICE_ID = "device_id"
         private const val ADVERTISING_ID = "advertising_id"
@@ -133,6 +159,7 @@ internal class MiddlewareSettingsImpl private constructor(
         private const val LOCATION_LONGITUDE = "location_longitude"
         private const val FREQUENCY_LIST = "frequency_list"
         private const val FREQUENCY_USER = "frequency_user"
+        private const val RECEIVER_PROFILE = "receiver_profile"
 
         @Volatile
         private var INSTANCE: MiddlewareSettingsImpl? = null

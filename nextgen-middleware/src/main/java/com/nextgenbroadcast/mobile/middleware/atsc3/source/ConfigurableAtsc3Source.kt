@@ -55,5 +55,9 @@ abstract class ConfigurableAtsc3Source<T>(
 
     fun getCurrentConfigIndex() = configIndex
 
+    fun initCurrentConfiguration(configIndex: Int) {
+        this.configIndex = configIndex
+    }
+
     protected abstract fun applyConfig(configIndex: Int): Int
 }
