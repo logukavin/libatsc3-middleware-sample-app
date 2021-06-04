@@ -10,7 +10,8 @@ class App : DaggerApplication() {
 
     override fun onCreate() {
         super.onCreate()
-        Bugfender.init(this, "nPbJ6hrKCr3NsDdjybzRmWQz7RlPSIWY", BuildConfig.DEBUG)
+
+        Bugfender.init(this, BuildConfig.BugfenderKey, BuildConfig.DEBUG)
         Bugfender.enableCrashReporting()
         Bugfender.enableUIEventLogging(this)
         Bugfender.enableLogcatLogging() // optional, if you want logs automatically collected from logcat
