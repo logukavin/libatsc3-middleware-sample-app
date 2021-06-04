@@ -1,5 +1,6 @@
 package com.nextgenbroadcast.mobile.middleware.controller.service
 
+import android.location.Location
 import android.util.Log
 import com.nextgenbroadcast.mobile.core.atsc3.MediaUrl
 import com.nextgenbroadcast.mobile.core.model.AVService
@@ -8,6 +9,7 @@ import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.middleware.analytics.IAtsc3Analytics
 import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3ModuleListener
 import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3ModuleState
+import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3Profile
 import com.nextgenbroadcast.mobile.middleware.atsc3.IAtsc3Module
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.SLTConstants
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.alerts.AeaTable
@@ -21,6 +23,7 @@ import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 
 internal class ServiceControllerImpl(
@@ -39,17 +42,17 @@ internal class ServiceControllerImpl(
     private var mediaUrlAssignmentJob: Job? = null
 
     private val atsc3State = MutableStateFlow<Atsc3ModuleState?>(Atsc3ModuleState.IDLE)
-    private val atsc3Configuration = MutableStateFlow<Pair<Int, Int>?>(null)
+    private val atsc3Configuration = MutableStateFlow<Triple<Int, Int, Boolean>?>(null)
 
     override val selectedService = repository.selectedService
     override val serviceGuideUrls = repository.serviceGuideUrls
     override val applications = repository.applications
 
     override val receiverState: StateFlow<ReceiverState> = combine(atsc3State, repository.selectedService, atsc3Configuration) { state, service, config ->
-        val (configIndex, configCount) = config ?: Pair(-1, -1)
+        val (configIndex, configCount, configKnown) = config ?: Triple(-1, -1, false)
         if (state == null || state == Atsc3ModuleState.IDLE) {
             ReceiverState.idle()
-        } else if (state == Atsc3ModuleState.SCANNING || (state == Atsc3ModuleState.SNIFFING && service == null && configCount > 1)) {
+        } else if (state == Atsc3ModuleState.SCANNING || (state == Atsc3ModuleState.SNIFFING && !configKnown && configCount > 1)) {
             ReceiverState.scanning(configIndex, configCount)
         } else if (service == null) {
             ReceiverState.tuning(configIndex, configCount)
@@ -66,19 +69,36 @@ internal class ServiceControllerImpl(
 
     override val alertList = repository.alertsForNotify
 
+    private var isScanning = false
+
     init {
         atsc3Module.setListener(this)
     }
 
     override fun onStateChanged(state: Atsc3ModuleState) {
         atsc3State.value = state
-        if (state == Atsc3ModuleState.IDLE) {
-            repository.reset()
+
+        when (state) {
+            Atsc3ModuleState.IDLE -> {
+                repository.reset()
+                isScanning = false
+            }
+
+            Atsc3ModuleState.SCANNING -> {
+                isScanning = true
+            }
+
+            Atsc3ModuleState.TUNED -> {
+                if (isScanning) {
+                    isScanning = false
+                    storeCurrentProfile()
+                }
+            }
         }
     }
 
-    override fun onConfigurationChanged(index: Int, count: Int) {
-        atsc3Configuration.value = Pair(index, count)
+    override fun onConfigurationChanged(index: Int, count: Int, isKnown: Boolean) {
+        atsc3Configuration.value = Triple(index, count, isKnown)
     }
 
     override fun onApplicationPackageReceived(appPackage: Atsc3Application) {
@@ -154,7 +174,8 @@ internal class ServiceControllerImpl(
                         clearRouteData()
                     }
 
-                    if (atsc3Module.connect(source)) {
+                    val lastProfile = getLastProfileForSource(source)
+                    if (atsc3Module.connect(source, lastProfile?.configs)) {
                         if (source is ITunableSource) {
                             tune(PhyFrequency.default(PhyFrequency.Source.AUTO))
                         }
@@ -240,7 +261,9 @@ internal class ServiceControllerImpl(
     override suspend fun tune(frequency: PhyFrequency) {
         withContext(Dispatchers.Main) {
             val frequencyList: List<Int> = if (frequency.list.isEmpty()) {
+                // If provided frequency list is empty then load last saved frequency and frequency list if it available
                 val lastFrequency = settings.lastFrequency
+                //TODO: why don't we check location??
                 settings.frequencyLocation?.let {
                     it.frequencyList.toMutableList().apply {
                         if (lastFrequency > 0) {
@@ -258,6 +281,7 @@ internal class ServiceControllerImpl(
             }
 
             val freqKhz = frequencyList.firstOrNull() ?: return@withContext
+
             // Store the first one because it will be used as default
             receiverFrequency.value = freqKhz
             settings.lastFrequency = freqKhz
@@ -333,8 +357,48 @@ internal class ServiceControllerImpl(
         }
     }
 
+    private fun getLastProfileForSource(source: IAtsc3Source): Atsc3Profile? {
+        val profile = settings.receiverProfile
+        return profile?.let {
+            val elapsedTime = System.currentTimeMillis() - profile.timestamp
+            val deviceLocation = atsc3Analytics.getLocation()
+            val profileLocation = Location("unknown").apply {
+                latitude = profile.location.lat
+                longitude = profile.location.lng
+            }
+            if (source::class.java.simpleName == profile.sourceType
+                    && profile.location != null
+                    && deviceLocation.distanceTo(profileLocation) < PROFILE_LOCATION_RADIUS
+                    && elapsedTime > 0 && elapsedTime < PROFILE_LIFE_TIME) {
+                profile
+            } else {
+                null
+            }
+        }
+    }
+
+    private fun storeCurrentProfile() {
+        val location = atsc3Analytics.getLocation()
+        if (location.latitude > 0 && location.longitude > 0) {
+            atsc3Scope.launch {
+                settings.receiverProfile = atsc3Module.getCurrentConfiguration()?.let { (srcType, config) ->
+                    Atsc3Profile(
+                            srcType,
+                            config,
+                            System.currentTimeMillis(),
+                            Atsc3Profile.SimpleLocation(location.latitude, location.longitude)
+                    )
+                }
+            }
+        }
+    }
+
     companion object {
-        private const val BA_LOADING_TIMEOUT = 5000L
         val TAG: String = ServiceControllerImpl::class.java.simpleName
+
+        private val BA_LOADING_TIMEOUT = TimeUnit.SECONDS.toMillis(5)
+        private val PROFILE_LIFE_TIME = TimeUnit.DAYS.toMillis(30)
+
+        private const val PROFILE_LOCATION_RADIUS = 24 * 1000 // about 15 mile
     }
 }

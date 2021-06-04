@@ -1,5 +1,7 @@
 package com.nextgenbroadcast.mobile.middleware.analytics
 
+import android.location.Location
+
 internal interface IAtsc3Analytics {
     fun setReportServerUrl(serverUrl: String?)
 
@@ -9,4 +11,6 @@ internal interface IAtsc3Analytics {
     fun finishDisplayMediaContent()
     fun startApplicationSession()
     fun finishApplicationSession()
+
+    fun getLocation(): Location
 }

@@ -332,6 +332,8 @@ class Atsc3Analytics private constructor(
         }
     }
 
+    override fun getLocation() = deviceLocation
+
     private fun sendAllEventsAndReschedule(reportServerUrl: String) {
         workManager.cancelUniqueWork(AnalyticsSendingWorker.NAME)
 
