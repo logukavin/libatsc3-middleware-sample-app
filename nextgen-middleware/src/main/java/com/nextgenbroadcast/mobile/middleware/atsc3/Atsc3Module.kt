@@ -1,5 +1,6 @@
 package com.nextgenbroadcast.mobile.middleware.atsc3
 
+import android.util.Log
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.core.atsc3.MediaUrl
 import com.nextgenbroadcast.mobile.core.atsc3.phy.PHYStatistics
@@ -624,10 +625,13 @@ internal class Atsc3Module(
     override fun pushRfPhyStatisticsUpdate(rfPhyStatistics: RfPhyStatistics) {
         phyDemodLock = rfPhyStatistics.demod_lock != 0
 
-        PHYStatistics.PHYRfStatistics = "PHY: $rfPhyStatistics".also {
-            log(it)
+        try {
+            PHYStatistics.PHYRfStatistics = "PHY: $rfPhyStatistics".also {
+                log(it)
+            }
+        } catch (ex: Exception) {
+            Log.w(TAG, "exception when dumping PHYRFStatistics: $ex");
         }
-
         rfPhyMetricsFlow.tryEmit(rfPhyStatistics)
     }
 
