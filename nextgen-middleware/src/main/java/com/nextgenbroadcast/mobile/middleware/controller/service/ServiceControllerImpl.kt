@@ -107,8 +107,8 @@ internal class ServiceControllerImpl(
         repository.addOrUpdateApplication(appPackage)
     }
 
-    override fun onServiceLocationTableChanged(services: List<Atsc3Service>, reportServerUrl: String?) {
-        atsc3Analytics.setReportServerUrl(reportServerUrl)
+    override fun onServiceLocationTableChanged(bsid: Int, services: List<Atsc3Service>, reportServerUrl: String?) {
+        atsc3Analytics.setReportServerUrl(bsid, reportServerUrl)
 
         // store A/V services
         val avServices = services.filter { service ->

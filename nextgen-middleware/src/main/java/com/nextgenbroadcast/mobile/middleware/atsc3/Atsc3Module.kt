@@ -501,6 +501,9 @@ internal class Atsc3Module(
         if (currentState == Atsc3ModuleState.SCANNING) {
             applyNextSourceConfig()
         } else if (currentState != Atsc3ModuleState.IDLE) {
+            if (!suspendedServiceSelection) {
+                selectedServiceBsid = slt.bsid
+            }
             finishReconfiguration()
         }
     }
@@ -522,9 +525,9 @@ internal class Atsc3Module(
                 .toSortedMap(compareBy { serviceToSourceConfig[it] })
                 .values.flatMap { it.services }
 
-        val urls = serviceLocationTable.mapValues { it.value.urls }
+        val urls = serviceLocationTable[selectedServiceBsid]?.urls ?: emptyMap()
 
-        fireServiceLocationTableChanged(services, urls.values.first())
+        fireServiceLocationTableChanged(services, urls)
     }
 
     override fun onAeatTablePresent(aeatPayloadXML: String) {
@@ -669,6 +672,7 @@ internal class Atsc3Module(
         log("fireServiceLocationTableChanged, services: $services, urls: $urls")
 
         listener?.onServiceLocationTableChanged(
+                selectedServiceBsid,
                 Collections.unmodifiableList(services),
                 urls[SLTConstants.URL_TYPE_REPORT_SERVER]
         )
