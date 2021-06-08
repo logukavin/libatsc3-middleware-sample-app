@@ -17,10 +17,11 @@ class AnalyticsSendingWorker(
     }
 
     override fun doWork(): Result {
+        val bsid = inputData.getInt(ARG_BSID, 0)
         return inputData.getString(ARG_BASE_URL)?.let { url ->
             runBlocking {
                 try {
-                    with(atsc3Analytics.sendAllEvents(url)) {
+                    with(atsc3Analytics.sendAllEvents(bsid, url)) {
                         join()
                         if (isCancelled) {
                             if (runAttemptCount < Atsc3Analytics.MAX_RETRY_COUNT) Result.retry() else Result.failure()
@@ -38,5 +39,6 @@ class AnalyticsSendingWorker(
     companion object {
         const val NAME = "ATSC3_ANALYTICS_REPORT_SENDER"
         const val ARG_BASE_URL = "BASE_URL"
+        const val ARG_BSID = "BSID"
     }
 }
