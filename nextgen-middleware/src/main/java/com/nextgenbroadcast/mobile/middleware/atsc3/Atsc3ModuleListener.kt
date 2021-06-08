@@ -12,7 +12,7 @@ interface Atsc3ModuleListener {
 
     fun onApplicationPackageReceived(appPackage: Atsc3Application)
 
-    fun onServiceLocationTableChanged(services: List<Atsc3Service>, reportServerUrl: String?)
+    fun onServiceLocationTableChanged(bsid: Int, services: List<Atsc3Service>, reportServerUrl: String?)
     fun onServicePackageChanged(pkg: Atsc3HeldPackage?)
     fun onServiceMediaReady(mediaUrl: MediaUrl, delayBeforePlayMs: Long)
     fun onServiceGuideUnitReceived(filePath: String, bsid: Int)
