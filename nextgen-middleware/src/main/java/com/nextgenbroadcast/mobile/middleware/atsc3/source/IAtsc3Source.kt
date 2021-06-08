@@ -10,8 +10,6 @@ interface IAtsc3Source {
     fun getAllConfigs(): List<Any>
 
     companion object {
-        const val CONFIG_DEFAULT = -1
-
         const val RESULT_ERROR = -1
         const val RESULT_OK = 0
     }
