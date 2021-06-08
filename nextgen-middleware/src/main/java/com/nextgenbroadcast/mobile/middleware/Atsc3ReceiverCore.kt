@@ -38,6 +38,7 @@ internal class Atsc3ReceiverCore(
 ) : IAtsc3ReceiverCore {
     //TODO: create own scope?
     private val coreScope: CoroutineScope = CoroutineScope(Dispatchers.Default)
+    private val mainScope: CoroutineScope = CoroutineScope(Dispatchers.Main)
     private var viewScope: CoroutineScope? = null
 
     private val _sessionNum = MutableStateFlow(0)
@@ -130,34 +131,33 @@ internal class Atsc3ReceiverCore(
     }
 
     override fun openRoute(source: IAtsc3Source, force: Boolean, onOpen: suspend (result: Boolean) -> Unit) {
-        coreScope.launch {
+        mainScope.launch {
             val result = serviceController.openRoute(source, force)
             onOpen(result)
         }
     }
 
     override fun closeRoute() {
-        coreScope.launch {
-            serviceController.stopRoute() // call to stopRoute is not a mistake. We use it to close previously opened file
+        mainScope.launch {
             serviceController.closeRoute()
         }
     }
 
     override fun tune(frequency: PhyFrequency) {
-        coreScope.launch {
+        mainScope.launch {
             serviceController.tune(frequency)
         }
     }
 
     override fun selectService(service: AVService, block: suspend (result: Boolean) -> Unit) {
-        coreScope.launch {
+        mainScope.launch {
             val result = serviceController.selectService(service)
             block(result)
         }
     }
 
     override fun cancelScanning() {
-        coreScope.launch {
+        mainScope.launch {
             serviceController.cancelScanning()
         }
     }

@@ -167,34 +167,27 @@ internal class ServiceControllerImpl(
     }
 
     override suspend fun openRoute(source: IAtsc3Source, force: Boolean): Boolean {
-        return withContext(Dispatchers.Main) {
-            atsc3Scope.async {
-                if (force || atsc3Module.isIdle()) {
-                    launch(Dispatchers.Main) {
-                        clearRouteData()
-                    }
-
-                    val lastProfile = getLastProfileForSource(source)
-                    if (atsc3Module.connect(source, lastProfile?.configs)) {
-                        if (source is ITunableSource) {
-                            tune(PhyFrequency.default(PhyFrequency.Source.AUTO))
-                        }
-                        return@async true
-                    }
+        return withContext(atsc3Scope.coroutineContext) {
+            if (force || atsc3Module.isIdle()) {
+                withContext(Dispatchers.Main) {
+                    clearRouteData()
                 }
-                return@async false
-            }.await()
-        }
-    }
 
-    override suspend fun stopRoute() {
-        withContext(atsc3Scope.coroutineContext) {
-            atsc3Module.stop()
+                val lastProfile = getLastProfileForSource(source)
+                if (atsc3Module.connect(source, lastProfile?.configs)) {
+                    if (source is ITunableSource) {
+                        tune(PhyFrequency.default(PhyFrequency.Source.AUTO))
+                    }
+                    return@withContext true
+                }
+            }
+            return@withContext false
         }
     }
 
     override suspend fun closeRoute() {
         withContext(atsc3Scope.coroutineContext) {
+            atsc3Module.stop() // call to stopRoute is not a mistake. We use it to close previously opened file
             atsc3Module.close()
         }
 
@@ -220,11 +213,11 @@ internal class ServiceControllerImpl(
             cancelMediaUrlAssignment()
             repository.setMediaUrl(null)
 
-            val res = atsc3Scope.async {
-                if (atsc3Module.isServiceSelected(service.bsid, service.id)) return@async null
-
-                atsc3Module.selectService(service.bsid, service.id)
-            }.await() ?: return@withContext true
+            val res = withContext(atsc3Scope.coroutineContext) {
+                if (!atsc3Module.isServiceSelected(service.bsid, service.id)) {
+                    atsc3Module.selectService(service.bsid, service.id)
+                } else null
+            } ?: return@withContext true
 
             if (res) {
                 atsc3Analytics.startSession(service.bsid, service.id, service.globalId, service.category)
@@ -288,14 +281,12 @@ internal class ServiceControllerImpl(
 
             withContext(atsc3Scope.coroutineContext) {
                 // ignore auto tune if receiver already tuned or scanning
-                if (frequency.source == PhyFrequency.Source.AUTO && !atsc3Module.isIdle()) {
-                    return@withContext
+                if (atsc3Module.isIdle() || frequency.source != PhyFrequency.Source.AUTO) {
+                    atsc3Module.tune(
+                            frequencyList = frequencyList,
+                            retuneOnDemod = frequency.source == PhyFrequency.Source.USER
+                    )
                 }
-
-                atsc3Module.tune(
-                        frequencyList = frequencyList,
-                        retuneOnDemod = frequency.source == PhyFrequency.Source.USER
-                )
             }
         }
     }

@@ -20,7 +20,6 @@ internal interface IServiceController {
     val alertList: StateFlow<List<AeaTable>>
 
     suspend fun openRoute(source: IAtsc3Source, force: Boolean = false): Boolean
-    suspend fun stopRoute()
     suspend fun closeRoute()
     suspend fun tune(frequency: PhyFrequency)
     suspend fun selectService(service: AVService): Boolean
