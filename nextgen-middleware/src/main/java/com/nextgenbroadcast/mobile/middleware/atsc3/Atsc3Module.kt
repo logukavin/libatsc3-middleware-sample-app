@@ -43,7 +43,7 @@ internal class Atsc3Module(
     private val stateLock = ReentrantLock()
     private var state = Atsc3ModuleState.IDLE
     private var source: IAtsc3Source? = null
-    private var currentSourceConfiguration: Int = IAtsc3Source.CONFIG_DEFAULT
+    private var currentSourceConfiguration: Int = -1
     private var lastTunedFreqList: List<Int> = emptyList()
     private var defaultConfiguration: Map<Any, Atsc3ServiceLocationTable>? = null
 
@@ -107,8 +107,13 @@ internal class Atsc3Module(
                     }
                 }
 
-                setSourceConfig(IAtsc3Source.CONFIG_DEFAULT)
-                applySourceConfig(src, IAtsc3Source.CONFIG_DEFAULT)
+                setSourceConfig(-1)
+                val config = if (USE_PERSISTED_CONFIGURATION) {
+                    findNextConfigIndexToSniff(src.getCurrentConfigIndex())
+                } else {
+                    src.getCurrentConfigIndex()
+                }
+                applySourceConfig(src, config, config > 0)
 
                 lastTunedFreqList = frequencyList
             } else {
@@ -186,10 +191,16 @@ internal class Atsc3Module(
 
         nextSourceJob = CoroutineScope(Dispatchers.Main).launch {
             // reset state before reconfiguration
-            setSourceConfig(IAtsc3Source.CONFIG_DEFAULT)
+            setSourceConfig(-1)
             val src = source
             if (src is ConfigurableAtsc3Source<*>) {
-                applySourceConfig(src, IAtsc3Source.CONFIG_DEFAULT /* apply next config */)
+                var nextConfigIndex = if (USE_PERSISTED_CONFIGURATION) {
+                    findNextConfigIndexToSniff(src.getCurrentConfigIndex() - 1)
+                } else {
+                    max(src.getCurrentConfigIndex() - 1, 0)
+                }
+
+                applySourceConfig(src, nextConfigIndex, true)
             }
         }
     }
@@ -204,7 +215,7 @@ internal class Atsc3Module(
         }
     }
 
-    private fun applySourceConfig(src: ConfigurableAtsc3Source<*>, config: Int): Int {
+    private fun applySourceConfig(src: ConfigurableAtsc3Source<*>, config: Int, isScanning: Boolean = false): Int {
         cancelSourceConfigTimeoutTask()
 
         log("applySourceConfig with src: $src, config: $config");
@@ -212,17 +223,9 @@ internal class Atsc3Module(
         return withStateLock {
             if (src.getConfigCount() < 1) return@withStateLock IAtsc3Source.RESULT_ERROR
 
-            val applyNext = (config == IAtsc3Source.CONFIG_DEFAULT)
-            var nextConfigIndex = config
-            if (USE_PERSISTED_CONFIGURATION) {
-                if (applyNext) {
-                    nextConfigIndex = findNextConfigIndexToSniff(src.getCurrentConfigIndex() - 1)
-                }
-            }
-
             isReconfiguring = true
             val result = try {
-                src.configure(nextConfigIndex)
+                src.configure(config)
             } finally {
                 isReconfiguring = false
             }
@@ -231,7 +234,7 @@ internal class Atsc3Module(
                 //jjustman-2021-05-19 - this is not quite true, we shouldn't actually set our "new" state until either onSls or onSourceConfigTimeout occurs..
                 //vmatiash-2021-05-28 - refactored - we apply new configuration but to not switch to TUNED until receive SLT
                 setSourceConfig(result)
-                val newState = if (result > 0 && applyNext) Atsc3ModuleState.SCANNING else Atsc3ModuleState.SNIFFING
+                val newState = if (result > 0 && isScanning) Atsc3ModuleState.SCANNING else Atsc3ModuleState.SNIFFING
                 setState(newState)
                 startSourceConfigTimeoutTask()
             }
@@ -401,7 +404,7 @@ internal class Atsc3Module(
         defaultConfiguration = null
 
         lastTunedFreqList = emptyList()
-        setSourceConfig(IAtsc3Source.CONFIG_DEFAULT)
+        setSourceConfig(-1)
         reset()
     }
 
