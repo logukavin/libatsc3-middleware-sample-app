@@ -9,7 +9,7 @@ class SrtListAtsc3Source(
 ) : ConfigurableAtsc3Source<String>(srtSourceList) {
 
     override fun open(): Int {
-        return configure(IAtsc3Source.CONFIG_DEFAULT)
+        return configure(getCurrentConfigIndex())
     }
 
     override fun openPhyClient(): Atsc3NdkPHYClientBase? {

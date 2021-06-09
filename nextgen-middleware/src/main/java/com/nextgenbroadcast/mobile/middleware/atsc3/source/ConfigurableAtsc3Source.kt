@@ -7,28 +7,16 @@ abstract class ConfigurableAtsc3Source<T>(
         configs: List<T>
 ): Atsc3Source() where T: Any {
     private val configList = ArrayList(configs)
-    private var configIndex: Int = configs.size - 1
-    private var scanning: Boolean = configs.size > 1
+    private var currentConfigIndex: Int = configs.size - 1
 
     fun configure(configIndex: Int): Int {
-        if (configList.isEmpty() || configIndex >= configList.size) return IAtsc3Source.RESULT_ERROR
+        if (configList.isEmpty() || configIndex < 0 || configIndex >= configList.size) return IAtsc3Source.RESULT_ERROR
 
-        if (configIndex >= 0) {
-            scanning = false
-            this.configIndex = configIndex
-        }
+        currentConfigIndex = configIndex
 
-        var result = applyConfig(this.configIndex)
-        if (result != IAtsc3Source.RESULT_ERROR && this.configIndex >= 0) {
-            result = this.configIndex
-
-            if (scanning) {
-                if (this.configIndex == 0) {
-                    scanning = false
-                } else {
-                    this.configIndex--
-                }
-            }
+        var result = applyConfig(configIndex)
+        if (result != IAtsc3Source.RESULT_ERROR && configIndex >= 0) {
+            result = configIndex
         }
 
         return result
@@ -49,14 +37,13 @@ abstract class ConfigurableAtsc3Source<T>(
     fun setConfigs(configs: List<T>) {
         configList.clear()
         configList.addAll(configs)
-        configIndex = configs.size - 1
-        scanning = configIndex > 0
+        currentConfigIndex = configs.size - 1
     }
 
-    fun getCurrentConfigIndex() = configIndex
+    fun getCurrentConfigIndex() = currentConfigIndex
 
     fun initCurrentConfiguration(configIndex: Int) {
-        this.configIndex = configIndex
+        this.currentConfigIndex = configIndex
     }
 
     protected abstract fun applyConfig(configIndex: Int): Int
