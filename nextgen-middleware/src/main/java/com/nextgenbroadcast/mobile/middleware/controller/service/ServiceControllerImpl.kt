@@ -22,6 +22,8 @@ import com.nextgenbroadcast.mobile.middleware.repository.IRepository
 import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
@@ -37,6 +39,7 @@ internal class ServiceControllerImpl(
 ) : IServiceController, Atsc3ModuleListener {
 
     private val atsc3Scope = CoroutineScope(Executors.newSingleThreadExecutor().asCoroutineDispatcher())
+    private val atsc3ScopeLock = Mutex()
 
     private var heldResetJob: Job? = null
     private var mediaUrlAssignmentJob: Job? = null
@@ -157,20 +160,22 @@ internal class ServiceControllerImpl(
 
     override suspend fun openRoute(source: IAtsc3Source, force: Boolean): Boolean {
         return withContext(atsc3Scope.coroutineContext) {
-            if (force || atsc3Module.isIdle()) {
-                withContext(Dispatchers.Main) {
-                    clearRouteData()
-                }
-
-                val lastProfile = getLastProfileForSource(source)
-                if (atsc3Module.connect(source, lastProfile?.configs)) {
-                    if (source is ITunableSource) {
-                        tune(PhyFrequency.default(PhyFrequency.Source.AUTO))
+            atsc3ScopeLock.withLock {
+                if (force || atsc3Module.isIdle()) {
+                    withContext(Dispatchers.Main) {
+                        clearRouteData()
                     }
-                    return@withContext true
+
+                    val lastProfile = getLastProfileForSource(source)
+                    if (atsc3Module.connect(source, lastProfile?.configs)) {
+                        if (source is ITunableSource) {
+                            tune(PhyFrequency.default(PhyFrequency.Source.AUTO))
+                        }
+                        return@withLock true
+                    }
                 }
+                return@withLock false
             }
-            return@withContext false
         }
     }
 
