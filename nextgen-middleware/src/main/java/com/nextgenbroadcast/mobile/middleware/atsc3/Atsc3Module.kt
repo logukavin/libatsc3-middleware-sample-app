@@ -194,7 +194,7 @@ internal class Atsc3Module(
             setSourceConfig(-1)
             val src = source
             if (src is ConfigurableAtsc3Source<*>) {
-                var nextConfigIndex = if (USE_PERSISTED_CONFIGURATION) {
+                val nextConfigIndex = if (USE_PERSISTED_CONFIGURATION) {
                     findNextConfigIndexToSniff(src.getCurrentConfigIndex() - 1)
                 } else {
                     max(src.getCurrentConfigIndex() - 1, 0)
@@ -660,7 +660,7 @@ internal class Atsc3Module(
     }
 
     private fun applyDefaultConfiguration(src: IAtsc3Source) {
-        val srcConfigs = src.getAllConfigs()
+        val srcConfigs = src.getAllConfigs().map { it.toString() }
         defaultConfiguration?.forEach { (config, slt) ->
             val configIndex = srcConfigs.indexOf(config)
             if (configIndex >= 0) {

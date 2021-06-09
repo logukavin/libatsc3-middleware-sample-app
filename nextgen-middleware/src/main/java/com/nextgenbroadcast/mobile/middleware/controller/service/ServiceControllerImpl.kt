@@ -69,32 +69,15 @@ internal class ServiceControllerImpl(
 
     override val alertList = repository.alertsForNotify
 
-    private var isScanning = false
-
     init {
         atsc3Module.setListener(this)
     }
 
     override fun onStateChanged(state: Atsc3ModuleState) {
-        atsc3State.value = state
-
-        when (state) {
-            Atsc3ModuleState.IDLE -> {
-                repository.reset()
-                isScanning = false
-            }
-
-            Atsc3ModuleState.SCANNING -> {
-                isScanning = true
-            }
-
-            Atsc3ModuleState.TUNED -> {
-                if (isScanning) {
-                    isScanning = false
-                    storeCurrentProfile()
-                }
-            }
+        if (state == Atsc3ModuleState.IDLE) {
+            repository.reset()
         }
+        atsc3State.value = state
     }
 
     override fun onConfigurationChanged(index: Int, count: Int, isKnown: Boolean) {
@@ -127,6 +110,12 @@ internal class ServiceControllerImpl(
                     it.hidden
             )
         }
+
+        val oldServices = repository.services.value
+        if (oldServices.size != avServices.size || !oldServices.containsAll(avServices)) {
+            storeCurrentProfile()
+        }
+
         repository.setServices(avServices)
 
         // select ESG service
@@ -370,7 +359,7 @@ internal class ServiceControllerImpl(
 
     private fun storeCurrentProfile() {
         val location = atsc3Analytics.getLocation()
-        if (location.latitude > 0 && location.longitude > 0) {
+        if (location.latitude != 0.0 && location.longitude != 0.0) {
             atsc3Scope.launch {
                 settings.receiverProfile = atsc3Module.getCurrentConfiguration()?.let { (srcType, config) ->
                     Atsc3Profile(
