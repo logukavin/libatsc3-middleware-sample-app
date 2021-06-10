@@ -60,7 +60,7 @@ internal class RepositoryImpl : IRepository {
     }
 
     override fun setMediaUrl(mediaUrl: MediaUrl?) {
-        Log.e(TAG, String.format("setMediaUrl: %s", mediaUrl));
+        Log.d(TAG, "setMediaUrl: $mediaUrl")
         routeMediaUrl.value = mediaUrl
     }
 

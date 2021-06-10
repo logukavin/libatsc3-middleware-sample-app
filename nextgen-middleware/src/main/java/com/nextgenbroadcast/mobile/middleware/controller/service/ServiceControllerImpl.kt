@@ -204,8 +204,7 @@ internal class ServiceControllerImpl(
             if (repository.selectedService.value == service) return@withContext true
 
             // Reset current media. New media url will be received after service selection.
-            cancelMediaUrlAssignment()
-            repository.setMediaUrl(null)
+            resetMediaUrl()
 
             val res = withContext(atsc3Scope.coroutineContext) {
                 if (!atsc3Module.isServiceSelected(service.bsid, service.id)) {
@@ -269,17 +268,21 @@ internal class ServiceControllerImpl(
 
             val freqKhz = frequencyList.firstOrNull() ?: return@withContext
 
+            val forceTune = (frequency.source == PhyFrequency.Source.USER)
+
+            if (forceTune) {
+                // Reset current media. New media url will be received after service selection.
+                resetMediaUrl()
+            }
+
             // Store the first one because it will be used as default
             receiverFrequency.value = freqKhz
             settings.lastFrequency = freqKhz
 
             withContext(atsc3Scope.coroutineContext) {
                 // ignore auto tune if receiver already tuned or scanning
-                if (atsc3Module.isIdle() || frequency.source != PhyFrequency.Source.AUTO) {
-                    atsc3Module.tune(
-                            frequencyList = frequencyList,
-                            retuneOnDemod = frequency.source == PhyFrequency.Source.USER
-                    )
+                if (atsc3Module.isIdle() || forceTune) {
+                    atsc3Module.tune(frequencyList, forceTune)
                 }
             }
         }
@@ -304,6 +307,11 @@ internal class ServiceControllerImpl(
 
     override fun getCurrentRouteMediaUrl(): MediaUrl? {
         return repository.routeMediaUrl.value
+    }
+
+    private fun resetMediaUrl() {
+        cancelMediaUrlAssignment()
+        repository.setMediaUrl(null)
     }
 
     private fun resetHeldWithDelay() {
@@ -352,7 +360,6 @@ internal class ServiceControllerImpl(
                 longitude = profile.location.lng
             }
             if (source::class.java.simpleName == profile.sourceType
-                    && profile.location != null
                     && deviceLocation.distanceTo(profileLocation) < PROFILE_LOCATION_RADIUS
                     && elapsedTime > 0 && elapsedTime < PROFILE_LIFE_TIME) {
                 profile

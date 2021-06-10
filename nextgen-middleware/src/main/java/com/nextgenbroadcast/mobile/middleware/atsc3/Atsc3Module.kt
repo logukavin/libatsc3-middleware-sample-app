@@ -90,10 +90,10 @@ internal class Atsc3Module(
      * The first one will be used as default.
      * frequencyList - list of frequencies in KHz
      */
-    override fun tune(frequencyList: List<Int>, retuneOnDemod: Boolean) {
+    override fun tune(frequencyList: List<Int>, force: Boolean) {
         val freqKhz = frequencyList.firstOrNull() ?: 0
         val demodLock = phyDemodLock
-        if ((freqKhz != 0 && lastTunedFreqList.isEquals(frequencyList)) || (!retuneOnDemod && demodLock)) return
+        if (!force && (demodLock || (freqKhz != 0 && lastTunedFreqList.isEquals(frequencyList)))) return
 
         val src = source
         if (src is ITunableSource) {
@@ -219,7 +219,7 @@ internal class Atsc3Module(
     private fun applySourceConfig(src: ConfigurableAtsc3Source<*>, config: Int, isScanning: Boolean = false): Int {
         cancelSourceConfigTimeoutTask()
 
-        log("applySourceConfig with src: $src, config: $config");
+        log("applySourceConfig with src: $src, config: $config")
 
         return withStateLock {
             if (src.getConfigCount() < 1) return@withStateLock IAtsc3Source.RESULT_ERROR
@@ -353,7 +353,7 @@ internal class Atsc3Module(
                     return true
                 }
             }
-        }
+        } ?: log("selectService - source configuration for bsid: $bsid NOT FOUND")
 
         return internalSelectService(bsid, serviceId)
     }
@@ -362,7 +362,7 @@ internal class Atsc3Module(
         log("internalSelectService: enter: with bsid: $bsid, serviceId: $serviceId");
 
         selectedServiceSLSProtocol = atsc3NdkApplicationBridge.atsc3_slt_selectService(serviceId)
-        log("internalSelectService: after atsc3NdkApplicationBridge.atsc3_slt_selectService with serviceId: $serviceId, selectedServiceSLSProtocol is: $selectedServiceSLSProtocol");
+        log("internalSelectService: after atsc3NdkApplicationBridge.atsc3_slt_selectService with serviceId: $serviceId, selectedServiceSLSProtocol is: $selectedServiceSLSProtocol")
 
         //TODO: temporary test solution
         if (!tmpAdditionalServiceOpened) {
