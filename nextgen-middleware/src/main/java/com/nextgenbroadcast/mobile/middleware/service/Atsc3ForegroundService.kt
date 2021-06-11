@@ -14,13 +14,11 @@ import android.support.v4.media.MediaBrowserCompat
 import android.util.Log
 import android.widget.Toast
 import androidx.core.content.ContextCompat
+import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.middleware.*
-import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverCore
-import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverStandalone
-import com.nextgenbroadcast.mobile.middleware.BuildConfig
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.Atsc3Source
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.UsbAtsc3Source
 import com.nextgenbroadcast.mobile.middleware.cache.DownloadManager
@@ -33,7 +31,11 @@ import com.nextgenbroadcast.mobile.middleware.service.holder.WebServerHolder
 import com.nextgenbroadcast.mobile.middleware.service.init.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
+import org.json.JSONArray
+import java.io.File
 import java.lang.ref.WeakReference
+import java.nio.channels.FileChannel
+import java.nio.charset.Charset
 
 
 abstract class Atsc3ForegroundService : BindableForegroundService() {
@@ -293,6 +295,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
     override fun onLoadChildren(parentId: String, result: Result<List<MediaBrowserCompat.MediaItem>>) {
         if (MediaHolder.isRoot(parentId)) {
+            readSrtListFromFile(sourceList)
             result.sendResult(sourceList.map { (title, path, id) ->
                 MediaHolder.getItem(title, path, id)
             })
@@ -301,6 +304,36 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         }
 
         result.sendResult(emptyList())
+    }
+
+    private fun readSrtListFromFile(sourceMap: MutableList<Triple<String, String, String>>) {
+        try {
+            val assetFileDescriptor =
+                contentResolver.openAssetFileDescriptor(Uri.fromFile(File(EXTERNAL_FILE_PATH)), "r")
+
+            assetFileDescriptor?.createInputStream().use { fileInputStream ->
+                val fileChannel = fileInputStream?.channel
+                val mappedByteBuffer =
+                    fileChannel?.map(FileChannel.MapMode.READ_ONLY, 0, fileChannel.size())
+                val jString = Charset.defaultCharset().decode(mappedByteBuffer).toString()
+                val jsonArr = JSONArray(jString)
+
+                for (i in 0..jsonArr.length()) {
+                    val jsonObject = jsonArr.getJSONObject(i)
+                    sourceMap.add(
+                        Triple(
+                            jsonObject.getString(JSON_SRT_NAME),
+                            jsonObject.getString(JSON_SRT_URL_NAME),
+                            DUMMY_ID
+                        )
+                    )
+                }
+
+            }
+
+        } catch (e: java.lang.Exception) {
+            LOG.e(TAG, "readSrtListFromFile exception:", e)
+        }
     }
 
     private fun maybeInitialize() {
@@ -519,7 +552,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         const val EXTRA_PLAY_AUDIO_ON_BOARD = "play_audio_on_board"
         const val EXTRA_FORCE_OPEN = "force_open"
 
-        val sourceList = listOf(
+        val sourceList = mutableListOf(
                 Triple("las", "srt://las.srt.atsc3.com:31350?passphrase=A166AC45-DB7C-4B68-B957-09B8452C76A4", "A166AC45-DB7C-4B68-B957-09B8452C76A4"),
                 Triple("bna", "srt://bna.srt.atsc3.com:31347?passphrase=88731837-0EB5-4951-83AA-F515B3BEBC20", "88731837-0EB5-4951-83AA-F515B3BEBC20"),
                 Triple("slc", "srt://slc.srt.atsc3.com:31341?passphrase=B9E4F7B8-3CDD-4BA2-ACA6-13088AB855C0", "B9E4F7B8-3CDD-4BA2-ACA6-13088AB855C0"),
@@ -529,6 +562,11 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
                 Triple("labJJPixel5", "srt://lab.srt.atsc3.com:31348?passphrase=3D5E5ED2-700D-443B-968F-598DB9A2750D&packetfilter=fec", "3D5E5ED2-700D-443B-968F-598DB9A2750D"),
                 Triple("seaJJAndroid", "srt://sea.srt.atsc3.com:31346?passphrase=055E0771-97B2-4447-8B5C-3B2497D0DE32", "055E0771-97B2-4447-8B5C-3B2497D0DE32")
         )
+
+        private const val EXTERNAL_FILE_PATH = "/sdcard/srt.conf"
+        private const val JSON_SRT_URL_NAME = "srtUrl"
+        private const val JSON_SRT_NAME = "name"
+        private const val DUMMY_ID = "055E0771-97B2-4447-8B5C-3B2497D0DE32"
 
         internal lateinit var clazz: Class<out Atsc3ForegroundService>
 
