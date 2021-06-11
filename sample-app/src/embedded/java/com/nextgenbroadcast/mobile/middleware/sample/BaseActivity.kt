@@ -11,6 +11,7 @@ import android.support.v4.media.session.MediaControllerCompat
 import android.util.Log
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
 import com.nextgenbroadcast.mobile.middleware.R
 import com.nextgenbroadcast.mobile.middleware.service.Atsc3ForegroundService
@@ -39,7 +40,11 @@ abstract class BaseActivity : AppCompatActivity() {
         // The media session connection will start ForegroundService that requires permission.
         // This method called after permission request, that's why it should be here.
         if (!mediaBrowser.isConnected) {
-            mediaBrowser.connect()
+            try {
+                mediaBrowser.connect()
+            } catch (e: IllegalStateException) {
+                LOG.d(TAG, "Failed to connect Media Browser: ", e)
+            }
         }
 
         if (isBound) return
@@ -55,7 +60,11 @@ abstract class BaseActivity : AppCompatActivity() {
     }
 
     fun unbindService() {
-        mediaBrowser.disconnect()
+        try {
+            mediaBrowser.disconnect()
+        } catch (e: IllegalStateException) {
+            LOG.d(TAG, "Failed to disconnect Media Browser: ", e)
+        }
 
         if (!isBound) return
 
@@ -111,6 +120,10 @@ abstract class BaseActivity : AppCompatActivity() {
 
             isBound = false
         }
+    }
+
+    companion object {
+        val TAG: String = BaseActivity::class.java.simpleName
     }
 }
 
