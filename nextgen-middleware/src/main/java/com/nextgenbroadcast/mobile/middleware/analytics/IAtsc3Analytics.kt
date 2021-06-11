@@ -1,6 +1,6 @@
 package com.nextgenbroadcast.mobile.middleware.analytics
 
-import android.location.Location
+import kotlinx.coroutines.Job
 
 internal interface IAtsc3Analytics {
     fun setReportServerUrl(bsid: Int, serverUrl: String?)
@@ -12,5 +12,5 @@ internal interface IAtsc3Analytics {
     fun startApplicationSession()
     fun finishApplicationSession()
 
-    fun getLocation(): Location
+    fun sendAllEvents(bsid: Int, reportServerUrl: String): Job
 }
