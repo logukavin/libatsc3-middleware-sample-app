@@ -164,7 +164,8 @@ class MainActivity : BaseActivity() {
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
 
-        if (requestCode == PERMISSION_REQUEST) {
+        // permissions could empty if permission request was interrupted
+        if (requestCode == PERMISSION_REQUEST && permissions.isNotEmpty()) {
             val requiredPermissions = mutableListOf<String>()
             permissions.forEachIndexed { i, permission ->
                 if (grantResults[i] != PackageManager.PERMISSION_GRANTED) {
