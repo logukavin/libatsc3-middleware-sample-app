@@ -5,6 +5,7 @@ import android.util.Log
 import com.nextgenbroadcast.mobile.core.model.PhyFrequency
 import com.nextgenbroadcast.mobile.middleware.IAtsc3ReceiverCore
 import com.nextgenbroadcast.mobile.middleware.location.IFrequencyLocator
+import com.nextgenbroadcast.mobile.middleware.location.LocationRequester
 import com.nextgenbroadcast.mobile.middleware.settings.IReceiverSettings
 import kotlinx.coroutines.*
 import java.util.concurrent.TimeUnit
@@ -51,20 +52,22 @@ internal class FrequencyInitializer(
                     try {
                         Log.d(TAG, "locator.locateFrequency before method invocation, location_request_day: $LOCATION_REQUEST_DELAY")
 
-                        locator.locateFrequency(context) { location ->
+                        LocationRequester(context).getLastLocation()?.let { location ->
                             Log.d(TAG, "locator.locateFrequency context: $context, location: $location")
                             val prevLocation = prevFrequencyLocation?.location
-                            prevLocation == null || location.distanceTo(prevLocation) > IFrequencyLocator.RECEPTION_RADIUS
-                        }?.let { frequencyLocation ->
-                            Log.d(TAG, "locator.locateFrequency let: $context, location: $frequencyLocation")
+                            if (prevLocation == null || location.distanceTo(prevLocation) > IFrequencyLocator.RECEPTION_RADIUS) {
+                                locator.locateFrequency(location)?.let { frequencyLocation ->
+                                    Log.d(TAG, "locator.locateFrequency let: $context, location: $frequencyLocation")
 
-                            settings.frequencyLocation = frequencyLocation
-                            val frequencies = frequencyLocation.frequencyList.filter { it > 0 }
-                            if (frequencies.isNotEmpty()) {
-                                withContext(Dispatchers.Main) {
-                                    receiver.tune(PhyFrequency.auto(frequencies))
+                                    settings.frequencyLocation = frequencyLocation
+                                    val frequencies = frequencyLocation.frequencyList.filter { it > 0 }
+                                    if (frequencies.isNotEmpty()) {
+                                        withContext(Dispatchers.Main) {
+                                            receiver.tune(PhyFrequency.auto(frequencies))
+                                        }
+                                        locationTaken = true
+                                    }
                                 }
-                                locationTaken = true
                             }
                         }
 

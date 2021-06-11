@@ -27,6 +27,7 @@ import com.nextgenbroadcast.mobile.middleware.cache.DownloadManager
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
 import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
 import com.nextgenbroadcast.mobile.middleware.phy.Atsc3DeviceReceiver
+import com.nextgenbroadcast.mobile.middleware.service.holder.LocationHolder
 import com.nextgenbroadcast.mobile.middleware.service.holder.MediaHolder
 import com.nextgenbroadcast.mobile.middleware.service.holder.TelemetryHolder
 import com.nextgenbroadcast.mobile.middleware.service.holder.WebServerHolder
@@ -67,6 +68,9 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     // Telemetry
     internal lateinit var telemetryHolder: TelemetryHolder
 
+    // Location
+    private lateinit var locationHolder: LocationHolder
+
     // Initialization from Service metadata
     private val initializer = ArrayList<WeakReference<IServiceInitializer>>()
     private var isInitialized = false
@@ -76,6 +80,8 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
         atsc3Receiver = Atsc3ReceiverStandalone.get(applicationContext)
         wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Atsc3ForegroundService::lock")
+
+        locationHolder = LocationHolder(applicationContext, atsc3Receiver)
 
         media = MediaHolder(applicationContext, atsc3Receiver).also {
             it.open()
@@ -111,6 +117,8 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
                 PlaybackState.IDLE
             }
         }.stateIn(serviceScope, SharingStarted.Eagerly, PlaybackState.IDLE)
+
+        locationHolder.open(serviceScope)
 
         serviceScope.launch {
             playbackState.collect { state ->

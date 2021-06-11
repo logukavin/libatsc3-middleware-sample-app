@@ -354,12 +354,13 @@ internal class ServiceControllerImpl(
         val profile = settings.receiverProfile
         return profile?.let {
             val elapsedTime = System.currentTimeMillis() - profile.timestamp
-            val deviceLocation = atsc3Analytics.getLocation()
+            val deviceLocation = repository.lastLocation.value
             val profileLocation = Location("unknown").apply {
                 latitude = profile.location.lat
                 longitude = profile.location.lng
             }
             if (source::class.java.simpleName == profile.sourceType
+                    && deviceLocation != null
                     && deviceLocation.distanceTo(profileLocation) < PROFILE_LOCATION_RADIUS
                     && elapsedTime > 0 && elapsedTime < PROFILE_LIFE_TIME) {
                 profile
@@ -370,9 +371,9 @@ internal class ServiceControllerImpl(
     }
 
     private fun storeCurrentProfile() {
-        val location = atsc3Analytics.getLocation()
-        if (location.latitude != 0.0 && location.longitude != 0.0) {
-            atsc3Scope.launch {
+        atsc3Scope.launch {
+            val location = repository.lastLocation.value
+            if (location != null && location.latitude != 0.0 && location.longitude != 0.0) {
                 settings.receiverProfile = atsc3Module.getCurrentConfiguration()?.let { (srcType, config) ->
                     Atsc3Profile(
                             srcType,
