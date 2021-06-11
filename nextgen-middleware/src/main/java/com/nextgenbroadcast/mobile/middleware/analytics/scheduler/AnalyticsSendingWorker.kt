@@ -1,9 +1,11 @@
-package com.nextgenbroadcast.mobile.middleware.analytics
+package com.nextgenbroadcast.mobile.middleware.analytics.scheduler
 
 import android.content.Context
 import androidx.work.Worker
 import androidx.work.WorkerParameters
-import com.nextgenbroadcast.mobile.middleware.settings.MiddlewareSettingsImpl
+import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverStandalone
+import com.nextgenbroadcast.mobile.middleware.analytics.Atsc3Analytics
+import com.nextgenbroadcast.mobile.middleware.analytics.IAtsc3Analytics
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking
 
@@ -12,8 +14,8 @@ class AnalyticsSendingWorker(
         workerParams: WorkerParameters
 ) : Worker(appContext, workerParams) {
 
-    private val atsc3Analytics: Atsc3Analytics by lazy {
-        Atsc3Analytics.getInstance(appContext, MiddlewareSettingsImpl.getInstance(appContext))
+    private val atsc3Analytics: IAtsc3Analytics by lazy {
+        Atsc3ReceiverStandalone.get(appContext).analytics
     }
 
     override fun doWork(): Result {
