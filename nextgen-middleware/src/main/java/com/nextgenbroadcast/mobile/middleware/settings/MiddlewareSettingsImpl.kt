@@ -26,12 +26,12 @@ internal class MiddlewareSettingsImpl private constructor(
 
     override val deviceId: String
         get() = requireString(DEVICE_ID) {
-            UUID.randomUUID().toString()
+            randomUUID()
         }
 
     override val advertisingId: String
         get() = requireString(ADVERTISING_ID) {
-            UUID.randomUUID().toString()
+            randomUUID()
         }
 
     override var lastReportDate: LocalDateTime
@@ -142,6 +142,8 @@ internal class MiddlewareSettingsImpl private constructor(
             }.toString()
         }
     }
+
+    private fun randomUUID() = UUID.randomUUID().toString()
 
     private fun expiredReportTime() =
             LocalDateTime.now().minusHours(Atsc3Analytics.MAX_HOURS_BEFORE_SEND_REPORT).minusSeconds(1)

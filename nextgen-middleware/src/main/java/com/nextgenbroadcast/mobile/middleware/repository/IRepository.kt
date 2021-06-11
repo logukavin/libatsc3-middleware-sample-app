@@ -1,5 +1,6 @@
 package com.nextgenbroadcast.mobile.middleware.repository
 
+import android.location.Location
 import com.nextgenbroadcast.mobile.core.atsc3.MediaUrl
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.alerts.AeaTable
@@ -22,6 +23,8 @@ internal interface IRepository {
     val services: StateFlow<List<AVService>>
     val heldPackage: StateFlow<Atsc3HeldPackage?>
 
+    val lastLocation: StateFlow<Location?>
+
     fun addOrUpdateApplication(application: Atsc3Application)
     fun findApplication(appContextId: String): Atsc3Application?
 
@@ -35,6 +38,8 @@ internal interface IRepository {
     fun setMediaUrl(mediaUrl: MediaUrl?)
 
     fun setAlertList(newAlerts: List<AeaTable>)
+
+    fun updateLastLocation(location: Location?)
 
     fun reset()
 }
