@@ -114,7 +114,7 @@ internal class Atsc3Module(
                 } else {
                     src.getCurrentConfigIndex()
                 }
-                applySourceConfig(src, config, config > 0)
+                applySourceConfig(src, config, src.getConfigCount() > 1)
 
                 lastTunedFreqList = frequencyList
             } else {
@@ -157,7 +157,9 @@ internal class Atsc3Module(
                         else -> Atsc3ModuleState.IDLE
                     }
                     setState(newState)
-                    startSourceConfigTimeoutTask()
+                    if (newState == Atsc3ModuleState.SCANNING) {
+                        startSourceConfigTimeoutTask()
+                    }
                     return@withStateLock true
                 }
                 return@withStateLock false
@@ -216,7 +218,7 @@ internal class Atsc3Module(
         }
     }
 
-    private fun applySourceConfig(src: ConfigurableAtsc3Source<*>, config: Int, isScanning: Boolean = false): Int {
+    private fun applySourceConfig(src: ConfigurableAtsc3Source<*>, config: Int, isScanning: Boolean): Int {
         cancelSourceConfigTimeoutTask()
 
         log("applySourceConfig with src: $src, config: $config")
@@ -237,7 +239,9 @@ internal class Atsc3Module(
                 setSourceConfig(result)
                 val newState = if (result > 0 && isScanning) Atsc3ModuleState.SCANNING else Atsc3ModuleState.SNIFFING
                 setState(newState)
-                startSourceConfigTimeoutTask()
+                if (isScanning) {
+                    startSourceConfigTimeoutTask()
+                }
             }
 
             return@withStateLock result
@@ -268,7 +272,7 @@ internal class Atsc3Module(
             } else if (currentState != Atsc3ModuleState.IDLE) {
                 if (serviceLocationTable.isEmpty()) {
                     // stop() - don't stop phy here to let it being reconfigured
-                    setState(Atsc3ModuleState.IDLE)
+                    //setState(Atsc3ModuleState.IDLE) - don't move to IDLE to infinitely wait for a first SLT
                 } else {
                     finishReconfiguration()
                 }
@@ -347,7 +351,7 @@ internal class Atsc3Module(
                 val src = source
                 if (src is ConfigurableAtsc3Source<*>) {
                     withStateLock {
-                        applySourceConfig(src, serviceConfig)
+                        applySourceConfig(src, serviceConfig, false)
                         suspendedServiceSelection = true
                     }
                     return true
