@@ -67,7 +67,8 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     private val initializer = ArrayList<WeakReference<IServiceInitializer>>()
     private var isInitialized = false
 
-    lateinit var externalSrtServices: List<Triple<String, String, String>>
+    private var externalSrtServices: MutableList<Triple<String, String, String>> = mutableListOf()
+    var defaultRout: String? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -98,7 +99,9 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
         startStateObservation()
 
-        externalSrtServices = FileReader.readSrtListFromFile(contentResolver)
+        val srtConfig = SrtConfigReader.readSrtListFromFile(contentResolver, EXTERNAL_FILE_PATH)
+        defaultRout = srtConfig.first
+        externalSrtServices.addAll(srtConfig.second)
 
     }
 
@@ -139,6 +142,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
             atsc3Receiver.serviceController.routeServices.collect { services ->
                 withContext(Dispatchers.Main) {
                     media.setQueue(services)
+
                     // Automatically start playing the first service in list
                     if (playbackState.value == PlaybackState.IDLE) {
                         services.firstOrNull()?.let { service ->
@@ -242,7 +246,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
-        Log.d(TAG, "================================ onStartCommand")
+
         media.handleIntent(intent)
 
         if (intent != null) {
@@ -340,7 +344,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
             Log.d(TAG, "Can't initialize, something is wrong in metadata", e)
         }
 
-        FileReader.defaultRout?.let { openRoute(it)}
+        defaultRout?.let { openRoute(it)}
     }
 
     private fun openRoute(sourcePath: String?) {
@@ -519,6 +523,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         const val EXTRA_ROUTE_PATH = "route_path"
         const val EXTRA_PLAY_AUDIO_ON_BOARD = "play_audio_on_board"
         const val EXTRA_FORCE_OPEN = "force_open"
+        const val EXTERNAL_FILE_PATH = "/sdcard/srt.conf"
 
         val sourceList = listOf(
                 Triple("las", "srt://las.srt.atsc3.com:31350?passphrase=A166AC45-DB7C-4B68-B957-09B8452C76A4", "A166AC45-DB7C-4B68-B957-09B8452C76A4"),
