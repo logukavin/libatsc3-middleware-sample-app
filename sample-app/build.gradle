@@ -226,4 +226,7 @@ dependencies {
 
     implementation 'com.bugfender.sdk:android:3.+'
 
+    implementation "org.eclipse.jetty:jetty-client:9.4.38.v20210224"
+    implementation "com.squareup.okio:okio:2.8.0"
+    implementation 'com.google.code.gson:gson:2.8.6'
 }
