@@ -31,6 +31,8 @@ import com.nextgenbroadcast.mobile.middleware.service.init.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import java.lang.ref.WeakReference
+import java.util.*
+import kotlin.collections.ArrayList
 
 abstract class Atsc3ForegroundService : BindableForegroundService() {
     private val usbManager: UsbManager by lazy {
@@ -68,7 +70,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     private var isInitialized = false
 
     private var externalSrtServices: MutableList<Triple<String, String, String>> = mutableListOf()
-    var defaultRout: String? = null
+    var defaultRouts = mutableListOf<String>()
 
     override fun onCreate() {
         super.onCreate()
@@ -99,9 +101,14 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
         startStateObservation()
 
-        val srtConfig = SrtConfigReader.readSrtListFromFile(contentResolver, EXTERNAL_FILE_PATH)
-        defaultRout = srtConfig.first
-        externalSrtServices.addAll(srtConfig.second)
+        SrtConfigReader.readSrtListFromFile(contentResolver, EXTERNAL_FILE_PATH).forEach {
+            if (it.third) {
+                defaultRouts.add(it.second)
+            }
+            if (it.first.isNotEmpty() && it.second.isNotEmpty()) {
+                externalSrtServices.add(Triple(it.first, it.second, UUID.randomUUID().toString()))
+            }
+        }
 
     }
 
@@ -344,7 +351,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
             Log.d(TAG, "Can't initialize, something is wrong in metadata", e)
         }
 
-        defaultRout?.let { openRoute(it)}
+        openRoute(defaultRouts.joinToString("\n"))
     }
 
     private fun openRoute(sourcePath: String?) {
