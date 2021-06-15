@@ -69,8 +69,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     private val initializer = ArrayList<WeakReference<IServiceInitializer>>()
     private var isInitialized = false
 
-    private var externalSrtServices: MutableList<Triple<String, String, String>> = mutableListOf()
-    var defaultRouts = mutableListOf<String>()
+    private var externalSrtServices: MutableList<Triple<String, String, Boolean>> = mutableListOf()
 
     override fun onCreate() {
         super.onCreate()
@@ -101,14 +100,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
         startStateObservation()
 
-        SrtConfigReader.readSrtListFromFile(contentResolver, EXTERNAL_FILE_PATH).forEach {
-            if (it.third) {
-                defaultRouts.add(it.second)
-            }
-            if (it.first.isNotEmpty() && it.second.isNotEmpty()) {
-                externalSrtServices.add(Triple(it.first, it.second, UUID.randomUUID().toString()))
-            }
-        }
+        externalSrtServices.addAll(SrtConfigReader.readSrtListFromFile(contentResolver, EXTERNAL_FILE_PATH))
 
     }
 
@@ -304,8 +296,11 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
     override fun onLoadChildren(parentId: String, result: Result<List<MediaBrowserCompat.MediaItem>>) {
         if (MediaHolder.isRoot(parentId)) {
-            result.sendResult((sourceList + externalSrtServices).map { (title, path, id) ->
+            result.sendResult((sourceList).map { (title, path, id) ->
                 MediaHolder.getItem(title, path, id)
+            })
+            result.sendResult((externalSrtServices).map { (title, path, _) ->
+                MediaHolder.getItem(title, path, UUID.randomUUID().toString())
             })
             return
         }
@@ -351,7 +346,9 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
             Log.d(TAG, "Can't initialize, something is wrong in metadata", e)
         }
 
-        openRoute(defaultRouts.joinToString("\n"))
+        openRoute(externalSrtServices.filter {
+            it.third  && it.first.isNotEmpty() && it.second.isNotEmpty()
+        }.joinToString("\n"))
     }
 
     private fun openRoute(sourcePath: String?) {

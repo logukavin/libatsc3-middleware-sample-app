@@ -48,7 +48,9 @@ object SrtConfigReader {
         } catch (e: Exception) {
             LOG.e(Atsc3ForegroundService.TAG, "readSrtListFromFile exception:", e)
         } finally {
-            return externalSrtList.toList()
+            return externalSrtList.filter {
+                it.first.isNotEmpty() && it.second.isNotEmpty()
+            }.toList()
         }
 
     }
