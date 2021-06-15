@@ -8,6 +8,7 @@ import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.filter
 import java.util.concurrent.ConcurrentHashMap
 import javax.servlet.AsyncEvent
 import javax.servlet.AsyncListener
@@ -27,6 +28,11 @@ class WebTelemetryWriter(
 
     override fun open() {
         webServer.addHandler(CONNECTION_PATH) { req, resp ->
+            val filter: List<String> = req.pathInfo
+                    .trim('/')
+                    .split("/")
+                    .filter { it.isNotEmpty() }
+
             req.startAsync().apply {
                 timeout = 0 // infinite timeout
                 addListener(object : AsyncListener {
@@ -49,10 +55,15 @@ class WebTelemetryWriter(
             }
 
             resp.writer.println("Event logging started...")
+            if (filter.isNotEmpty()) {
+                resp.writer.println("filters: $filter")
+            }
             resp.writer.flush()
 
             jobs[req] = CoroutineScope(Dispatchers.IO).launch {
-                flow.collect { event ->
+                flow.filter { event ->
+                    filter.isEmpty() || filter.contains(event.topic)
+                }.collect { event ->
                     resp.writer.apply {
                         println(gson.toJson(event))
                         resp.writer.flush()
