@@ -13,4 +13,6 @@ internal interface IAtsc3ReceiverCore {
     fun cancelScanning()
 
     fun getReceiverState(): ReceiverState
+
+    fun getPhyVersionInfo(): Map<String, String?>
 }

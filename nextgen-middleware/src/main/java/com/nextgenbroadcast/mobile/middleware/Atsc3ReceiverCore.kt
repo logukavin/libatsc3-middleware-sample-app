@@ -197,4 +197,8 @@ internal class Atsc3ReceiverCore(
         _sessionNum.value++
         viewController?.onNewSessionStarted()
     }
+
+    override fun getPhyVersionInfo(): Map<String, String?> {
+        return atsc3Module.getVersionInfo()
+    }
 }
