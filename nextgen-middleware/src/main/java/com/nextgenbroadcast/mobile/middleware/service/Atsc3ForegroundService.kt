@@ -6,9 +6,7 @@ import android.content.Intent
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import android.net.*
-import android.os.Bundle
-import android.os.IBinder
-import android.os.PowerManager
+import android.os.*
 import android.os.PowerManager.WakeLock
 import android.support.v4.media.MediaBrowserCompat
 import android.util.Log
@@ -25,6 +23,7 @@ import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceControl
 import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
 import com.nextgenbroadcast.mobile.middleware.phy.Atsc3DeviceReceiver
 import com.nextgenbroadcast.mobile.middleware.service.holder.MediaHolder
+import com.nextgenbroadcast.mobile.middleware.service.holder.SrtListHolder
 import com.nextgenbroadcast.mobile.middleware.service.holder.TelemetryHolder
 import com.nextgenbroadcast.mobile.middleware.service.holder.WebServerHolder
 import com.nextgenbroadcast.mobile.middleware.service.init.*
@@ -65,11 +64,12 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     // Telemetry
     internal lateinit var telemetryHolder: TelemetryHolder
 
+    // Srt
+    private lateinit var srtList: SrtListHolder
+
     // Initialization from Service metadata
     private val initializer = ArrayList<WeakReference<IServiceInitializer>>()
     private var isInitialized = false
-
-    private var externalSrtServices: MutableList<Triple<String, String, Boolean>> = mutableListOf()
 
     override fun onCreate() {
         super.onCreate()
@@ -98,10 +98,11 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
                 }
         )
 
+        srtList = SrtListHolder(applicationContext).apply {
+            open()
+        }
+
         startStateObservation()
-
-        externalSrtServices.addAll(SrtConfigReader.readSrtListFromFile(contentResolver, EXTERNAL_FILE_PATH))
-
     }
 
     private fun startStateObservation() {
@@ -296,11 +297,8 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
     override fun onLoadChildren(parentId: String, result: Result<List<MediaBrowserCompat.MediaItem>>) {
         if (MediaHolder.isRoot(parentId)) {
-            result.sendResult((sourceList).map { (title, path, id) ->
+            result.sendResult(srtList.getFullSrtList().map { (title, path, id) ->
                 MediaHolder.getItem(title, path, id)
-            })
-            result.sendResult((externalSrtServices).map { (title, path, _) ->
-                MediaHolder.getItem(title, path, UUID.randomUUID().toString())
             })
             return
         }
@@ -346,9 +344,10 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
             Log.d(TAG, "Can't initialize, something is wrong in metadata", e)
         }
 
-        openRoute(externalSrtServices.filter {
-            it.third  && it.first.isNotEmpty() && it.second.isNotEmpty()
-        }.joinToString("\n"))
+        val sourcePath = srtList.getDefaultRoute()
+        if (sourcePath != null) {
+            openRoute(applicationContext, sourcePath)
+        }
     }
 
     private fun openRoute(sourcePath: String?) {
@@ -527,18 +526,6 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         const val EXTRA_ROUTE_PATH = "route_path"
         const val EXTRA_PLAY_AUDIO_ON_BOARD = "play_audio_on_board"
         const val EXTRA_FORCE_OPEN = "force_open"
-        const val EXTERNAL_FILE_PATH = "/sdcard/srt.conf"
-
-        val sourceList = listOf(
-                Triple("las", "srt://las.srt.atsc3.com:31350?passphrase=A166AC45-DB7C-4B68-B957-09B8452C76A4", "A166AC45-DB7C-4B68-B957-09B8452C76A4"),
-                Triple("bna", "srt://bna.srt.atsc3.com:31347?passphrase=88731837-0EB5-4951-83AA-F515B3BEBC20", "88731837-0EB5-4951-83AA-F515B3BEBC20"),
-                Triple("slc", "srt://slc.srt.atsc3.com:31341?passphrase=B9E4F7B8-3CDD-4BA2-ACA6-13088AB855C0", "B9E4F7B8-3CDD-4BA2-ACA6-13088AB855C0"),
-                Triple("lab", "srt://lab.srt.atsc3.com:31340?passphrase=03760631-667B-4ADB-9E04-E4491B0A7CF1", "03760631-667B-4ADB-9E04-E4491B0A7CF1"),
-                Triple("qa", "srt://lab.srt.atsc3.com:31347?passphrase=f51e5a22-9b73-4ec8-be84-e4c173f1d913", "f51e5a22-9b73-4ec8-be84-e4c173f1d913"),
-                Triple("labJJ", "srt://lab.srt.atsc3.com:31346?passphrase=055E0771-97B2-4447-8B5C-3B2497D0DE32", "055E0771-97B2-4447-8B5C-3B2497D0DE32"),
-                Triple("labJJPixel5", "srt://lab.srt.atsc3.com:31348?passphrase=3D5E5ED2-700D-443B-968F-598DB9A2750D&packetfilter=fec", "3D5E5ED2-700D-443B-968F-598DB9A2750D"),
-                Triple("seaJJAndroid", "srt://sea.srt.atsc3.com:31346?passphrase=055E0771-97B2-4447-8B5C-3B2497D0DE32", "055E0771-97B2-4447-8B5C-3B2497D0DE32")
-        )
 
         internal lateinit var clazz: Class<out Atsc3ForegroundService>
 

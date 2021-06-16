@@ -1,62 +1,42 @@
 package com.nextgenbroadcast.mobile.middleware.service
 
-import android.content.ContentResolver
-import android.net.Uri
+import android.content.res.AssetFileDescriptor
 import com.nextgenbroadcast.mobile.core.LOG
+import okio.ByteString.Companion.readByteString
 import org.json.JSONArray
 import org.json.JSONException
-import java.io.File
-import java.nio.MappedByteBuffer
-import java.nio.channels.FileChannel
-import java.nio.charset.Charset
+import java.io.IOException
 
 object SrtConfigReader {
-    private const val JSON_SRT_URL_NAME = "srtUrl"
+    val TAG = SrtConfigReader::class.java.simpleName
+
+    private const val JSON_SRT_URL_NAME = "url"
     private const val JSON_SRT_NAME = "name"
-    private const val JSON_IS_DEFAULT_NAME = "isDefault"
+    private const val JSON_IS_DEFAULT_NAME = "default"
 
-    fun readSrtListFromFile(contentResolver: ContentResolver, filePath:String):  List<Triple<String, String, Boolean>> {
-        val externalSrtList = mutableListOf<Triple<String, String, Boolean>>()
+    fun readSrtListFromFile(file: AssetFileDescriptor): List<Triple<String, String, Boolean>> {
+        val list = mutableListOf<Triple<String, String, Boolean>>()
         try {
-            val assetFileDescriptor =
-                contentResolver.openAssetFileDescriptor(Uri.fromFile(File(filePath)), "r")
-
-            assetFileDescriptor?.createInputStream()?.use { fileInputStream ->
-                val fileChannel = fileInputStream.channel
-                val mappedByteBuffer =
-                    fileChannel?.map(FileChannel.MapMode.READ_ONLY, 0, fileChannel.size())
-                val jString = String.fromMappedByteBuffer(mappedByteBuffer)
-                val jsonArr = JSONArray(jString)
+            file.createInputStream().use { fileInputStream ->
+                val json = fileInputStream.readByteString(fileInputStream.available()).utf8()
+                val jsonArr = JSONArray(json)
 
                 for (i in 0 until jsonArr.length()) {
                     val jsonObject = jsonArr.getJSONObject(i)
-
-                    try {
-                        externalSrtList.add(
-                            Triple(
-                                jsonObject.getString(JSON_SRT_NAME),
-                                jsonObject.getString(JSON_SRT_URL_NAME),
-                                jsonObject.getBoolean(JSON_IS_DEFAULT_NAME)
-                            )
-                        )
-                    } catch (e: JSONException) {
-                        LOG.e(Atsc3ForegroundService.TAG, "get value from json exception:", e)
+                    val name = jsonObject.optString(JSON_SRT_NAME, "srt $i")
+                    val url = jsonObject.optString(JSON_SRT_URL_NAME)
+                    val isDefault = jsonObject.optBoolean(JSON_IS_DEFAULT_NAME, false)
+                    if (url.isNotBlank()) {
+                        list.add(Triple(name, url, isDefault))
                     }
                 }
             }
-
-        } catch (e: Exception) {
-            LOG.e(Atsc3ForegroundService.TAG, "readSrtListFromFile exception:", e)
-        } finally {
-            return externalSrtList.filter {
-                it.first.isNotEmpty() && it.second.isNotEmpty()
-            }.toList()
+        } catch (e: JSONException) {
+            LOG.e(TAG, "Failed to parse SRT config: ", e)
+        } catch (e: IOException) {
+            LOG.e(TAG, "Failed to read SRT config: ", e)
         }
 
+        return list
     }
-
-}
-
- fun String.Companion.fromMappedByteBuffer(mappedByteBuffer: MappedByteBuffer?): String {
-    return Charset.defaultCharset().decode(mappedByteBuffer).toString()
 }
