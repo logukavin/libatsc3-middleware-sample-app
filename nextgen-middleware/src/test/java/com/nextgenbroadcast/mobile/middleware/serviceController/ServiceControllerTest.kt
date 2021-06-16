@@ -549,7 +549,7 @@ class ServiceControllerTest {
         verify(atsc3Module).tune(
                 freqKhz = freqKhz,
                 frequencies = frequency.list,
-                retuneOnDemod = frequency.source == PhyFrequency.Source.USER
+                force = frequency.source == PhyFrequency.Source.USER
         )
     }
 
