@@ -21,4 +21,6 @@ interface IAtsc3Module {
     fun isIdle(): Boolean
 
     fun getCurrentConfiguration(): Pair<String, Map<Any, Atsc3ServiceLocationTable>>?
+
+    fun getVersionInfo(): Map<String, String?>
 }
