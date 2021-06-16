@@ -37,14 +37,12 @@ import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.ViewViewModel
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.factory.UserAgentViewModelFactory
 import com.nextgenbroadcast.mobile.middleware.sample.resolver.ReceiverContentResolver
 import com.nextgenbroadcast.mobile.middleware.sample.useragent.ServiceAdapter
+import com.nextgenbroadcast.mobile.telemetry.TelemetryManager
 import com.nextgenbroadcast.mobile.view.AboutDialog
 import com.nextgenbroadcast.mobile.view.TrackSelectionDialog
 import com.nextgenbroadcast.mobile.view.UserAgentView
 import kotlinx.android.synthetic.main.fragment_main.*
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 
 class MainFragment : Fragment(), ReceiverContentResolver.Listener {
 
@@ -63,6 +61,7 @@ class MainFragment : Fragment(), ReceiverContentResolver.Listener {
     private lateinit var sourceAdapter: ArrayAdapter<String>
     private lateinit var bottomSheetBehavior: BottomSheetBehavior<View>
     private lateinit var receiverContentResolver: ReceiverContentResolver
+    private lateinit var telemetryManager: TelemetryManager
 
     private var phyLoggingJob: Job? = null
 
@@ -88,6 +87,8 @@ class MainFragment : Fragment(), ReceiverContentResolver.Listener {
         })
 
         receiverContentResolver = ReceiverContentResolver(context, this)
+
+        telemetryManager = TelemetryManager()
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
@@ -234,6 +235,8 @@ class MainFragment : Fragment(), ReceiverContentResolver.Listener {
 
         // reload BA to prevent desynchronization between BA and RMP playback state
         user_agent_web_view.reload()
+
+        //telemetryManager.start()
     }
 
     override fun onStop() {
@@ -242,6 +245,8 @@ class MainFragment : Fragment(), ReceiverContentResolver.Listener {
         receiverContentResolver.unregister()
 
         receiver_player.stop()
+
+        //telemetryManager.stop()
     }
 
     override fun onDestroy() {
