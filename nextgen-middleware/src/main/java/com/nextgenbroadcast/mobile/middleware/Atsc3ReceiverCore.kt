@@ -6,7 +6,6 @@ import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.presentation.*
 import com.nextgenbroadcast.mobile.middleware.analytics.IAtsc3Analytics
 import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3Module
-import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3ModuleState
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.SLTConstants
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.IServiceGuideStore
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.ServiceGuideDeliveryUnitReader
@@ -34,7 +33,7 @@ internal class Atsc3ReceiverCore(
         val repository: IRepository,
         private val serviceGuideStore: IServiceGuideStore,
         val mediaFileProvider: IMediaFileProvider,
-        private val analytics: IAtsc3Analytics
+        val analytics: IAtsc3Analytics
 ) : IAtsc3ReceiverCore {
     //TODO: create own scope?
     private val coreScope: CoroutineScope = CoroutineScope(Dispatchers.Default)

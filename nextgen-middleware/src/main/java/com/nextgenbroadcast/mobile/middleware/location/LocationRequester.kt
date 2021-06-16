@@ -13,19 +13,26 @@ import android.os.Bundle
 import android.util.Log
 import androidx.core.content.ContextCompat
 import com.nextgenbroadcast.mobile.middleware.service.init.FrequencyInitializer
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.channels.sendBlocking
+import kotlinx.coroutines.flow.*
 import kotlin.coroutines.resume
 
-class LocationGatherer {
+class LocationRequester(
+        private val context: Context
+) : ILocationRequester {
+    private val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+
     private var locationRequest: Pair<LocationManager, LocationListener>? = null
 
-    suspend fun getLastLocation(context: Context): Location? {
-        if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) return null
+    override fun checkPermission(): Boolean {
+        return ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+    }
 
-        val locationManager = (context.getSystemService(Context.LOCATION_SERVICE) as LocationManager)
+    override suspend fun getLastLocation(): Location? {
+        if (!checkPermission()) return null
 
         return suspendCancellableCoroutine { cont ->
             cont.invokeOnCancellation {
@@ -43,21 +50,9 @@ class LocationGatherer {
             Log.d(TAG, "getLastLocation() - after getNewestLastKnownLocation")
 
             try {
+                dumpProviders()
 
-                locationManager.getProviders(false).forEach {
-                    val providerInstance = locationManager.getProvider(it)
-                    Log.d(TAG, "getLastLocation() - locationManager.getProviders with provider: $it, enabled: ${locationManager.isProviderEnabled(it)}, provider: ${providerInstance}")
-                }
-
-
-                /* jjustman-2021-05-25 - we need to invoke full setAccuracy due to
-                    Unresolved reference. None of the following candidates is applicable because of receiver type mismatch:
-                    public operator fun <T, R> DeepRecursiveFunction<TypeVariable(T), TypeVariable(R)>.invoke(value: TypeVariable(T)): TypeVariable(R) defined in kotlin
-                */
-
-                val providerCriteria = Criteria().apply {
-                    accuracy = ACCURACY_COARSE
-                }
+                val providerCriteria = getProviderCriteria()
 
                 Log.d(TAG, "getLastLocation() - locationManager.getBestProvider with criteria: $providerCriteria")
 
@@ -98,11 +93,61 @@ class LocationGatherer {
         }
     }
 
+    override fun observeLocation(minUpdateTime: Long, minDistance: Float): Flow<Location?> {
+        return callbackFlow<Location?> {
+            val locationListener = object : LocationListener {
+                override fun onLocationChanged(location: Location?) {
+                    sendBlocking(location)
+                }
+
+                override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {
+                    // do nothing
+                }
+
+                override fun onProviderEnabled(provider: String?) {
+                    // do nothing
+                }
+
+                override fun onProviderDisabled(provider: String?) {
+                    cancel()
+                }
+            }
+
+            if (checkPermission()) {
+                try {
+                    //dumpProviders()
+
+                    val providerCriteria = getProviderCriteria()
+
+                    locationManager.getBestProvider(providerCriteria, true)?.let { provider ->
+                        withContext(Dispatchers.Main) {
+                            locationManager.requestLocationUpdates(provider, minUpdateTime, minDistance, locationListener)
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.w(TAG, "Error on location request ", e)
+                }
+            }
+
+            awaitClose {
+                locationManager.removeUpdates(locationListener)
+            }
+        }.buffer(Channel.CONFLATED) // To avoid blocking
+    }
+
     fun cancel() {
         locationRequest?.let { (locationManager, locationListener) ->
             locationRequest = null
             locationManager.removeUpdates(locationListener)
         }
+    }
+
+    private fun getProviderCriteria() = Criteria().apply {
+        /* jjustman-2021-05-25 - we need to invoke full setAccuracy due to
+            Unresolved reference. None of the following candidates is applicable because of receiver type mismatch:
+            public operator fun <T, R> DeepRecursiveFunction<TypeVariable(T), TypeVariable(R)>.invoke(value: TypeVariable(T)): TypeVariable(R) defined in kotlin
+         */
+        accuracy = ACCURACY_COARSE
     }
 
     @SuppressLint("MissingPermission")
@@ -122,17 +167,23 @@ class LocationGatherer {
                     }
                 }
             } catch (e: Exception) {
-                Log.w(FrequencyInitializer.TAG, "Error on location request ", e)
+                Log.w(TAG, "Error on location request ", e)
             }
         }
-
 
         Log.i(TAG, "getNewestLastKnownLocation: bestLocation returning: $bestLocation, accuracy: ${bestLocation?.accuracy} elapsedRealtimeNanos: ${bestLocation?.elapsedRealtimeNanos}")
 
         return bestLocation
     }
 
+    private fun dumpProviders() {
+        locationManager.getProviders(false).forEach {
+            val providerInstance = locationManager.getProvider(it)
+            Log.d(TAG, "getLastLocation() - locationManager.getProviders with provider: $it, enabled: ${locationManager.isProviderEnabled(it)}, provider: ${providerInstance}")
+        }
+    }
+
     companion object {
-        val TAG = LocationGatherer::class.java.simpleName
+        val TAG = LocationRequester::class.java.simpleName
     }
 }

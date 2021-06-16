@@ -90,10 +90,10 @@ internal class Atsc3Module(
      * The first one will be used as default.
      * frequencyList - list of frequencies in KHz
      */
-    override fun tune(frequencyList: List<Int>, retuneOnDemod: Boolean) {
+    override fun tune(frequencyList: List<Int>, force: Boolean) {
         val freqKhz = frequencyList.firstOrNull() ?: 0
         val demodLock = phyDemodLock
-        if ((freqKhz != 0 && lastTunedFreqList.isEquals(frequencyList)) || (!retuneOnDemod && demodLock)) return
+        if (!force && (demodLock || (freqKhz != 0 && lastTunedFreqList.isEquals(frequencyList)))) return
 
         val src = source
         if (src is ITunableSource) {
@@ -114,7 +114,7 @@ internal class Atsc3Module(
                 } else {
                     src.getCurrentConfigIndex()
                 }
-                applySourceConfig(src, config, config > 0)
+                applySourceConfig(src, config, src.getConfigCount() > 1)
 
                 lastTunedFreqList = frequencyList
             } else {
@@ -157,7 +157,9 @@ internal class Atsc3Module(
                         else -> Atsc3ModuleState.IDLE
                     }
                     setState(newState)
-                    startSourceConfigTimeoutTask()
+                    if (newState == Atsc3ModuleState.SCANNING) {
+                        startSourceConfigTimeoutTask()
+                    }
                     return@withStateLock true
                 }
                 return@withStateLock false
@@ -216,10 +218,10 @@ internal class Atsc3Module(
         }
     }
 
-    private fun applySourceConfig(src: ConfigurableAtsc3Source<*>, config: Int, isScanning: Boolean = false): Int {
+    private fun applySourceConfig(src: ConfigurableAtsc3Source<*>, config: Int, isScanning: Boolean): Int {
         cancelSourceConfigTimeoutTask()
 
-        log("applySourceConfig with src: $src, config: $config");
+        log("applySourceConfig with src: $src, config: $config")
 
         return withStateLock {
             if (src.getConfigCount() < 1) return@withStateLock IAtsc3Source.RESULT_ERROR
@@ -237,7 +239,9 @@ internal class Atsc3Module(
                 setSourceConfig(result)
                 val newState = if (result > 0 && isScanning) Atsc3ModuleState.SCANNING else Atsc3ModuleState.SNIFFING
                 setState(newState)
-                startSourceConfigTimeoutTask()
+                if (isScanning) {
+                    startSourceConfigTimeoutTask()
+                }
             }
 
             return@withStateLock result
@@ -268,7 +272,7 @@ internal class Atsc3Module(
             } else if (currentState != Atsc3ModuleState.IDLE) {
                 if (serviceLocationTable.isEmpty()) {
                     // stop() - don't stop phy here to let it being reconfigured
-                    setState(Atsc3ModuleState.IDLE)
+                    //setState(Atsc3ModuleState.IDLE) - don't move to IDLE to infinitely wait for a first SLT
                 } else {
                     finishReconfiguration()
                 }
@@ -347,13 +351,13 @@ internal class Atsc3Module(
                 val src = source
                 if (src is ConfigurableAtsc3Source<*>) {
                     withStateLock {
-                        applySourceConfig(src, serviceConfig)
+                        applySourceConfig(src, serviceConfig, false)
                         suspendedServiceSelection = true
                     }
                     return true
                 }
             }
-        }
+        } ?: log("selectService - source configuration for bsid: $bsid NOT FOUND")
 
         return internalSelectService(bsid, serviceId)
     }
@@ -362,7 +366,7 @@ internal class Atsc3Module(
         log("internalSelectService: enter: with bsid: $bsid, serviceId: $serviceId");
 
         selectedServiceSLSProtocol = atsc3NdkApplicationBridge.atsc3_slt_selectService(serviceId)
-        log("internalSelectService: after atsc3NdkApplicationBridge.atsc3_slt_selectService with serviceId: $serviceId, selectedServiceSLSProtocol is: $selectedServiceSLSProtocol");
+        log("internalSelectService: after atsc3NdkApplicationBridge.atsc3_slt_selectService with serviceId: $serviceId, selectedServiceSLSProtocol is: $selectedServiceSLSProtocol")
 
         //TODO: temporary test solution
         if (!tmpAdditionalServiceOpened) {

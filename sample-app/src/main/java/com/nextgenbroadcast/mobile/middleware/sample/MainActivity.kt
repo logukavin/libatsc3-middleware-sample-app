@@ -164,7 +164,8 @@ class MainActivity : BaseActivity() {
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
 
-        if (requestCode == PERMISSION_REQUEST) {
+        // permissions could empty if permission request was interrupted
+        if (requestCode == PERMISSION_REQUEST && permissions.isNotEmpty()) {
             val requiredPermissions = mutableListOf<String>()
             permissions.forEachIndexed { i, permission ->
                 if (grantResults[i] != PackageManager.PERMISSION_GRANTED) {
@@ -347,7 +348,7 @@ class MainActivity : BaseActivity() {
 
         // Checks that the platform will allow the specified type of update. // For a flexible update, use AppUpdateType.FLEXIBLE
         appUpdateInfoTask.addOnSuccessListener { appUpdateInfo ->
-            Log.i(TAG, "appUpdateInfoTask.onSuccessListener: appUpdateInfo: " + appUpdateInfo);
+            Log.i(TAG, "appUpdateInfoTask.onSuccessListener: appUpdateInfo: $appUpdateInfo")
             //jjustman-2021-05-04 - always push our ATSC3 sample app updates, e.g. dont gate on only && appUpdateInfo.isUpdateTypeAllowed(AppUpdateType.IMMEDIATE)
             if (appUpdateInfo.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE) {
                 // Request the update.
@@ -356,9 +357,8 @@ class MainActivity : BaseActivity() {
         }
 
         appUpdateInfoTask.addOnFailureListener { failedInfo ->
-            Log.w(TAG, "appUpdateInfoTask.onFailureListener: failedInfo: "+failedInfo);
+            Log.w(TAG, "appUpdateInfoTask.onFailureListener: failedInfo: $failedInfo")
         }
-
     }
 
     private fun getMainFragment() = supportFragmentManager.findFragmentByTag(MainFragment.TAG) as? MainFragment

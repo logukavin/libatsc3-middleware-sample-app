@@ -204,8 +204,7 @@ internal class ServiceControllerImpl(
             if (repository.selectedService.value == service) return@withContext true
 
             // Reset current media. New media url will be received after service selection.
-            cancelMediaUrlAssignment()
-            repository.setMediaUrl(null)
+            resetMediaUrl()
 
             val res = withContext(atsc3Scope.coroutineContext) {
                 if (!atsc3Module.isServiceSelected(service.bsid, service.id)) {
@@ -269,17 +268,21 @@ internal class ServiceControllerImpl(
 
             val freqKhz = frequencyList.firstOrNull() ?: return@withContext
 
+            val forceTune = (frequency.source == PhyFrequency.Source.USER)
+
+            if (forceTune) {
+                // Reset current media. New media url will be received after service selection.
+                resetMediaUrl()
+            }
+
             // Store the first one because it will be used as default
             receiverFrequency.value = freqKhz
             settings.lastFrequency = freqKhz
 
             withContext(atsc3Scope.coroutineContext) {
                 // ignore auto tune if receiver already tuned or scanning
-                if (atsc3Module.isIdle() || frequency.source != PhyFrequency.Source.AUTO) {
-                    atsc3Module.tune(
-                            frequencyList = frequencyList,
-                            retuneOnDemod = frequency.source == PhyFrequency.Source.USER
-                    )
+                if (atsc3Module.isIdle() || forceTune) {
+                    atsc3Module.tune(frequencyList, forceTune)
                 }
             }
         }
@@ -304,6 +307,11 @@ internal class ServiceControllerImpl(
 
     override fun getCurrentRouteMediaUrl(): MediaUrl? {
         return repository.routeMediaUrl.value
+    }
+
+    private fun resetMediaUrl() {
+        cancelMediaUrlAssignment()
+        repository.setMediaUrl(null)
     }
 
     private fun resetHeldWithDelay() {
@@ -346,13 +354,13 @@ internal class ServiceControllerImpl(
         val profile = settings.receiverProfile
         return profile?.let {
             val elapsedTime = System.currentTimeMillis() - profile.timestamp
-            val deviceLocation = atsc3Analytics.getLocation()
+            val deviceLocation = repository.lastLocation.value
             val profileLocation = Location("unknown").apply {
                 latitude = profile.location.lat
                 longitude = profile.location.lng
             }
             if (source::class.java.simpleName == profile.sourceType
-                    && profile.location != null
+                    && deviceLocation != null
                     && deviceLocation.distanceTo(profileLocation) < PROFILE_LOCATION_RADIUS
                     && elapsedTime > 0 && elapsedTime < PROFILE_LIFE_TIME) {
                 profile
@@ -363,9 +371,9 @@ internal class ServiceControllerImpl(
     }
 
     private fun storeCurrentProfile() {
-        val location = atsc3Analytics.getLocation()
-        if (location.latitude != 0.0 && location.longitude != 0.0) {
-            atsc3Scope.launch {
+        atsc3Scope.launch {
+            val location = repository.lastLocation.value
+            if (location != null && location.latitude != 0.0 && location.longitude != 0.0) {
                 settings.receiverProfile = atsc3Module.getCurrentConfiguration()?.let { (srcType, config) ->
                     Atsc3Profile(
                             srcType,

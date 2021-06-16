@@ -1,5 +1,6 @@
 package com.nextgenbroadcast.mobile.middleware.repository
 
+import android.location.Location
 import android.util.Log
 import com.nextgenbroadcast.mobile.core.atsc3.MediaUrl
 import com.nextgenbroadcast.mobile.core.model.AVService
@@ -23,6 +24,8 @@ internal class RepositoryImpl : IRepository {
     override val applications = MutableStateFlow<List<Atsc3Application>>(emptyList())
     override val services = MutableStateFlow<List<AVService>>(emptyList())
     override val heldPackage = MutableStateFlow<Atsc3HeldPackage?>(null)
+
+    override val lastLocation = MutableStateFlow<Location?>(null)
 
     override fun addOrUpdateApplication(application: Atsc3Application) {
         _applications[application.uid] = application
@@ -60,7 +63,7 @@ internal class RepositoryImpl : IRepository {
     }
 
     override fun setMediaUrl(mediaUrl: MediaUrl?) {
-        Log.e(TAG, String.format("setMediaUrl: %s", mediaUrl));
+        Log.d(TAG, "setMediaUrl: $mediaUrl")
         routeMediaUrl.value = mediaUrl
     }
 
@@ -84,6 +87,10 @@ internal class RepositoryImpl : IRepository {
         }
 
         alertsForNotify.value = currentAlerts.values.toMutableList()
+    }
+
+    override fun updateLastLocation(location: Location?) {
+        lastLocation.value = location
     }
 
     private fun isExpired(expireTime: ZonedDateTime?, currentTime: ZonedDateTime): Boolean {
