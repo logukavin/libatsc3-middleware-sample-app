@@ -7,6 +7,7 @@ import android.media.AudioManager
 import android.net.Uri
 import android.util.Log
 import com.google.android.exoplayer2.*
+import com.google.android.exoplayer2.source.MediaSource
 import com.google.android.exoplayer2.source.dash.DashMediaSource
 import com.google.android.exoplayer2.source.dash.DefaultDashChunkSource
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
@@ -84,8 +85,7 @@ class Atsc3MediaPlayer(
     }
 
     fun play(mediaUri: Uri, mimeType: String? = null, requestAudioFocus: Boolean = true) {
-
-        Log.i(TAG, String.format("play: with mediaUri: %s and mimeType: %s, requestAudioFocus: %s", mediaUri, mimeType, requestAudioFocus))
+        Log.i(TAG, "play: with mediaUri: $mediaUri and mimeType: $mimeType, requestAudioFocus: $requestAudioFocus")
 
         reset()
 
@@ -96,55 +96,55 @@ class Atsc3MediaPlayer(
             _trackSelector = it
         }
 
-        _player = (if (mimeType == MMTConstants.MIME_MMT_VIDEO || mimeType == MMTConstants.MIME_MMT_AUDIO) {
-            isMMTPlayback = true
+        val mediaSource = createMediaSource(mediaUri, mimeType)
 
-            val mediaSource = MMTMediaSource.Factory({
-                Atsc3ContentDataSource(context)
-            }, {
-                arrayOf(Atsc3MMTExtractor())
-            }).apply {
-                setLoadErrorHandlingPolicy(createMMTLoadErrorHandlingPolicy())
-            }.createMediaSource(mediaUri)
-
-            createMMTExoPlayer(selector).apply {
+        _player =
+            if (mimeType == MMTConstants.MIME_MMT_VIDEO || mimeType == MMTConstants.MIME_MMT_AUDIO) {
+                isMMTPlayback = true
+                createMMTExoPlayer(selector)
+            } else {
+                createDefaultExoPlayer(selector)
+            }.apply {
                 prepare(mediaSource)
+                if (!requestAudioFocus || tryRetrievedAudioFocus()) {
+                    playWhenReady = this@Atsc3MediaPlayer.playWhenReady
+                }
             }
-        } else {
-            val dashMediaSource = createMediaSourceFactory().createMediaSource(mediaUri)
-            createDefaultExoPlayer(selector).apply {
-                prepare(dashMediaSource)
-            }
-        }).apply {
-            if (!requestAudioFocus || tryRetrievedAudioFocus()) {
-                playWhenReady = this@Atsc3MediaPlayer.playWhenReady
-            }
-        }
     }
 
-    fun replay(requestAudioFocus: Boolean = true) {
-        Log.i(TAG, String.format("replay: with requestAudioFocus: %s", requestAudioFocus));
-
+    fun tryReplay(requestAudioFocus: Boolean = true) {
+        Log.i(TAG, "replay: with requestAudioFocus: $requestAudioFocus")
 
         playWhenReady = true
 
-        if (_player == null && lastMediaUri == null) return
-
-        if (requestAudioFocus && !tryRetrievedAudioFocus()) {
+        val mediaUri = lastMediaUri
+        if (mediaUri == null || (requestAudioFocus && !tryRetrievedAudioFocus())) {
             return
         }
 
         cancelDelayedPlayerReset()
 
+        val player = _player
         if (playbackState == PlaybackState.IDLE) {
-            lastMediaUri?.let { uri ->
-                play(uri, lastMimeType, false)
+            if (player != null) {
+                player.prepare(createMediaSource(mediaUri, lastMimeType))
+                player.playWhenReady = this@Atsc3MediaPlayer.playWhenReady
+            } else {
+                play(mediaUri, lastMimeType, false)
             }
         }
     }
 
     fun pause() {
+        Log.i(TAG, "pause: with lastMediaUri: $lastMediaUri")
+
         playWhenReady = false
+    }
+
+    fun stop() {
+        Log.i(TAG, "stop: with lastMediaUri: $lastMediaUri")
+
+        _player?.stop(true)
     }
 
     fun reset() {
@@ -214,6 +214,20 @@ class Atsc3MediaPlayer(
 
                 selector.setParameters(builder)
             }
+        }
+    }
+
+    private fun createMediaSource(mediaUri: Uri, mimeType: String?): MediaSource {
+        return if (mimeType == MMTConstants.MIME_MMT_VIDEO || mimeType == MMTConstants.MIME_MMT_AUDIO) {
+            MMTMediaSource.Factory({
+                Atsc3ContentDataSource(context)
+            }, {
+                arrayOf(Atsc3MMTExtractor())
+            }).apply {
+                setLoadErrorHandlingPolicy(createMMTLoadErrorHandlingPolicy())
+            }.createMediaSource(mediaUri)
+        } else {
+            createMediaSourceFactory().createMediaSource(mediaUri)
         }
     }
 

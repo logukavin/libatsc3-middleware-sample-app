@@ -105,6 +105,12 @@ internal class ViewControllerImpl(
         reportPlaybackState(state)
     }
 
+    override fun rmpStop() {
+        mainScope.launch {
+            rmpListeners.notifyStop(null)
+        }
+    }
+
     override fun rmpPause() {
         mainScope.launch {
             rmpListeners.notifyPause(null)
@@ -140,7 +146,7 @@ internal class ViewControllerImpl(
     //TODO: currently delay not supported and blocked on RPC level
     override fun requestMediaPlay(mediaUrl: String?, delay: Long) {
         mainScope.launch {
-            rmpPause()
+            rmpStop()
             if (mediaUrl != null) {
                 playbackSource.value = PlaybackSource.BROADBAND
             } else {
@@ -154,7 +160,7 @@ internal class ViewControllerImpl(
     //TODO: currently delay not supported and blocked on RPC level
     override fun requestMediaStop(delay: Long) {
         mainScope.launch {
-            rmpPause()
+            rmpStop()
         }
     }
 

@@ -13,13 +13,13 @@ import kotlinx.coroutines.launch
 class RMPViewModel(
         private val presenter: IMediaPlayerPresenter
 ) : ViewModel(), IObservablePlayer.IPlayerStateListener {
-    private val _playWhenReady = MutableLiveData(true)
+    private val _requestedState = MutableLiveData(PlaybackState.PLAYING)
     private val _mediaUri = MutableLiveData<Uri?>()
     private val _layoutParams = MutableLiveData<RPMParams>()
 
     val layoutParams: LiveData<RPMParams> = _layoutParams
     val mediaUri: LiveData<Uri?> = _mediaUri
-    val playWhenReady: LiveData<Boolean> = _playWhenReady
+    val requestedState: LiveData<PlaybackState> = _requestedState
 
     var rmpState = PlaybackState.IDLE
         private set
@@ -45,17 +45,21 @@ class RMPViewModel(
         presenter.removeOnPlayerSateChangedCallback(this)
     }
 
+    override fun onStop(mediaController: IMediaPlayerPresenter?) {
+        _requestedState.value = PlaybackState.IDLE
+    }
+
     override fun onPause(mediaController: IMediaPlayerPresenter?) {
-        _playWhenReady.value = false
+        _requestedState.value = PlaybackState.PAUSED
     }
 
     override fun onResume(mediaController: IMediaPlayerPresenter?) {
-        _playWhenReady.value = true
+        _requestedState.value = PlaybackState.PLAYING
     }
 
     fun reset() {
         presenter.rmpLayoutReset()
-        _playWhenReady.value = true
+        _requestedState.value = PlaybackState.PLAYING
     }
 
     fun setCurrentPlayerState(state: PlaybackState) {
