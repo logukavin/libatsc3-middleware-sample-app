@@ -38,6 +38,7 @@ internal class ServiceControllerImpl(
         private val onError: ((message: String) -> Unit)? = null
 ) : IServiceController, Atsc3ModuleListener {
 
+    private val mainScope = CoroutineScope(Dispatchers.Main)
     private val atsc3Scope = CoroutineScope(Executors.newSingleThreadExecutor().asCoroutineDispatcher())
     private val atsc3ScopeLock = Mutex()
 
@@ -77,25 +78,27 @@ internal class ServiceControllerImpl(
     }
 
     override fun onStateChanged(state: Atsc3ModuleState) {
-        if (state == Atsc3ModuleState.IDLE) {
-            repository.reset()
+        mainScope.launch {
+            if (state == Atsc3ModuleState.IDLE) {
+                repository.reset()
+            }
+            atsc3State.value = state
         }
-        atsc3State.value = state
     }
 
     override fun onConfigurationChanged(index: Int, count: Int, isKnown: Boolean) {
+        // we don't need MainScope because it's thread safe
         atsc3Configuration.value = Triple(index, count, isKnown)
     }
 
     override fun onApplicationPackageReceived(appPackage: Atsc3Application) {
         Log.d("ServiceControllerImpl", "onPackageReceived - appPackage: $appPackage")
-
-        repository.addOrUpdateApplication(appPackage)
+        mainScope.launch {
+            repository.addOrUpdateApplication(appPackage)
+        }
     }
 
     override fun onServiceLocationTableChanged(bsid: Int, services: List<Atsc3Service>, reportServerUrl: String?) {
-        atsc3Analytics.setReportServerUrl(bsid, reportServerUrl)
-
         // store A/V services
         val avServices = services.filter { service ->
             service.serviceCategory == SLTConstants.SERVICE_CATEGORY_AV
@@ -114,48 +117,61 @@ internal class ServiceControllerImpl(
             )
         }
 
-        val oldServices = repository.services.value
-        if (oldServices.size != avServices.size || !oldServices.containsAll(avServices)) {
-            storeCurrentProfile()
-        }
+        mainScope.launch {
+            atsc3Analytics.setReportServerUrl(bsid, reportServerUrl)
 
-        repository.setServices(avServices)
+            val oldServices = repository.services.value
+            if (oldServices.size != avServices.size || !oldServices.containsAll(avServices)) {
+                storeCurrentProfile()
+            }
 
-        // select ESG service
-        services.firstOrNull { service ->
-            service.serviceCategory == SLTConstants.SERVICE_CATEGORY_ESG
-        }?.let { service ->
-            atsc3Scope.launch {
-                atsc3Module.selectAdditionalService(service.serviceId)
+            repository.setServices(avServices)
+
+            // select ESG service
+            services.firstOrNull { service ->
+                service.serviceCategory == SLTConstants.SERVICE_CATEGORY_ESG
+            }?.let { service ->
+                atsc3Scope.launch {
+                    atsc3Module.selectAdditionalService(service.serviceId)
+                }
             }
         }
     }
 
     override fun onServicePackageChanged(pkg: Atsc3HeldPackage?) {
-        cancelHeldReset()
-
-        repository.setHeldPackage(pkg)
+        mainScope.launch {
+            cancelHeldReset()
+            repository.setHeldPackage(pkg)
+        }
     }
 
     override fun onServiceMediaReady(mediaUrl: MediaUrl, delayBeforePlayMs: Long) {
-        Log.e(TAG, String.format("onServiceMediaReady with mediaUrl: %s, delayBeforePlayMs: %d", mediaUrl, delayBeforePlayMs))
-        if (delayBeforePlayMs > 0) {
-            setMediaUrlWithDelay(mediaUrl, delayBeforePlayMs)
-        } else {
-            repository.setMediaUrl(mediaUrl)
+        Log.e(TAG, "onServiceMediaReady with mediaUrl: $mediaUrl, delayBeforePlayMs: $delayBeforePlayMs")
+        mainScope.launch {
+            if (delayBeforePlayMs > 0) {
+                setMediaUrlWithDelay(mediaUrl, delayBeforePlayMs)
+            } else {
+                repository.setMediaUrl(mediaUrl)
+            }
         }
     }
 
     override fun onServiceGuideUnitReceived(filePath: String, bsid: Int) {
-        serviceGuideReader.readDeliveryUnit(filePath, bsid)
+        mainScope.launch {
+            serviceGuideReader.readDeliveryUnit(filePath, bsid)
+        }
     }
 
     override fun onError(message: String) {
-        onError?.invoke(message)
+        mainScope.launch {
+            onError?.invoke(message)
+        }
     }
 
     override fun onAeatTableChanged(list: List<AeaTable>) {
-        repository.setAlertList(list)
+        mainScope.launch {
+            repository.setAlertList(list)
+        }
     }
 
     override suspend fun openRoute(source: IAtsc3Source, force: Boolean): Boolean {
@@ -200,38 +216,42 @@ internal class ServiceControllerImpl(
     }
 
     override suspend fun selectService(service: AVService): Boolean {
-        return withContext(Dispatchers.Main) {
-            if (repository.selectedService.value == service) return@withContext true
+        return withContext(atsc3Scope.coroutineContext) {
+            if (atsc3Module.isServiceSelected(service.bsid, service.id)) return@withContext true
 
-            // Reset current media. New media url will be received after service selection.
-            resetMediaUrl()
+            val res = atsc3ScopeLock.withLock {
+                withContext(Dispatchers.Main) {
+                    // Reset current media. New media url will be received after service selection.
+                    resetMediaUrl()
 
-            val res = withContext(atsc3Scope.coroutineContext) {
-                if (!atsc3Module.isServiceSelected(service.bsid, service.id)) {
-                    atsc3Module.selectService(service.bsid, service.id)
-                } else null
-            } ?: return@withContext true
-
-            if (res) {
-                atsc3Analytics.startSession(service.bsid, service.id, service.globalId, service.category)
-
-                // Store successfully selected service. This will lead to RMP reset
-                repository.setSelectedService(service)
-
-                // Reset the current HELD if it's not compatible new service or start delayed reset otherwise.
-                // Delayed reset will be canceled when a new HELD been received for selected service.
-                repository.heldPackage.value?.let { currentHeld ->
-                    // Is new service compatible with current HELD?
-                    if (currentHeld.coupledServices?.contains(service.id) == true) {
-                        resetHeldWithDelay()
-                    } else {
-                        repository.setHeldPackage(null)
+                    // Reset the current HELD if it's not compatible new service or start delayed reset otherwise.
+                    // Delayed reset will be canceled when a new HELD been received for selected service.
+                    repository.heldPackage.value?.let { currentHeld ->
+                        // Is new service compatible with current HELD?
+                        //TODO: we should check held broadcaster, but don't have it in held
+                        if (currentHeld.coupledServices?.contains(service.id) == true) {
+                            resetHeldWithDelay()
+                        } else {
+                            repository.setHeldPackage(null)
+                        }
                     }
                 }
-            } else {
-                // Reset HELD and service if service can't be selected
-                repository.setHeldPackage(null)
-                repository.setSelectedService(null)
+
+                atsc3Module.selectService(service.bsid, service.id)
+            }
+
+            withContext(Dispatchers.Main) {
+                if (res) {
+                    atsc3Analytics.startSession(service.bsid, service.id, service.globalId, service.category)
+
+                    // Store successfully selected service. This will lead to RMP reset
+                    repository.setSelectedService(service)
+                } else {
+                    cancelHeldReset()
+                    // Reset HELD and service if service can't be selected
+                    repository.setHeldPackage(null)
+                    repository.setSelectedService(null)
+                }
             }
 
             res
@@ -316,12 +336,10 @@ internal class ServiceControllerImpl(
 
     private fun resetHeldWithDelay() {
         cancelHeldReset()
-        heldResetJob = stateScope.launch {
+        heldResetJob = mainScope.launch {
             delay(BA_LOADING_TIMEOUT)
-            withContext(Dispatchers.Main) {
-                repository.setHeldPackage(null)
-                heldResetJob = null
-            }
+            repository.setHeldPackage(null)
+            heldResetJob = null
         }
     }
 
@@ -334,12 +352,10 @@ internal class ServiceControllerImpl(
 
     private fun setMediaUrlWithDelay(mediaUrl: MediaUrl, delayMs: Long) {
         cancelMediaUrlAssignment()
-        mediaUrlAssignmentJob = stateScope.launch {
+        mediaUrlAssignmentJob = mainScope.launch {
             delay(delayMs)
-            withContext(Dispatchers.Main) {
-                repository.setMediaUrl(mediaUrl)
-                mediaUrlAssignmentJob = null
-            }
+            repository.setMediaUrl(mediaUrl)
+            mediaUrlAssignmentJob = null
         }
     }
 
