@@ -157,7 +157,7 @@ internal class Atsc3Module(
                         else -> Atsc3ModuleState.IDLE
                     }
                     setState(newState)
-                    if (newState == Atsc3ModuleState.SCANNING) {
+                    if (source.getConfigCount() > 1) {
                         startSourceConfigTimeoutTask()
                     }
                     return@withStateLock true
