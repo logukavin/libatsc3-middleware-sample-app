@@ -26,6 +26,7 @@ internal interface IViewController {
 
     fun updateRMPPosition(scaleFactor: Double, xPos: Double, yPos: Double)
 
+    fun rmpStop()
     fun rmpPause()
     fun rmpResume()
     fun rmpLayoutReset()
