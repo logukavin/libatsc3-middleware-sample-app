@@ -25,6 +25,7 @@ import com.nextgenbroadcast.mobile.core.FileUtils
 import com.nextgenbroadcast.mobile.core.atsc3.phy.PHYStatistics
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.AppData
+import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.presentation.ApplicationState
 import com.nextgenbroadcast.mobile.middleware.sample.core.SwipeGestureDetector
@@ -435,15 +436,14 @@ class MainFragment : Fragment(), ReceiverContentResolver.Listener {
                 if (mediaUri != null) {
                     receiver_player.play(mediaUri)
                 } else {
-                    receiver_player.stop()
-                    receiver_player.clearState()
+                    receiver_player.stopAndClear()
                 }
             })
-            playWhenReady.observe(this@MainFragment, { playWhenReady ->
-                if (playWhenReady) {
-                    receiver_player.replay()
-                } else {
-                    receiver_player.pause()
+            requestedState.observe(this@MainFragment, { state ->
+                when(state) {
+                    PlaybackState.PAUSED -> receiver_player.pause()
+                    PlaybackState.PLAYING -> receiver_player.tryReplay()
+                    PlaybackState.IDLE -> receiver_player.stop()
                 }
             })
         }

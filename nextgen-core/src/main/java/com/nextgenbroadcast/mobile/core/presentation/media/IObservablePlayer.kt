@@ -8,6 +8,7 @@ interface IObservablePlayer {
     fun removeOnPlayerSateChangedCallback(callback: IPlayerStateListener)
 
     interface IPlayerStateListener {
+        fun onStop(mediaController: IMediaPlayerPresenter?)
         fun onPause(mediaController: IMediaPlayerPresenter?)
         fun onResume(mediaController: IMediaPlayerPresenter?)
     }

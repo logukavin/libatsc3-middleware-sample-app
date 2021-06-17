@@ -81,8 +81,7 @@ class ReceiverPlayerView @JvmOverloads constructor(
         // AO service content will be played out with ForegroundService embedded player which is
         // indicated on binding service with flag EXTRA_PLAY_AUDIO_ON_BOARD
         if (mimeType == MMTConstants.MIME_MMT_AUDIO) {
-            stop()
-            atsc3Player.clearSavedState()
+            stopAndClear()
             return
         }
 
@@ -97,8 +96,10 @@ class ReceiverPlayerView @JvmOverloads constructor(
         }
     }
 
-    fun replay() {
-        atsc3Player.replay()
+    fun tryReplay() {
+        atsc3Player.tryReplay()
+        // ensure we still observing correct player
+        player = atsc3Player.player
     }
 
     fun pause() {
@@ -106,11 +107,12 @@ class ReceiverPlayerView @JvmOverloads constructor(
     }
 
     fun stop() {
-        atsc3Player.reset()
-        player = null
+        atsc3Player.stop()
     }
 
-    fun clearState() {
+    fun stopAndClear() {
+        atsc3Player.reset()
+        player = null
         atsc3Player.clearSavedState()
     }
 
@@ -153,8 +155,9 @@ class ReceiverPlayerView @JvmOverloads constructor(
     private fun cancelMediaTimeUpdate() {
         updateMediaTimeHandler.removeCallbacks(updateMediaTimeRunnable)
     }
+
     fun getTrackSelector(): DefaultTrackSelector? {
-        return atsc3Player.trackSelector;
+        return atsc3Player.trackSelector
     }
 
     companion object {
