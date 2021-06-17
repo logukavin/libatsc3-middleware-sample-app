@@ -165,7 +165,7 @@ internal class MediaHolder(
     inner class MediaSessionCallback : MediaSessionCompat.Callback() {
         override fun onPlay() {
             if (player.isInitialized) {
-                player.replay()
+                player.tryReplay()
             } else {
                 receiver.viewController?.rmpResume()
             }

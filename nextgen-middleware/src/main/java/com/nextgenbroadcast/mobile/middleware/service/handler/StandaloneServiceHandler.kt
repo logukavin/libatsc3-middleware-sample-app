@@ -104,6 +104,10 @@ internal class StandaloneServiceHandler(
             private val sendToMessenger: Messenger
     ) : IObservablePlayer.IPlayerStateListener {
 
+        override fun onStop(mediaController: IMediaPlayerPresenter?) {
+            TODO("Not yet implemented")
+        }
+
         override fun onPause(mediaController: IMediaPlayerPresenter?) {
             sendToMessenger.send(buildMessage(IServiceBinder.ACTION_PLAYER_STATE_CHANGE_PAUSE))
         }
