@@ -10,6 +10,9 @@ import com.nextgenbroadcast.mobile.core.presentation.ApplicationState
 import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverCore
 import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverStandalone
 import com.nextgenbroadcast.mobile.middleware.R
+import com.nextgenbroadcast.mobile.middleware.atsc3.PhyVersionInfo.INFO_DEMOD_VERSION
+import com.nextgenbroadcast.mobile.middleware.atsc3.PhyVersionInfo.INFO_FIRMWARE_VERSION
+import com.nextgenbroadcast.mobile.middleware.atsc3.PhyVersionInfo.INFO_SDK_VERSION
 import com.nextgenbroadcast.mobile.middleware.server.ServerUtils
 import com.nextgenbroadcast.mobile.middleware.server.cert.IUserAgentSSLContext
 import com.nextgenbroadcast.mobile.middleware.server.cert.UserAgentSSLContext
@@ -47,6 +50,7 @@ class ReceiverContentProvider : ContentProvider() {
             addURI(authority, CONTENT_SERVER_CERTIFICATE, QUERY_CERTIFICATE)
             addURI(authority, CONTENT_RECEIVER_STATE, QUERY_RECEIVER_STATE)
             addURI(authority, CONTENT_RECEIVER_FREQUENCY, QUERY_RECEIVER_FREQUENCY)
+            addURI(authority, CONTENT_PHY_VERSION_INFO, QUERY_PHY_VERSION_INFO)
         }
 
         val repository = receiver.repository
@@ -125,6 +129,15 @@ class ReceiverContentProvider : ContentProvider() {
                 }
             }
 
+            QUERY_PHY_VERSION_INFO -> {
+                val phyVersionInfo = receiver.getPhyVersionInfo()
+                MatrixCursor(arrayOf(INFO_SDK_VERSION, INFO_FIRMWARE_VERSION, INFO_DEMOD_VERSION)).apply {
+                    newRow().add(INFO_SDK_VERSION, phyVersionInfo[INFO_SDK_VERSION])
+                            .add(INFO_FIRMWARE_VERSION, phyVersionInfo[INFO_FIRMWARE_VERSION])
+                            .add(INFO_DEMOD_VERSION, phyVersionInfo[INFO_DEMOD_VERSION])
+                }
+            }
+
             else -> null
         }
     }
@@ -192,12 +205,14 @@ class ReceiverContentProvider : ContentProvider() {
         private const val QUERY_CERTIFICATE = 3
         private const val QUERY_RECEIVER_STATE = 4
         private const val QUERY_RECEIVER_FREQUENCY = 5
+        private const val QUERY_PHY_VERSION_INFO = 6
 
         const val CONTENT_APP_DATA = "appData"
         const val CONTENT_APP_STATE = "appState"
         const val CONTENT_SERVER_CERTIFICATE = "serverCertificate"
         const val CONTENT_RECEIVER_STATE = "receiverState"
         const val CONTENT_RECEIVER_FREQUENCY = "receiverFrequency"
+        const val CONTENT_PHY_VERSION_INFO = "receiverPhyInfo"
 
         const val APP_CONTEXT_ID = "appContextId"
         const val APP_ENTRY_PAGE = "appEntryPage"
