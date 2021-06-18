@@ -67,8 +67,9 @@ class MainFragment : Fragment(), ReceiverContentResolver.Listener {
     private var phyLoggingJob: Job? = null
 
     private val getContent = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-        val path = uri?.let { FileUtils.getPath(requireContext(), uri) }
-        path?.let { openRoute(requireContext(), path) }
+        uri?.let {
+            openRoute(requireContext(), uri.toString())
+        }
     }
 
     override fun onAttach(context: Context) {
