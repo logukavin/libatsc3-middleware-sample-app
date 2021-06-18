@@ -5,9 +5,15 @@ interface IAtsc3Source {
     fun close()
     fun stop()
 
-    companion object {
-        const val CONFIG_DEFAULT = -1
+    fun getConfigCount(): Int
+    fun getConfigByIndex(configIndex: Int): Any
+    fun getAllConfigs(): List<Any>
 
+    fun getSdkVersion(): String?
+    fun getFirmwareVersion(): String?
+    fun getDemodVersion(): String?
+
+    companion object {
         const val RESULT_ERROR = -1
         const val RESULT_OK = 0
     }

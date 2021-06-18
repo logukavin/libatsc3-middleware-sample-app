@@ -1,9 +1,11 @@
 package com.nextgenbroadcast.mobile.middleware
 
 import android.content.Context
+import android.provider.Settings
 import android.widget.Toast
-import com.nextgenbroadcast.mobile.core.cert.UserAgentSSLContext
+import androidx.work.WorkManager
 import com.nextgenbroadcast.mobile.middleware.analytics.Atsc3Analytics
+import com.nextgenbroadcast.mobile.middleware.analytics.scheduler.AnalyticScheduler
 import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3Module
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.db.RoomServiceGuideStore
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.db.SGDataBase
@@ -35,6 +37,7 @@ internal object Atsc3ReceiverStandalone {
     private fun newInstance(appContext: Context): Atsc3ReceiverCore {
         val settings = MiddlewareSettingsImpl.getInstance(appContext)
         val repository = RepositoryImpl()
+
         val db = SGDataBase.getDatabase(appContext)
         val serviceGuideStore = RoomServiceGuideStore(db).apply {
             subscribe {
@@ -42,12 +45,17 @@ internal object Atsc3ReceiverStandalone {
                 appContext.contentResolver.notifyChange(serviceContentUri, null)
             }
         }
-        val atsc3Module = Atsc3Module(appContext.cacheDir)
-        val mediaFileProvider = MediaFileProvider(appContext)
-        val sslContext = UserAgentSSLContext(appContext)
-        val analytics = Atsc3Analytics.getInstance(appContext, settings)
 
-        return Atsc3ReceiverCore(atsc3Module, settings, repository, serviceGuideStore, mediaFileProvider, sslContext, analytics).apply {
+        val atsc3Module = Atsc3Module(appContext.cacheDir)
+
+        val mediaFileProvider = MediaFileProvider(appContext)
+
+        val clockSource = Settings.Global.getInt(appContext.contentResolver, Settings.Global.AUTO_TIME, 0)
+        val cacheFolder = appContext.filesDir
+        val scheduler = AnalyticScheduler(WorkManager.getInstance(appContext))
+        val analytics = Atsc3Analytics(clockSource, cacheFolder, repository, settings, scheduler)
+
+        return Atsc3ReceiverCore(atsc3Module, settings, repository, serviceGuideStore, mediaFileProvider, analytics).apply {
             MainScope().launch {
                 errorFlow.collect { message ->
                     Toast.makeText(appContext, message, Toast.LENGTH_SHORT).show()

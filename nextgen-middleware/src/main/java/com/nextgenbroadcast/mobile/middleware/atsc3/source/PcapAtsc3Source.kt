@@ -5,19 +5,47 @@ import org.ngbp.libatsc3.middleware.android.phy.virtual.PcapDemuxedVirtualPHYAnd
 import org.ngbp.libatsc3.middleware.android.phy.virtual.PcapSTLTPVirtualPHYAndroid
 
 abstract class PcapAtsc3Source(
-        private val type: PcapType
-) : BaseAtsc3Source() {
+    private val filename: String
+) : Atsc3Source() {
 
     enum class PcapType {
         DEMUXED, STLTP
     }
 
-    protected fun createPhyClient(): Atsc3NdkPHYClientBase {
-        return when (type) {
-            PcapType.DEMUXED -> PcapDemuxedVirtualPHYAndroid()
-            PcapType.STLTP -> PcapSTLTPVirtualPHYAndroid()
-        }.apply {
-            init()
+    protected fun createPhyClient(): Atsc3NdkPHYClientBase? {
+        //TODO: temporary solution
+        val type = if (filename.contains(".demux.") || filename.contains(".demuxed.")) PcapType.DEMUXED else PcapType.STLTP
+        return try {
+            when (type) {
+                PcapType.DEMUXED -> PcapDemuxedVirtualPHYAndroid()
+                PcapType.STLTP -> PcapSTLTPVirtualPHYAndroid()
+            }.apply {
+                init()
+            }
+        } catch (e: Error) {
+            LOG.e(TAG, "Can't open Pcap file: $filename, type: $type", e)
         }
+
+        return null
+    }
+
+    override fun getConfigCount() = 1
+
+    override fun getConfigByIndex(configIndex: Int): String {
+        return if (configIndex == 0) {
+            filename
+        } else {
+            throw IndexOutOfBoundsException("Incorrect configuration index: $configIndex")
+        }
+    }
+
+    override fun getAllConfigs(): List<String> = listOf(filename)
+
+    override fun toString(): String {
+        return "PCAP Source: filename = $filename"
+    }
+
+    companion object {
+        val TAG: String = PcapAtsc3Source::class.java.simpleName
     }
 }

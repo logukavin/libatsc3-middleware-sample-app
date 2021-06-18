@@ -1,11 +1,9 @@
 package com.nextgenbroadcast.mobile.middleware.location
 
-import android.annotation.SuppressLint
-import android.content.Context
 import android.location.Location
-import android.util.Log
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.middleware.BuildConfig
 import com.nextgenbroadcast.mobile.middleware.Auth0
 import com.nextgenbroadcast.mobile.middleware.net.auth0.Auth0Request
@@ -23,18 +21,13 @@ class FrequencyLocator : IFrequencyLocator {
         OkHttpClient()
     }
 
-    @SuppressLint("MissingPermission")
-    override suspend fun locateFrequency(context: Context, predicate: (Location) -> Boolean): FrequencyLocation? {
-        return LocationGatherer().getLastLocation(context)?.let { location ->
-            if (predicate.invoke(location)) {
-                val frequencyList = getFrequenciesByLocation(location.latitude, location.longitude)
-                if (frequencyList.isNotEmpty()) {
-                    return FrequencyLocation(location, frequencyList)
-                }
-            }
-
-            return null
+    override suspend fun locateFrequency(location: Location): FrequencyLocation? {
+        val frequencyList = getFrequenciesByLocation(location.latitude, location.longitude)
+        if (frequencyList.isNotEmpty()) {
+            return FrequencyLocation(location, frequencyList)
         }
+
+        return null
     }
 
     private suspend fun getFrequenciesByLocation(latitude: Double, longitude: Double): List<Int> {
@@ -53,6 +46,9 @@ class FrequencyLocator : IFrequencyLocator {
                 }?.accessToken
             }?.let { token ->
                 val frequenciesRequest = SinclairPlatform(BuildConfig.SinclairPlatformUrl).frequenciesRequest(token, latitude, longitude)
+
+                LOG.d(TAG, "getFrequenciesByLocation, frequenciesRequest is: $frequenciesRequest")
+
                 httpClient.newCall(frequenciesRequest).await { response ->
                     response.body?.let { body ->
                         Gson().fromJson<List<Station>?>(body.string(), object : TypeToken<List<Station>?>() {}.type)
@@ -61,14 +57,16 @@ class FrequencyLocator : IFrequencyLocator {
             }
 
             if (!stations.isNullOrEmpty()) {
+                LOG.i(TAG, "getFrequenciesByLocation, returning stations: $stations")
                 return stations.map { station ->
                     station.frequency * 1000
                 }.distinct()
             }
         } catch (e: IOException) {
-            Log.d(TAG, "Error on frequency request", e)
+            LOG.d(TAG, "Error on frequency request", e)
         }
 
+        LOG.d(TAG, "getFrequenciesByLocation, returning emptyList()")
         return emptyList()
     }
 

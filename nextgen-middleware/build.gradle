@@ -50,13 +50,16 @@ android {
             }
         }
 
+        resValue("string", "defaultActionWatch", "com.nextgenbroadcast.mobile.middleware.sample.action.watch")
         resValue("string", "nextgenMediaFileProvider", "com.nextgenbroadcast.mobile.middleware.provider.dash")
         resValue("string", "nextgenMMTContentProvider", "com.nextgenbroadcast.mobile.middleware.provider.mmt")
         resValue("string", "nextgenServicesGuideProvider", "com.nextgenbroadcast.mobile.middleware.provider.esg")
+        resValue("string", "receiverContentProvider", "com.nextgenbroadcast.mobile.middleware.provider.content")
 
         buildConfigField("String", "Auth0TokenUrl", "\"https://sinclairplatform.auth0.com/oauth/token\"")
         buildConfigField("String", "Auth0Audience", "\"https://api.prod.sinclairplatform.com\"")
         buildConfigField("String", "SinclairPlatformUrl", "\"https://prod-property-gateway.sinclairplatform.com\"")
+        buildConfigField("String", "AWSIoTCustomerUrl", "\"a2mpoqnjkscij4-ats.iot.us-east-1.amazonaws.com\"")
     }
 
     buildTypes {
@@ -195,7 +198,9 @@ dependencies {
     implementation 'com.amazonaws:aws-iot-device-sdk-java:1.3.7'
 
     implementation "com.google.android.gms:play-services-location:18.0.0"
-    
+
+    implementation 'org.bouncycastle:bcpkix-jdk15on:1.56'
+
     testImplementation 'junit:junit:4.13.1'
     androidTestImplementation 'androidx.test.ext:junit:1.1.2'
     testImplementation 'androidx.test:core:1.3.0'

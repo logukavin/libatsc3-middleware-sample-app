@@ -1,24 +1,24 @@
 package com.nextgenbroadcast.mobile.middleware.analytics
 
-import android.content.Context
 import android.location.Location
-import android.provider.Settings
-import android.util.Log
-import androidx.work.*
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
+import com.google.gson.annotations.SerializedName
 import com.nextgenbroadcast.mobile.core.DateUtils
-import com.nextgenbroadcast.mobile.middleware.analytics.model.AVService
+import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.middleware.analytics.model.AppInterval
 import com.nextgenbroadcast.mobile.middleware.analytics.model.BroadcastInterval
 import com.nextgenbroadcast.mobile.middleware.analytics.model.ReportInterval
+import com.nextgenbroadcast.mobile.middleware.analytics.scheduler.IAnalyticScheduler
 import com.nextgenbroadcast.mobile.middleware.analytics.serializer.DateSerializer
 import com.nextgenbroadcast.mobile.middleware.analytics.serializer.LocationSerializer
-import com.nextgenbroadcast.mobile.middleware.location.LocationGatherer
 import com.nextgenbroadcast.mobile.middleware.net.await
+import com.nextgenbroadcast.mobile.middleware.repository.IRepository
 import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
 import com.squareup.tape2.QueueFile
 import kotlinx.coroutines.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -29,18 +29,23 @@ import java.io.File
 import java.io.IOException
 import java.time.LocalDateTime
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.resume
 
-class Atsc3Analytics private constructor(
-        private val context: Context,
-        private val settings: IMiddlewareSettings
+internal class Atsc3Analytics(
+        private val clockSource: Int,
+        private val cacheFolder: File,
+        private val repository: IRepository,
+        private val settings: IMiddlewareSettings,
+        private val scheduler: IAnalyticScheduler
 ) : IAtsc3Analytics {
-    private val workManager = WorkManager.getInstance(context)
-    private val persistedStore = QueueFile.Builder(File(context.filesDir, CACHE_FILE_NAME)).build()
+    private val lock = Mutex()
     private val deviceId = settings.deviceId
-    private val clockSource = Settings.Global.getInt(context.contentResolver, Settings.Global.AUTO_TIME, 0)
+
+    private val storeMap = ConcurrentHashMap<Int, QueueFile>()
+
     private var lastReportDate: LocalDateTime
         get() = settings.lastReportDate
         set(value) {
@@ -59,28 +64,17 @@ class Atsc3Analytics private constructor(
     }
 
     private var activeSession: AVService? = null
-    private var deviceLocation: Location = Location("none")
     private var serverUrl: String? = null
 
-    init {
-        CoroutineScope(Dispatchers.IO).launch {
-            LocationGatherer().getLastLocation(context)?.let { lastLocation ->
-                withContext(Dispatchers.Main) {
-                    deviceLocation = lastLocation
-                }
-            }
-        }
-    }
-
-    override fun setReportServerUrl(serverUrl: String?) {
+    override fun setReportServerUrl(bsid: Int, serverUrl: String?) {
         this.serverUrl = serverUrl
 
         if (serverUrl != null) {
             // send a reports if it's time to, or schedule the next sending
             if (DateUtils.hoursTillNow(lastReportDate) >= MAX_HOURS_BEFORE_SEND_REPORT) {
-                sendAllEventsAndReschedule(serverUrl)
+                sendAllEventsAndReschedule(bsid, serverUrl)
             } else {
-                scheduleWork(serverUrl, TimeUnit.HOURS.toSeconds(MAX_HOURS_BEFORE_SEND_REPORT))
+                scheduler.scheduleWork(bsid, serverUrl, TimeUnit.HOURS.toSeconds(MAX_HOURS_BEFORE_SEND_REPORT))
             }
         }
     }
@@ -227,7 +221,7 @@ class Atsc3Analytics private constructor(
         try {
             action()
         } catch (t: Throwable) {
-            Log.e(TAG, "Analytic queue IO exception", t)
+            LOG.e(TAG, "Analytic queue IO exception", t)
             clear()
         }
     }
@@ -236,6 +230,9 @@ class Atsc3Analytics private constructor(
         damp(avService)
 
         CoroutineScope(LOGGING_IO).launch {
+            val bsid = avService.bsid
+            val persistedStore = getStoreByBsid(bsid)
+            val deviceLocation = repository.lastLocation.value ?: Location("none")
             persistedStore.clearOnError {
                 suspendCancellableCoroutine<CacheEntry> { cont ->
                     if (persistedStore.size() >= MAX_CACHE_SIZE) {
@@ -251,7 +248,7 @@ class Atsc3Analytics private constructor(
 
             if (persistedStore.size() >= CACHE_FULL_SIZE) {
                 serverUrl?.let {
-                    sendAllEventsAndReschedule(it)
+                    sendAllEventsAndReschedule(bsid, it)
                 }
             }
         }
@@ -281,12 +278,12 @@ class Atsc3Analytics private constructor(
     }
 
     @Suppress("SameParameterValue")
-    private suspend fun peekFromStore(maxCount: Int): List<JSONObject> {
+    private suspend fun peekFromStore(store: QueueFile, maxCount: Int): List<JSONObject> {
         return withContext(LOGGING_IO) {
             var count = 0
             mutableListOf<JSONObject>().apply {
-                val iterator = persistedStore.iterator()
-                persistedStore.clearOnError {
+                val iterator = store.iterator()
+                store.clearOnError {
                     while (count++ < maxCount && iterator.hasNext()) {
                         add(JSONObject(String(iterator.next())))
                     }
@@ -295,9 +292,10 @@ class Atsc3Analytics private constructor(
         }
     }
 
-    fun sendAllEvents(reportServerUrl: String): Job {
+    override fun sendAllEvents(bsid: Int, reportServerUrl: String): Job {
         return CoroutineScope(SENDING_IO).launch {
-            var events = peekFromStore(5)
+            val persistedStore = getStoreByBsid(bsid)
+            var events = peekFromStore(persistedStore, 5)
             while (isActive && events.isNotEmpty()) {
                 val cdmJson = createCDMJson(events)
                 val request = Request.Builder()
@@ -316,7 +314,7 @@ class Atsc3Analytics private constructor(
                         }
                     }
                 } catch (e: IOException) {
-                    Log.d(TAG, "Can't send reports to: $reportServerUrl", e)
+                    LOG.d(TAG, "Can't send reports to: $reportServerUrl", e)
                     false
                 }
 
@@ -327,53 +325,44 @@ class Atsc3Analytics private constructor(
                     break
                 }
 
-                events = peekFromStore(5)
+                events = peekFromStore(persistedStore, 5)
             }
         }
     }
 
-    private fun sendAllEventsAndReschedule(reportServerUrl: String) {
-        workManager.cancelUniqueWork(AnalyticsSendingWorker.NAME)
+    private fun sendAllEventsAndReschedule(bsid: Int, reportServerUrl: String) {
+        scheduler.cancelSchedule(bsid)
 
-        sendAllEvents(reportServerUrl).invokeOnCompletion { exception ->
+        sendAllEvents(bsid, reportServerUrl).invokeOnCompletion { exception ->
             val delay = if (exception != null) {
                 TimeUnit.MINUTES.toSeconds(MIN_MINUTES_BEFORE_RETRY_REPORT)
             } else {
                 TimeUnit.HOURS.toSeconds(MAX_HOURS_BEFORE_SEND_REPORT)
             }
 
-            scheduleWork(reportServerUrl, delay)
+            scheduler.scheduleWork(bsid, reportServerUrl, delay)
         }
-    }
-
-    private fun scheduleWork(reportServerUrl: String, delaySec: Long, keepIfExists: Boolean = false): Boolean {
-        val constraints = Constraints.Builder()
-                .setRequiredNetworkType(NetworkType.CONNECTED)
-                .build()
-
-        val uploadWorkRequest = OneTimeWorkRequestBuilder<AnalyticsSendingWorker>()
-                .setConstraints(constraints)
-                .setInitialDelay(delaySec, TimeUnit.SECONDS)
-                .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, RETRY_DELAY_MINUTES, TimeUnit.MINUTES)
-                .setInputData(workDataOf(
-                        AnalyticsSendingWorker.ARG_BASE_URL to reportServerUrl
-                ))
-                .build()
-
-        workManager.enqueueUniqueWork(
-                AnalyticsSendingWorker.NAME,
-                if (keepIfExists) ExistingWorkPolicy.KEEP else ExistingWorkPolicy.REPLACE,
-                uploadWorkRequest
-        )
-
-        return true
     }
 
     private fun damp(avService: AVService) {
         if (!LOGGING) return
 
-        Log.d(TAG, gson.toJson(avService))
+        LOG.d(TAG, gson.toJson(avService))
     }
+
+    private suspend fun getStoreByBsid(bsid: Int): QueueFile {
+        return storeMap[bsid] ?: lock.withLock {
+            storeMap[bsid] ?: let {
+                QueueFile.Builder(
+                        File(cacheFolder, getStoreName(bsid))
+                ).build().also {
+                    storeMap[bsid] = it
+                }
+            }
+        }
+    }
+
+    private fun getStoreName(bsid: Int) = "$bsid-$CACHE_FILE_NAME"
 
     private class CacheEntry(
             val avService: AVService,
@@ -404,18 +393,16 @@ class Atsc3Analytics private constructor(
 
         const val CONTENT_TYPE_JSON = "application/json"
         val MEDIA_TYPE_JSON = "$CONTENT_TYPE_JSON; charset=utf-8".toMediaType()
-
-        @Volatile
-        private var INSTANCE: Atsc3Analytics? = null
-
-        fun getInstance(context: Context, settings: IMiddlewareSettings): Atsc3Analytics {
-            val instance = INSTANCE
-            return instance ?: synchronized(this) {
-                val instance2 = INSTANCE
-                instance2 ?: Atsc3Analytics(context, settings).also {
-                    INSTANCE = it
-                }
-            }
-        }
     }
+}
+
+private class AVService(
+        val country: String,
+        val bsid: Int,
+        val serviceID: Int,
+        val globalServiceID: String?,
+        val serviceType: Int
+) {
+    @SerializedName("reportInterval")
+    val reportIntervals = mutableListOf<ReportInterval>()
 }

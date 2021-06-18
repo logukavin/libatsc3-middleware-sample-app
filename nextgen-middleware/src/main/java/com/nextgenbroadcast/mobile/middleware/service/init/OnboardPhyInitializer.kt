@@ -4,20 +4,22 @@ import android.content.Context
 import android.content.res.Resources
 import android.content.res.XmlResourceParser
 import android.util.Log
-import com.nextgenbroadcast.mobile.middleware.IAtsc3ServiceCore
+import com.nextgenbroadcast.mobile.middleware.IAtsc3ReceiverCore
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.PhyAtsc3Source
 import com.nextgenbroadcast.mobile.middleware.atsc3.utils.XmlUtils
+import kotlinx.coroutines.suspendCancellableCoroutine
 import org.ngbp.libatsc3.middleware.android.phy.Atsc3NdkPHYClientBase
 import org.xmlpull.v1.XmlPullParser
 import java.lang.Exception
+import kotlin.coroutines.resume
 
 internal class OnboardPhyInitializer(
-        private val atsc3Service: IAtsc3ServiceCore
+        private val receiver: IAtsc3ReceiverCore
 ) : IServiceInitializer {
 
     private var isActive = true
 
-    override fun initialize(context: Context, components: Map<Class<*>, Pair<Int, String>>): Boolean {
+    override suspend fun initialize(context: Context, components: Map<Class<*>, Pair<Int, String>>): Boolean {
         components.filter { (clazz, _) ->
             Atsc3NdkPHYClientBase::class.java.isAssignableFrom(clazz)
         }.map { (clazz, data) ->
@@ -35,7 +37,11 @@ internal class OnboardPhyInitializer(
                 var connected = false
                 params.forEach params@{ (fd, devicePath, freqKhz) ->
                     try {
-                        connected = atsc3Service.openRoute(PhyAtsc3Source(phy, fd, devicePath, freqKhz))
+                        connected = suspendCancellableCoroutine { cont ->
+                            receiver.openRoute(PhyAtsc3Source(phy, fd, devicePath, freqKhz)) { result ->
+                                cont.resume(result)
+                            }
+                        }
                         if (connected) return@params
                     } catch (t: Throwable) {
                         t.printStackTrace()

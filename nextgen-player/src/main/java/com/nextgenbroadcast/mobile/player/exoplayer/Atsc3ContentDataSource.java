@@ -110,6 +110,9 @@ public class Atsc3ContentDataSource extends BaseDataSource {
 
     @Override
     public int read(byte[] buffer, int offset, int readLength) throws Atsc3ContentDataSource.Atsc3ContentDataSourceException {
+        //Log.d("Atsc3ContentDataSource",String.format("read with offset: %d, readLength: %d, bytesRemaining: %d", offset, readLength, bytesRemaining));
+
+
         if (readLength == 0) {
             return 0;
         } else if (bytesRemaining == 0) {
@@ -132,12 +135,18 @@ public class Atsc3ContentDataSource extends BaseDataSource {
 //                throw new Atsc3ContentDataSource.Atsc3ContentDataSourceException(new EOFException());
 //            }
 //            return C.RESULT_END_OF_INPUT;
+
+            //Log.d("Atsc3ContentDataSource",String.format("after read wtih bytesRead == -1, returning 0"));
+
             return 0;
         }
         if (bytesRemaining != C.LENGTH_UNSET) {
             bytesRemaining -= bytesRead;
         }
         bytesTransferred(bytesRead);
+
+        //Log.d("Atsc3ContentDataSource",String.format("read: exit with bytesRead: %d", bytesRead));
+
         return bytesRead;
     }
 

@@ -6,7 +6,7 @@ import org.ngbp.libatsc3.middleware.android.phy.virtual.srt.SRTRxSTLTPVirtualPHY
 
 class SrtAtsc3Source(
         private val srtSource: String
-) : BaseAtsc3Source() {
+) : Atsc3Source() {
     override fun openPhyClient(): Atsc3NdkPHYClientBase? {
         try {
             return SRTRxSTLTPVirtualPHYAndroid().apply {
@@ -21,6 +21,18 @@ class SrtAtsc3Source(
 
         return null
     }
+
+    override fun getConfigCount() = 1
+
+    override fun getConfigByIndex(configIndex: Int): String {
+        return if (configIndex == 0) {
+            srtSource
+        } else {
+            throw IndexOutOfBoundsException("Incorrect configuration index: $configIndex")
+        }
+    }
+
+    override fun getAllConfigs(): List<String> = listOf(srtSource)
 
     override fun toString(): String {
         return "SRT Source: $srtSource"

@@ -3,20 +3,21 @@ package com.nextgenbroadcast.mobile.middleware.service.init
 import android.content.Context
 import android.util.Log
 import com.nextgenbroadcast.mobile.core.model.PhyFrequency
-import com.nextgenbroadcast.mobile.middleware.IAtsc3ServiceCore
+import com.nextgenbroadcast.mobile.middleware.IAtsc3ReceiverCore
 import com.nextgenbroadcast.mobile.middleware.location.IFrequencyLocator
+import com.nextgenbroadcast.mobile.middleware.location.LocationRequester
 import com.nextgenbroadcast.mobile.middleware.settings.IReceiverSettings
 import kotlinx.coroutines.*
 import java.util.concurrent.TimeUnit
 
 internal class FrequencyInitializer(
         private val settings: IReceiverSettings,
-        private val atsc3Service: IAtsc3ServiceCore
+        private val receiver: IAtsc3ReceiverCore
 ) : IServiceInitializer {
 
-    private var locationJob: Job? = null
+    override suspend fun initialize(context: Context, components: Map<Class<*>, Pair<Int, String>>): Boolean {
+        Log.d(TAG, "FrequencyInitializer::initalize - locator.locateFrequency before method invocation, location_request_day: $LOCATION_REQUEST_DELAY")
 
-    override fun initialize(context: Context, components: Map<Class<*>, Pair<Int, String>>): Boolean {
         val locators = components.filter { (clazz, _) ->
             IFrequencyLocator::class.java.isAssignableFrom(clazz)
         }.filter { (_, data) ->
@@ -27,7 +28,7 @@ internal class FrequencyInitializer(
             clazz as Class<IFrequencyLocator>
         }
 
-        locationJob = CoroutineScope(Dispatchers.IO).launch {
+        supervisorScope {
             var locationTaken = false
             var frequencyApplied = false
             val prevFrequencyLocation = settings.frequencyLocation
@@ -39,27 +40,34 @@ internal class FrequencyInitializer(
 
                 frequencyApplied = true
                 withContext(Dispatchers.Main) {
-                    atsc3Service.tune(PhyFrequency.default(PhyFrequency.Source.AUTO))
+                    receiver.tune(PhyFrequency.default(PhyFrequency.Source.AUTO))
                 }
             }
 
             withTimeout(LOCATION_REQUEST_DELAY) {
                 locators.forEach { component ->
                     val instance: Any = component.getDeclaredConstructor().newInstance()
-                    val initializer = instance as IFrequencyLocator
+                    val locator = instance as IFrequencyLocator
 
                     try {
-                        initializer.locateFrequency(context) { location ->
+                        Log.d(TAG, "locator.locateFrequency before method invocation, location_request_day: $LOCATION_REQUEST_DELAY")
+
+                        LocationRequester(context).getLastLocation()?.let { location ->
+                            Log.d(TAG, "locator.locateFrequency context: $context, location: $location")
                             val prevLocation = prevFrequencyLocation?.location
-                            prevLocation == null || location.distanceTo(prevLocation) > IFrequencyLocator.RECEPTION_RADIUS
-                        }?.let { frequencyLocation ->
-                            settings.frequencyLocation = frequencyLocation
-                            val frequencies = frequencyLocation.frequencyList.filter { it > 0 }
-                            if (frequencies.isNotEmpty()) {
-                                withContext(Dispatchers.Main) {
-                                    atsc3Service.tune(PhyFrequency.auto(frequencies))
+                            if (prevLocation == null || location.distanceTo(prevLocation) > IFrequencyLocator.RECEPTION_RADIUS) {
+                                locator.locateFrequency(location)?.let { frequencyLocation ->
+                                    Log.d(TAG, "locator.locateFrequency let: $context, location: $frequencyLocation")
+
+                                    settings.frequencyLocation = frequencyLocation
+                                    val frequencies = frequencyLocation.frequencyList.filter { it > 0 }
+                                    if (frequencies.isNotEmpty()) {
+                                        withContext(Dispatchers.Main) {
+                                            receiver.tune(PhyFrequency.auto(frequencies))
+                                        }
+                                        locationTaken = true
+                                    }
                                 }
-                                locationTaken = true
                             }
                         }
 
@@ -74,7 +82,8 @@ internal class FrequencyInitializer(
 
             if (!locationTaken && !frequencyApplied) {
                 withContext(Dispatchers.Main) {
-                    atsc3Service.tune(PhyFrequency.default(PhyFrequency.Source.AUTO))
+                    Log.i(TAG, "locationTaken: $locationTaken, frequencyApplied: $frequencyApplied")
+                    receiver.tune(PhyFrequency.default(PhyFrequency.Source.AUTO))
                 }
             }
         }
@@ -83,10 +92,7 @@ internal class FrequencyInitializer(
     }
 
     override fun cancel() {
-        locationJob?.let { job ->
-            job.cancel()
-            locationJob = null
-        }
+
     }
 
     companion object {

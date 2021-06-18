@@ -3,14 +3,17 @@ package com.nextgenbroadcast.mobile.middleware.sample
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.PictureInPictureParams
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Configuration
+import android.media.MediaMetadata
 import android.media.session.MediaController
 import android.media.session.MediaSession
 import android.media.session.PlaybackState
 import android.os.Bundle
 import android.support.v4.media.MediaBrowserCompat
+import android.util.Log
 import android.view.View
 import android.widget.Toast
 import androidx.activity.viewModels
@@ -22,37 +25,32 @@ import com.google.android.play.core.appupdate.AppUpdateManagerFactory
 import com.google.android.play.core.install.model.AppUpdateType
 import com.google.android.play.core.install.model.UpdateAvailability
 import com.google.android.play.core.tasks.Task
-import androidx.lifecycle.asLiveData
+import androidx.lifecycle.lifecycleScope
 import com.nextgenbroadcast.mobile.core.model.AVService
-import com.nextgenbroadcast.mobile.core.model.ReceiverState
+import com.nextgenbroadcast.mobile.core.presentation.IControllerPresenter
 import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
+import com.nextgenbroadcast.mobile.middleware.getApkBaseServicePackage
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.ViewViewModel
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.factory.UserAgentViewModelFactory
 import com.nextgenbroadcast.mobile.middleware.service.media.MediaSessionConstants
+import com.nextgenbroadcast.mobile.middleware.telemetry.ReceiverTelemetry
 import dagger.android.AndroidInjection
-
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
 
 class MainActivity : BaseActivity() {
-    private val viewViewModel: ViewViewModel by viewModels()
-
     private lateinit var appUpdateManager: AppUpdateManager
+
+    private val viewViewModel: ViewViewModel by viewModels()
 
     private val hasFeaturePIP: Boolean by lazy {
         packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)
     }
 
-    override fun onBind(binder: IServiceBinder) {
-        binder.receiverPresenter.receiverState.asLiveData().observe(this, { receiverState ->
-            val state = receiverState?.state
-            if (state == null || state == ReceiverState.State.IDLE) {
-                if (isInPictureInPictureMode) {
-                    startActivity(Intent(this, MainActivity::class.java).apply {
-                        flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-                    })
-                }
-            }
-        })
+    private var controlerPresentationJob: Job? = null
 
+    override fun onBind(binder: IServiceBinder) {
         val factory = UserAgentViewModelFactory(
                 application,
                 binder.userAgentPresenter,
@@ -60,41 +58,19 @@ class MainActivity : BaseActivity() {
                 binder.receiverPresenter
         )
 
-        getMainFragment().onBind(factory)
+        getMainFragment()?.onBind(factory)
 
         binder.controllerPresenter?.let { controllerPresenter ->
-            viewViewModel.enableTelemetry.observe(this) { enableTelemetry ->
-                if (enableTelemetry != null) {
-                    controllerPresenter.setTelemetryEnabled(enableTelemetry)
-                }
-            }
-            viewViewModel.sensorTelemetryEnabled.observe(this) { sensorEnabled ->
-                if (sensorEnabled != null) {
-                    controllerPresenter.setTelemetryEnabled("sensors", sensorEnabled)
-                }
-            }
-            viewViewModel.sensorFrequencyType.observe(this) { frequencyType ->
-                if (frequencyType != null) {
-                    controllerPresenter.setTelemetryUpdateDelay("sensors", frequencyType.delayMils)
-                }
-            }
-            viewViewModel.locationTelemetryEnabled.observe(this) { sensorEnabled ->
-                if (sensorEnabled != null) {
-                    controllerPresenter.setTelemetryEnabled("location", sensorEnabled)
-                }
-            }
-            viewViewModel.locationFrequencyType.observe(this) { frequencyType ->
-                if (frequencyType != null) {
-                    controllerPresenter.setTelemetryUpdateDelay("location", frequencyType.delay())
-                }
-            }
+            bindControlPresenter(controllerPresenter)
         }
     }
 
     override fun onUnbind() {
-        viewModelStore.clear()
+        viewViewModel.clearSubscriptions(this)
+        controlerPresentationJob?.cancel()
+        controlerPresentationJob = null
 
-        getMainFragment().onUnbind()
+        getMainFragment()?.onUnbind()
     }
 
     override fun onSourcesAvailable(sources: List<MediaBrowserCompat.MediaItem>) {
@@ -111,7 +87,8 @@ class MainActivity : BaseActivity() {
     }
 
     override fun onMediaSessionCreated() {
-        viewViewModel.services.value = mediaController.queue?.mapNotNull { it.toService() } ?: emptyList()
+        viewViewModel.services.value = mediaController.queue?.mapNotNull { it.toService() }
+                ?: emptyList()
         viewViewModel.currentServiceTitle.value = mediaController.queueTitle?.toString()
         viewViewModel.isPlaying.value = mediaController.playbackState?.state == PlaybackState.STATE_PLAYING
 
@@ -163,6 +140,8 @@ class MainActivity : BaseActivity() {
     }
 
     override fun onStop() {
+        Log.w(TAG, "onStop() invoked - our activity is no longer visible");
+
         super.onStop()
 
         mediaController?.unregisterCallback(mediaControllerCallback)
@@ -185,7 +164,8 @@ class MainActivity : BaseActivity() {
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
 
-        if (requestCode == PERMISSION_REQUEST) {
+        // permissions could empty if permission request was interrupted
+        if (requestCode == PERMISSION_REQUEST && permissions.isNotEmpty()) {
             val requiredPermissions = mutableListOf<String>()
             permissions.forEachIndexed { i, permission ->
                 if (grantResults[i] != PackageManager.PERMISSION_GRANTED) {
@@ -254,7 +234,134 @@ class MainActivity : BaseActivity() {
         }
     }
 
-    private fun getMainFragment() = supportFragmentManager.findFragmentByTag(MainFragment.TAG) as MainFragment
+    private fun bindControlPresenter(controllerPresenter: IControllerPresenter) {
+        with(viewViewModel) {
+            controlerPresentationJob = lifecycleScope.launch {
+                launch {
+                    controllerPresenter.debugInfoSettings.collect { debugInfoSetting ->
+                        val isDebugInfoEnable = debugInfoSetting[ReceiverTelemetry.INFO_DEBUG]
+                                ?: false
+                        val isPhyInfoEnable = debugInfoSetting[ReceiverTelemetry.INFO_PHY] ?: false
+
+                        showDebugInfo.value = isDebugInfoEnable || isPhyInfoEnable
+                        showPhyInfo.value = isPhyInfoEnable
+                    }
+                }
+
+                launch {
+                    controllerPresenter.telemetryEnabled.collect { enableMap ->
+                        val distValues = enableMap.values.distinct()
+                        if (distValues.size == 1) {
+                            enableTelemetry.value = distValues.first()
+                        } else {
+                            enableTelemetry.value = distValues.size > 1
+                        }
+                        val distSensorValues = enableMap.filterKeys {
+                            it.startsWith(ReceiverTelemetry.TELEMETRY_SENSORS)
+                        }.values.distinct()
+                        sensorTelemetryEnabled.value = distSensorValues.isNotEmpty() && (distSensorValues.size > 1 || distSensorValues.first())
+                        locationTelemetryEnabled.value = enableMap[ReceiverTelemetry.TELEMETRY_LOCATION]
+                    }
+                }
+            }
+
+            showDebugInfo.observe(this@MainActivity) { showDebugInfo ->
+                if (showDebugInfo != null) {
+                    val actualValue = controllerPresenter.debugInfoSettings.value[ReceiverTelemetry.INFO_DEBUG]
+                    setIfChanged(actualValue, showDebugInfo) { enabled ->
+                        controllerPresenter.setDebugInfoVisible(ReceiverTelemetry.INFO_DEBUG, enabled)
+                    }
+                }
+            }
+
+            showPhyInfo.observe(this@MainActivity) { showPhyInfo ->
+                if (showPhyInfo != null) {
+                    val actualValue = controllerPresenter.debugInfoSettings.value[ReceiverTelemetry.INFO_PHY]
+                    setIfChanged(actualValue, showPhyInfo) { enabled ->
+                        controllerPresenter.setDebugInfoVisible(ReceiverTelemetry.INFO_PHY, enabled)
+                    }
+                }
+            }
+
+            enableTelemetry.observe(this@MainActivity) { enableTelemetry ->
+                if (enableTelemetry != null) {
+                    val actualValue = controllerPresenter.telemetryEnabled.value.distinctValue()
+                    // switch must be On if telemetry partially switched On. We allow only switching off partially active telemetry
+                    setIfChanged(actualValue, enableTelemetry) { enabled ->
+                        controllerPresenter.setTelemetryEnabled(enabled)
+                    }
+                }
+            }
+
+            sensorTelemetryEnabled.observe(this@MainActivity) { sensorEnabled ->
+                if (sensorEnabled != null) {
+                    val actualValue = controllerPresenter.telemetryEnabled.value.distinctValue(ReceiverTelemetry.TELEMETRY_SENSORS)
+                    // switch must be On if if one of sensors is active. We allow only switching off partially active sensors
+                    setIfChanged(actualValue, sensorEnabled) { enabled ->
+                        controllerPresenter.setTelemetryEnabled(ReceiverTelemetry.TELEMETRY_SENSORS, enabled)
+                    }
+                }
+            }
+            sensorFrequencyType.observe(this@MainActivity) { frequencyType ->
+                if (frequencyType != null) {
+                    controllerPresenter.setTelemetryUpdateDelay(ReceiverTelemetry.TELEMETRY_SENSORS, frequencyType.delayMils)
+                }
+            }
+            locationTelemetryEnabled.observe(this@MainActivity) { sensorEnabled ->
+                if (sensorEnabled != null) {
+                    controllerPresenter.setTelemetryEnabled(ReceiverTelemetry.TELEMETRY_LOCATION, sensorEnabled)
+                }
+            }
+            locationFrequencyType.observe(this@MainActivity) { frequencyType ->
+                if (frequencyType != null) {
+                    controllerPresenter.setTelemetryUpdateDelay(ReceiverTelemetry.TELEMETRY_LOCATION, frequencyType.delay())
+                }
+            }
+        }
+    }
+
+    private fun setIfChanged(actual: Boolean?, new: Boolean, block: (value: Boolean) -> Unit) {
+        if (actual != null) {
+            if (actual != new) {
+                block(new)
+            }
+        } else if (!new) {
+            block(false)
+        }
+    }
+
+    private fun <K, V> Map<out K, V>.distinctValue(): V? {
+        return values.distinct().let {
+            if (it.size == 1) it.first() else null
+        }
+    }
+
+    private fun <V> Map<String, V>.distinctValue(key: String): V? {
+        return filterKeys {
+            it.startsWith(key)
+        }.distinctValue()
+    }
+
+    private fun checkForAppUpdates() {
+        // Creates instance of the manager, returns an intent object that you use to check for an update.
+        val appUpdateInfoTask: Task<AppUpdateInfo> = appUpdateManager.appUpdateInfo as Task<AppUpdateInfo>
+
+        // Checks that the platform will allow the specified type of update. // For a flexible update, use AppUpdateType.FLEXIBLE
+        appUpdateInfoTask.addOnSuccessListener { appUpdateInfo ->
+            Log.i(TAG, "appUpdateInfoTask.onSuccessListener: appUpdateInfo: $appUpdateInfo")
+            //jjustman-2021-05-04 - always push our ATSC3 sample app updates, e.g. dont gate on only && appUpdateInfo.isUpdateTypeAllowed(AppUpdateType.IMMEDIATE)
+            if (appUpdateInfo.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE) {
+                // Request the update.
+                appUpdateManager.startUpdateFlowForResult(appUpdateInfo, AppUpdateType.IMMEDIATE, this, APP_UPDATE_REQUEST_CODE)
+            }
+        }
+
+        appUpdateInfoTask.addOnFailureListener { failedInfo ->
+            Log.w(TAG, "appUpdateInfoTask.onFailureListener: failedInfo: $failedInfo")
+        }
+    }
+
+    private fun getMainFragment() = supportFragmentManager.findFragmentByTag(MainFragment.TAG) as? MainFragment
 
     private val mediaControllerCallback = object : MediaController.Callback() {
         override fun onQueueChanged(queue: MutableList<MediaSession.QueueItem>?) {
@@ -272,18 +379,32 @@ class MainActivity : BaseActivity() {
         override fun onSessionDestroyed() {
             mediaController?.unregisterCallback(this)
         }
+
+        override fun onMetadataChanged(metadata: MediaMetadata?) {
+            metadata?.let {
+                val serviceCategory = metadata.getLong(MediaMetadata.METADATA_KEY_DISC_NUMBER).toInt()
+                metadata.getString(MediaMetadata.METADATA_KEY_MEDIA_ID)?.let { serviceGlobalId ->
+                    getApkBaseServicePackage(serviceCategory, serviceGlobalId)?.let { appPackage ->
+                        launchApplication(appPackage)
+                    }
+                }
+            }
+        }
     }
 
-    private fun checkForAppUpdates() {
-        // Creates instance of the manager, returns an intent object that you use to check for an update.
-        val appUpdateInfoTask: Task<AppUpdateInfo> = appUpdateManager.appUpdateInfo as Task<AppUpdateInfo>
-
-        // Checks that the platform will allow the specified type of update. // For a flexible update, use AppUpdateType.FLEXIBLE
-        appUpdateInfoTask.addOnSuccessListener { appUpdateInfo ->
-            if (appUpdateInfo.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE && appUpdateInfo.isUpdateTypeAllowed(AppUpdateType.IMMEDIATE)) {
-                // Request the update.
-                appUpdateManager.startUpdateFlowForResult(appUpdateInfo, AppUpdateType.IMMEDIATE,this, APP_UPDATE_REQUEST_CODE)
+    private fun launchApplication(appPackage: String) {
+        val started: Boolean = packageManager.getLaunchIntentForPackage(appPackage)?.let { intent ->
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            try {
+                startActivity(intent)
+                true
+            } catch (e: ActivityNotFoundException) {
+                false
             }
+        } ?: false
+
+        if (!started) {
+            Toast.makeText(this@MainActivity, getString(R.string.message_service_apk_not_found, appPackage), Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -294,8 +415,9 @@ class MainActivity : BaseActivity() {
         val necessaryPermissions = listOf(
                 Manifest.permission.WRITE_EXTERNAL_STORAGE,
                 Manifest.permission.ACCESS_COARSE_LOCATION,
-                Manifest.permission.ACCESS_FINE_LOCATION,
-                Manifest.permission.READ_PHONE_STATE
+                Manifest.permission.ACCESS_FINE_LOCATION
         )
+
+        val TAG: String = MainActivity::class.java.simpleName
     }
 }

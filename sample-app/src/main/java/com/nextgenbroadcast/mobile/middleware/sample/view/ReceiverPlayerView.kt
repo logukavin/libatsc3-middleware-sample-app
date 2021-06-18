@@ -5,10 +5,10 @@ import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.util.AttributeSet
-import android.util.Log
 import com.google.android.exoplayer2.Player
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
 import com.google.android.exoplayer2.ui.PlayerView
+import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.RMPViewModel
 import com.nextgenbroadcast.mobile.player.Atsc3MediaPlayer
@@ -53,7 +53,7 @@ class ReceiverPlayerView @JvmOverloads constructor(
             }
 
             override fun onPlayerError(error: Exception) {
-                Log.d(TAG, error.message ?: "")
+                LOG.d(TAG, error.message ?: "")
             }
 
             override fun onPlaybackSpeedChanged(speed: Float) {
@@ -75,9 +75,13 @@ class ReceiverPlayerView @JvmOverloads constructor(
 
     fun play(mediaUri: Uri) {
         val mimeType = context.contentResolver.getType(mediaUri)
+
+        LOG.i(TAG, String.format("play: with mediaUri: %s and mimeType: %s", mediaUri, mimeType))
+
+        // AO service content will be played out with ForegroundService embedded player which is
+        // indicated on binding service with flag EXTRA_PLAY_AUDIO_ON_BOARD
         if (mimeType == MMTConstants.MIME_MMT_AUDIO) {
-            stop()
-            atsc3Player.clearSavedState()
+            stopAndClear()
             return
         }
 
@@ -92,8 +96,10 @@ class ReceiverPlayerView @JvmOverloads constructor(
         }
     }
 
-    fun replay() {
-        atsc3Player.replay()
+    fun tryReplay() {
+        atsc3Player.tryReplay()
+        // ensure we still observing correct player
+        player = atsc3Player.player
     }
 
     fun pause() {
@@ -101,11 +107,12 @@ class ReceiverPlayerView @JvmOverloads constructor(
     }
 
     fun stop() {
-        atsc3Player.reset()
-        player = null
+        atsc3Player.stop()
     }
 
-    fun clearState() {
+    fun stopAndClear() {
+        atsc3Player.reset()
+        player = null
         atsc3Player.clearSavedState()
     }
 
@@ -148,8 +155,9 @@ class ReceiverPlayerView @JvmOverloads constructor(
     private fun cancelMediaTimeUpdate() {
         updateMediaTimeHandler.removeCallbacks(updateMediaTimeRunnable)
     }
+
     fun getTrackSelector(): DefaultTrackSelector? {
-        return atsc3Player.trackSelector;
+        return atsc3Player.trackSelector
     }
 
     companion object {

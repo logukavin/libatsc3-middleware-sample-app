@@ -5,7 +5,7 @@ import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import com.nextgenbroadcast.mobile.core.LOG
-import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIotThing
+import com.nextgenbroadcast.mobile.middleware.telemetry.ReceiverTelemetry
 import com.nextgenbroadcast.mobile.middleware.telemetry.entity.TelemetryEvent
 import com.nextgenbroadcast.mobile.middleware.telemetry.entity.TelemetryPayload
 import kotlinx.coroutines.channels.Channel
@@ -61,15 +61,38 @@ class SensorTelemetryReader(
         }.buffer(Channel.CONFLATED) // To avoid send blocking
                 .sample(delayMils) // To control emission frequency
                 .collect { data ->
-                    eventFlow.emit(TelemetryEvent(AWSIotThing.AWSIOT_TOPIC_SENSORS, data))
+                    eventFlow.emit(TelemetryEvent(TelemetryEvent.EVENT_TOPIC_SENSORS, data))
                 }
     }
 
     companion object {
         val TAG: String = SensorTelemetryReader::class.java.simpleName
-        const val NAME = "sensors"
+        const val NAME = ReceiverTelemetry.TELEMETRY_SENSORS
 
         val DEFAULT_UPDATE_FREQUENCY = TimeUnit.SECONDS.toMillis(1)
+
+        private const val SENSOR_LINEAR_ACCELERATION = "acceleration"
+        private const val SENSOR_GYROSCOPE = "gyroscope"
+        private const val SENSOR_SIGNIFICANT_MOTION = "motion"
+        private const val SENSOR_STEP_DETECTOR = "step_detector"
+        private const val SENSOR_STEP_COUNTER = "step_counter"
+        private const val SENSOR_ROTATION_VECTOR = "rotation"
+
+        fun getFullSensorName(sensorName: String): String? {
+            val sensorType = when (sensorName) {
+                SENSOR_LINEAR_ACCELERATION -> Sensor.TYPE_LINEAR_ACCELERATION
+                SENSOR_GYROSCOPE -> Sensor.TYPE_GYROSCOPE
+                SENSOR_SIGNIFICANT_MOTION -> Sensor.TYPE_SIGNIFICANT_MOTION
+                SENSOR_STEP_DETECTOR -> Sensor.TYPE_STEP_DETECTOR
+                SENSOR_STEP_COUNTER -> Sensor.TYPE_STEP_COUNTER
+                SENSOR_ROTATION_VECTOR -> Sensor.TYPE_ROTATION_VECTOR
+                else -> {
+                    return null
+                }
+            }
+            return "$NAME:$sensorType"
+        }
+
     }
 }
 
@@ -82,7 +105,7 @@ enum class SensorFrequencyType(
     LOW(5000)
 }
 
-data class SensorData(
+private data class SensorData(
         val sensorName: String,
         val values: FloatArray,
         val accuracy: Int

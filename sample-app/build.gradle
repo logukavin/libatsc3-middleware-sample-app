@@ -1,6 +1,6 @@
 plugins {
     id 'com.android.application'
-    id 'com.github.triplet.play' version '3.3.0'
+    id 'com.github.triplet.play' version '3.4.0'
 }
 
 apply plugin: 'com.android.application'
@@ -12,8 +12,8 @@ apply plugin: 'com.google.firebase.crashlytics'
 apply plugin: 'com.google.firebase.firebase-perf'
 apply plugin: 'com.github.triplet.play'
 
-def appVersionCode = project.hasProperty('versionCode') ? versionCode.toInteger() : 4
-def appVersion = "1.0.3"
+def appVersionCode = project.hasProperty('versionCode') ? versionCode.toInteger() : 5
+def appVersion = "1.0.5"
 
 def getCertPropertyCode(propertyName) {
     if (project.hasProperty(propertyName)) {
@@ -51,6 +51,8 @@ android {
         versionName appVersion
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
+        buildConfigField("String", "BugfenderKey", "\"nPbJ6hrKCr3NsDdjybzRmWQz7RlPSIWY\"")
     }
 
     signingConfigs {
@@ -94,6 +96,7 @@ android {
             resValue "string", "nextgenMediaFileProvider", "com.nextgenbroadcast.mobile.middleware.provider.dash.tv"
             resValue("string", "nextgenMMTContentProvider", "com.nextgenbroadcast.mobile.middleware.provider.mmt.tv")
             resValue("string", "nextgenServicesGuideProvider", "com.nextgenbroadcast.mobile.middleware.provider.esg.tv")
+            resValue("string", "receiverContentProvider", "com.nextgenbroadcast.mobile.middleware.provider.content")
         }
 
         light {
@@ -215,9 +218,15 @@ dependencies {
     //jjustman-2021-01-14 - adding firebase performance
     implementation 'com.google.firebase:firebase-perf:19.1.1'
 
-    implementation 'com.google.android.play:core-ktx:1.7.0'
+    implementation 'com.google.android.play:core-ktx:1.8.1'
 
     implementation 'org.slf4j:slf4j-nop:1.7.25'
 
     implementation "androidx.media:media:1.2.1"
+
+    implementation 'com.bugfender.sdk:android:3.+'
+
+    implementation "org.eclipse.jetty:jetty-client:9.4.38.v20210224"
+    implementation "com.squareup.okio:okio:2.8.0"
+    implementation 'com.google.code.gson:gson:2.8.6'
 }
