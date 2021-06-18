@@ -3,6 +3,7 @@ package com.nextgenbroadcast.mobile.middleware.service
 import android.content.Context
 import android.hardware.usb.UsbDevice
 import android.net.Uri
+import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.middleware.DeviceTypeSelectionDialog
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.*
 
@@ -36,8 +37,13 @@ fun routePathToSource(context: Context, path: String): IAtsc3Source? {
         } else {
             PcapAtsc3Source.PcapType.STLTP
         }
-        context.contentResolver.openFileDescriptor(Uri.parse(path), "r")?.use { descriptor ->
-            PcapDescriptorAtsc3Source(descriptor.detachFd(), descriptor.statSize, type)
+        try {
+            context.contentResolver.openFileDescriptor(Uri.parse(path), "r")?.use { descriptor ->
+                PcapDescriptorAtsc3Source(descriptor.detachFd(), descriptor.statSize, type)
+            }
+        } catch (e: Exception) {
+            LOG.w("routePathToSource", "Can't create source for path: $path", e)
+            null
         }
         //PcapFileAtsc3Source(path, type)
     }
