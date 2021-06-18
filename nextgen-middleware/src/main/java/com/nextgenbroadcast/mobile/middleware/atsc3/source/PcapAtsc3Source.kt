@@ -1,11 +1,12 @@
 package com.nextgenbroadcast.mobile.middleware.atsc3.source
 
+import com.nextgenbroadcast.mobile.core.LOG
 import org.ngbp.libatsc3.middleware.android.phy.Atsc3NdkPHYClientBase
 import org.ngbp.libatsc3.middleware.android.phy.virtual.PcapDemuxedVirtualPHYAndroid
 import org.ngbp.libatsc3.middleware.android.phy.virtual.PcapSTLTPVirtualPHYAndroid
 
 abstract class PcapAtsc3Source(
-    private val filename: String
+    private val type: PcapType
 ) : Atsc3Source() {
 
     enum class PcapType {
@@ -13,8 +14,6 @@ abstract class PcapAtsc3Source(
     }
 
     protected fun createPhyClient(): Atsc3NdkPHYClientBase? {
-        //TODO: temporary solution
-        val type = if (filename.contains(".demux.") || filename.contains(".demuxed.")) PcapType.DEMUXED else PcapType.STLTP
         return try {
             when (type) {
                 PcapType.DEMUXED -> PcapDemuxedVirtualPHYAndroid()
@@ -23,26 +22,27 @@ abstract class PcapAtsc3Source(
                 init()
             }
         } catch (e: Error) {
-            LOG.e(TAG, "Can't open Pcap file: $filename, type: $type", e)
+            LOG.e(TAG, "Can't create Phy of type: $type", e)
+            null
         }
-
-        return null
     }
+
+    abstract fun getFileName(): String
 
     override fun getConfigCount() = 1
 
     override fun getConfigByIndex(configIndex: Int): String {
         return if (configIndex == 0) {
-            filename
+            getFileName()
         } else {
             throw IndexOutOfBoundsException("Incorrect configuration index: $configIndex")
         }
     }
 
-    override fun getAllConfigs(): List<String> = listOf(filename)
+    override fun getAllConfigs(): List<String> = listOf(getFileName())
 
     override fun toString(): String {
-        return "PCAP Source: filename = $filename"
+        return "PCAP Source: filename = ${getFileName()}"
     }
 
     companion object {
