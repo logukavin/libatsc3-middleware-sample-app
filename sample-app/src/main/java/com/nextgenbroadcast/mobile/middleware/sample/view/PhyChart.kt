@@ -61,9 +61,10 @@ class PhyChart @JvmOverloads constructor(
             phyEventCounter = 0
         }
 
+        val snr = phyPayload.snr1000.toDouble() / 1000
         val dataPoint = DataPoint(
             currentTime.toDouble(),
-            min(max(SNR_MIN_VALUE, phyPayload.snr1000.toDouble()), SNR_MAX_VALUE)
+            min(max(SNR_MIN_VALUE, snr), SNR_MAX_VALUE)
         )
 
         val maxValue = if (currentSpeed == 0L) {

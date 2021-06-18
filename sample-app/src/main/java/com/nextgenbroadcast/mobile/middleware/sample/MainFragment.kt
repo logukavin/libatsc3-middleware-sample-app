@@ -242,7 +242,7 @@ class MainFragment : Fragment(), ReceiverContentResolver.Listener {
            phyChart.addEvent(phyPayload)
         })
 
-        telemetryManager.start()
+        //telemetryManager.start()
     }
 
     override fun onStop() {
@@ -252,7 +252,7 @@ class MainFragment : Fragment(), ReceiverContentResolver.Listener {
 
         receiver_player.stop()
 
-        telemetryManager.stop()
+        //telemetryManager.stop()
     }
 
     override fun onDestroy() {
