@@ -384,24 +384,27 @@ class MainActivity : BaseActivity() {
             metadata?.let {
                 val serviceCategory = metadata.getLong(MediaMetadata.METADATA_KEY_DISC_NUMBER).toInt()
                 metadata.getString(MediaMetadata.METADATA_KEY_MEDIA_ID)?.let { serviceGlobalId ->
-                    val appPackage = getApkBaseServicePackage(serviceCategory, serviceGlobalId)
-                    if (appPackage != null) {
-                        val started: Boolean = packageManager.getLaunchIntentForPackage(appPackage)?.let { intent ->
-                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            try {
-                                startActivity(intent)
-                                true
-                            } catch (e: ActivityNotFoundException) {
-                                false
-                            }
-                        } ?: false
-
-                        if (!started) {
-                            Toast.makeText(this@MainActivity, getString(R.string.message_service_apk_not_found, appPackage), Toast.LENGTH_SHORT).show()
-                        }
+                    getApkBaseServicePackage(serviceCategory, serviceGlobalId)?.let { appPackage ->
+                        launchApplication(appPackage)
                     }
                 }
             }
+        }
+    }
+
+    private fun launchApplication(appPackage: String) {
+        val started: Boolean = packageManager.getLaunchIntentForPackage(appPackage)?.let { intent ->
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            try {
+                startActivity(intent)
+                true
+            } catch (e: ActivityNotFoundException) {
+                false
+            }
+        } ?: false
+
+        if (!started) {
+            Toast.makeText(this@MainActivity, getString(R.string.message_service_apk_not_found, appPackage), Toast.LENGTH_SHORT).show()
         }
     }
 

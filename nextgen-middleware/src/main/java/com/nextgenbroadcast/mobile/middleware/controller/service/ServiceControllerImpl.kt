@@ -52,16 +52,18 @@ internal class ServiceControllerImpl(
     override val serviceGuideUrls = repository.serviceGuideUrls
     override val applications = repository.applications
 
-    override val receiverState: StateFlow<ReceiverState> = combine(atsc3State, repository.selectedService, atsc3Configuration) { state, service, config ->
+    override val receiverState: StateFlow<ReceiverState> = combine(atsc3State, repository.selectedService, repository.services, atsc3Configuration) { state, service, services, config ->
         val (configIndex, configCount, configKnown) = config ?: Triple(-1, -1, false)
         if (state == null || state == Atsc3ModuleState.IDLE) {
             ReceiverState.idle()
         } else if (state == Atsc3ModuleState.SCANNING || (state == Atsc3ModuleState.SNIFFING && !configKnown && configCount > 1)) {
             ReceiverState.scanning(configIndex, configCount)
-        } else if (service == null) {
+        } else if (services.isEmpty()) {
             ReceiverState.tuning(configIndex, configCount)
+        } else if (service == null) {
+            ReceiverState.ready(configIndex, configCount)
         } else {
-            ReceiverState.connected(configIndex, configCount)
+            ReceiverState.buffering(configIndex, configCount)
         }
     }.stateIn(stateScope, SharingStarted.Eagerly, ReceiverState.idle())
 
