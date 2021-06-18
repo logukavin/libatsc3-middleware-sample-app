@@ -10,34 +10,37 @@ import com.nextgenbroadcast.mobile.telemetry.TelemetryManager
 import kotlinx.android.synthetic.main.fragment_main.view.*
 import java.util.concurrent.TimeUnit
 import kotlin.math.max
+import kotlin.math.min
 
 class PhyChart @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
 ) : GraphView(context, attrs, defStyleAttr) {
 
-    var phyGraphSeries: LineGraphSeries<DataPoint> = LineGraphSeries()
-    var phyEventCounter = 0
-    var eventStartTime: Long = 0
-    var currentSpeed: Long = 0
+    private var phyGraphSeries: LineGraphSeries<DataPoint> = LineGraphSeries()
+    private var phyEventCounter = 0
+    private var eventStartTime: Long = 0
+    private var currentSpeed: Long = 0
 
-    fun initGraphView() {
-        phyChart.viewport.isXAxisBoundsManual = true
+    override fun onFinishInflate() {
+        super.onFinishInflate()
         val currentTime = System.currentTimeMillis().toDouble()
-        phyChart.viewport.setMaxX(currentTime)
-        phyChart.viewport.setMinX((currentTime - TIME_PERIOD_FOR_ACTUAL_SNR_MILLISECOND))
-        phyChart.viewport.isYAxisBoundsManual = true
-        phyChart.viewport.setMinY(SNR_MIN_VALUE)
-        phyChart.viewport.setMaxY(SNR_MAX_VALUE)
-        phyChart.title = resources.getString(R.string.phy_snr)
+        with(phyChart.viewport) {
+            isXAxisBoundsManual = true
+            setMaxX(currentTime)
+            setMinX((currentTime - TIME_PERIOD_FOR_ACTUAL_SNR_MILLISECOND))
+            isYAxisBoundsManual = true
+            setMinY(SNR_MIN_VALUE)
+            setMaxY(SNR_MAX_VALUE)
+            isYAxisBoundsManual = true
+            setMinY(SNR_MIN_VALUE)
+            setMaxY(SNR_MAX_VALUE)
+            isScrollable = true
+        }
 
+        phyChart.title = resources.getString(R.string.phy_snr)
         phyChart.titleColor = resources.getColor(R.color.white)
         phyChart.gridLabelRenderer.gridColor = resources.getColor(R.color.white)
         phyChart.gridLabelRenderer.numVerticalLabels = 4
-        phyChart.viewport.isYAxisBoundsManual = true
-        phyChart.viewport.setMinY(SNR_MIN_VALUE)
-        phyChart.viewport.setMaxY(SNR_MAX_VALUE)
-
-        phyChart.viewport.isScrollable = true
         phyChart.addSeries(phyGraphSeries)
     }
 
@@ -55,8 +58,7 @@ class PhyChart @JvmOverloads constructor(
         val dataPoint =
             DataPoint(
                 currentTime.toDouble(),
-                Integer.min(max(SNR_MIN_VALUE.toInt(), phyPayload.snr1000), SNR_MAX_VALUE.toInt())
-                    .toDouble()
+                min(max(SNR_MIN_VALUE, phyPayload.snr1000.toDouble()), SNR_MAX_VALUE)
             )
 
         val maxValue = if (currentSpeed == 0L) {
@@ -77,7 +79,8 @@ class PhyChart @JvmOverloads constructor(
         private const val SNR_MAX_VALUE = 30.0
         private const val SNR_MIN_VALUE = 0.0
         private const val TIME_PERIOD_FOR_ACTUAL_SNR_MINUTES = 5L
-        private val TIME_PERIOD_FOR_ACTUAL_SNR_MILLISECOND = TimeUnit.MINUTES.toMillis(TIME_PERIOD_FOR_ACTUAL_SNR_MINUTES)
+        private val TIME_PERIOD_FOR_ACTUAL_SNR_MILLISECOND =
+            TimeUnit.MINUTES.toMillis(TIME_PERIOD_FOR_ACTUAL_SNR_MINUTES)
 
     }
 }
