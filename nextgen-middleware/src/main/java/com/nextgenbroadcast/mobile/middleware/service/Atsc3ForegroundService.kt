@@ -356,7 +356,9 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         unregisterDeviceReceiver()
 
         sourcePath?.let {
-            atsc3Receiver.openRoute(routePathToSource(sourcePath), true)
+            routePathToSource(applicationContext, sourcePath)?.let { source ->
+                atsc3Receiver.openRoute(source, true)
+            }
         }
     }
 
