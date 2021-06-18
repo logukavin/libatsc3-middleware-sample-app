@@ -228,7 +228,6 @@ class MainFragment : Fragment(), ReceiverContentResolver.Listener {
             setSelectedService(currentServiceTitle)
         }
 
-        phyChart.initGraphView()
     }
 
     override fun onStart() {
