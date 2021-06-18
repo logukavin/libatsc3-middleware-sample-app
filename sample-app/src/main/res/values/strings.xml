@@ -11,6 +11,7 @@
     <string name="settings_scan_btn">Scan range</string>
     <string name="settings_enable_debug_info">Enable Debug Information</string>
     <string name="settings_enable_phy_info">Enable Phy Information</string>
+    <string name="settings_display_phy_chart">Display Phy Chart</string>
     <string name="settings_enable_sensor_telemetry">Sensors</string>
     <string name="settings_enable_location_telemetry">Location</string>
     <string name="settings_enable_telemetry">Collect Telemetry</string>
