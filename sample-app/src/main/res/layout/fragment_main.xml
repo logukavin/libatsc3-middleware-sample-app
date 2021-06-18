@@ -111,6 +111,13 @@
                 app:layout_constraintStart_toStartOf="@+id/receiver_player"
                 app:layout_constraintTop_toBottomOf="@+id/atsc3_data_log" />
 
+            <com.nextgenbroadcast.mobile.middleware.sample.view.PhyChart
+                android:id="@+id/phyChart"
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/phy_chart_height"
+                android:visibility="@{viewModel.showPhyChart ? View.VISIBLE : View.GONE }"
+                app:layout_constraintTop_toBottomOf="@+id/phy_data_log" />
+
             <androidx.appcompat.widget.AppCompatImageButton
                 android:id="@+id/settings_button"
                 android:layout_width="wrap_content"

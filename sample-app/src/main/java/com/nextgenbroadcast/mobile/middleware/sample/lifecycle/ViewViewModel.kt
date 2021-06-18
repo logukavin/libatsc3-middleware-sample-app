@@ -24,6 +24,7 @@ class ViewViewModel : ViewModel() {
     val sensorFrequencyType = MutableLiveData(SensorFrequencyType.MEDIUM)
     val locationTelemetryEnabled = MutableLiveData(true)
     val locationFrequencyType = MutableLiveData(LocationFrequencyType.MEDIUM)
+    val showPhyChart = MutableLiveData(true)
 
     fun clearSubscriptions(owner: LifecycleOwner) {
         enableTelemetry.removeObservers(owner)
