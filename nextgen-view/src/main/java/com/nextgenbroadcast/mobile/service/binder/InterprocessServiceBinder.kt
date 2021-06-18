@@ -22,11 +22,10 @@ class InterprocessServiceBinder(
         override val sltServices = MutableStateFlow<List<AVService>>(emptyList())
         override val selectedService = MutableStateFlow<AVService?>(null)
 
-        override fun selectService(service: AVService): Boolean {
+        override fun selectService(service: AVService) {
             sendAction(IServiceBinder.ACTION_SELECT_SERVICE, bundleOf(
                     IServiceBinder.PARAM_SELECT_SERVICE to service
             ))
-            return true
         }
     }
 
@@ -60,6 +59,10 @@ class InterprocessServiceBinder(
             sendAction(IServiceBinder.ACTION_BA_STATE_CHANGED, bundleOf(
                     IServiceBinder.PARAM_APPSTATE to state
             ))
+        }
+
+        override fun getWebServerCertificateHash(): String? {
+            return null
         }
     }
 

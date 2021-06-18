@@ -38,7 +38,7 @@
             </intent-filter>
 
             <intent-filter>
-                <action android:name="com.nextgenbroadcast.mobile.tv" />
+                <action android:name="com.nextgenbroadcast.mobile.middleware.sample.action.watch" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>

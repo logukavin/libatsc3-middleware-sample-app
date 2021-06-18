@@ -2,6 +2,7 @@ package com.nextgenbroadcast.mobile.middleware.sample
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.view.GestureDetector
@@ -24,8 +25,9 @@ import com.nextgenbroadcast.mobile.core.FileUtils
 import com.nextgenbroadcast.mobile.core.atsc3.phy.PHYStatistics
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.AppData
+import com.nextgenbroadcast.mobile.core.model.PlaybackState
+import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.presentation.ApplicationState
-import com.nextgenbroadcast.mobile.middleware.sample.SettingsDialog.Companion.REQUEST_KEY_FREQUENCY
 import com.nextgenbroadcast.mobile.middleware.sample.core.SwipeGestureDetector
 import com.nextgenbroadcast.mobile.middleware.sample.core.mapWith
 import com.nextgenbroadcast.mobile.middleware.sample.databinding.FragmentMainBinding
@@ -34,17 +36,16 @@ import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.ReceiverViewModel
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.UserAgentViewModel
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.ViewViewModel
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.factory.UserAgentViewModelFactory
+import com.nextgenbroadcast.mobile.middleware.sample.resolver.ReceiverContentResolver
 import com.nextgenbroadcast.mobile.middleware.sample.useragent.ServiceAdapter
+import com.nextgenbroadcast.mobile.telemetry.TelemetryManager
 import com.nextgenbroadcast.mobile.view.AboutDialog
 import com.nextgenbroadcast.mobile.view.TrackSelectionDialog
 import com.nextgenbroadcast.mobile.view.UserAgentView
 import kotlinx.android.synthetic.main.fragment_main.*
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 
-class MainFragment : Fragment() {
+class MainFragment : Fragment(), ReceiverContentResolver.Listener {
 
     private lateinit var binding: FragmentMainBinding
     private var rmpViewModel: RMPViewModel? = null
@@ -60,6 +61,8 @@ class MainFragment : Fragment() {
     private lateinit var serviceAdapter: ServiceAdapter
     private lateinit var sourceAdapter: ArrayAdapter<String>
     private lateinit var bottomSheetBehavior: BottomSheetBehavior<View>
+    private lateinit var receiverContentResolver: ReceiverContentResolver
+    private lateinit var telemetryManager: TelemetryManager
 
     private var phyLoggingJob: Job? = null
 
@@ -72,7 +75,7 @@ class MainFragment : Fragment() {
     override fun onAttach(context: Context) {
         super.onAttach(context)
 
-        val callback = object : OnBackPressedCallback(true) {
+        requireActivity().onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 if (user_agent_web_view.checkContentVisible()) {
                     user_agent_web_view.actionExit()
@@ -83,8 +86,11 @@ class MainFragment : Fragment() {
                     }
                 }
             }
-        }
-        requireActivity().onBackPressedDispatcher.addCallback(this, callback)
+        })
+
+        receiverContentResolver = ReceiverContentResolver(context, this)
+
+        telemetryManager = TelemetryManager()
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
@@ -118,11 +124,11 @@ class MainFragment : Fragment() {
         user_agent_web_view.setOnTouchListener { _, motionEvent -> swipeGD.onTouchEvent(motionEvent) }
         user_agent_web_view.setListener(object : UserAgentView.IListener {
             override fun onOpen() {
-                userAgentViewModel?.setApplicationState(ApplicationState.OPENED)
+                receiverContentResolver.publishApplicationState(ApplicationState.OPENED)
             }
 
             override fun onClose() {
-                userAgentViewModel?.setApplicationState(ApplicationState.LOADED)
+                receiverContentResolver.publishApplicationState(ApplicationState.LOADED)
             }
 
             override fun onLoadingError() {
@@ -171,9 +177,19 @@ class MainFragment : Fragment() {
             }
         }
 
-        setFragmentResultListener(REQUEST_KEY_FREQUENCY) { _, bundle ->
+        setFragmentResultListener(SettingsDialog.REQUEST_KEY_FREQUENCY) { _, bundle ->
             val freqKhz = bundle.getInt(SettingsDialog.PARAM_FREQUENCY, 0)
-            receiverViewModel?.tune(freqKhz)
+            receiverContentResolver.tune(freqKhz)
+        }
+
+        setFragmentResultListener(SettingsDialog.REQUEST_KEY_SCAN_RANGE) { _, bundle ->
+            bundle.getIntegerArrayList(SettingsDialog.PARAM_FREQUENCY)?.let { freqKhzList ->
+                receiverContentResolver.tune(freqKhzList)
+            }
+        }
+
+        cancel_scan_btn.setOnClickListener {
+            receiverContentResolver.tune(-1 /* cancel tuning */)
         }
 
         settings_button.setOnClickListener {
@@ -214,6 +230,70 @@ class MainFragment : Fragment() {
         }
     }
 
+    override fun onStart() {
+        super.onStart()
+
+        receiverContentResolver.register()
+
+        // reload BA to prevent desynchronization between BA and RMP playback state
+        user_agent_web_view.reload()
+
+        //telemetryManager.start()
+    }
+
+    override fun onStop() {
+        super.onStop()
+
+        receiverContentResolver.unregister()
+
+        receiver_player.stop()
+
+        //telemetryManager.stop()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+
+        phyLoggingJob?.cancel()
+        phyLoggingJob = null
+    }
+
+    override fun onDataReceived(appData: AppData?) {
+        switchApplication(appData)
+        receiverViewModel?.appData?.value = appData
+    }
+
+    override fun onReceiverStateChanged(state: ReceiverState) {
+        receiverViewModel?.receiverState?.value = state
+
+        when (state.state) {
+            ReceiverState.State.IDLE -> {
+                // exit PIP mode when Receiver is de-initialized
+                val activity = requireActivity()
+                if (activity.isInPictureInPictureMode) {
+                    startActivity(Intent(activity, MainActivity::class.java).apply {
+                        flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+                    })
+                }
+            }
+
+            ReceiverState.State.READY -> {
+                // Automatically start playing the first service in list when Receiver became ready
+                with(viewViewModel.defaultService) {
+                    removeObservers(this@MainFragment)
+                    observe(this@MainFragment) { defaultService ->
+                        if (defaultService != null) {
+                            removeObservers(this@MainFragment)
+                            selectService(defaultService)
+                        }
+                    }
+                }
+            }
+
+            else -> {}
+        }
+    }
+
     private fun showPopupSettingsMenu(v: View) {
         PopupMenu(context, v).apply {
             inflate(R.menu.settings_menu)
@@ -223,7 +303,9 @@ class MainFragment : Fragment() {
             setOnMenuItemClickListener { item ->
                 when (item.itemId) {
                     R.id.menu_settings -> {
-                        openSettingsDialog(receiverViewModel?.getFrequency())
+                        openSettingsDialog(
+                                receiverContentResolver.queryReceiverFrequency()
+                        )
                         true
                     }
                     R.id.menu_select_tracks -> {
@@ -256,7 +338,7 @@ class MainFragment : Fragment() {
                     getString(R.string.track_selection_title),
                     currentTrackSelection,
                     trackSelection
-            ) { _ -> isShowingTrackSelectionDialog = false }
+            ) { isShowingTrackSelectionDialog = false }
             trackSelectionDialog.show(parentFragmentManager, null)
         }
     }
@@ -273,26 +355,6 @@ class MainFragment : Fragment() {
             serviceList.adapter = sourceAdapter
             setSelectedService(null)
         }
-    }
-
-    override fun onStart() {
-        super.onStart()
-
-        // reload BA to prevent desynchronization between BA and RMP playback state
-        user_agent_web_view.reload()
-    }
-
-    override fun onStop() {
-        super.onStop()
-
-        receiver_player.stop()
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-
-        phyLoggingJob?.cancel()
-        phyLoggingJob = null
     }
 
     override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean) {
@@ -312,10 +374,13 @@ class MainFragment : Fragment() {
 
     fun onBind(factory: UserAgentViewModelFactory) {
         val provider = ViewModelProvider(viewModelStore, factory)
-        bindViewModels(provider).let { (rmp, userAgent) ->
-            bindUserAgent(userAgent)
+        bindViewModels(provider).let { (rmp, _) ->
             bindMediaPlayer(rmp)
         }
+
+        // temporary solution while we are migrating to ContentResolver
+        onDataReceived(receiverContentResolver.queryAppData())
+        onReceiverStateChanged(receiverContentResolver.queryReceiverState() ?: ReceiverState.idle())
     }
 
     fun onUnbind() {
@@ -329,6 +394,9 @@ class MainFragment : Fragment() {
 
         // Current view-models holds presenters from IBinder of service. Should be released
         viewModelStore.clear()
+
+        // important to reset it to allow BA reload
+        currentAppData = null
     }
 
     private fun selectService(service: AVService) {
@@ -372,12 +440,6 @@ class MainFragment : Fragment() {
         Toast.makeText(requireContext(), getText(R.string.ba_loading_problem), Toast.LENGTH_SHORT).show()
     }
 
-    private fun bindUserAgent(userAgentViewModel: UserAgentViewModel) {
-        userAgentViewModel.appData.observe(this, { appData ->
-            switchApplication(appData)
-        })
-    }
-
     private fun bindMediaPlayer(rmpViewModel: RMPViewModel) {
         with(rmpViewModel) {
             reset()
@@ -392,15 +454,14 @@ class MainFragment : Fragment() {
                 if (mediaUri != null) {
                     receiver_player.play(mediaUri)
                 } else {
-                    receiver_player.stop()
-                    receiver_player.clearState()
+                    receiver_player.stopAndClear()
                 }
             })
-            playWhenReady.observe(this@MainFragment, { playWhenReady ->
-                if (playWhenReady) {
-                    receiver_player.replay()
-                } else {
-                    receiver_player.pause()
+            requestedState.observe(this@MainFragment, { state ->
+                when(state) {
+                    PlaybackState.PAUSED -> receiver_player.pause()
+                    PlaybackState.PLAYING -> receiver_player.tryReplay()
+                    PlaybackState.IDLE -> receiver_player.stop()
                 }
             })
         }
@@ -443,13 +504,16 @@ class MainFragment : Fragment() {
     }
 
     private fun loadBroadcasterApplication(appData: AppData) {
+        if (user_agent_web_view.serverCertificateHash == null) {
+            user_agent_web_view.serverCertificateHash = receiverContentResolver.queryServerCertificate()
+        }
         user_agent_web_view.loadBAContent(appData.appEntryPage)
-        userAgentViewModel?.setApplicationState(ApplicationState.LOADED)
+        receiverContentResolver.publishApplicationState(ApplicationState.LOADED)
     }
 
     private fun unloadBroadcasterApplication() {
         user_agent_web_view.unloadBAContent()
-        userAgentViewModel?.setApplicationState(ApplicationState.UNAVAILABLE)
+        receiverContentResolver.publishApplicationState(ApplicationState.UNAVAILABLE)
     }
 
     companion object {

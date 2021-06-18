@@ -8,11 +8,11 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.entities.service.Atsc3Servic
 
 interface Atsc3ModuleListener {
     fun onStateChanged(state: Atsc3ModuleState)
-    fun onConfigurationChanged(index: Int, count: Int)
+    fun onConfigurationChanged(index: Int, count: Int, isKnown: Boolean)
 
     fun onApplicationPackageReceived(appPackage: Atsc3Application)
 
-    fun onServiceLocationTableChanged(services: List<Atsc3Service>, reportServerUrl: String?)
+    fun onServiceLocationTableChanged(bsid: Int, services: List<Atsc3Service>, reportServerUrl: String?)
     fun onServicePackageChanged(pkg: Atsc3HeldPackage?)
     fun onServiceMediaReady(mediaUrl: MediaUrl, delayBeforePlayMs: Long)
     fun onServiceGuideUnitReceived(filePath: String, bsid: Int)

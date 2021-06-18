@@ -7,6 +7,7 @@ import com.nextgenbroadcast.mobile.core.presentation.IUserAgentPresenter
 import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.presentation.ApplicationState
 
+@Deprecated("Use the ReceiverContentResolver instead")
 class UserAgentViewModel(
         private val presenter: IUserAgentPresenter
 ) : ViewModel() {
@@ -20,5 +21,9 @@ class UserAgentViewModel(
 
     fun setApplicationState(state: ApplicationState) {
         presenter.setApplicationState(state)
+    }
+
+    fun getServerCertificateHash(): String? {
+        return presenter.getWebServerCertificateHash()
     }
 }

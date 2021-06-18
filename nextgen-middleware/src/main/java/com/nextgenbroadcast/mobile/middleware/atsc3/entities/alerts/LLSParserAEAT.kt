@@ -60,7 +60,7 @@ class LLSParserAEAT {
                 "Header" -> {
                     val header = readHeader(parser)
                     aea.effective = header.effective
-                    aea.expires = header.expires
+                    aea.expires = XmlUtils.strToDate(header.expires)
                 }
                 "AEAText" -> aea.messages?.add(readAEAText(parser).message)
                 else -> parser.skipTag()

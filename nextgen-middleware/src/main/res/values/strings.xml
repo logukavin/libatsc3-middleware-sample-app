@@ -15,4 +15,8 @@
     <string name="service_action_select_pcap">Select pcap file…</string>
     <string name="service_action_disconnect">Disconnect</string>
     <string name="watch_tv">Watch TV</string>
+    <string name="device_type_selection_title">Select dongle type</string>
+    <string name="device_type_action_kailash">KAILASH</string>
+    <string name="device_type_action_yoga">YOGA</string>
+    <string name="tv_application_selection_title">Select TV application</string>
 </resources>

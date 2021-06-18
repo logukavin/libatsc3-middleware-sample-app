@@ -8,8 +8,10 @@ import android.os.Bundle
 import android.os.IBinder
 import android.support.v4.media.MediaBrowserCompat
 import android.support.v4.media.session.MediaControllerCompat
+import android.util.Log
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
 import com.nextgenbroadcast.mobile.middleware.R
 import com.nextgenbroadcast.mobile.middleware.service.Atsc3ForegroundService
@@ -33,10 +35,16 @@ abstract class BaseActivity : AppCompatActivity() {
     }
 
     fun bindService() {
+
+        Log.e(this.toString(), String.format("bindService: enter: invoked with mediaBrowser.isConnected: %s, isBound: %s", mediaBrowser.isConnected, isBound))
         // The media session connection will start ForegroundService that requires permission.
         // This method called after permission request, that's why it should be here.
         if (!mediaBrowser.isConnected) {
-            mediaBrowser.connect()
+            try {
+                mediaBrowser.connect()
+            } catch (e: IllegalStateException) {
+                LOG.d(TAG, "Failed to connect Media Browser: ", e)
+            }
         }
 
         if (isBound) return
@@ -46,11 +54,17 @@ abstract class BaseActivity : AppCompatActivity() {
             putExtra(Atsc3ForegroundService.EXTRA_PLAY_AUDIO_ON_BOARD, true)
         }.also { intent ->
             bindService(intent, connection, BIND_AUTO_CREATE)
+            Log.e(this.toString(), String.format("bindService: exit: after bindService(intent, connection) with mediaBrowser.isConnected: %s, isBound: %s, intent: %s, connection: %s", mediaBrowser.isConnected, isBound, intent, connection))
+
         }
     }
 
     fun unbindService() {
-        mediaBrowser.disconnect()
+        try {
+            mediaBrowser.disconnect()
+        } catch (e: IllegalStateException) {
+            LOG.d(TAG, "Failed to disconnect Media Browser: ", e)
+        }
 
         if (!isBound) return
 
@@ -97,12 +111,19 @@ abstract class BaseActivity : AppCompatActivity() {
             }
 
             onBind(binder)
+            Log.e(this.toString(), "connection.onServiceConnected - setting isBound to true");
             isBound = true
         }
 
         override fun onServiceDisconnected(arg0: ComponentName) {
+            Log.e(this.toString(), "connection.onServiceDisconnected - setting isBound to falsse");
+
             isBound = false
         }
+    }
+
+    companion object {
+        val TAG: String = BaseActivity::class.java.simpleName
     }
 }
 

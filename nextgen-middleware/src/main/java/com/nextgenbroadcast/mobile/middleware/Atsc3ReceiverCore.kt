@@ -1,13 +1,12 @@
 package com.nextgenbroadcast.mobile.middleware
 
-import com.nextgenbroadcast.mobile.core.cert.IUserAgentSSLContext
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.PhyFrequency
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.presentation.*
 import com.nextgenbroadcast.mobile.middleware.analytics.IAtsc3Analytics
 import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3Module
-import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3ModuleState
+import com.nextgenbroadcast.mobile.middleware.atsc3.entities.SLTConstants
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.IServiceGuideStore
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.ServiceGuideDeliveryUnitReader
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.IAtsc3Source
@@ -22,14 +21,11 @@ import com.nextgenbroadcast.mobile.middleware.gateway.rpc.RPCGatewayImpl
 import com.nextgenbroadcast.mobile.middleware.gateway.web.IWebGateway
 import com.nextgenbroadcast.mobile.middleware.gateway.web.WebGatewayImpl
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
-import com.nextgenbroadcast.mobile.middleware.server.web.MiddlewareWebServer
 import com.nextgenbroadcast.mobile.middleware.service.provider.IMediaFileProvider
 import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.BufferOverflow
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.*
 
 internal class Atsc3ReceiverCore(
         private val atsc3Module: Atsc3Module,
@@ -37,17 +33,19 @@ internal class Atsc3ReceiverCore(
         val repository: IRepository,
         private val serviceGuideStore: IServiceGuideStore,
         val mediaFileProvider: IMediaFileProvider,
-        private val sslContext: IUserAgentSSLContext,
-        private val analytics: IAtsc3Analytics
-) : IAtsc3ServiceCore {
+        val analytics: IAtsc3Analytics
+) : IAtsc3ReceiverCore {
     //TODO: create own scope?
     private val coreScope: CoroutineScope = CoroutineScope(Dispatchers.Default)
+    private val mainScope: CoroutineScope = CoroutineScope(Dispatchers.Main)
     private var viewScope: CoroutineScope? = null
 
-    private val _errorFlow = MutableSharedFlow<String>(10, 0, BufferOverflow.DROP_OLDEST)
+    private val _sessionNum = MutableStateFlow(0)
+    val sessionNum = _sessionNum.asStateFlow()
+
+    private val _errorFlow = MutableSharedFlow<String>(0, 10, BufferOverflow.DROP_OLDEST)
     val errorFlow = _errorFlow.asSharedFlow()
 
-    //TODO: we should close this instances
     private val serviceGuideReader = ServiceGuideDeliveryUnitReader(serviceGuideStore)
     val serviceController: IServiceController = ServiceControllerImpl(repository, settings, atsc3Module, analytics, serviceGuideReader, coreScope, ::onError)
     var viewController: IViewController? = null
@@ -57,13 +55,12 @@ internal class Atsc3ReceiverCore(
 
     private var webGateway: IWebGateway? = null
     private var rpcGateway: IRPCGateway? = null
-    private var webServer: MiddlewareWebServer? = null
 
     // event flows
     val rfPhyMetricsFlow = atsc3Module.rfPhyMetricsFlow.asSharedFlow()
 
     fun deInitialize() {
-        stopAndDestroyViewPresentation()
+        destroyViewPresentation()
         atsc3Module.close()
 
         // this instance wouldn't be destroyed so do not finish local scope
@@ -71,14 +68,14 @@ internal class Atsc3ReceiverCore(
     }
 
     fun isIdle(): Boolean {
-        return atsc3Module.getState() == Atsc3ModuleState.IDLE
+        return atsc3Module.isIdle()
     }
 
-    fun createAndStartViewPresentation(downloadManager: IDownloadManager, ignoreAudioServiceMedia: Boolean,
-                                       onObserve: (view: IViewController, viewScope: CoroutineScope) -> Unit): IViewController {
+    fun createViewPresentation(downloadManager: IDownloadManager, ignoreAudioServiceMedia: Boolean,
+                               onObserve: (view: IViewController, viewScope: CoroutineScope) -> Unit): IViewController {
         this.ignoreAudioServiceMedia = ignoreAudioServiceMedia
 
-        internalDestroyViewPresentation()
+        destroyViewPresentation()
 
         val stateScope = CoroutineScope(Dispatchers.Default).also {
             viewScope = it
@@ -112,35 +109,10 @@ internal class Atsc3ReceiverCore(
 
         onObserve(view, stateScope)
 
-        startWebServer(rpc, web, stateScope)
-
         return view
     }
 
-    fun suspendViewPresentation() {
-        stopWebServer()
-    }
-
-    fun resumeViewPresentation() {
-        if (webServer != null) return
-
-        val rpc = rpcGateway ?: return
-        val web = webGateway ?: return
-        val stateScope = viewScope ?: return
-
-        stateScope.launch {
-            viewController?.appData?.collect()
-        }
-
-        startWebServer(rpc, web, stateScope)
-    }
-
-    private fun stopAndDestroyViewPresentation() {
-        suspendViewPresentation()
-        internalDestroyViewPresentation()
-    }
-
-    private fun internalDestroyViewPresentation() {
+    private fun destroyViewPresentation() {
         webGateway = null
         rpcGateway = null
         viewController = null
@@ -149,49 +121,44 @@ internal class Atsc3ReceiverCore(
         viewScope = null
     }
 
-    private fun startWebServer(rpc: IRPCGateway, web: IWebGateway, stateScope: CoroutineScope) {
-        webServer = MiddlewareWebServer.Builder()
-                .stateScope(stateScope)
-                .rpcGateway(rpc)
-                .webGateway(web)
-                .build().also { server ->
-                    GlobalScope.launch {
-                        server.start(sslContext)
-                        viewController?.onNewSessionStarted() // used to rebuild data related to server
-                    }
-                }
+    fun getWebInterface(): Triple<IWebGateway, IRPCGateway, CoroutineScope>? {
+        val web = webGateway ?: return null
+        val rpc = rpcGateway ?: return null
+        val stateScope = viewScope ?: return null
+
+        return Triple(web, rpc, stateScope)
     }
 
-    private fun stopWebServer() {
-        webServer?.let { server ->
-            if (server.isRunning()) {
-                GlobalScope.launch {
-                    try {
-                        server.stop()
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
-                }
-            }
+    override fun openRoute(source: IAtsc3Source, force: Boolean, onOpen: suspend (result: Boolean) -> Unit) {
+        mainScope.launch {
+            val result = serviceController.openRoute(source, force)
+            onOpen(result)
         }
-        webServer = null
-    }
-
-    override fun openRoute(source: IAtsc3Source): Boolean {
-        return serviceController.openRoute(source)
     }
 
     override fun closeRoute() {
-        serviceController.stopRoute() // call to stopRoute is not a mistake. We use it to close previously opened file
-        serviceController.closeRoute()
+        mainScope.launch {
+            serviceController.closeRoute()
+        }
     }
 
     override fun tune(frequency: PhyFrequency) {
-        serviceController.tune(frequency)
+        mainScope.launch {
+            serviceController.tune(frequency)
+        }
     }
 
-    override fun selectService(service: AVService) {
-        serviceController.selectService(service)
+    override fun selectService(service: AVService, block: suspend (result: Boolean) -> Unit) {
+        mainScope.launch {
+            val result = serviceController.selectService(service)
+            block(result)
+        }
+    }
+
+    override fun cancelScanning() {
+        mainScope.launch {
+            serviceController.cancelScanning()
+        }
     }
 
     override fun getReceiverState(): ReceiverState {
@@ -206,15 +173,32 @@ internal class Atsc3ReceiverCore(
 
     fun getPreviousService() = serviceController.getNearbyService(-1)
 
-    fun findServiceBy(bsid: Int, serviceId: Int): AVService? {
+    fun findServiceById(bsid: Int, serviceId: Int): AVService? {
         return repository.findServiceBy(bsid, serviceId)
     }
 
-    fun findServiceBy(name: String): AVService? {
+    fun findServiceById(globalId: String): AVService? {
+        return repository.findServiceBy(globalId)
+    }
+
+    fun findServiceByName(name: String): AVService? {
         return repository.findServiceOrNull { it.shortName == name }
     }
 
     fun findActiveServiceById(serviceId: Int): AVService? {
-        return findServiceBy(atsc3Module.selectedServiceBsid, serviceId)
+        return findServiceById(atsc3Module.selectedServiceBsid, serviceId)
+    }
+
+    fun playEmbedded(service: AVService): Boolean {
+        return ignoreAudioServiceMedia && service.category == SLTConstants.SERVICE_CATEGORY_AO
+    }
+
+    fun notifyNewSessionStarted() {
+        _sessionNum.value++
+        viewController?.onNewSessionStarted()
+    }
+
+    override fun getPhyVersionInfo(): Map<String, String?> {
+        return atsc3Module.getVersionInfo()
     }
 }

@@ -1,11 +1,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.nextgenbroadcast.mobile.middleware">
 
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
     <!--    To make service endless-->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
@@ -29,6 +30,13 @@
             android:taskAffinity=".ServiceActivity"
             android:theme="@style/Theme.AppCompat.Light.Dialog" />
 
+        <activity
+            android:name=".DeviceTypeSelectionDialog"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:taskAffinity=".ServiceActivity"
+            android:theme="@style/Theme.AppCompat.Light.Dialog" />
+
         <receiver android:name="androidx.media.session.MediaButtonReceiver">
             <intent-filter>
                 <action android:name="android.intent.action.MEDIA_BUTTON" />
@@ -43,28 +51,34 @@
             android:name="androidx.work.impl.WorkManagerInitializer"
             android:authorities="${applicationId}.workmanager-init"
             android:exported="false"
-            android:initOrder="4" />
+            android:initOrder="5" />
 
         <provider
             android:name=".provider.dash.DashContentProvider"
             android:authorities="@string/nextgenMediaFileProvider"
             android:exported="false"
             android:grantUriPermissions="true"
-            android:initOrder="3" />
+            android:initOrder="4" />
 
         <provider
             android:name=".provider.mmt.MMTContentProvider"
             android:authorities="@string/nextgenMMTContentProvider"
             android:exported="false"
             android:grantUriPermissions="true"
-            android:initOrder="2" />
+            android:initOrder="3" />
 
         <provider
             android:name=".provider.esg.ESGContentProvider"
             android:authorities="@string/nextgenServicesGuideProvider"
             android:exported="false"
             android:grantUriPermissions="true"
-            android:initOrder="1" />
+            android:initOrder="2" />
 
+        <provider
+            android:name=".provider.content.ReceiverContentProvider"
+            android:authorities="@string/receiverContentProvider"
+            android:exported="false"
+            android:grantUriPermissions="true"
+            android:initOrder="1" />
     </application>
 </manifest>

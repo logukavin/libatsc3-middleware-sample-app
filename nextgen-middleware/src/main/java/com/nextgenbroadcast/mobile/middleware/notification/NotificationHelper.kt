@@ -21,7 +21,7 @@ class NotificationHelper(
 ) {
     private val notificationManager = context.getSystemService(NotificationManager::class.java)
 
-    fun createMediaNotificationBuilder(title: String, text: String, state: PlaybackState, mediaSession: MediaSessionCompat?): NotificationCompat.Builder {
+    fun createMediaNotificationBuilder(title: String, text: String, state: PlaybackState, mediaToken: MediaSessionCompat.Token?): NotificationCompat.Builder {
         val dialogIntent = Intent(context, ServiceDialogActivity::class.java)
         val contentIntent = PendingIntent.getActivity(context, 0, dialogIntent, 0)
         val actionIntent = MediaButtonReceiver.buildMediaButtonPendingIntent(context, PlaybackStateCompat.ACTION_PLAY_PAUSE)
@@ -56,8 +56,8 @@ class NotificationHelper(
             ))
 
             val mediaStyle = androidx.media.app.NotificationCompat.MediaStyle().setShowActionsInCompactView(0, 1, 2)
-            if (mediaSession != null) {
-                mediaStyle.setMediaSession(mediaSession.sessionToken)
+            if (mediaToken != null) {
+                mediaStyle.setMediaSession(mediaToken)
             }
             builder.setStyle(mediaStyle)
         }

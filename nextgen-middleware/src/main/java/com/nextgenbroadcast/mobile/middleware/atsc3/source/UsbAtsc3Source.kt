@@ -9,7 +9,8 @@ import org.ngbp.libatsc3.middleware.android.phy.Atsc3UsbDevice
 
 class UsbAtsc3Source(
         private val usbManager: UsbManager,
-        private val device: UsbDevice
+        private val device: UsbDevice,
+        private val type: Int
 ) : TunableConfigurableAtsc3Source() {
 
     override fun openPhyClient(): Atsc3NdkPHYClientBase? {
@@ -27,7 +28,7 @@ class UsbAtsc3Source(
                 val atsc3NdkPHYClientBaseCandidate = Atsc3NdkPHYClientBase.CreateInstanceFromUSBVendorIDProductIDSupportedPHY(candidatePHY)
 
                 if (candidatePHY.getIsBootloader(device)) {
-                    val r = atsc3NdkPHYClientBaseCandidate.download_bootloader_firmware(atsc3UsbDevice.fd, atsc3UsbDevice.deviceName)
+                    val r = atsc3NdkPHYClientBaseCandidate.download_bootloader_firmware(atsc3UsbDevice.fd, type, atsc3UsbDevice.deviceName)
                     if (r < 0) {
                         Log.d(TAG, "prepareDevices: download_bootloader_firmware with $atsc3NdkPHYClientBaseCandidate failed for path: ${atsc3UsbDevice.deviceName}, fd: ${atsc3UsbDevice.fd}")
                     } else {
@@ -35,7 +36,7 @@ class UsbAtsc3Source(
                         //pre-boot devices should re-enumerate, so don't track this connection just yet...
                     }
                 } else {
-                    val r = atsc3NdkPHYClientBaseCandidate.open(atsc3UsbDevice.fd, atsc3UsbDevice.deviceName)
+                    val r = atsc3NdkPHYClientBaseCandidate.open(atsc3UsbDevice.fd, type, atsc3UsbDevice.deviceName)
                     if (r < 0) {
                         Log.d(TAG, "prepareDevices: open with $atsc3NdkPHYClientBaseCandidate failed for path: ${atsc3UsbDevice.deviceName}, fd: ${atsc3UsbDevice.fd}, res: $r")
                     } else {
@@ -86,5 +87,7 @@ class UsbAtsc3Source(
 
     companion object {
         private val TAG: String = UsbAtsc3Source::class.java.simpleName
+
+        fun getSaankhyaFX3DeviceType(device: UsbDevice) = getSaankhyaFX3DeviceType(device.vendorId, device.productId, device.manufacturerName)
     }
 }

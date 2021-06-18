@@ -1,5 +1,7 @@
 package com.nextgenbroadcast.mobile.middleware.repository
 
+import android.location.Location
+import android.util.Log
 import com.nextgenbroadcast.mobile.core.atsc3.MediaUrl
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.alerts.AeaTable
@@ -7,6 +9,7 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Applicatio
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPackage
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.SGUrl
 import kotlinx.coroutines.flow.MutableStateFlow
+import java.time.ZonedDateTime
 import java.util.concurrent.ConcurrentHashMap
 
 internal class RepositoryImpl : IRepository {
@@ -21,6 +24,8 @@ internal class RepositoryImpl : IRepository {
     override val applications = MutableStateFlow<List<Atsc3Application>>(emptyList())
     override val services = MutableStateFlow<List<AVService>>(emptyList())
     override val heldPackage = MutableStateFlow<Atsc3HeldPackage?>(null)
+
+    override val lastLocation = MutableStateFlow<Location?>(null)
 
     override fun addOrUpdateApplication(application: Atsc3Application) {
         _applications[application.uid] = application
@@ -58,21 +63,39 @@ internal class RepositoryImpl : IRepository {
     }
 
     override fun setMediaUrl(mediaUrl: MediaUrl?) {
+        Log.d(TAG, "setMediaUrl: $mediaUrl")
         routeMediaUrl.value = mediaUrl
     }
 
     override fun setAlertList(newAlerts: List<AeaTable>) {
-        val currentAlerts = alertsForNotify.value.toMutableList()
+        val currentAlerts = alertsForNotify.value.associateBy({ it.id }, { it }).toMutableMap()
+        val canceledIds: MutableSet<String> = mutableSetOf()
+        val currentTime = ZonedDateTime.now()
 
         newAlerts.forEach { aea ->
             if (aea.type == AeaTable.CANCEL_ALERT) {
-                currentAlerts.removeIf { it.id == aea.refId }
+                aea.refId?.let {
+                    canceledIds.add(it)
+                }
             } else {
-                //TODO filter aea by expires date
-                currentAlerts.add(aea)
+                currentAlerts[aea.id] = aea
             }
         }
-        alertsForNotify.value = currentAlerts
+
+        currentAlerts.values.removeIf {
+            isExpired(it.expires, currentTime) || canceledIds.contains(it.id)
+        }
+
+        alertsForNotify.value = currentAlerts.values.toMutableList()
+    }
+
+    override fun updateLastLocation(location: Location?) {
+        lastLocation.value = location
+    }
+
+    private fun isExpired(expireTime: ZonedDateTime?, currentTime: ZonedDateTime): Boolean {
+        if (expireTime == null) return true
+        return expireTime.isBefore(currentTime)
     }
 
     override fun reset() {
@@ -82,5 +105,9 @@ internal class RepositoryImpl : IRepository {
         heldPackage.value = null
         routeMediaUrl.value = null
         alertsForNotify.value = emptyList()
+    }
+
+    companion object {
+        val TAG: String = RepositoryImpl::class.java.simpleName
     }
 }

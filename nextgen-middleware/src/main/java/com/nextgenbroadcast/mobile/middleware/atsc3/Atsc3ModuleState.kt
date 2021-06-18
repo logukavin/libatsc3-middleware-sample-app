@@ -1,5 +1,9 @@
 package com.nextgenbroadcast.mobile.middleware.atsc3
 
 enum class Atsc3ModuleState {
-    IDLE, SCANNING, TUNED, STOPPED
+    IDLE,       // source is not configured (tuned) and no service is available
+    SCANNING,   // enumerating over the source configurations (frequencies) and collecting SLT data
+    SNIFFING,   // source configured (tuned) and awaiting for SLT data
+    TUNED,      // source successfully configured (tuned) and SLT data available
+    STOPPED     // the sourec was stopped but not disconnected
 }

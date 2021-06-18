@@ -3,13 +3,13 @@ package com.nextgenbroadcast.mobile.middleware.service
 import android.app.Notification
 import android.content.Intent
 import android.os.IBinder
-import android.support.v4.media.session.MediaSessionCompat
 import androidx.core.app.NotificationCompat
 import androidx.media.MediaBrowserServiceCompat
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.middleware.R
+import com.nextgenbroadcast.mobile.middleware.atsc3.entities.SLTConstants
 import com.nextgenbroadcast.mobile.middleware.notification.NotificationHelper
 
 abstract class BindableForegroundService : MediaBrowserServiceCompat() {
@@ -76,7 +76,7 @@ abstract class BindableForegroundService : MediaBrowserServiceCompat() {
         isForeground = false
     }
 
-    protected fun createNotificationBuilder(receiverState: ReceiverState? = null, service: AVService? = null, playbackState: PlaybackState? = null, mediaSession: MediaSessionCompat? = null): NotificationCompat.Builder {
+    protected fun createNotificationBuilder(receiverState: ReceiverState? = null, service: AVService? = null, playbackState: PlaybackState? = null): NotificationCompat.Builder {
         val state = receiverState?.state
         val title = if (state == null || state == ReceiverState.State.IDLE) {
             getString(R.string.atsc3_source_is_not_initialized)
@@ -101,12 +101,16 @@ abstract class BindableForegroundService : MediaBrowserServiceCompat() {
         val fixedPlaybackState = if (service == null || playbackState == null) {
             PlaybackState.IDLE
         } else if (playbackState == PlaybackState.IDLE) {
-            PlaybackState.PAUSED
+            if (service.category == SLTConstants.SERVICE_CATEGORY_AV || service.category == SLTConstants.SERVICE_CATEGORY_AO) {
+                PlaybackState.PAUSED
+            } else {
+                PlaybackState.IDLE
+            }
         } else {
             playbackState
         }
 
-        return notificationHelper.createMediaNotificationBuilder(title, text, fixedPlaybackState, mediaSession)
+        return notificationHelper.createMediaNotificationBuilder(title, text, fixedPlaybackState, sessionToken)
     }
 
     protected fun pushNotification(notification: NotificationCompat.Builder) {

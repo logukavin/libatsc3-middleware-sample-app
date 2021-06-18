@@ -3,6 +3,13 @@
 # Add steps that test, sign, and distribute the APK, save build artifacts, and more:
 # https://docs.microsoft.com/azure/devops/pipelines/languages/android
 
+#resources:
+#  pipelines:
+#  - pipeline: Middleware   # Name of the pipeline resource
+#    source: Middleware # Name of the pipeline referenced by the pipeline resource
+#    # project: FabrikamProject # Required only if the source pipeline is in another project
+#    trigger: true # Run app-ci pipeline when any run of security-lib-ci completes
+
 pool:
   vmImage: 'ubuntu-latest'
 
@@ -14,6 +21,7 @@ parameters:
   - name: release_notes
     displayName: Release notes
     type: string
+    default: "CI build"
 
   - name: tester_groups
     displayName: Tester groups

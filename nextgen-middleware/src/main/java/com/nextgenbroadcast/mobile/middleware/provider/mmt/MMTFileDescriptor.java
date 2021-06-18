@@ -475,14 +475,20 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
             }
 
             if (mfuByteBufferFragment.mfu_presentation_time_uS_computed == null) {
+                MmtPacketIdContext.MmtMfuStatistics statistic;
+
                 if (mfuByteBufferFragment.mpu_presentation_time_uS_from_SI != null && mfuByteBufferFragment.mpu_presentation_time_uS_from_SI > 0) {
                     if (isVideo && MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us > 0) {
                         mfuByteBufferFragment.mfu_presentation_time_uS_computed = mfuByteBufferFragment.mpu_presentation_time_uS_from_SI + (mfuByteBufferFragment.sample_number - 1) * MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us;
-                    } else if (isAudio && MmtPacketIdContext.audio_packet_statistics.extracted_sample_duration_us > 0) {
-                        mfuByteBufferFragment.mfu_presentation_time_uS_computed = mfuByteBufferFragment.mpu_presentation_time_uS_from_SI + (mfuByteBufferFragment.sample_number - 1) * MmtPacketIdContext.audio_packet_statistics.extracted_sample_duration_us;
+                    } else if (isAudio && ((statistic = MmtPacketIdContext.getAudioPacketStatistic(mfuByteBufferFragment.packet_id)) != null && statistic.extracted_sample_duration_us > 0)) {
+                        mfuByteBufferFragment.mfu_presentation_time_uS_computed = mfuByteBufferFragment.mpu_presentation_time_uS_from_SI + (mfuByteBufferFragment.sample_number - 1) * statistic.extracted_sample_duration_us;
                     } else if (isText && MmtPacketIdContext.stpp_packet_statistics.extracted_sample_duration_us > 0) {
                         mfuByteBufferFragment.mfu_presentation_time_uS_computed = mfuByteBufferFragment.mpu_presentation_time_uS_from_SI + (mfuByteBufferFragment.sample_number - 1) * MmtPacketIdContext.stpp_packet_statistics.extracted_sample_duration_us;
                     }
+                    Log.i("MMTFileDescriptor",String.format("mfuByteBufferFragment.mfu_presentation_time_uS_computed is NULL for packet_id: %d, mpu_sequence_number: %d, sample_number: %d, COMPUTED mpu_presentation_time_uS_from_SI: %d", mfuByteBufferFragment.packet_id, mfuByteBufferFragment.mpu_sequence_number, mfuByteBufferFragment.sample_number, mfuByteBufferFragment.mpu_presentation_time_uS_from_SI));
+
+                } else {
+                    Log.w("MMTFileDescriptor",String.format("mfuByteBufferFragment.mfu_presentation_time_uS_computed is NULL for packet_id: %d, mpu_sequence_number: %d, sample_number: %d, ORIGINAL mpu_presentation_time_uS_from_SI: %d", mfuByteBufferFragment.packet_id, mfuByteBufferFragment.mpu_sequence_number, mfuByteBufferFragment.sample_number, mfuByteBufferFragment.mpu_presentation_time_uS_from_SI));
                 }
             }
 

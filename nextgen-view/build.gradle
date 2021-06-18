@@ -58,6 +58,11 @@ dependencies {
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:$coroutinesVersion"
 
     implementation "androidx.lifecycle:lifecycle-livedata-ktx:$lifecycleVersion"
+
+    // Telemetry observing
+    compileOnly "org.eclipse.jetty:jetty-client:9.4.38.v20210224"
+    compileOnly "com.squareup.okio:okio:2.8.0"
+    compileOnly 'com.google.code.gson:gson:2.8.6'
 }
 
 apply from: '../publish.gradle'
