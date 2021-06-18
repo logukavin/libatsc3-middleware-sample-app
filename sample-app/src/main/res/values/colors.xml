@@ -7,4 +7,6 @@
     <color name="black">#ff000000</color>
     <color name="white">#FFFFFFFF</color>
     <color name="semi_transparent">#7F000000</color>
+
+    <color name="chart_grid_color">#4CFFFFFF</color>
 </resources>
