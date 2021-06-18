@@ -228,6 +228,7 @@ class MainFragment : Fragment(), ReceiverContentResolver.Listener {
         viewViewModel.currentServiceTitle.observe(viewLifecycleOwner) { currentServiceTitle ->
             setSelectedService(currentServiceTitle)
         }
+
     }
 
     override fun onStart() {
@@ -237,6 +238,10 @@ class MainFragment : Fragment(), ReceiverContentResolver.Listener {
 
         // reload BA to prevent desynchronization between BA and RMP playback state
         user_agent_web_view.reload()
+
+        telemetryManager.phyEvents.observe(this, { phyPayload ->
+           phyChart.addEvent(phyPayload)
+        })
 
         //telemetryManager.start()
     }

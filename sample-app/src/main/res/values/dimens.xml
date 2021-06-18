@@ -5,4 +5,5 @@
     <dimen name="item_spinner_padding">12dp</dimen>
     <dimen name="service_bottom_sheet_item_height">28dp</dimen>
     <dimen name="settings_margin_level_2">15dp</dimen>
+    <dimen name="phy_chart_height">100dp</dimen>
 </resources>

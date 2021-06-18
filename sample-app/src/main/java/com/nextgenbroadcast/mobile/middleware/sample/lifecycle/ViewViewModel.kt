@@ -13,6 +13,7 @@ class ViewViewModel : ViewModel() {
 
     val showDebugInfo = MutableLiveData<Boolean>()
     val showPhyInfo = MutableLiveData<Boolean>()
+    val showPhyChart = MutableLiveData<Boolean>()
 
     val debugData = MutableLiveData<String>()
 
