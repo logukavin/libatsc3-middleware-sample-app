@@ -11,7 +11,10 @@ import androidx.fragment.app.DialogFragment
 import kotlinx.android.synthetic.main.dialog_about.view.*
 
 
-class AboutDialog : DialogFragment() {
+class AboutDialog(
+    private val phyInfo: Triple<String?, String?, String?>?,
+    private val frequency: Int?
+) : DialogFragment() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -52,6 +55,35 @@ class AboutDialog : DialogFragment() {
                     appendBoldTitle(getString(R.string.android_id)).append(it)
                 }
             } catch (e: SecurityException) {
+            }
+
+            phyInfo?.let { info ->
+                val (sdkVersion, firmwareVersion, demodeVersion) = info
+                sdkVersion?.let {
+                    if (isNotEmpty()) {
+                        append(DOUBLE_LINE_BREAK)
+                        appendBoldTitle(getString(R.string.phy_sdk_version)).append(it)
+                    }
+                }
+
+                demodeVersion?.let {
+                    if (isNotEmpty()) {
+                        append(DOUBLE_LINE_BREAK)
+                        appendBoldTitle(getString(R.string.demode_version)).append(it)
+                    }
+                }
+
+                firmwareVersion?.let {
+                    if (isNotEmpty()) {
+                        append(DOUBLE_LINE_BREAK)
+                        appendBoldTitle(getString(R.string.firmware_version)).append(it)
+                    }
+                }
+            }
+
+            frequency?.let {
+                append(DOUBLE_LINE_BREAK)
+                appendBoldTitle(getString(R.string.frequency)).append(it)
             }
         }
 

@@ -21,7 +21,6 @@ import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.setFragmentResultListener
 import androidx.lifecycle.ViewModelProvider
 import com.google.android.material.bottomsheet.BottomSheetBehavior
-import com.nextgenbroadcast.mobile.core.FileUtils
 import com.nextgenbroadcast.mobile.core.atsc3.phy.PHYStatistics
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.AppData
@@ -329,7 +328,7 @@ class MainFragment : Fragment(), ReceiverContentResolver.Listener {
     }
 
     private fun openInfoDialog() {
-        AboutDialog().show(parentFragmentManager, null)
+        AboutDialog(receiverContentResolver.getPhyInfo(), receiverContentResolver.queryReceiverFrequency()).show(parentFragmentManager, null)
     }
 
     private fun openSelectTracksDialog() {
