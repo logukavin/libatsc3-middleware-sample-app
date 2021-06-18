@@ -11,7 +11,7 @@ class PcapFileAtsc3Source(
 
     override fun openPhyClient(): Atsc3NdkPHYClientBase? {
         try {
-            val client = createPhyClient()
+            val client = createPhyClient() ?: return null
             val res = client.open_from_capture(filename)
 
             if (res == Atsc3Module.RES_OK) {
@@ -24,6 +24,8 @@ class PcapFileAtsc3Source(
 
         return null
     }
+
+    override fun getFileName() = filename
 
     override fun toString(): String {
         return "PCAP Source: filename = $filename, type = $type"

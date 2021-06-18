@@ -2,6 +2,7 @@ package com.nextgenbroadcast.mobile.middleware.service
 
 import android.content.Context
 import android.hardware.usb.UsbDevice
+import android.net.Uri
 import com.nextgenbroadcast.mobile.middleware.DeviceTypeSelectionDialog
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.*
 
@@ -20,7 +21,7 @@ fun startAtsc3ServiceForDevice(context: Context, device: UsbDevice, forceOpen: B
     }
 }
 
-fun routePathToSource(path: String): IAtsc3Source {
+fun routePathToSource(context: Context, path: String): IAtsc3Source? {
     return if (path.startsWith("srt://")) {
         if (path.contains('\n')) {
             val sources = path.split('\n')
@@ -29,6 +30,15 @@ fun routePathToSource(path: String): IAtsc3Source {
             SrtAtsc3Source(path)
         }
     } else {
-        PcapAtsc3Source(path)
+        //TODO: temporary solution
+        val type = if (path.contains(".demux.") || path.contains(".demuxed.")) {
+            PcapAtsc3Source.PcapType.DEMUXED
+        } else {
+            PcapAtsc3Source.PcapType.STLTP
+        }
+        context.contentResolver.openFileDescriptor(Uri.parse(path), "r")?.use { descriptor ->
+            PcapDescriptorAtsc3Source(descriptor.detachFd(), descriptor.statSize, type)
+        }
+        //PcapFileAtsc3Source(path, type)
     }
 }

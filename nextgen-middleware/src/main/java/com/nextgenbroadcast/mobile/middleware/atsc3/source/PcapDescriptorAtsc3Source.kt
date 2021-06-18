@@ -12,8 +12,8 @@ class PcapDescriptorAtsc3Source(
 
     override fun openPhyClient(): Atsc3NdkPHYClientBase? {
         try {
-            val client = createPhyClient()
-            val res = client.open_from_capture_fd("/proc/self/fd/$fd", fd, length)
+            val client = createPhyClient() ?: return null
+            val res = client.open_from_capture_fd(getFileName(), fd, length)
 
             if (res == Atsc3Module.RES_OK) {
                 client.run()
@@ -25,6 +25,8 @@ class PcapDescriptorAtsc3Source(
 
         return null
     }
+
+    override fun getFileName() = "/proc/self/fd/$fd"
 
     override fun toString(): String {
         return "PCAP Source: fd = $fd, type = $type"
