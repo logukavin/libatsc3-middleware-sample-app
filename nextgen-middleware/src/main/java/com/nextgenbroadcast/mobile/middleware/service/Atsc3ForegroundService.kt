@@ -150,13 +150,6 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
             atsc3Receiver.serviceController.routeServices.collect { services ->
                 withContext(Dispatchers.Main) {
                     media.setQueue(services)
-
-                    // Automatically start playing the first service in list
-                    if (playbackState.value == PlaybackState.IDLE) {
-                        services.firstOrNull()?.let { service ->
-                            media.selectMediaService(service)
-                        }
-                    }
                 }
             }
         }

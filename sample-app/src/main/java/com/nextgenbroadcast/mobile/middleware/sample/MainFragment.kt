@@ -265,14 +265,31 @@ class MainFragment : Fragment(), ReceiverContentResolver.Listener {
     override fun onReceiverStateChanged(state: ReceiverState) {
         receiverViewModel?.receiverState?.value = state
 
-        // exit PIP mode when Receiver is de-initialized
-        if (state.state == ReceiverState.State.IDLE) {
-            val activity = requireActivity()
-            if (activity.isInPictureInPictureMode) {
-                startActivity(Intent(activity, MainActivity::class.java).apply {
-                    flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-                })
+        when (state.state) {
+            ReceiverState.State.IDLE -> {
+                // exit PIP mode when Receiver is de-initialized
+                val activity = requireActivity()
+                if (activity.isInPictureInPictureMode) {
+                    startActivity(Intent(activity, MainActivity::class.java).apply {
+                        flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+                    })
+                }
             }
+
+            ReceiverState.State.READY -> {
+                // Automatically start playing the first service in list when Receiver became ready
+                with(viewViewModel.defaultService) {
+                    removeObservers(this@MainFragment)
+                    observe(this@MainFragment) { defaultService ->
+                        if (defaultService != null) {
+                            removeObservers(this@MainFragment)
+                            selectService(defaultService)
+                        }
+                    }
+                }
+            }
+
+            else -> {}
         }
     }
 

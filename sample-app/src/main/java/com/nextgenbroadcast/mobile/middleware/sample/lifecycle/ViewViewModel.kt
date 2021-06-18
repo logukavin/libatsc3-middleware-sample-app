@@ -1,8 +1,6 @@
 package com.nextgenbroadcast.mobile.middleware.sample.lifecycle
 
-import androidx.lifecycle.LifecycleOwner
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.*
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.middleware.telemetry.reader.LocationFrequencyType
 import com.nextgenbroadcast.mobile.middleware.telemetry.reader.SensorFrequencyType
@@ -17,6 +15,10 @@ class ViewViewModel : ViewModel() {
     val showPhyInfo = MutableLiveData<Boolean>()
 
     val debugData = MutableLiveData<String>()
+
+    val defaultService = services.distinctUntilChanged().map { list ->
+        list.firstOrNull()
+    }
 
     // must be cleared on unBind
     val enableTelemetry = MutableLiveData(false)
