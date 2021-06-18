@@ -3,6 +3,7 @@ package com.nextgenbroadcast.mobile.middleware.telemetry.writer
 import com.google.gson.Gson
 import com.nextgenbroadcast.mobile.middleware.server.web.IMiddlewareWebServer
 import com.nextgenbroadcast.mobile.middleware.telemetry.entity.TelemetryEvent
+import com.nextgenbroadcast.mobile.middleware.telemetry.entity.TelemetryPayload
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
@@ -13,6 +14,8 @@ import java.util.concurrent.ConcurrentHashMap
 import javax.servlet.AsyncEvent
 import javax.servlet.AsyncListener
 import javax.servlet.http.HttpServletRequest
+import kotlin.concurrent.fixedRateTimer
+import kotlin.random.Random
 
 class WebTelemetryWriter(
         private val webServer: IMiddlewareWebServer
@@ -27,6 +30,20 @@ class WebTelemetryWriter(
     private val jobs = ConcurrentHashMap<HttpServletRequest, Job>()
 
     override fun open() {
+       // todo for testing, should be deleted
+        fixedRateTimer("myTimer", false, 0, 1000) {
+            CoroutineScope(Dispatchers.IO).async {
+                val value = Random.nextInt(12, 18)
+
+                flow.emit(
+                    TelemetryEvent(
+                       "phy",
+                        PhyData(snr1000 = value)
+                    )
+                )
+            }
+        }
+
         webServer.addHandler(CONNECTION_PATH) { req, resp ->
             val filter: List<String> = req.pathInfo
                     .trim('/')
@@ -91,3 +108,5 @@ class WebTelemetryWriter(
         private const val CONNECTION_PATH = "telemetry"
     }
 }
+// todo for testing, should be deleted
+class PhyData(val snr1000: Int) : TelemetryPayload()
