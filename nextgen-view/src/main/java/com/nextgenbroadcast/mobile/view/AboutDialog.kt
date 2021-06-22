@@ -12,7 +12,9 @@ import kotlinx.android.synthetic.main.dialog_about.view.*
 
 
 class AboutDialog(
-    private val phyInfo: Triple<String?, String?, String?>?,
+    private val sdkVersion:String?,
+    private val firmwareVersion:String?,
+    private val demodeVersion:String?,
     private val frequency: Int?
 ) : DialogFragment() {
 
@@ -57,27 +59,24 @@ class AboutDialog(
             } catch (e: SecurityException) {
             }
 
-            phyInfo?.let { info ->
-                val (sdkVersion, firmwareVersion, demodeVersion) = info
-                sdkVersion?.let {
-                    if (isNotEmpty()) {
-                        append(DOUBLE_LINE_BREAK)
-                        appendBoldTitle(getString(R.string.phy_sdk_version)).append(it)
-                    }
+            sdkVersion?.let {
+                if (isNotEmpty()) {
+                    append(DOUBLE_LINE_BREAK)
+                    appendBoldTitle(getString(R.string.phy_sdk_version)).append(it)
                 }
+            }
 
-                demodeVersion?.let {
-                    if (isNotEmpty()) {
-                        append(DOUBLE_LINE_BREAK)
-                        appendBoldTitle(getString(R.string.demode_version)).append(it)
-                    }
+            demodeVersion?.let {
+                if (isNotEmpty()) {
+                    append(DOUBLE_LINE_BREAK)
+                    appendBoldTitle(getString(R.string.demode_version)).append(it)
                 }
+            }
 
-                firmwareVersion?.let {
-                    if (isNotEmpty()) {
-                        append(DOUBLE_LINE_BREAK)
-                        appendBoldTitle(getString(R.string.firmware_version)).append(it)
-                    }
+            firmwareVersion?.let {
+                if (isNotEmpty()) {
+                    append(DOUBLE_LINE_BREAK)
+                    appendBoldTitle(getString(R.string.firmware_version)).append(it)
                 }
             }
 
