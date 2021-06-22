@@ -21,4 +21,6 @@
     <string name="receiver_status_tuning">Tuning…</string>
     <string name="receiver_scanning_cancel_btn">cancel</string>
     <string name="message_service_apk_not_found">Application with package name %s is unavailable</string>
+    <string name="chart_phy_snr_title">Phy SNR</string>
+    <string name="chart_phy_share_title">Phy Chart screenshot</string>
 </resources>

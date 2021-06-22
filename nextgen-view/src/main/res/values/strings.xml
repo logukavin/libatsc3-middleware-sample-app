@@ -5,5 +5,4 @@
     <string name="version_code">Version Code:</string>
     <string name="android_id">Serial Number:</string>
     <string name="ok">OK</string>
-    <string name="phy_snr">Phy Snr</string>
 </resources>
