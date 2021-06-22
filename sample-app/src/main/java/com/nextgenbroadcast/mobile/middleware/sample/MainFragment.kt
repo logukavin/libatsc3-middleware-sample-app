@@ -346,7 +346,15 @@ class MainFragment : Fragment(), ReceiverContentResolver.Listener {
     }
 
     private fun openInfoDialog() {
-        AboutDialog().show(parentFragmentManager, null)
+            receiverContentResolver.getPhyInfo()?.let { (sdkVersion, firmwareVersion, demodeVersion) ->
+            AboutDialog(
+                sdkVersion,
+                firmwareVersion,
+                demodeVersion,
+                receiverContentResolver.queryReceiverFrequency()
+            ).show(parentFragmentManager, null)
+        }
+
     }
 
     private fun openSelectTracksDialog() {

@@ -14,6 +14,7 @@ import androidx.core.database.getStringOrNull
 import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.presentation.ApplicationState
+import com.nextgenbroadcast.mobile.middleware.atsc3.PhyVersionInfo
 import com.nextgenbroadcast.mobile.middleware.provider.content.ReceiverContentProvider
 import java.nio.ByteBuffer
 
@@ -30,6 +31,7 @@ class ReceiverContentResolver(
     private val certificateUri = ReceiverContentProvider.getUriForPath(context, ReceiverContentProvider.CONTENT_SERVER_CERTIFICATE)
     private val receiverStateUri = ReceiverContentProvider.getUriForPath(context, ReceiverContentProvider.CONTENT_RECEIVER_STATE)
     private val receiverFrequencyUri = ReceiverContentProvider.getUriForPath(context, ReceiverContentProvider.CONTENT_RECEIVER_FREQUENCY)
+    private val receiverPhyInfoUri = ReceiverContentProvider.getUriForPath(context, ReceiverContentProvider.CONTENT_PHY_VERSION_INFO)
 
     private var providerClient: ContentProviderClient? = null
 
@@ -121,6 +123,14 @@ class ReceiverContentResolver(
             if (state != null) {
                 ReceiverState(state, stateIndex ?: 0, stateCount ?: 0)
             } else null
+        }
+    }
+
+    fun getPhyInfo(): Triple<String?, String?, String?>? {
+        return receiverPhyInfoUri.queryFirst { cursor ->
+            Triple(cursor.getStringOrNull(PhyVersionInfo.INFO_SDK_VERSION),
+                cursor.getStringOrNull(PhyVersionInfo.INFO_FIRMWARE_VERSION),
+                cursor.getStringOrNull(PhyVersionInfo.INFO_DEMOD_VERSION))
         }
     }
 
