@@ -9,5 +9,4 @@
     <string name="demode_version">Demod Version:</string>
     <string name="firmware_version">Kernel Version:</string>
     <string name="frequency">Frequency:</string>
-    <string name="phy_snr">Phy Snr</string>
 </resources>

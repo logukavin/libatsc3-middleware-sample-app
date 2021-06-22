@@ -25,7 +25,7 @@ class WebTelemetryObserver(
         host: String,
         port: Int,
         topics: List<String>
-) {
+): ITelemetryObserver {
     private val clientUrl = "http://$host:$port/$CONNECTION_PATH/${topics.joinToString("/")}"
     private val gson = Gson()
 
@@ -33,19 +33,27 @@ class WebTelemetryObserver(
         HttpClient()
     }
 
-    suspend fun read(eventFlow: MutableSharedFlow<TelemetryEvent>) {
+    override suspend fun read(eventFlow: MutableSharedFlow<TelemetryEvent>) {
+        delay(3000) // wait for web client
+
         if (!httpClient.isRunning) {
             httpClient.start()
         }
 
         try {
             supervisorScope {
+                var retryCount = MAX_RETRY_COUNT
                 while (isActive) {
+                    retryCount--
+
                     try {
                         collectEvents(eventFlow)
+                        retryCount = MAX_RETRY_COUNT // restore retry count after successful connection
                     } catch (e: Exception) {
                         LOG.i(TAG, "Telemetry observation finished with exception", e)
                     }
+
+                    if (retryCount <= 0) break
 
                     if (isActive) delay(1000)
                 }
@@ -100,5 +108,6 @@ class WebTelemetryObserver(
         val TAG: String = WebTelemetryObserver::class.java.simpleName
 
         private const val CONNECTION_PATH = "telemetry"
+        private const val MAX_RETRY_COUNT = 5
     }
 }
