@@ -115,6 +115,7 @@
                 android:id="@+id/phy_chart"
                 android:layout_width="match_parent"
                 android:layout_height="@dimen/phy_chart_height"
+                android:background="@color/semi_transparent"
                 android:visibility="@{viewModel.showPhyChart ? View.VISIBLE : View.GONE }"
                 app:layout_constraintTop_toBottomOf="@+id/phy_data_log" />
 

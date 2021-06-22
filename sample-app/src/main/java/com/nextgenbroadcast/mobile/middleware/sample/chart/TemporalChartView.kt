@@ -32,6 +32,7 @@ open class TemporalChartView @JvmOverloads constructor(
             gridColor = ContextCompat.getColor(context, R.color.chart_grid_color)
             verticalLabelsColor = textColor
             horizontalLabelsColor = textColor
+            textSize = resources.getDimension(R.dimen.chart_label_text_size)
             labelFormatter = object : DefaultLabelFormatter() {
                 override fun formatLabel(value: Double, isValueX: Boolean): String? {
                     return if (!isValueX) {
