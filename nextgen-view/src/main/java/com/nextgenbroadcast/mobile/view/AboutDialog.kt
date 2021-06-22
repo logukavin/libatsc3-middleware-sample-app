@@ -7,14 +7,14 @@ import android.text.Html
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.annotation.StringRes
 import androidx.fragment.app.DialogFragment
 import kotlinx.android.synthetic.main.dialog_about.view.*
 
-
 class AboutDialog(
-    private val sdkVersion:String?,
-    private val firmwareVersion:String?,
-    private val demodeVersion:String?,
+    private val sdkVersion: String?,
+    private val firmwareVersion: String?,
+    private val demodeVersion: String?,
     private val frequency: Int?
 ) : DialogFragment() {
 
@@ -39,14 +39,14 @@ class AboutDialog(
 
         val stringBuilder = StringBuilder().apply {
             packageInfo?.versionName?.let {
-                appendBoldTitle(getString(R.string.version_name)).append(it)
+                appendBoldTitle(R.string.version_name).append(it)
             }
 
             packageInfo?.longVersionCode?.let {
                 if (isNotEmpty()) {
                     append(DOUBLE_LINE_BREAK)
                 }
-                appendBoldTitle(getString(R.string.version_code)).append(it)
+                appendBoldTitle(R.string.version_code).append(it)
             }
 
             try {
@@ -54,45 +54,35 @@ class AboutDialog(
                     if (isNotEmpty()) {
                         append(DOUBLE_LINE_BREAK)
                     }
-                    appendBoldTitle(getString(R.string.android_id)).append(it)
+                    appendBoldTitle(R.string.android_id).append(it)
                 }
             } catch (e: SecurityException) {
             }
 
-            sdkVersion?.let {
-                if (isNotEmpty()) {
-                    append(DOUBLE_LINE_BREAK)
-                    appendBoldTitle(getString(R.string.phy_sdk_version)).append(it)
-                }
-            }
+            append(DOUBLE_LINE_BREAK)
+            appendBoldTitle(R.string.phy_sdk_version).append(sdkVersion.orDash())
 
-            demodeVersion?.let {
-                if (isNotEmpty()) {
-                    append(DOUBLE_LINE_BREAK)
-                    appendBoldTitle(getString(R.string.demode_version)).append(it)
-                }
-            }
+            append(DOUBLE_LINE_BREAK)
+            appendBoldTitle(R.string.demode_version).append(demodeVersion.orDash())
 
-            firmwareVersion?.let {
-                if (isNotEmpty()) {
-                    append(DOUBLE_LINE_BREAK)
-                    appendBoldTitle(getString(R.string.firmware_version)).append(it)
-                }
-            }
+            append(DOUBLE_LINE_BREAK)
+            appendBoldTitle(R.string.firmware_version).append(firmwareVersion.orDash())
 
-            frequency?.let {
-                append(DOUBLE_LINE_BREAK)
-                appendBoldTitle(getString(R.string.frequency)).append(it)
-            }
+            append(DOUBLE_LINE_BREAK)
+            appendBoldTitle(R.string.frequency).append(frequency ?: 0)
         }
 
         return Html.fromHtml(stringBuilder.toString(), Html.FROM_HTML_MODE_LEGACY)
     }
 
+    private fun StringBuilder.appendBoldTitle(@StringRes resId: Int) = appendBoldTitle(getString(resId))
+
     private fun StringBuilder.appendBoldTitle(title: String): StringBuilder {
         append("<b>").append(title).append(" ").append("</b>")
         return this
     }
+
+    private fun String?.orDash() = this ?: "-"
 
     companion object {
         private const val DOUBLE_LINE_BREAK = "<br><br>"
