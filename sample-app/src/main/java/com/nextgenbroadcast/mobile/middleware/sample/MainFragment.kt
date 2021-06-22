@@ -21,13 +21,13 @@ import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.setFragmentResultListener
 import androidx.lifecycle.ViewModelProvider
 import com.google.android.material.bottomsheet.BottomSheetBehavior
-import com.nextgenbroadcast.mobile.core.FileUtils
 import com.nextgenbroadcast.mobile.core.atsc3.phy.PHYStatistics
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.presentation.ApplicationState
+import com.nextgenbroadcast.mobile.middleware.sample.chart.PhyChart
 import com.nextgenbroadcast.mobile.middleware.sample.core.SwipeGestureDetector
 import com.nextgenbroadcast.mobile.middleware.sample.core.mapWith
 import com.nextgenbroadcast.mobile.middleware.sample.databinding.FragmentMainBinding
@@ -38,7 +38,8 @@ import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.ViewViewModel
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.factory.UserAgentViewModelFactory
 import com.nextgenbroadcast.mobile.middleware.sample.resolver.ReceiverContentResolver
 import com.nextgenbroadcast.mobile.middleware.sample.useragent.ServiceAdapter
-import com.nextgenbroadcast.mobile.telemetry.TelemetryManager
+import com.nextgenbroadcast.mobile.telemetry.TelemetryClient
+import com.nextgenbroadcast.mobile.telemetry.WebTelemetryObserver
 import com.nextgenbroadcast.mobile.view.AboutDialog
 import com.nextgenbroadcast.mobile.view.TrackSelectionDialog
 import com.nextgenbroadcast.mobile.view.UserAgentView
@@ -62,7 +63,7 @@ class MainFragment : Fragment(), ReceiverContentResolver.Listener {
     private lateinit var sourceAdapter: ArrayAdapter<String>
     private lateinit var bottomSheetBehavior: BottomSheetBehavior<View>
     private lateinit var receiverContentResolver: ReceiverContentResolver
-    private lateinit var telemetryManager: TelemetryManager
+    private lateinit var telemetryClient: TelemetryClient
 
     private var phyLoggingJob: Job? = null
 
@@ -90,7 +91,10 @@ class MainFragment : Fragment(), ReceiverContentResolver.Listener {
 
         receiverContentResolver = ReceiverContentResolver(context, this)
 
-        telemetryManager = TelemetryManager()
+        telemetryClient = TelemetryClient(
+            WebTelemetryObserver("localhost", 8081, listOf("phy")),
+            300
+        )
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
@@ -214,6 +218,16 @@ class MainFragment : Fragment(), ReceiverContentResolver.Listener {
             }
         }
 
+        viewViewModel.showPhyChart.observe(viewLifecycleOwner) { phyChartEnabled ->
+            if (phyChartEnabled == true) {
+                phy_chart.setDataSource(newChartDataSource())
+                telemetryClient.start()
+            } else {
+                phy_chart.setDataSource(null)
+                telemetryClient.stop()
+            }
+        }
+
         viewViewModel.sources.observe(viewLifecycleOwner) { sourceList ->
             val sources = sourceList.map { (title) -> title }.toMutableList().apply {
                 add(0, "Select pcap file...")
@@ -229,6 +243,11 @@ class MainFragment : Fragment(), ReceiverContentResolver.Listener {
             setSelectedService(currentServiceTitle)
         }
 
+        phy_chart.setOnLongClickListener {
+            phy_chart.takeSnapshotAndShare(requireContext(), "phy_chart", getString(R.string.chart_phy_share_title))
+            true
+        }
+        phy_chart.setDataSource(newChartDataSource())
     }
 
     override fun onStart() {
@@ -239,11 +258,9 @@ class MainFragment : Fragment(), ReceiverContentResolver.Listener {
         // reload BA to prevent desynchronization between BA and RMP playback state
         user_agent_web_view.reload()
 
-        telemetryManager.phyEvents.observe(this, { phyPayload ->
-           phyChart.addEvent(phyPayload)
-        })
-
-        //telemetryManager.start()
+        if (viewViewModel.showPhyChart.value == true) {
+            telemetryClient.start(false)
+        }
     }
 
     override fun onStop() {
@@ -253,7 +270,7 @@ class MainFragment : Fragment(), ReceiverContentResolver.Listener {
 
         receiver_player.stop()
 
-        //telemetryManager.stop()
+        telemetryClient.stop()
     }
 
     override fun onDestroy() {
@@ -520,6 +537,8 @@ class MainFragment : Fragment(), ReceiverContentResolver.Listener {
         user_agent_web_view.unloadBAContent()
         receiverContentResolver.publishApplicationState(ApplicationState.UNAVAILABLE)
     }
+
+    private fun newChartDataSource() = PhyChart.DataSource(telemetryClient)
 
     companion object {
         val TAG: String = MainFragment::class.java.simpleName
