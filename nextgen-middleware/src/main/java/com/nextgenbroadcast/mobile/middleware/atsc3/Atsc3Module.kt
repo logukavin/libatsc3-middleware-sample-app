@@ -672,7 +672,6 @@ internal class Atsc3Module(
             mutableMapOf<String, String?>().apply {
                 put(PhyVersionInfo.INFO_SDK_VERSION, src.getSdkVersion())
                 put(PhyVersionInfo.INFO_FIRMWARE_VERSION, src.getFirmwareVersion())
-                put(PhyVersionInfo.INFO_DEMOD_VERSION, src.getDemodVersion())
             }
         } ?: emptyMap()
     }

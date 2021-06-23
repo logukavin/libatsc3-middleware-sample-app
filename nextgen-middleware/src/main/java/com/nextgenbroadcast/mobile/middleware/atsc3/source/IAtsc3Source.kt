@@ -11,7 +11,6 @@ interface IAtsc3Source {
 
     fun getSdkVersion(): String?
     fun getFirmwareVersion(): String?
-    fun getDemodVersion(): String?
 
     companion object {
         const val RESULT_ERROR = -1
