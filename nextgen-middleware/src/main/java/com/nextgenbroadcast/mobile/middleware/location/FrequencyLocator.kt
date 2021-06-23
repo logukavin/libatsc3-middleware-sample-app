@@ -32,11 +32,11 @@ class FrequencyLocator : IFrequencyLocator {
 
         val frequencies = mutableListOf<Int>()
         locator.getLastLocation()?.let { location ->
-            Log.d(FrequencyInitializer.TAG, "locator.locateFrequency context: $context, location: $location")
+            Log.d(TAG, "locator.locateFrequency context: $context, location: $location")
             val prevLocation = prevFrequencyLocation?.location
             if (prevLocation == null || location.distanceTo(prevLocation) > RECEPTION_RADIUS) {
                 locateFrequency(location)?.let { frequencyLocation ->
-                    Log.d(FrequencyInitializer.TAG, "locator.locateFrequency let: $context, location: $frequencyLocation")
+                    Log.d(TAG, "locator.locateFrequency let: $context, location: $frequencyLocation")
 
                     settings.frequencyLocation = frequencyLocation
 
