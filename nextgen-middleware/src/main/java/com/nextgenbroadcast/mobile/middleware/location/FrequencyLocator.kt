@@ -44,6 +44,8 @@ class FrequencyLocator : IFrequencyLocator {
                         frequencyLocation.frequencyList.filter { it > 0 }
                     )
                 }
+            } else {
+                frequencies.addAll(prevFrequencyLocation.frequencyList)
             }
         }
 
