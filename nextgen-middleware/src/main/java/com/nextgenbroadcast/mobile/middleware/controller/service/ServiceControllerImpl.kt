@@ -271,18 +271,10 @@ internal class ServiceControllerImpl(
             val frequencyList: List<Int> = if (frequency.list.isEmpty()) {
                 // If provided frequency list is empty then load last saved frequency and frequency list if it available
                 val lastFrequency = settings.lastFrequency
-                //TODO: why don't we check location??
-                settings.frequencyLocation?.let {
-                    it.frequencyList.toMutableList().apply {
-                        if (lastFrequency > 0) {
-                            remove(lastFrequency)
-                            add(0, lastFrequency)
-                        }
-                    }
-                } ?: mutableListOf<Int>().apply {
-                    if (lastFrequency > 0) {
-                        add(lastFrequency)
-                    }
+                if (lastFrequency > 0) {
+                    listOf(lastFrequency)
+                } else {
+                    emptyList()
                 }
             } else {
                 frequency.list
