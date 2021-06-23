@@ -346,11 +346,10 @@ class MainFragment : Fragment(), ReceiverContentResolver.Listener {
     }
 
     private fun openInfoDialog() {
-            receiverContentResolver.getPhyInfo()?.let { (sdkVersion, firmwareVersion, demodeVersion) ->
+            receiverContentResolver.getPhyInfo()?.let { (sdkVersion, firmwareVersion) ->
             AboutDialog(
                 sdkVersion,
                 firmwareVersion,
-                demodeVersion,
                 receiverContentResolver.queryReceiverFrequency()
             ).show(parentFragmentManager, null)
         }

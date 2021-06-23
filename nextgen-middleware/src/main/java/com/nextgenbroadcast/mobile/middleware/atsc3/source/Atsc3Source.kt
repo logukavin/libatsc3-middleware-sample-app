@@ -51,10 +51,6 @@ abstract class Atsc3Source : IAtsc3Source {
         return atsc3NdkPHYClientInstance?._firmware_version
     }
 
-    override fun getDemodVersion(): String? {
-        return atsc3NdkPHYClientInstance?._demod_version
-    }
-
     companion object {
         private val TAG: String = Atsc3Source::class.java.simpleName
 
