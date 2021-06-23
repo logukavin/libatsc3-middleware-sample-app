@@ -14,7 +14,6 @@ import kotlinx.android.synthetic.main.dialog_about.view.*
 class AboutDialog(
     private val sdkVersion: String?,
     private val firmwareVersion: String?,
-    private val demodeVersion: String?,
     private val frequency: Int?
 ) : DialogFragment() {
 
@@ -61,9 +60,6 @@ class AboutDialog(
 
             append(DOUBLE_LINE_BREAK)
             appendBoldTitle(R.string.phy_sdk_version).append(sdkVersion.orDash())
-
-            append(DOUBLE_LINE_BREAK)
-            appendBoldTitle(R.string.demode_version).append(demodeVersion.orDash())
 
             append(DOUBLE_LINE_BREAK)
             appendBoldTitle(R.string.firmware_version).append(firmwareVersion.orDash())
