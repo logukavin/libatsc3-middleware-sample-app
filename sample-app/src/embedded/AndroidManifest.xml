@@ -14,7 +14,7 @@
 
             <meta-data
                 android:name="com.nextgenbroadcast.mobile.middleware.location.FrequencyLocator"
-                android:value="nextgenbroadcast.locator" />
+                android:resource="@xml/default_frequencies" />
 
             <meta-data
                 android:name="org.ngbp.libatsc3.middleware.android.phy.SaankhyaPHYAndroid"

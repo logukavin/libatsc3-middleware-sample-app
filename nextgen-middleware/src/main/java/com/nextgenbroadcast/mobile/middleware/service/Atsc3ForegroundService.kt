@@ -320,7 +320,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
         try {
             serviceScope.launch(handler) {
-                FrequencyInitializer(atsc3Receiver.settings, atsc3Receiver).also {
+                FrequencyInitializer(atsc3Receiver).also {
                     initializer.add(WeakReference(it))
                 }.initialize(appContext, components)
             }

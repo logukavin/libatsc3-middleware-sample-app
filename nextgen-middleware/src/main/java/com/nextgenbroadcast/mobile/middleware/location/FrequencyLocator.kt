@@ -1,6 +1,8 @@
 package com.nextgenbroadcast.mobile.middleware.location
 
+import android.content.Context
 import android.location.Location
+import android.util.Log
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.nextgenbroadcast.mobile.core.LOG
@@ -11,6 +13,8 @@ import com.nextgenbroadcast.mobile.middleware.net.auth0.Auth0Response
 import com.nextgenbroadcast.mobile.middleware.net.await
 import com.nextgenbroadcast.mobile.middleware.net.sinclair.SinclairPlatform
 import com.nextgenbroadcast.mobile.middleware.net.sinclair.Station
+import com.nextgenbroadcast.mobile.middleware.service.init.FrequencyInitializer
+import com.nextgenbroadcast.mobile.middleware.settings.MiddlewareSettingsImpl
 import okhttp3.OkHttpClient
 import java.io.IOException
 
@@ -21,7 +25,32 @@ class FrequencyLocator : IFrequencyLocator {
         OkHttpClient()
     }
 
-    override suspend fun locateFrequency(location: Location): FrequencyLocation? {
+    override suspend fun locateFrequency(context: Context): List<Int> {
+        val settings = MiddlewareSettingsImpl.getInstance(context)
+        val locator = LocationRequester(context)
+        val prevFrequencyLocation = settings.frequencyLocation
+
+        val frequencies = mutableListOf<Int>()
+        locator.getLastLocation()?.let { location ->
+            Log.d(FrequencyInitializer.TAG, "locator.locateFrequency context: $context, location: $location")
+            val prevLocation = prevFrequencyLocation?.location
+            if (prevLocation == null || location.distanceTo(prevLocation) > RECEPTION_RADIUS) {
+                locateFrequency(location)?.let { frequencyLocation ->
+                    Log.d(FrequencyInitializer.TAG, "locator.locateFrequency let: $context, location: $frequencyLocation")
+
+                    settings.frequencyLocation = frequencyLocation
+
+                    frequencies.addAll(
+                        frequencyLocation.frequencyList.filter { it > 0 }
+                    )
+                }
+            }
+        }
+
+        return frequencies
+    }
+
+    private suspend fun locateFrequency(location: Location): FrequencyLocation? {
         val frequencyList = getFrequenciesByLocation(location.latitude, location.longitude)
         if (frequencyList.isNotEmpty()) {
             return FrequencyLocation(location, frequencyList)
@@ -72,5 +101,7 @@ class FrequencyLocator : IFrequencyLocator {
 
     companion object {
         val TAG: String = FrequencyLocator::class.java.simpleName
+
+        const val RECEPTION_RADIUS = 50 * 1000 // in metres
     }
 }
