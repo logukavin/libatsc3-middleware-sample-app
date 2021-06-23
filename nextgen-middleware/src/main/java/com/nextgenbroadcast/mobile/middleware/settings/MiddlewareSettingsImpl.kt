@@ -56,10 +56,10 @@ internal class MiddlewareSettingsImpl private constructor(
             }
         }
 
-    override var lastFrequency: Int
-        get() = loadInt(FREQUENCY_USER)
+    override var lastFrequency: List<Int>
+        get() = loadStringSet(FREQUENCY_USER).mapNotNull { it.toIntOrNull() }
         set(value) {
-            saveInt(FREQUENCY_USER, value)
+            saveStringSet(FREQUENCY_USER, value.map { it.toString() })
         }
 
     override var receiverProfile: Atsc3Profile?
@@ -97,6 +97,15 @@ internal class MiddlewareSettingsImpl private constructor(
 
     private fun requireString(key: String, action: () -> String): String {
         return loadString(key) ?: saveString(key, action.invoke())
+    }
+
+    private fun saveStringSet(key: String, value: List<String>): List<String> {
+        preferences.edit { putStringSet(key, value.toSet()) }
+        return value
+    }
+
+    private fun loadStringSet(key: String): List<String> {
+        return preferences.getStringSet(key, null)?.toList() ?: emptyList()
     }
 
     private fun saveInt(key: String, value: Int): Int {
