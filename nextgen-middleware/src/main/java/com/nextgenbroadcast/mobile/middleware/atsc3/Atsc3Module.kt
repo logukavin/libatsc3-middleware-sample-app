@@ -40,6 +40,7 @@ internal class Atsc3Module(
 
     private val atsc3NdkApplicationBridge = Atsc3NdkApplicationBridge(this)
     private val atsc3NdkPHYBridge = Atsc3NdkPHYBridge(this)
+    private val systemProperties = atsc3NdkApplicationBridge.atsc3_slt_alc_get_system_properties()
 
     private val stateLock = ReentrantLock()
     private var state = Atsc3ModuleState.IDLE
@@ -668,12 +669,24 @@ internal class Atsc3Module(
     }
 
     override fun getVersionInfo(): Map<String, String?> {
-        return source?.let { src ->
-            mutableMapOf<String, String?>().apply {
+        return mutableMapOf<String, String?>().apply {
+            put(PhyVersionInfo.INFO_SERIAL_NUMBER, getSerialNum())
+            source?.let { src ->
                 put(PhyVersionInfo.INFO_SDK_VERSION, src.getSdkVersion())
                 put(PhyVersionInfo.INFO_FIRMWARE_VERSION, src.getFirmwareVersion())
+                if (src is UsbAtsc3Source) {
+                    put(PhyVersionInfo.INFO_PHY_TYPE, src.type.toString())
+                }
             }
-        } ?: emptyMap()
+        }
+    }
+
+    override fun getSerialNum(): String {
+        var serialId = systemProperties.serialno_str
+        if (serialId.isBlank()) {
+            serialId = systemProperties.boot_serialno_str
+        }
+        return serialId
     }
 
     private fun applyDefaultConfiguration(src: IAtsc3Source) {
