@@ -12,7 +12,7 @@ import android.support.v4.media.session.PlaybackStateCompat
 import androidx.media.MediaBrowserServiceCompat
 import androidx.media.session.MediaButtonReceiver
 import com.nextgenbroadcast.mobile.core.LOG
-import com.nextgenbroadcast.mobile.core.atsc3.MediaUrl
+import com.nextgenbroadcast.mobile.core.model.MediaUrl
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverCore

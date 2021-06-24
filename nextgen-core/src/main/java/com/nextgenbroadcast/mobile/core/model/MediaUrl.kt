@@ -1,4 +1,4 @@
-package com.nextgenbroadcast.mobile.core.atsc3
+package com.nextgenbroadcast.mobile.core.model
 
 class MediaUrl(
         val url: String,

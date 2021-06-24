@@ -2,7 +2,7 @@ package com.nextgenbroadcast.mobile.middleware.controller.service
 
 import android.location.Location
 import android.util.Log
-import com.nextgenbroadcast.mobile.core.atsc3.MediaUrl
+import com.nextgenbroadcast.mobile.core.model.MediaUrl
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.PhyFrequency
 import com.nextgenbroadcast.mobile.core.model.ReceiverState

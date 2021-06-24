@@ -1,8 +1,9 @@
-package com.nextgenbroadcast.mobile.middleware.dev.telemetry
+package com.nextgenbroadcast.mobile.middleware.dev.telemetry.observer
 
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.nextgenbroadcast.mobile.core.LOG
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.TelemetryEvent
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.channels.sendBlocking

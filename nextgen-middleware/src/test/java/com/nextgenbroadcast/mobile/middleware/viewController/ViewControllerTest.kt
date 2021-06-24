@@ -2,7 +2,7 @@ package com.nextgenbroadcast.mobile.middleware.viewController
 
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import androidx.core.net.toUri
-import com.nextgenbroadcast.mobile.core.atsc3.MediaUrl
+import com.nextgenbroadcast.mobile.core.model.MediaUrl
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.RPMParams

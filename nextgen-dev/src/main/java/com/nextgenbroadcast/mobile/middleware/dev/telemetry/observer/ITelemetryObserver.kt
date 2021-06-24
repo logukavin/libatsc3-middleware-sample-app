@@ -1,5 +1,6 @@
-package com.nextgenbroadcast.mobile.middleware.dev.telemetry
+package com.nextgenbroadcast.mobile.middleware.dev.telemetry.observer
 
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.TelemetryEvent
 import kotlinx.coroutines.flow.MutableSharedFlow
 
 interface ITelemetryObserver {

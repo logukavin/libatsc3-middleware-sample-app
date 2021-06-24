@@ -24,3 +24,10 @@ fun <T> List<T>.isEquals(second: List<T>): Boolean {
 
     return true
 }
+
+fun isClass(className: String) = try {
+    Class.forName(className)
+    true
+} catch (e: Exception) {
+    false
+}
