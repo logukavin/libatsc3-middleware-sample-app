@@ -4,9 +4,9 @@ import android.content.Context
 import android.hardware.usb.UsbManager
 import com.nextgenbroadcast.mobile.middleware.service.startAtsc3ServiceForDevice
 
-class Atsc3UsbPhyConnector {
+class Atsc3UsbPhyConnector : IUsbConnector {
 
-    fun connect(context: Context, compatibleList: List<Pair<Int, Int>>): Boolean {
+    override fun connect(context: Context, compatibleList: List<Pair<Int, Int>>): Boolean {
         val usbManager = context.getSystemService(Context.USB_SERVICE) as UsbManager
 
         usbManager.deviceList.values.firstOrNull { device ->
