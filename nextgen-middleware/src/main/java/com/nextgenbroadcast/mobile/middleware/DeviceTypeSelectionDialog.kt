@@ -6,6 +6,7 @@ import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
+import com.nextgenbroadcast.mobile.core.FileUtils
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.Atsc3Source
 import com.nextgenbroadcast.mobile.middleware.phy.Atsc3DeviceReceiver
 import com.nextgenbroadcast.mobile.middleware.service.Atsc3ForegroundService
@@ -21,6 +22,23 @@ class DeviceTypeSelectionDialog : AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         device = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE) ?: let {
+            finish()
+            return
+        }
+
+        val configName = getString(R.string.externalPhyConfig)
+        val typeOverload = if (configName.isNotBlank()) {
+            FileUtils.readExternalFileAsString(this, configName)?.let { str ->
+                when {
+                    "YOGA".equals(str, true) -> Atsc3Source.DEVICE_TYPE_YOGA
+                    "KAILASH".equals(str, true) -> Atsc3Source.DEVICE_TYPE_KAILASH
+                    else -> null
+                }
+            }
+        } else null
+
+        if (typeOverload != null) {
+            Atsc3ForegroundService.startForDevice(this, device, typeOverload)
             finish()
             return
         }

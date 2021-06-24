@@ -5,7 +5,7 @@ import android.content.res.Resources
 import android.content.res.XmlResourceParser
 import android.util.Log
 import com.nextgenbroadcast.mobile.middleware.atsc3.utils.XmlUtils
-import com.nextgenbroadcast.mobile.middleware.phy.Atsc3UsbPhyConnector
+import com.nextgenbroadcast.mobile.middleware.phy.IUsbConnector
 import org.xmlpull.v1.XmlPullParser
 
 internal class UsbPhyInitializer : IServiceInitializer {
@@ -13,18 +13,18 @@ internal class UsbPhyInitializer : IServiceInitializer {
 
     override suspend fun initialize(context: Context, components: Map<Class<*>, Pair<Int, String>>): Boolean {
         components.filter { (clazz, _) ->
-            Atsc3UsbPhyConnector::class.java.isAssignableFrom(clazz)
+            IUsbConnector::class.java.isAssignableFrom(clazz)
         }.map { (clazz, data) ->
             val (resource) = data
             @Suppress("UNCHECKED_CAST")
-            Pair(clazz as Class<Atsc3UsbPhyConnector>, resource)
+            Pair(clazz as Class<IUsbConnector>, resource)
         }.forEach { (component, resource) ->
             try {
                 val parser = context.resources.getXml(resource)
                 val phys = readPhyAttributes(parser)
 
                 val instance: Any = component.getDeclaredConstructor().newInstance()
-                val connector = instance as Atsc3UsbPhyConnector
+                val connector = instance as IUsbConnector
 
                 if (connector.connect(context, phys)) {
                     return true
