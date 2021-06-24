@@ -10,7 +10,7 @@ import org.ngbp.libatsc3.middleware.android.phy.Atsc3UsbDevice
 class UsbAtsc3Source(
         private val usbManager: UsbManager,
         private val device: UsbDevice,
-        private val type: Int
+        val type: Int
 ) : TunableConfigurableAtsc3Source() {
 
     override fun openPhyClient(): Atsc3NdkPHYClientBase? {
