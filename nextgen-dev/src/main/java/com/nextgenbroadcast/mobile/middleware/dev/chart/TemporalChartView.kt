@@ -1,13 +1,11 @@
-package com.nextgenbroadcast.mobile.middleware.sample.chart
+package com.nextgenbroadcast.mobile.middleware.dev.chart
 
 import android.content.Context
 import android.util.AttributeSet
-import androidx.core.content.ContextCompat
 import com.jjoe64.graphview.DefaultLabelFormatter
 import com.jjoe64.graphview.GraphView
 import com.jjoe64.graphview.series.BaseSeries
 import com.jjoe64.graphview.series.DataPoint
-import com.nextgenbroadcast.mobile.middleware.sample.R
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -25,14 +23,7 @@ open class TemporalChartView @JvmOverloads constructor(
     override fun onFinishInflate() {
         super.onFinishInflate()
 
-        val textColor = ContextCompat.getColor(context, R.color.white)
-
-        titleColor = textColor
         with(gridLabelRenderer) {
-            gridColor = ContextCompat.getColor(context, R.color.chart_grid_color)
-            verticalLabelsColor = textColor
-            horizontalLabelsColor = textColor
-            textSize = resources.getDimension(R.dimen.chart_label_text_size)
             labelFormatter = object : DefaultLabelFormatter() {
                 override fun formatLabel(value: Double, isValueX: Boolean): String? {
                     return if (!isValueX) {
