@@ -168,6 +168,7 @@ dependencies {
     implementation project(":nextgen-core")
     implementation project(":nextgen-view")
     implementation project(":nextgen-player")
+    implementation project(":nextgen-dev")
 
     embeddedImplementation project(":nextgen-middleware")
     standaloneImplementation project(":nextgen-middleware")
@@ -229,6 +230,4 @@ dependencies {
     implementation "org.eclipse.jetty:jetty-client:9.4.38.v20210224"
     implementation "com.squareup.okio:okio:2.8.0"
     implementation 'com.google.code.gson:gson:2.8.6'
-
-    implementation 'com.jjoe64:graphview:4.2.2'
 }

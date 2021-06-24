@@ -1,11 +1,13 @@
-package com.nextgenbroadcast.mobile.middleware.sample.chart
+package com.nextgenbroadcast.mobile.middleware.sample.view
 
 import android.content.Context
 import android.util.AttributeSet
+import androidx.core.content.ContextCompat
 import com.jjoe64.graphview.series.DataPoint
 import com.jjoe64.graphview.series.LineGraphSeries
+import com.nextgenbroadcast.mobile.middleware.dev.chart.TemporalChartView
 import com.nextgenbroadcast.mobile.middleware.sample.R
-import com.nextgenbroadcast.mobile.telemetry.TelemetryClient
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.TelemetryClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -24,7 +26,16 @@ class PhyChart @JvmOverloads constructor(
         super.onFinishInflate()
 
         title = resources.getString(R.string.chart_phy_snr_title)
-        gridLabelRenderer.numVerticalLabels = 4
+        val textColor = ContextCompat.getColor(context, R.color.white)
+
+        titleColor = textColor
+        with(gridLabelRenderer) {
+            gridColor = ContextCompat.getColor(context, R.color.chart_grid_color)
+            verticalLabelsColor = textColor
+            horizontalLabelsColor = textColor
+            textSize = resources.getDimension(R.dimen.chart_label_text_size)
+            numVerticalLabels = 4
+        }
 
         setViewport(VISIBLE_PERIOD, SNR_MIN_VALUE, SNR_MAX_VALUE)
     }

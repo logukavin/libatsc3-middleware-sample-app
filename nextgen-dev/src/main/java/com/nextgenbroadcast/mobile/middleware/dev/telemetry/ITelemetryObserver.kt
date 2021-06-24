@@ -1,4 +1,4 @@
-package com.nextgenbroadcast.mobile.telemetry
+package com.nextgenbroadcast.mobile.middleware.dev.telemetry
 
 import kotlinx.coroutines.flow.MutableSharedFlow
 
