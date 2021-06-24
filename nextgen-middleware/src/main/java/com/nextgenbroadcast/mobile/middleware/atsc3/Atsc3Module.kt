@@ -2,8 +2,8 @@ package com.nextgenbroadcast.mobile.middleware.atsc3
 
 import android.util.Log
 import com.nextgenbroadcast.mobile.core.LOG
-import com.nextgenbroadcast.mobile.core.atsc3.MediaUrl
-import com.nextgenbroadcast.mobile.core.atsc3.phy.PHYStatistics
+import com.nextgenbroadcast.mobile.core.isClass
+import com.nextgenbroadcast.mobile.core.model.MediaUrl
 import com.nextgenbroadcast.mobile.core.isEquals
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.Atsc3ServiceLocationTable
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.SLTConstants
@@ -16,6 +16,7 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.HeldXmlParser
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.service.Atsc3Service
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.service.LLSParserSLT
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.*
+import com.nextgenbroadcast.mobile.middleware.dev.atsc3.PHYStatistics
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -31,8 +32,10 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.fixedRateTimer
 import kotlin.concurrent.schedule
 import kotlin.math.max
+import kotlin.random.Random
 
 internal class Atsc3Module(
         private val cacheDir: File
@@ -635,13 +638,17 @@ internal class Atsc3Module(
     override fun pushRfPhyStatisticsUpdate(rfPhyStatistics: RfPhyStatistics) {
         phyDemodLock = rfPhyStatistics.demod_lock != 0
 
-        try {
-            PHYStatistics.PHYRfStatistics = "PHY: $rfPhyStatistics".also {
-                log(it)
+        if (USE_DEV_STATISTIC) {
+            try {
+                PHYStatistics.PHYRfStatistics = "PHY: $rfPhyStatistics".also {
+                    log(it)
+                }
+            } catch (ex: Exception) {
+                Log.w(TAG, "exception when dumping PHYRFStatistics: $ex");
             }
-        } catch (ex: Exception) {
-            Log.w(TAG, "exception when dumping PHYRFStatistics: $ex");
+            PHYStatistics.rfMetricsFlow.tryEmit(rfPhyStatistics)
         }
+
         rfPhyMetricsFlow.tryEmit(rfPhyStatistics)
     }
 
@@ -749,5 +756,6 @@ internal class Atsc3Module(
         const val SCHEME_MMT = "mmt://"
 
         private const val USE_PERSISTED_CONFIGURATION = true
+        private val USE_DEV_STATISTIC = isClass("com.nextgenbroadcast.mobile.middleware.dev.atsc3.PHYStatistics")
     }
 }
