@@ -1,4 +1,4 @@
-package com.nextgenbroadcast.mobile.middleware.sample.chart
+package com.nextgenbroadcast.mobile.middleware.dev.chart
 
 import com.jjoe64.graphview.series.BaseSeries
 import com.jjoe64.graphview.series.DataPoint

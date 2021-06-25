@@ -27,7 +27,7 @@ import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.presentation.ApplicationState
-import com.nextgenbroadcast.mobile.middleware.sample.chart.PhyChart
+import com.nextgenbroadcast.mobile.middleware.sample.view.PhyChart
 import com.nextgenbroadcast.mobile.middleware.sample.core.SwipeGestureDetector
 import com.nextgenbroadcast.mobile.middleware.sample.core.mapWith
 import com.nextgenbroadcast.mobile.middleware.sample.databinding.FragmentMainBinding
@@ -38,8 +38,8 @@ import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.ViewViewModel
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.factory.UserAgentViewModelFactory
 import com.nextgenbroadcast.mobile.middleware.sample.resolver.ReceiverContentResolver
 import com.nextgenbroadcast.mobile.middleware.sample.useragent.ServiceAdapter
-import com.nextgenbroadcast.mobile.telemetry.TelemetryClient
-import com.nextgenbroadcast.mobile.telemetry.WebTelemetryObserver
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.TelemetryClient
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.WebTelemetryObserver
 import com.nextgenbroadcast.mobile.view.AboutDialog
 import com.nextgenbroadcast.mobile.view.TrackSelectionDialog
 import com.nextgenbroadcast.mobile.view.UserAgentView
