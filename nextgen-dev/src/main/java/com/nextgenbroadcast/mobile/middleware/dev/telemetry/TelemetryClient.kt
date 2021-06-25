@@ -37,6 +37,10 @@ class TelemetryClient(
         observingJob = null
     }
 
+    fun isStarted(): Boolean {
+        return observingJob?.isActive ?: false
+    }
+
     inline fun <reified T> getPayloadFlow(): Flow<T?> {
         return eventFlow.map { event ->
             try {
