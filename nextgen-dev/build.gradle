@@ -34,6 +34,7 @@ android {
     }
 }
 
+def libatsc3Version = rootProject.ext.libatsc3Version
 def coreKtxVersion = rootProject.ext.coreKtxVersion
 def coroutinesVersion = rootProject.ext.coroutinesVersion
 
@@ -47,6 +48,12 @@ dependencies {
     implementation project(':nextgen-core')
 
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:$coroutinesVersion"
+
+    if (project.hasProperty('org.gradle.project.use_local_src_libatsc3_folder') && project.property('org.gradle.project.use_local_src_libatsc3_folder').toString().toBoolean()) {
+        implementation project(":atsc3_bridge")
+    } else {
+        implementation "org.ngbp.libatsc3:atsc3_bridge:$libatsc3Version"
+    }
 
     // Telemetry observing
     implementation "org.eclipse.jetty:jetty-client:9.4.38.v20210224"

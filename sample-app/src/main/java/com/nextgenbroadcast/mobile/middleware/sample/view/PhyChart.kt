@@ -7,12 +7,11 @@ import com.jjoe64.graphview.series.DataPoint
 import com.jjoe64.graphview.series.LineGraphSeries
 import com.nextgenbroadcast.mobile.middleware.dev.chart.TemporalChartView
 import com.nextgenbroadcast.mobile.middleware.sample.R
-import com.nextgenbroadcast.mobile.middleware.dev.telemetry.TelemetryClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
 import kotlin.math.max
@@ -41,13 +40,9 @@ class PhyChart @JvmOverloads constructor(
     }
 
     class DataSource(
-        client: TelemetryClient
+        private val flow: Flow<Double>,
     ) : TemporalDataSource(VISIBLE_PERIOD) {
         private var graphSeries = LineGraphSeries<DataPoint>()
-        private val flow = client.getPayloadFlow<PhyPayload>().map {
-            it.snr1000.toDouble() / 1000
-        }
-
         private var sourceJob: Job? = null
 
         override fun open() {
