@@ -2,6 +2,8 @@ package com.nextgenbroadcast.mobile.middleware.dev.telemetry
 
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import com.nextgenbroadcast.mobile.core.LOG
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.observer.ITelemetryObserver
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.*
@@ -35,11 +37,24 @@ class TelemetryClient(
         observingJob = null
     }
 
-    inline fun <reified T> getPayloadFlow(): Flow<T> {
+    fun isStarted(): Boolean {
+        return observingJob?.isActive ?: false
+    }
+
+    inline fun <reified T> getPayloadFlow(): Flow<T?> {
         return eventFlow.map { event ->
-            gson.fromJson<T>(event.payload, typeToken<T>())
+            try {
+                gson.fromJson<T>(event.payload, typeToken<T>())
+            } catch (e: Exception) {
+                LOG.w(TAG, "Cann't parse telemetry event", e)
+                null
+            }
         }
     }
 
     inline fun <reified T> typeToken(): Type = object: TypeToken<T>() {}.type
+
+    companion object {
+        val TAG: String = TelemetryClient::class.java.simpleName
+    }
 }

@@ -21,12 +21,13 @@ import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.setFragmentResultListener
 import androidx.lifecycle.ViewModelProvider
 import com.google.android.material.bottomsheet.BottomSheetBehavior
-import com.nextgenbroadcast.mobile.core.atsc3.phy.PHYStatistics
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.presentation.ApplicationState
+import com.nextgenbroadcast.mobile.middleware.dev.atsc3.PHYStatistics
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.observer.StaticTelemetryObserver
 import com.nextgenbroadcast.mobile.middleware.sample.view.PhyChart
 import com.nextgenbroadcast.mobile.middleware.sample.core.SwipeGestureDetector
 import com.nextgenbroadcast.mobile.middleware.sample.core.mapWith
@@ -39,12 +40,13 @@ import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.factory.UserAgent
 import com.nextgenbroadcast.mobile.middleware.sample.resolver.ReceiverContentResolver
 import com.nextgenbroadcast.mobile.middleware.sample.useragent.ServiceAdapter
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.TelemetryClient
-import com.nextgenbroadcast.mobile.middleware.dev.telemetry.WebTelemetryObserver
 import com.nextgenbroadcast.mobile.view.AboutDialog
 import com.nextgenbroadcast.mobile.view.TrackSelectionDialog
 import com.nextgenbroadcast.mobile.view.UserAgentView
 import kotlinx.android.synthetic.main.fragment_main.*
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.map
 
 class MainFragment : Fragment(), ReceiverContentResolver.Listener {
 
@@ -92,7 +94,8 @@ class MainFragment : Fragment(), ReceiverContentResolver.Listener {
         receiverContentResolver = ReceiverContentResolver(context, this)
 
         telemetryClient = TelemetryClient(
-            WebTelemetryObserver("localhost", 8081, listOf("phy")),
+            StaticTelemetryObserver(),
+            //WebTelemetryObserver("localhost", 8081, listOf("phy")),
             300
         )
     }
@@ -220,11 +223,15 @@ class MainFragment : Fragment(), ReceiverContentResolver.Listener {
 
         viewViewModel.showPhyChart.observe(viewLifecycleOwner) { phyChartEnabled ->
             if (phyChartEnabled == true) {
-                phy_chart.setDataSource(newChartDataSource())
-                telemetryClient.start()
+                if (!telemetryClient.isStarted()) {
+                    phy_chart.setDataSource(newChartDataSource())
+                    telemetryClient.start()
+                }
             } else {
-                phy_chart.setDataSource(null)
-                telemetryClient.stop()
+                if (telemetryClient.isStarted()) {
+                    phy_chart.setDataSource(null)
+                    telemetryClient.stop()
+                }
             }
         }
 
@@ -545,7 +552,14 @@ class MainFragment : Fragment(), ReceiverContentResolver.Listener {
         receiverContentResolver.publishApplicationState(ApplicationState.UNAVAILABLE)
     }
 
-    private fun newChartDataSource() = PhyChart.DataSource(telemetryClient)
+    private fun newChartDataSource() = PhyChart.DataSource(
+        telemetryClient.getPayloadFlow<Int>().filterNotNull().map {
+            it.toDouble() / 1000
+        }
+//        telemetryClient.getPayloadFlow<PhyChart.PhyPayload>().filterNotNull().map {
+//            it.snr1000.toDouble() / 1000
+//        }
+    )
 
     companion object {
         val TAG: String = MainFragment::class.java.simpleName

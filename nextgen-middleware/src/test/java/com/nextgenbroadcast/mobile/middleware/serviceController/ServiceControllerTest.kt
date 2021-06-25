@@ -1,7 +1,7 @@
 package com.nextgenbroadcast.mobile.middleware.serviceController
 
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
-import com.nextgenbroadcast.mobile.core.atsc3.MediaUrl
+import com.nextgenbroadcast.mobile.core.model.MediaUrl
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.PhyFrequency
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
