@@ -223,11 +223,15 @@ class MainFragment : Fragment(), ReceiverContentResolver.Listener {
 
         viewViewModel.showPhyChart.observe(viewLifecycleOwner) { phyChartEnabled ->
             if (phyChartEnabled == true) {
-                phy_chart.setDataSource(newChartDataSource())
-                telemetryClient.start()
+                if (!telemetryClient.isStarted()) {
+                    phy_chart.setDataSource(newChartDataSource())
+                    telemetryClient.start()
+                }
             } else {
-                phy_chart.setDataSource(null)
-                telemetryClient.stop()
+                if (telemetryClient.isStarted()) {
+                    phy_chart.setDataSource(null)
+                    telemetryClient.stop()
+                }
             }
         }
 
