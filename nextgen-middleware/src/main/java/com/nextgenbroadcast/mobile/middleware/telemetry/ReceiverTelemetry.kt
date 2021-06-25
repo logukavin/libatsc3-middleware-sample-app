@@ -8,4 +8,5 @@ object ReceiverTelemetry {
 
     const val INFO_DEBUG = "debug"
     const val INFO_PHY = "phy"
+    const val INFO_PHY_CHART = "phyChart"
 }

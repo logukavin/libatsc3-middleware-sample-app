@@ -239,12 +239,13 @@ class MainActivity : BaseActivity() {
             controlerPresentationJob = lifecycleScope.launch {
                 launch {
                     controllerPresenter.debugInfoSettings.collect { debugInfoSetting ->
-                        val isDebugInfoEnable = debugInfoSetting[ReceiverTelemetry.INFO_DEBUG]
-                                ?: false
+                        val isDebugInfoEnable = debugInfoSetting[ReceiverTelemetry.INFO_DEBUG] ?: false
                         val isPhyInfoEnable = debugInfoSetting[ReceiverTelemetry.INFO_PHY] ?: false
+                        val isPhyChartEnable = debugInfoSetting[ReceiverTelemetry.INFO_PHY_CHART] ?: false
 
                         showDebugInfo.value = isDebugInfoEnable || isPhyInfoEnable
                         showPhyInfo.value = isPhyInfoEnable
+                        showPhyChart.value = isPhyChartEnable
                     }
                 }
 
@@ -279,6 +280,15 @@ class MainActivity : BaseActivity() {
                     val actualValue = controllerPresenter.debugInfoSettings.value[ReceiverTelemetry.INFO_PHY]
                     setIfChanged(actualValue, showPhyInfo) { enabled ->
                         controllerPresenter.setDebugInfoVisible(ReceiverTelemetry.INFO_PHY, enabled)
+                    }
+                }
+            }
+
+            showPhyChart.observe(this@MainActivity) { showPhyChart ->
+                if (showPhyChart != null) {
+                    val actualValue = controllerPresenter.debugInfoSettings.value[ReceiverTelemetry.INFO_PHY_CHART]
+                    setIfChanged(actualValue, showPhyChart) { enabled ->
+                        controllerPresenter.setDebugInfoVisible(ReceiverTelemetry.INFO_PHY_CHART, enabled)
                     }
                 }
             }
