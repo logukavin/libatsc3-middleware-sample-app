@@ -3,6 +3,7 @@ package com.nextgenbroadcast.mobile.middleware.service
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.Intent.FLAG_ACTIVITY_NEW_TASK
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import android.net.*
@@ -169,7 +170,9 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
                 }
             }
         }
-
+        startActivity(AlertDialogActivity.newIntent(this@Atsc3ForegroundService, "Simple warning message"))
+        startActivity(AlertDialogActivity.newIntent(this@Atsc3ForegroundService, "2 Simple warning message"))
+        startActivity(AlertDialogActivity.newIntent(this@Atsc3ForegroundService, "3 Simple warning message"))
         //TODO: This is temporary solution
         serviceScope.launch {
             atsc3Receiver.serviceController.alertList.collect { alerts ->
@@ -177,7 +180,8 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
                 if (messages.isEmpty()) return@collect
                 withContext(Dispatchers.Main) {
                     messages.forEach { msg ->
-                        Toast.makeText(applicationContext, msg, Toast.LENGTH_LONG).show()
+                     //   Toast.makeText(applicationContext, msg, Toast.LENGTH_LONG).show()
+                  startActivity(AlertDialogActivity.newIntent(this@Atsc3ForegroundService, msg))
                     }
                 }
             }
