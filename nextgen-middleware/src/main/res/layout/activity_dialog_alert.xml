@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <TextView
+        android:id="@+id/textViewAlertMessage"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+        android:drawablePadding="8dp"
+        android:gravity="start|center_vertical"
+        android:padding="8dp"
+        app:drawableLeftCompat="@drawable/ic_baseline_warning_24"
+        tools:text="Alert message" />
+
+    <Button
+        android:id="@+id/buttonOkDialogAlert"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+        android:background="@color/but_dismiss_bg_color"
+        android:text="@string/dismiss"
+        android:textColor="@color/white" />
+
+</LinearLayout>
