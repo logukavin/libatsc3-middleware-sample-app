@@ -17,7 +17,8 @@ internal class OnboardPhyInitializer(
         private val receiver: IAtsc3ReceiverCore
 ) : IServiceInitializer {
 
-    private var isActive = true
+    @Volatile
+    private var isCanceled = false
 
     override suspend fun initialize(context: Context, components: Map<Class<*>, Pair<Int, String>>): Boolean {
         components.filter { (clazz, _) ->
@@ -36,6 +37,8 @@ internal class OnboardPhyInitializer(
 
                 var connected = false
                 params.forEach params@{ (fd, devicePath, freqKhz) ->
+                    if (isCanceled) return@forEach
+
                     try {
                         connected = suspendCancellableCoroutine { cont ->
                             receiver.openRoute(PhyAtsc3Source(phy, fd, devicePath, freqKhz)) { result ->
@@ -46,8 +49,6 @@ internal class OnboardPhyInitializer(
                     } catch (t: Throwable) {
                         t.printStackTrace()
                     }
-
-                    if (!isActive) return@forEach
                 }
 
                 if (connected) {
@@ -63,14 +64,14 @@ internal class OnboardPhyInitializer(
                 Log.w(TAG, "Onboard Phy resource reading error: ", e)
             }
 
-            if (!isActive) return@forEach
+            if (isCanceled) return@forEach
         }
 
         return false
     }
 
     override fun cancel() {
-        isActive = false
+        isCanceled = true
     }
 
     private fun readPhyAttributes(parser: XmlResourceParser): List<Triple<Int, String?, Int>> {
