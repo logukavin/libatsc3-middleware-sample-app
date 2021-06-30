@@ -1,17 +1,17 @@
 package com.nextgenbroadcast.mobile.middleware.service.init
 
 import android.content.Context
+import android.content.res.Resources
+import android.content.res.XmlResourceParser
 import android.util.Log
 import com.nextgenbroadcast.mobile.core.model.PhyFrequency
 import com.nextgenbroadcast.mobile.middleware.IAtsc3ReceiverCore
+import com.nextgenbroadcast.mobile.middleware.atsc3.utils.*
 import com.nextgenbroadcast.mobile.middleware.location.IFrequencyLocator
-import com.nextgenbroadcast.mobile.middleware.location.LocationRequester
-import com.nextgenbroadcast.mobile.middleware.settings.IReceiverSettings
 import kotlinx.coroutines.*
 import java.util.concurrent.TimeUnit
 
 internal class FrequencyInitializer(
-        private val settings: IReceiverSettings,
         private val receiver: IAtsc3ReceiverCore
 ) : IServiceInitializer {
 
@@ -20,18 +20,15 @@ internal class FrequencyInitializer(
 
         val locators = components.filter { (clazz, _) ->
             IFrequencyLocator::class.java.isAssignableFrom(clazz)
-        }.filter { (_, data) ->
-            val (_, value) = data
-            value == LOCATOR_STR
-        }.map { (clazz, _) ->
+        }.map { (clazz, data) ->
+            val (resource) = data
             @Suppress("UNCHECKED_CAST")
-            clazz as Class<IFrequencyLocator>
+            Pair(clazz as Class<IFrequencyLocator>, resource)
         }
 
         supervisorScope {
             var locationTaken = false
             var frequencyApplied = false
-            val prevFrequencyLocation = settings.frequencyLocation
 
             val defaultTune = async {
                 delay(FAST_TUNE_DELAY)
@@ -45,35 +42,29 @@ internal class FrequencyInitializer(
             }
 
             withTimeout(LOCATION_REQUEST_DELAY) {
-                locators.forEach { component ->
-                    val instance: Any = component.getDeclaredConstructor().newInstance()
-                    val locator = instance as IFrequencyLocator
-
+                locators.forEach { (component, resource) ->
                     try {
+                        val parser = context.resources.getXml(resource)
+                        val defaultFrequencies = readAttributes(parser)
+
+                        val instance: Any = component.getDeclaredConstructor().newInstance()
+                        val locator = instance as IFrequencyLocator
+
                         Log.d(TAG, "locator.locateFrequency before method invocation, location_request_day: $LOCATION_REQUEST_DELAY")
 
-                        LocationRequester(context).getLastLocation()?.let { location ->
-                            Log.d(TAG, "locator.locateFrequency context: $context, location: $location")
-                            val prevLocation = prevFrequencyLocation?.location
-                            if (prevLocation == null || location.distanceTo(prevLocation) > IFrequencyLocator.RECEPTION_RADIUS) {
-                                locator.locateFrequency(location)?.let { frequencyLocation ->
-                                    Log.d(TAG, "locator.locateFrequency let: $context, location: $frequencyLocation")
-
-                                    settings.frequencyLocation = frequencyLocation
-                                    val frequencies = frequencyLocation.frequencyList.filter { it > 0 }
-                                    if (frequencies.isNotEmpty()) {
-                                        withContext(Dispatchers.Main) {
-                                            receiver.tune(PhyFrequency.auto(frequencies))
-                                        }
-                                        locationTaken = true
-                                    }
-                                }
+                        val frequencies = (defaultFrequencies + locator.locateFrequency(context)).distinct()
+                        if (frequencies.isNotEmpty()) {
+                            withContext(Dispatchers.Main) {
+                                receiver.tune(PhyFrequency.auto(frequencies))
                             }
+                            locationTaken = true
                         }
 
                         defaultTune.cancel()
                     } catch (e: TimeoutCancellationException) {
                         Log.w(TAG, "Location request timeout")
+                    } catch (e: Resources.NotFoundException) {
+                        Log.w(OnboardPhyInitializer.TAG, "Frequency resource reading error: ", e)
                     }
 
                     if (!isActive || locationTaken) return@forEach
@@ -95,12 +86,34 @@ internal class FrequencyInitializer(
 
     }
 
+    private fun readAttributes(parser: XmlResourceParser): List<Int> {
+        val result = ArrayList<Int>()
+        try {
+            parser.iterateDocument { name ->
+                if (name == "frequencies") {
+                    parser.iterateSubTags { subName ->
+                        if (subName == "frequency") {
+                            parser.readTextTag()?.toIntOrNull()?.let {
+                                result.add(it * 1000)
+                            }
+                        } else {
+                            parser.skipTag()
+                        }
+                    }
+                } else {
+                    parser.skipTag()
+                }
+            }
+        } finally {
+            parser.close()
+            return result
+        }
+    }
+
     companion object {
         val TAG: String = FrequencyInitializer::class.java.simpleName
 
         private val FAST_TUNE_DELAY = TimeUnit.SECONDS.toMillis(10)
         private val LOCATION_REQUEST_DELAY = TimeUnit.MINUTES.toMillis(5)
-
-        private const val LOCATOR_STR = "nextgenbroadcast.locator"
     }
 }

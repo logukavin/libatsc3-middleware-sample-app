@@ -178,7 +178,7 @@ internal class ServiceControllerImpl(
 
     override suspend fun openRoute(source: IAtsc3Source, force: Boolean): Boolean {
         return withContext(atsc3Scope.coroutineContext) {
-            atsc3ScopeLock.withLock {
+            val opened = atsc3ScopeLock.withLock {
                 if (force || atsc3Module.isIdle()) {
                     withContext(Dispatchers.Main) {
                         clearRouteData()
@@ -186,14 +186,17 @@ internal class ServiceControllerImpl(
 
                     val lastProfile = getLastProfileForSource(source)
                     if (atsc3Module.connect(source, lastProfile?.configs)) {
-                        if (source is ITunableSource) {
-                            tune(PhyFrequency.default(PhyFrequency.Source.AUTO))
-                        }
                         return@withLock true
                     }
                 }
                 return@withLock false
             }
+
+            if (opened && source is ITunableSource) {
+                tune(PhyFrequency.default(PhyFrequency.Source.AUTO))
+            }
+
+            opened
         }
     }
 
@@ -268,43 +271,33 @@ internal class ServiceControllerImpl(
 
     override suspend fun tune(frequency: PhyFrequency) {
         withContext(Dispatchers.Main) {
-            val frequencyList: List<Int> = if (frequency.list.isEmpty()) {
-                // If provided frequency list is empty then load last saved frequency and frequency list if it available
-                val lastFrequency = settings.lastFrequency
-                //TODO: why don't we check location??
-                settings.frequencyLocation?.let {
-                    it.frequencyList.toMutableList().apply {
-                        if (lastFrequency > 0) {
-                            remove(lastFrequency)
-                            add(0, lastFrequency)
-                        }
-                    }
-                } ?: mutableListOf<Int>().apply {
-                    if (lastFrequency > 0) {
-                        add(lastFrequency)
-                    }
+            atsc3ScopeLock.withLock {
+                val frequencyList: List<Int> = if (frequency.list.isEmpty()) {
+                    settings.lastFrequency
+                } else {
+                    frequency.list
                 }
-            } else {
-                frequency.list
-            }
 
-            val freqKhz = frequencyList.firstOrNull() ?: return@withContext
+                val freqKhz = frequencyList.firstOrNull() ?: return@withContext
 
-            val forceTune = (frequency.source == PhyFrequency.Source.USER)
+                val forceTune = (frequency.source == PhyFrequency.Source.USER)
+                if (forceTune) {
+                    // Reset current media. New media url will be received after service selection.
+                    resetMediaUrl()
+                }
 
-            if (forceTune) {
-                // Reset current media. New media url will be received after service selection.
-                resetMediaUrl()
-            }
+                val tuned = withContext(atsc3Scope.coroutineContext) {
+                    // ignore auto tune if receiver already tuned or scanning
+                    if (atsc3Module.isIdle() || forceTune) {
+                        atsc3Module.tune(frequencyList, forceTune)
+                        true
+                    } else false
+                }
 
-            // Store the first one because it will be used as default
-            receiverFrequency.value = freqKhz
-            settings.lastFrequency = freqKhz
-
-            withContext(atsc3Scope.coroutineContext) {
-                // ignore auto tune if receiver already tuned or scanning
-                if (atsc3Module.isIdle() || forceTune) {
-                    atsc3Module.tune(frequencyList, forceTune)
+                if (tuned) {
+                    // Store the first one because it will be used as default
+                    receiverFrequency.value = freqKhz
+                    settings.lastFrequency = frequencyList
                 }
             }
         }

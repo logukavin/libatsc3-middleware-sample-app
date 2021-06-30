@@ -5,6 +5,6 @@ import com.nextgenbroadcast.mobile.middleware.location.FrequencyLocation
 
 interface IReceiverSettings {
     var frequencyLocation: FrequencyLocation?
-    var lastFrequency: Int
+    var lastFrequency: List<Int>
     var receiverProfile: Atsc3Profile?
 }
