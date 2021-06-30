@@ -1,11 +1,7 @@
 package com.nextgenbroadcast.mobile.middleware.location
 
-import android.location.Location
+import android.content.Context
 
 interface IFrequencyLocator {
-    suspend fun locateFrequency(location: Location): FrequencyLocation?
-
-    companion object {
-        const val RECEPTION_RADIUS = 50 * 1000 // in metres
-    }
+    suspend fun locateFrequency(context: Context): List<Int>
 }
