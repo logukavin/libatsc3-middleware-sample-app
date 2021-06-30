@@ -8,6 +8,8 @@ import android.content.SharedPreferences
 import android.hardware.Sensor
 import android.hardware.SensorManager
 import android.media.AudioManager
+import android.net.nsd.NsdManager
+import android.net.nsd.NsdServiceInfo
 import android.net.wifi.WifiManager
 import androidx.core.content.edit
 import androidx.media.MediaBrowserServiceCompat
@@ -18,6 +20,7 @@ import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.core.model.PhyFrequency
 import com.nextgenbroadcast.mobile.middleware.*
 import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverCore
+import com.nextgenbroadcast.mobile.middleware.dev.nsd.NsdConfig
 import com.nextgenbroadcast.mobile.middleware.gateway.web.ConnectionType
 import com.nextgenbroadcast.mobile.middleware.server.web.IMiddlewareWebServer
 import com.nextgenbroadcast.mobile.middleware.service.Atsc3ForegroundService
@@ -64,6 +67,9 @@ internal class TelemetryHolder(
     }
     private val wifiManager: WifiManager by lazy {
         context.getSystemService(MediaBrowserServiceCompat.WIFI_SERVICE) as WifiManager
+    }
+    private val nsdManager: NsdManager by lazy {
+        context.getSystemService(Context.NSD_SERVICE) as NsdManager
     }
     private val sharedPreferences: SharedPreferences by lazy {
         context.getSharedPreferences(SHARED_PREFERENCES_NAME, Context.MODE_PRIVATE)
@@ -142,12 +148,15 @@ internal class TelemetryHolder(
 
         FirebaseInstallations.getInstance().id.addOnCompleteListener { task ->
             if (task.isSuccessful) {
-                initializeAWSIoThing(task.result)
+                val deviceId = task.result
+                initializeAWSIoThing(deviceId)
+                if (MiddlewareConfig.DEV_TOOLS) {
+                    registerNsdService(deviceId)
+                }
             } else {
                 LOG.e(TAG, "Can't create Telemetry because Firebase ID not received.", task.exception)
             }
         }
-
     }
 
     fun close() {
@@ -163,6 +172,10 @@ internal class TelemetryHolder(
             }
         }
         awsIoThing = null
+
+        if (MiddlewareConfig.DEV_TOOLS) {
+            unregisterNsdService()
+        }
     }
 
     fun setInfoVisible(enabled: Boolean, name: String) {
@@ -340,6 +353,49 @@ internal class TelemetryHolder(
     private fun storePrefsMap(key: String, map: PrefsMap) {
         sharedPreferences.edit {
             putString(key, gson.toJson(map))
+        }
+    }
+
+    private fun registerNsdService(deviceId: String) {
+        try {
+            nsdManager.registerService(
+                NsdServiceInfo().apply {
+                    serviceName = NsdConfig.SERVICE_NAME
+                    serviceType = NsdConfig.SERVICE_TYPE
+                    port = CONNECTION_TCP_PORT
+                    setAttribute("id", deviceId)
+                },
+                NsdManager.PROTOCOL_DNS_SD,
+                nsdRegistrationListener
+            )
+        } catch (e: Exception) {
+            LOG.w(TAG, "Failed to register NSD service", e)
+        }
+    }
+
+    private fun unregisterNsdService() {
+        try {
+            nsdManager.unregisterService(nsdRegistrationListener)
+        } catch (e: Exception) {
+            LOG.w(TAG, "Failed to unregister NSD service", e)
+        }
+    }
+
+    private val nsdRegistrationListener = object : NsdManager.RegistrationListener {
+        override fun onServiceRegistered(NsdServiceInfo: NsdServiceInfo) {
+            LOG.d(TAG, "NSD Registered")
+        }
+
+        override fun onRegistrationFailed(serviceInfo: NsdServiceInfo, errorCode: Int) {
+            LOG.d(TAG, "NSD RegistrationFailed errorCode: $errorCode")
+        }
+
+        override fun onServiceUnregistered(arg0: NsdServiceInfo) {
+            LOG.d(TAG, "NSD Unregistered")
+        }
+
+        override fun onUnregistrationFailed(serviceInfo: NsdServiceInfo, errorCode: Int) {
+            LOG.d(TAG, "NSD Unregistration Failed errorCode: $errorCode")
         }
     }
 
