@@ -6,6 +6,7 @@ import com.jjoe64.graphview.DefaultLabelFormatter
 import com.jjoe64.graphview.GraphView
 import com.jjoe64.graphview.series.BaseSeries
 import com.jjoe64.graphview.series.DataPoint
+import com.nextgenbroadcast.mobile.core.LOG
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -89,18 +90,21 @@ open class TemporalChartView @JvmOverloads constructor(
         private var totalValueCount: Long = 0
 
         fun addValue(graphSeries: BaseSeries<DataPoint>, value: Double) {
-            val currentTime = System.currentTimeMillis()
+            addValue(graphSeries, value, System.currentTimeMillis())
+        }
+
+        fun addValue(graphSeries: BaseSeries<DataPoint>, value: Double, time: Long) {
             if (eventCounter == 0) {
-                eventStartTime = currentTime
+                eventStartTime = time
             }
 
             if (eventCounter > SPEED_UPDATE_ITEM_COUNT) {
-                currentSpeed = ((currentTime - eventStartTime) / SPEED_UPDATE_ITEM_COUNT)
+                currentSpeed = ((time - eventStartTime) / SPEED_UPDATE_ITEM_COUNT)
                 eventCounter = 0
-                eventStartTime = currentTime
+                eventStartTime = time
             }
 
-            val dataPoint = DataPoint(currentTime.toDouble().toSeconds(), value)
+            val dataPoint = DataPoint(time.toDouble().toSeconds(), value)
 
             val maxValueCount = if (currentSpeed == 0L) {
                 INITIAL_VALUE_COUNT
@@ -108,7 +112,11 @@ open class TemporalChartView @JvmOverloads constructor(
                 INITIAL_VALUE_COUNT + (visiblePeriod / currentSpeed)
             }
 
-            graphSeries.appendData(dataPoint, true, maxValueCount.toInt())
+            try {
+                graphSeries.appendData(dataPoint, true, maxValueCount.toInt())
+            } catch (e: IndexOutOfBoundsException) {
+                LOG.d(TAG, "Failed to append new value: $dataPoint", e)
+            }
 
             eventCounter++
             totalValueCount++
@@ -116,7 +124,17 @@ open class TemporalChartView @JvmOverloads constructor(
 
         fun getTotalCount() = totalValueCount
 
+        override fun open() {
+            eventCounter = 0
+        }
+
+        override fun close(reset: Boolean) {
+            eventCounter = 0
+        }
+
         companion object {
+            val TAG: String = TemporalDataSource::class.java.simpleName
+
             private const val SPEED_UPDATE_ITEM_COUNT = 10
             private const val INITIAL_VALUE_COUNT = 100
         }

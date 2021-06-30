@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="phy_chart_height">100dp</dimen>
+    <dimen name="chart_label_text_size">12sp</dimen>
+</resources>

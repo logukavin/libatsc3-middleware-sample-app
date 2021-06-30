@@ -1,4 +1,4 @@
-package com.nextgenbroadcast.mobile.middleware.sample.view
+package com.nextgenbroadcast.mobile.middleware.scoreboard.view
 
 import android.content.Context
 import android.util.AttributeSet
@@ -6,7 +6,7 @@ import androidx.core.content.ContextCompat
 import com.jjoe64.graphview.series.DataPoint
 import com.jjoe64.graphview.series.LineGraphSeries
 import com.nextgenbroadcast.mobile.middleware.dev.chart.TemporalChartView
-import com.nextgenbroadcast.mobile.middleware.sample.R
+import com.nextgenbroadcast.mobile.middleware.scoreboard.R
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -40,7 +40,7 @@ class PhyChart @JvmOverloads constructor(
     }
 
     class DataSource(
-        private val flow: Flow<Double>,
+        private val flow: Flow<Pair<Long, Double>>,
     ) : TemporalDataSource(VISIBLE_PERIOD) {
         private var graphSeries = LineGraphSeries<DataPoint>()
         private var sourceJob: Job? = null
@@ -49,8 +49,8 @@ class PhyChart @JvmOverloads constructor(
             super.open()
 
             sourceJob = CoroutineScope(Dispatchers.Main).launch {
-                flow.collect { value ->
-                    addValue(graphSeries, min(max(SNR_MIN_VALUE, value), SNR_MAX_VALUE))
+                flow.collect { (time, value) ->
+                    addValue(graphSeries, min(max(SNR_MIN_VALUE, value), SNR_MAX_VALUE), time)
                 }
             }
         }
@@ -68,10 +68,6 @@ class PhyChart @JvmOverloads constructor(
 
         override fun getSeries() = listOf(graphSeries)
     }
-
-    data class PhyPayload(
-        val snr1000: Int
-    )
 
     companion object {
         private const val SNR_MAX_VALUE = 30.0
