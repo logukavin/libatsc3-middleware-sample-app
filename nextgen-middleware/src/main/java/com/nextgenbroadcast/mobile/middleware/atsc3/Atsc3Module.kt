@@ -2,9 +2,9 @@ package com.nextgenbroadcast.mobile.middleware.atsc3
 
 import android.util.Log
 import com.nextgenbroadcast.mobile.core.LOG
-import com.nextgenbroadcast.mobile.core.isClass
 import com.nextgenbroadcast.mobile.core.model.MediaUrl
 import com.nextgenbroadcast.mobile.core.isEquals
+import com.nextgenbroadcast.mobile.middleware.MiddlewareConfig
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.Atsc3ServiceLocationTable
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.SLTConstants
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.alerts.LLSParserAEAT
@@ -756,6 +756,6 @@ internal class Atsc3Module(
         const val SCHEME_MMT = "mmt://"
 
         private const val USE_PERSISTED_CONFIGURATION = true
-        private val USE_DEV_STATISTIC = isClass("com.nextgenbroadcast.mobile.middleware.dev.atsc3.PHYStatistics")
+        private val USE_DEV_STATISTIC = MiddlewareConfig.DEV_TOOLS
     }
 }
