@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">Middleware Scoreboard</string>
+    <string name="chart_phy_snr_title">Phy SNR</string>
+    <string name="chart_add_btn_title">Add</string>
+    <string name="chart_remove_btn_title">Remove</string>
+    <string name="chart_device_lost_label">LOST</string>
+    <string name="chart_mode_switch_title">Show in pager mode</string>
+</resources>
