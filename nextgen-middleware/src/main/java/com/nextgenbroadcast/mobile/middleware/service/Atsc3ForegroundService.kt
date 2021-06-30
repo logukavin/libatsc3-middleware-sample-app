@@ -319,10 +319,11 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         }
 
         try {
+            val freqInitializer = FrequencyInitializer(atsc3Receiver).also {
+                initializer.add(WeakReference(it))
+            }
             serviceScope.launch(handler) {
-                FrequencyInitializer(atsc3Receiver).also {
-                    initializer.add(WeakReference(it))
-                }.initialize(appContext, components)
+                freqInitializer.initialize(appContext, components)
             }
 
             // Do not re-open the libatsc3 if it's already opened
@@ -336,8 +337,10 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
                 if (phyInitializer.initialize(appContext, components)) {
                     startForeground(applicationContext)
                 } else {
-                    UsbPhyInitializer().also {
-                        initializer.add(WeakReference(it))
+                    withContext(Dispatchers.Main) {
+                        UsbPhyInitializer().also {
+                            initializer.add(WeakReference(it))
+                        }
                     }.initialize(appContext, components)
                 }
             }

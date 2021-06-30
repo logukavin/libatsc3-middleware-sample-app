@@ -15,6 +15,9 @@ internal class FrequencyInitializer(
         private val receiver: IAtsc3ReceiverCore
 ) : IServiceInitializer {
 
+    @Volatile
+    private var isCanceled = false
+
     override suspend fun initialize(context: Context, components: Map<Class<*>, Pair<Int, String>>): Boolean {
         Log.d(TAG, "FrequencyInitializer::initalize - locator.locateFrequency before method invocation, location_request_day: $LOCATION_REQUEST_DELAY")
 
@@ -33,16 +36,20 @@ internal class FrequencyInitializer(
             val defaultTune = async {
                 delay(FAST_TUNE_DELAY)
 
-                if (!isActive) return@async
+                if (!isActive || isCanceled) return@async
 
                 frequencyApplied = true
                 withContext(Dispatchers.Main) {
-                    receiver.tune(PhyFrequency.default(PhyFrequency.Source.AUTO))
+                    if (!isCanceled) {
+                        receiver.tune(PhyFrequency.default(PhyFrequency.Source.AUTO))
+                    }
                 }
             }
 
             withTimeout(LOCATION_REQUEST_DELAY) {
                 locators.forEach { (component, resource) ->
+                    if (!isActive || isCanceled) return@forEach
+
                     try {
                         val parser = context.resources.getXml(resource)
                         val defaultFrequencies = readAttributes(parser)
@@ -55,7 +62,9 @@ internal class FrequencyInitializer(
                         val frequencies = (defaultFrequencies + locator.locateFrequency(context)).distinct()
                         if (frequencies.isNotEmpty()) {
                             withContext(Dispatchers.Main) {
-                                receiver.tune(PhyFrequency.auto(frequencies))
+                                if (!isCanceled) {
+                                    receiver.tune(PhyFrequency.auto(frequencies))
+                                }
                             }
                             locationTaken = true
                         }
@@ -74,7 +83,9 @@ internal class FrequencyInitializer(
             if (!locationTaken && !frequencyApplied) {
                 withContext(Dispatchers.Main) {
                     Log.i(TAG, "locationTaken: $locationTaken, frequencyApplied: $frequencyApplied")
-                    receiver.tune(PhyFrequency.default(PhyFrequency.Source.AUTO))
+                    if (!isCanceled) {
+                        receiver.tune(PhyFrequency.default(PhyFrequency.Source.AUTO))
+                    }
                 }
             }
         }
@@ -83,7 +94,7 @@ internal class FrequencyInitializer(
     }
 
     override fun cancel() {
-
+        isCanceled = true
     }
 
     private fun readAttributes(parser: XmlResourceParser): List<Int> {

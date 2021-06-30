@@ -9,7 +9,8 @@ import com.nextgenbroadcast.mobile.middleware.phy.IUsbConnector
 import org.xmlpull.v1.XmlPullParser
 
 internal class UsbPhyInitializer : IServiceInitializer {
-    private var isActive = true
+    @Volatile
+    private var isCanceled = false
 
     override suspend fun initialize(context: Context, components: Map<Class<*>, Pair<Int, String>>): Boolean {
         components.filter { (clazz, _) ->
@@ -19,6 +20,8 @@ internal class UsbPhyInitializer : IServiceInitializer {
             @Suppress("UNCHECKED_CAST")
             Pair(clazz as Class<IUsbConnector>, resource)
         }.forEach { (component, resource) ->
+            if (isCanceled) return@forEach
+
             try {
                 val parser = context.resources.getXml(resource)
                 val phys = readPhyAttributes(parser)
@@ -32,15 +35,13 @@ internal class UsbPhyInitializer : IServiceInitializer {
             } catch (e: Resources.NotFoundException) {
                 Log.w(TAG, "Usb Phy resource reading error: ", e)
             }
-
-            if (!isActive) return@forEach
         }
 
         return false
     }
 
     override fun cancel() {
-        isActive = false
+        isCanceled = true
     }
 
     private fun readPhyAttributes(parser: XmlResourceParser): List<Pair<Int, Int>> {
