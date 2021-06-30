@@ -3,7 +3,6 @@ package com.nextgenbroadcast.mobile.middleware.service
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.content.Intent.FLAG_ACTIVITY_NEW_TASK
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import android.net.*
@@ -11,7 +10,6 @@ import android.os.*
 import android.os.PowerManager.WakeLock
 import android.support.v4.media.MediaBrowserCompat
 import android.util.Log
-import android.widget.Toast
 import androidx.core.content.ContextCompat
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
@@ -22,12 +20,9 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.source.UsbAtsc3Source
 import com.nextgenbroadcast.mobile.middleware.cache.DownloadManager
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
 import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
+import com.nextgenbroadcast.mobile.middleware.notification.AlertNotificationHelper
 import com.nextgenbroadcast.mobile.middleware.phy.Atsc3DeviceReceiver
-import com.nextgenbroadcast.mobile.middleware.service.holder.LocationHolder
-import com.nextgenbroadcast.mobile.middleware.service.holder.MediaHolder
-import com.nextgenbroadcast.mobile.middleware.service.holder.SrtListHolder
-import com.nextgenbroadcast.mobile.middleware.service.holder.TelemetryHolder
-import com.nextgenbroadcast.mobile.middleware.service.holder.WebServerHolder
+import com.nextgenbroadcast.mobile.middleware.service.holder.*
 import com.nextgenbroadcast.mobile.middleware.service.init.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -75,6 +70,10 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     // Initialization from Service metadata
     private val initializer = ArrayList<WeakReference<IServiceInitializer>>()
     private var isInitialized = false
+
+    private val alertNotificationHelper by lazy {
+        AlertNotificationHelper(this)
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -170,18 +169,33 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
                 }
             }
         }
-        startActivity(AlertDialogActivity.newIntent(this@Atsc3ForegroundService, "Simple warning message"))
-        startActivity(AlertDialogActivity.newIntent(this@Atsc3ForegroundService, "2 Simple warning message"))
-        startActivity(AlertDialogActivity.newIntent(this@Atsc3ForegroundService, "3 Simple warning message"))
-        //TODO: This is temporary solution
+
+        /// TODO test data should be removed
+//        startActivity(AlertDialogActivity.newIntent(this@Atsc3ForegroundService, "Simple warning message"))
+//        startActivity(AlertDialogActivity.newIntent(this@Atsc3ForegroundService, "Simple warning message2"))
+//        startActivity(AlertDialogActivity.newIntent(this@Atsc3ForegroundService, "Simple warning message3"))
+//        alertNotificationHelper.showNotification("Simple warning message1", (System.currentTimeMillis()/10000).toInt() + 2)
+//        alertNotificationHelper.showNotification("Simple warning message2", (System.currentTimeMillis()/10000).toInt() +3)
+//       alertNotificationHelper.showNotification("Simple warning message3", (System.currentTimeMillis()/10000).toInt() + 4)
+
         serviceScope.launch {
             atsc3Receiver.serviceController.alertList.collect { alerts ->
                 val messages = alerts.flatMap { it.messages ?: emptyList() }
                 if (messages.isEmpty()) return@collect
                 withContext(Dispatchers.Main) {
+                    var msgCounter = 0
                     messages.forEach { msg ->
-                     //   Toast.makeText(applicationContext, msg, Toast.LENGTH_LONG).show()
-                  startActivity(AlertDialogActivity.newIntent(this@Atsc3ForegroundService, msg))
+                        alertNotificationHelper.showNotification(
+                            msg,
+                            System.currentTimeMillis().toInt() + msgCounter
+                        )
+                        startActivity(
+                            AlertDialogActivity.newIntent(
+                                this@Atsc3ForegroundService,
+                                msg
+                            )
+                        )
+                        msgCounter++
                     }
                 }
             }
