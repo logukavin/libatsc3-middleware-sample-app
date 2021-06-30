@@ -1,12 +1,9 @@
 package com.nextgenbroadcast.mobile.middleware.service.holder
 
 import android.content.Context
-import android.net.Uri
-import android.os.Build
-import android.os.Environment
+import com.nextgenbroadcast.mobile.core.FileUtils
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.middleware.service.SrtConfigReader
-import java.io.File
 import java.util.*
 
 class SrtListHolder(
@@ -15,25 +12,14 @@ class SrtListHolder(
     private val externalSrtServices: MutableList<Triple<String, String, Boolean>> = mutableListOf()
 
     fun open() {
-        var externalFile: File? = null
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
-            externalFile = File(Environment.getExternalStorageDirectory(), EXTERNAL_FILE_NAME)
-        }
-
-        if (externalFile == null || !externalFile.exists()) {
-            externalFile = File(context.getExternalFilesDir(null), EXTERNAL_FILE_NAME)
-        }
-
-        if (!externalFile.exists()) return
-
         try {
-            context.contentResolver.openAssetFileDescriptor(Uri.fromFile(externalFile), "r")?.use { file ->
+            FileUtils.openExternalFileDescriptor(context, EXTERNAL_FILE_NAME)?.use { file ->
                 externalSrtServices.addAll(
                     SrtConfigReader.readSrtListFromFile(file)
                 )
             }
         } catch (e: Exception) {
-            LOG.w(TAG, "Failed to open external SRT config: ${externalFile.path}", e)
+            LOG.w(TAG, "Failed to open external SRT config: $EXTERNAL_FILE_NAME", e)
         }
     }
 
