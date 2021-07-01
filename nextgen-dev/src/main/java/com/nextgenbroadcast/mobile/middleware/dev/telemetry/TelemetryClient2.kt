@@ -2,6 +2,7 @@ package com.nextgenbroadcast.mobile.middleware.dev.telemetry
 
 import com.google.gson.Gson
 import com.nextgenbroadcast.mobile.core.LOG
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.entity.ClientTelemetryEvent
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.observer.ITelemetryObserver
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -17,7 +18,7 @@ class TelemetryClient2(
     private val stackSize: Int
 ) {
     private val coroutineScope = CoroutineScope(Dispatchers.IO)
-    private val observers = mutableMapOf<ITelemetryObserver, MutableSharedFlow<TelemetryEvent>>()
+    private val observers = mutableMapOf<ITelemetryObserver, MutableSharedFlow<ClientTelemetryEvent>>()
     private val observerJobs = ConcurrentHashMap<ITelemetryObserver, Job>()
 
     val gson = Gson()
@@ -52,17 +53,17 @@ class TelemetryClient2(
         observers.remove(observer)
     }
 
-    fun getFlow(observer: ITelemetryObserver): Flow<TelemetryEvent>? {
+    fun getFlow(observer: ITelemetryObserver): Flow<ClientTelemetryEvent>? {
         return observers[observer]
     }
 
-    private fun newEventFlow() = MutableSharedFlow<TelemetryEvent>(
+    private fun newEventFlow() = MutableSharedFlow<ClientTelemetryEvent>(
         replay = stackSize,
         extraBufferCapacity = 0,
         onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
 
-    private fun CoroutineScope.launchObserver(observer: ITelemetryObserver, eventFlow: MutableSharedFlow<TelemetryEvent>) {
+    private fun CoroutineScope.launchObserver(observer: ITelemetryObserver, eventFlow: MutableSharedFlow<ClientTelemetryEvent>) {
         observerJobs.put(observer,
             launch {
                 observer.read(eventFlow)

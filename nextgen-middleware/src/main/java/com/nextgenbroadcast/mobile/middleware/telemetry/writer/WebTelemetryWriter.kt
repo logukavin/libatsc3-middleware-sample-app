@@ -1,8 +1,9 @@
 package com.nextgenbroadcast.mobile.middleware.telemetry.writer
 
 import com.google.gson.Gson
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.entity.TelemetryEvent
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.writer.ITelemetryWriter
 import com.nextgenbroadcast.mobile.middleware.server.web.IMiddlewareWebServer
-import com.nextgenbroadcast.mobile.middleware.telemetry.entity.TelemetryEvent
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow

@@ -33,7 +33,7 @@ import com.nextgenbroadcast.mobile.middleware.getApkBaseServicePackage
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.ViewViewModel
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.factory.UserAgentViewModelFactory
 import com.nextgenbroadcast.mobile.middleware.service.media.MediaSessionConstants
-import com.nextgenbroadcast.mobile.middleware.telemetry.ReceiverTelemetry
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.ReceiverTelemetry
 import dagger.android.AndroidInjection
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collect

@@ -3,7 +3,7 @@ package com.nextgenbroadcast.mobile.middleware.dev.telemetry.observer
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.nextgenbroadcast.mobile.core.LOG
-import com.nextgenbroadcast.mobile.middleware.dev.telemetry.TelemetryEvent
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.entity.ClientTelemetryEvent
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.channels.sendBlocking
@@ -34,7 +34,7 @@ class WebTelemetryObserver(
         HttpClient()
     }
 
-    override suspend fun read(eventFlow: MutableSharedFlow<TelemetryEvent>) {
+    override suspend fun read(eventFlow: MutableSharedFlow<ClientTelemetryEvent>) {
         delay(3000) // wait for web client
 
         if (!httpClient.isRunning) {
@@ -66,8 +66,8 @@ class WebTelemetryObserver(
         httpClient.stop()
     }
 
-    private suspend fun collectEvents(eventFlow: MutableSharedFlow<TelemetryEvent>) {
-        callbackFlow<TelemetryEvent> {
+    private suspend fun collectEvents(eventFlow: MutableSharedFlow<ClientTelemetryEvent>) {
+        callbackFlow<ClientTelemetryEvent> {
             val request = httpClient.newRequest(clientUrl)
             var firstSkipped = false
             request.send(object : Response.Listener {
@@ -76,7 +76,7 @@ class WebTelemetryObserver(
                     if (firstSkipped) {
                         val json = content.toByteString().utf8()
                         try {
-                            val event = gson.fromJson<TelemetryEvent>(json, object : TypeToken<TelemetryEvent>() {}.type)
+                            val event = gson.fromJson<ClientTelemetryEvent>(json, object : TypeToken<ClientTelemetryEvent>() {}.type)
                             sendBlocking(event)
                         } catch (e: Exception) {
                             LOG.e(TAG, "Error on receiving event $json", e)

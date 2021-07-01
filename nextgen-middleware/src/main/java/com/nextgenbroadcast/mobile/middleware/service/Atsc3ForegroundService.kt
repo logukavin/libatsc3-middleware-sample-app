@@ -88,8 +88,10 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
             sessionToken = it.sessionToken
         }
 
-        telemetryHolder = TelemetryHolder(applicationContext, atsc3Receiver).also {
-            it.open()
+        if (MiddlewareConfig.DEV_TOOLS) {
+            telemetryHolder = TelemetryHolder(applicationContext, atsc3Receiver).also {
+                it.open()
+            }
         }
 
         webServer = WebServerHolder(applicationContext, atsc3Receiver,
@@ -97,10 +99,14 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
                     // used to rebuild data related to server
                     atsc3Receiver.notifyNewSessionStarted()
 
-                    telemetryHolder.notifyWebServerStarted(server)
+                    if (MiddlewareConfig.DEV_TOOLS) {
+                        telemetryHolder.notifyWebServerStarted(server)
+                    }
                 },
                 {
-                    telemetryHolder.notifyWebServerStopped()
+                    if (MiddlewareConfig.DEV_TOOLS) {
+                        telemetryHolder.notifyWebServerStopped()
+                    }
                 }
         )
 
@@ -197,7 +203,9 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         webServer.close()
         atsc3Receiver.deInitialize()
         serviceScope.cancel()
-        telemetryHolder.close()
+        if (MiddlewareConfig.DEV_TOOLS) {
+            telemetryHolder.close()
+        }
     }
 
     internal abstract fun createServiceBinder(serviceController: IServiceController): IBinder

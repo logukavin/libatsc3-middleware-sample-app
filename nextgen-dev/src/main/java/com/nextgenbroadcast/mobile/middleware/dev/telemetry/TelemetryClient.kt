@@ -3,6 +3,7 @@ package com.nextgenbroadcast.mobile.middleware.dev.telemetry
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.nextgenbroadcast.mobile.core.LOG
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.entity.ClientTelemetryEvent
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.observer.ITelemetryObserver
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.BufferOverflow
@@ -14,7 +15,7 @@ class TelemetryClient(
     stackSize: Int
 ) {
     val gson = Gson()
-    val eventFlow = MutableSharedFlow<TelemetryEvent>(
+    val eventFlow = MutableSharedFlow<ClientTelemetryEvent>(
         replay = stackSize,
         extraBufferCapacity = 0,
         onBufferOverflow = BufferOverflow.DROP_OLDEST

@@ -13,7 +13,6 @@ import android.net.nsd.NsdServiceInfo
 import android.net.wifi.WifiManager
 import androidx.core.content.edit
 import androidx.media.MediaBrowserServiceCompat
-import com.amazonaws.services.iot.client.core.AwsIotRuntimeException
 import com.google.firebase.installations.FirebaseInstallations
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
@@ -26,27 +25,28 @@ import com.nextgenbroadcast.mobile.middleware.dev.nsd.NsdConfig
 import com.nextgenbroadcast.mobile.middleware.gateway.web.ConnectionType
 import com.nextgenbroadcast.mobile.middleware.server.web.IMiddlewareWebServer
 import com.nextgenbroadcast.mobile.middleware.service.Atsc3ForegroundService
-import com.nextgenbroadcast.mobile.middleware.telemetry.ReceiverTelemetry
-import com.nextgenbroadcast.mobile.middleware.telemetry.RemoteControlBroker
-import com.nextgenbroadcast.mobile.middleware.telemetry.TelemetryBroker
-import com.nextgenbroadcast.mobile.middleware.telemetry.aws.AWSIoThing
-import com.nextgenbroadcast.mobile.middleware.telemetry.control.AWSIoTelemetryControl
-import com.nextgenbroadcast.mobile.middleware.telemetry.control.ITelemetryControl
-import com.nextgenbroadcast.mobile.middleware.telemetry.control.UdpTelemetryControl
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.ReceiverTelemetry
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.RemoteControlBroker
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.TelemetryBroker
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.aws.AWSIoThing
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.control.AWSIoTelemetryControl
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.control.ITelemetryControl
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.control.UdpTelemetryControl
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.reader.BatteryTelemetryReader
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.reader.GPSTelemetryReader
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.reader.RfPhyTelemetryReader
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.reader.SensorTelemetryReader
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.task.PongTelemetryTask
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.task.WiFiInfoTelemetryTask
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.writer.AWSIoTelemetryWriter
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.writer.FileTelemetryWriter
 import com.nextgenbroadcast.mobile.middleware.telemetry.control.WebTelemetryControl
-import com.nextgenbroadcast.mobile.middleware.telemetry.reader.BatteryTelemetryReader
-import com.nextgenbroadcast.mobile.middleware.telemetry.reader.GPSTelemetryReader
-import com.nextgenbroadcast.mobile.middleware.telemetry.reader.RfPhyTelemetryReader
-import com.nextgenbroadcast.mobile.middleware.telemetry.reader.SensorTelemetryReader
-import com.nextgenbroadcast.mobile.middleware.telemetry.task.PongTelemetryTask
-import com.nextgenbroadcast.mobile.middleware.telemetry.task.WiFiInfoTelemetryTask
-import com.nextgenbroadcast.mobile.middleware.telemetry.writer.AWSIoTelemetryWriter
-import com.nextgenbroadcast.mobile.middleware.telemetry.writer.FileTelemetryWriter
 import com.nextgenbroadcast.mobile.middleware.telemetry.writer.WebTelemetryWriter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import java.io.IOException
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.system.exitProcess
@@ -156,9 +156,7 @@ internal class TelemetryHolder(
                 if (!isClosed) {
                     val deviceId = task.result
                     registerAWSIoThing(deviceId)
-                    if (MiddlewareConfig.DEV_TOOLS) {
-                        registerNsdService(deviceId)
-                    }
+                    registerNsdService(deviceId)
                 }
             } else {
                 LOG.e(TAG, "Can't create Telemetry because Firebase ID not received.", task.exception)
@@ -176,10 +174,7 @@ internal class TelemetryHolder(
         remoteControl = null
 
         unregisterAWSIoThing()
-
-        if (MiddlewareConfig.DEV_TOOLS) {
-            unregisterNsdService()
-        }
+        unregisterNsdService()
     }
 
     fun setInfoVisible(enabled: Boolean, name: String) {
@@ -217,6 +212,7 @@ internal class TelemetryHolder(
             AWSIOT_RECEIVER_TEMPLATE_NAME,
             AWSIOT_CLIENT_ID_FORMAT,
             AWSIOT_EVENT_TOPIC_FORMAT,
+            BuildConfig.AWSIoTCustomerUrl,
             serialNumber,
             encryptedSharedPreferences(context, IoT_PREFERENCE),
         ) { keyPassword ->
@@ -224,7 +220,7 @@ internal class TelemetryHolder(
                 context.assets.open("9200fd27be-certificate.pem.crt"),
                 context.assets.open("9200fd27be-private.pem.key"),
                 keyPassword
-            ) ?: throw AwsIotRuntimeException("Failed to read certificate from resources")
+            ) ?: throw IOException("Failed to read certificate from resources")
         }.also {
             awsIoThing = it
         }
