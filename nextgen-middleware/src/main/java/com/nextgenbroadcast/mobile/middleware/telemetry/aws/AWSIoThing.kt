@@ -1,7 +1,6 @@
 package com.nextgenbroadcast.mobile.middleware.telemetry.aws
 
 import android.content.SharedPreferences
-import android.content.res.AssetManager
 import com.amazonaws.services.iot.client.*
 import com.amazonaws.services.iot.client.core.AwsIotRuntimeException
 import com.google.gson.*
@@ -9,32 +8,35 @@ import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.middleware.BuildConfig
 import com.nextgenbroadcast.mobile.middleware.telemetry.entity.TelemetryControl
 import com.nextgenbroadcast.mobile.middleware.telemetry.entity.TelemetryPayload
-import com.nextgenbroadcast.mobile.middleware.telemetry.security.PrivateKeyReader
+import com.nextgenbroadcast.mobile.core.cert.CertificateUtils
 import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.io.*
-import java.math.BigInteger
 import java.security.*
-import java.security.cert.Certificate
-import java.security.cert.CertificateException
-import java.security.cert.CertificateFactory
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 internal class AWSIoThing(
-        private val serialNumber: String,
-        private val preferences: SharedPreferences,
-        private val assets: AssetManager
+    templateName: String,
+    clientIdFormat: String,
+    eventTopicFormat: String,
+    private val serialNumber: String,
+    private val preferences: SharedPreferences,
+    private val getClientKeystore: (password: String) -> KeyStore
 ) {
     private val gson = Gson()
     private val clientLock = Mutex()
 
-    private val clientId = "ATSC3MobileReceiver_$serialNumber"
-    private val eventTopic = AWSIOT_TOPIC_EVENT.replace(AWSIOT_FORMAT_SERIAL, clientId)
-    private val controlTopic = AWSIOT_TOPIC_CONTROL.replace(AWSIOT_FORMAT_SERIAL, clientId)
-    private val globalControlTopic = AWSIOT_GLOBAL_TOPIC_CONTROL
+    private val AWSIOT_REQUEST_CREATE_KEYS_AND_CERTIFICATE = "\$aws/certificates/create/$AWSIOT_PAYLOAD_FORMAT"
+    private val AWSIOT_REQUEST_REGISTER_THING = "\$aws/provisioning-templates/$templateName/provision/$AWSIOT_PAYLOAD_FORMAT"
+
+    private val AWSIOT_SUBSCRIPTION_CREATE_CERTIFICATE_ACCEPTED = "\$aws/certificates/create/$AWSIOT_PAYLOAD_FORMAT/accepted"
+    private val AWSIOT_SUBSCRIPTION_REGISTER_THING_ACCEPTED = "\$aws/provisioning-templates/$templateName/provision/$AWSIOT_PAYLOAD_FORMAT/accepted"
+    private val AWSIOT_SUBSCRIPTION_REGISTER_THING_REJECTED = "\$aws/provisioning-templates/$templateName/provision/$AWSIOT_PAYLOAD_FORMAT/rejected"
+
+    private val clientId = clientIdFormat.replace(AWSIOT_FORMAT_SERIAL, serialNumber)
+    private val eventTopic = eventTopicFormat.replace(AWSIOT_FORMAT_SERIAL, clientId)
 
     @Volatile
     private var thingAwsIotClient: AWSIotMqttClient? = null
@@ -63,52 +65,29 @@ internal class AWSIoThing(
         }
     }
 
-    suspend fun subscribeCommandsFlow(commandFlow: MutableSharedFlow<TelemetryControl>) {
+    suspend fun subscribe(topic: String, block: (topic: String, command: TelemetryControl) -> Unit) {
         val client = requireClient()
-        val payloadToControl = { payload: String? ->
-            if (payload.isNullOrBlank()) {
-                TelemetryControl()
-            } else {
-                gson.fromJson(payload, TelemetryControl::class.java)
-            }
-        }
+        val controlTopic = topic.replace(AWSIOT_FORMAT_SERIAL, clientId)
 
-        supervisorScope {
-            // subscribe device specific control topic
-            launch {
-                try {
-                    suspendCancellableCoroutine<AWSIotMessage?> { cont ->
-                        client.subscribe(
-                                object : AWSIotTopicKtx(cont, controlTopic) {
-                                    override fun onMessage(message: AWSIotMessage) {
-                                        commandFlow.tryEmit(payloadToControl(message.stringPayload))
-                                    }
-                                }
-                        )
-                    }
-                } catch (e: Exception) {
-                    LOG.w(TAG, "Failed subscribe topic: $controlTopic", e)
-                }
-            }
+        try {
+            suspendCancellableCoroutine<AWSIotMessage?> { cont ->
+                client.subscribe(object : AWSIotTopicKtx(cont, controlTopic) {
+                    override fun onMessage(message: AWSIotMessage) {
+                        val payload = message.stringPayload
+                        val command = if (payload.isNullOrBlank()) {
+                            TelemetryControl()
+                        } else {
+                            gson.fromJson(payload, TelemetryControl::class.java)
+                        }
 
-            // subscribe global control topic
-            launch {
-                try {
-                    suspendCancellableCoroutine<AWSIotMessage?> { cont ->
-                        client.subscribe(
-                                object : AWSIotTopicKtx(cont, globalControlTopic) {
-                                    override fun onMessage(message: AWSIotMessage) {
-                                        commandFlow.tryEmit(payloadToControl(message.stringPayload).apply {
-                                            action = message.topic.substring(message.topic.lastIndexOf("/") + 1)
-                                        })
-                                    }
-                                }
-                        )
+                        block(message.topic, command)
                     }
-                } catch (e: Exception) {
-                    LOG.w(TAG, "Failed subscribe topic: $globalControlTopic", e)
-                }
+                })
             }
+        } catch (e: CancellationException) {
+            LOG.i(TAG, "Cancel topic subscription: $controlTopic", e)
+        } catch (e: Exception) {
+            LOG.w(TAG, "Failed subscribe topic: $controlTopic", e)
         }
     }
 
@@ -145,11 +124,9 @@ internal class AWSIoThing(
     private fun connect(): Job {
         val provisionedCertificateId = preferences.getString(PREF_CERTIFICATE_ID, null)
         return if (provisionedCertificateId == null) {
-            val (keyStore, keyPassword) = try {
-                readKeyPair(
-                        assets.open("9200fd27be-certificate.pem.crt"),
-                        assets.open("9200fd27be-private.pem.key")
-                ) ?: throw AwsIotRuntimeException("Key pair is null")
+            val keyPassword = CertificateUtils.generatePassword()
+            val keyStore = try {
+                getClientKeystore(keyPassword)
             } catch (e: IOException) {
                 LOG.e(TAG, "Keys reading error", e)
                 throw AwsIotRuntimeException(e)
@@ -197,7 +174,8 @@ internal class AWSIoThing(
     }
 
     private suspend fun connectAWSIoT(certificateStream: InputStream, privateKeyStream: InputStream) {
-        readKeyPair(certificateStream, privateKeyStream)?.let { (keyStore, keyPassword) ->
+        val keyPassword = CertificateUtils.generatePassword()
+        CertificateUtils.createKeyStore(certificateStream, privateKeyStream, keyPassword)?.let { keyStore ->
             thingAwsIotClient = createAWSIoTClient(keyStore, keyPassword) {
                 close()
             }
@@ -307,7 +285,7 @@ internal class AWSIoThing(
             }
         }.apply {
             //jjustman-2021-05-06 - default max connection retries for AWSIoT is set to 5, we will use a number slightly larger than 5...
-            maxConnectionRetries = AWSIOT_MAX_CONNECTION_RETRIES;
+            maxConnectionRetries = AWSIOT_MAX_CONNECTION_RETRIES
 
             //jjustman-2021-05-06 - NOTE: method docs indicate keepAliveInterval is 30s,
             //          but com.amazonaws.services.iot.client.AWSIotConfig.KEEP_ALIVE_INTERVAL
@@ -330,91 +308,22 @@ internal class AWSIoThing(
         }
     }
 
-    private fun readKeyPair(certStream: InputStream, privateKeyStream: InputStream): Pair<KeyStore, String>? {
-        var certs: Collection<Certificate?>? = null
-        var privateKey: PrivateKey? = null
-
-        try {
-            certs = BufferedInputStream(certStream).use { stream ->
-                CertificateFactory.getInstance("X.509").generateCertificates(stream)
-            }
-        } catch (e: IOException) {
-            LOG.i(TAG, "Failed to load certificate file", e)
-        } catch (e: CertificateException) {
-            LOG.i(TAG, "Failed to load certificate file", e)
-        }
-
-        try {
-            privateKey = DataInputStream(privateKeyStream).use { stream ->
-                PrivateKeyReader.getPrivateKey(stream, "RSA")
-            }
-        } catch (e: IOException) {
-            LOG.i(TAG, "Failed to load private key from file", e)
-        } catch (e: GeneralSecurityException) {
-            LOG.i(TAG, "Failed to load private key from file", e)
-        }
-
-        return if (certs != null && privateKey != null) {
-            getKeyStorePasswordPair(certs.filterNotNull(), privateKey)
-        } else {
-            null
-        }
-    }
-
-    private fun getKeyStorePasswordPair(certificates: Collection<Certificate>, privateKey: PrivateKey): Pair<KeyStore, String>? {
-        try {
-            val keyStore = KeyStore.getInstance(KeyStore.getDefaultType()).apply {
-                load(null)
-            }
-
-            // randomly generated key password for the key in the KeyStore
-            val keyPassword = BigInteger(128, SecureRandom()).toString(32)
-
-            keyStore.setKeyEntry("alias", privateKey, keyPassword.toCharArray(), certificates.toTypedArray())
-
-            return Pair(keyStore, keyPassword)
-        } catch (e: KeyStoreException) {
-            LOG.i(TAG, "Failed to create key store", e)
-        } catch (e: NoSuchAlgorithmException) {
-            LOG.i(TAG, "Failed to create key store", e)
-        } catch (e: CertificateException) {
-            LOG.i(TAG, "Failed to create key store", e)
-        } catch (e: IOException) {
-            LOG.i(TAG, "Failed to create key store", e)
-        }
-
-        return null
-    }
-
     companion object {
         val TAG: String = AWSIoThing::class.java.simpleName
+
+        const val AWSIOT_FORMAT_SERIAL = "{serial}"
+        const val AWSIOT_PAYLOAD_FORMAT = "json"
 
         private const val PREF_CERTIFICATE_ID = "certificateId"
         private const val PREF_CERTIFICATE_PEM = "certificatePem"
         private const val PREF_CERTIFICATE_KEY = "privateKey"
         private const val PREF_CERTIFICATE_TOKEN = "certificateOwnershipToken"
 
-        private const val AWSIOT_FORMAT_SERIAL = "{serial}"
-        private const val AWSIOT_PAYLOAD_FORMAT = "json"
-        private const val AWSIOT_TEMPLATE_NAME = "ATSC3MobileReceiverProvisioning"
+        private const val AWSIOT_MAX_CONNECTION_RETRIES = Int.MAX_VALUE -1
+        private const val AWSIOT_MAX_OFFLINE_QUEUE_SIZE = 1024
 
-        private const val AWSIOT_REQUEST_CREATE_KEYS_AND_CERTIFICATE = "\$aws/certificates/create/$AWSIOT_PAYLOAD_FORMAT"
-        private const val AWSIOT_REQUEST_REGISTER_THING = "\$aws/provisioning-templates/$AWSIOT_TEMPLATE_NAME/provision/$AWSIOT_PAYLOAD_FORMAT"
-
-        private const val AWSIOT_SUBSCRIPTION_CREATE_CERTIFICATE_ACCEPTED = "\$aws/certificates/create/$AWSIOT_PAYLOAD_FORMAT/accepted"
-        private const val AWSIOT_SUBSCRIPTION_REGISTER_THING_ACCEPTED = "\$aws/provisioning-templates/$AWSIOT_TEMPLATE_NAME/provision/$AWSIOT_PAYLOAD_FORMAT/accepted"
-        private const val AWSIOT_SUBSCRIPTION_REGISTER_THING_REJECTED = "\$aws/provisioning-templates/$AWSIOT_TEMPLATE_NAME/provision/$AWSIOT_PAYLOAD_FORMAT/rejected"
-
-        private const val AWSIOT_TOPIC_CONTROL = "control/$AWSIOT_FORMAT_SERIAL"
-        private const val AWSIOT_TOPIC_EVENT = "telemetry/$AWSIOT_FORMAT_SERIAL"
-
-        private const val AWSIOT_GLOBAL_TOPIC_CONTROL = "global/command/request/#"
-
-        private const val AWSIOT_MAX_CONNECTION_RETRIES = Int.MAX_VALUE -1;
-        private const val AWSIOT_MAX_OFFLINE_QUEUE_SIZE = 1024;
-
-        private const val AWSIOT_KEEPALIVE_INTERVAL_MS = 30000;
-        private const val AWSIOT_NUM_CLIENT_THREADS = 5;
+        private const val AWSIOT_KEEPALIVE_INTERVAL_MS = 30000
+        private const val AWSIOT_NUM_CLIENT_THREADS = 5
 
     }
 }

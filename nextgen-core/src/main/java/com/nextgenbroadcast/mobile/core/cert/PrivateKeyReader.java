@@ -1,4 +1,4 @@
-package com.nextgenbroadcast.mobile.middleware.telemetry.security;
+package com.nextgenbroadcast.mobile.core.cert;
 
 import android.util.Base64;
 
@@ -41,12 +41,12 @@ public class PrivateKeyReader {
 
 
 
-/**
- * Class for reading RSA or ECC private key from PEM file.
- *
- * It can read PEM files with PKCS#8 or PKCS#1 encodings. It doesn't support
- * encrypted PEM files.
- */
+    /**
+     * Class for reading RSA or ECC private key from PEM file.
+     *
+     * It can read PEM files with PKCS#8 or PKCS#1 encodings. It doesn't support
+     * encrypted PEM files.
+     */
 
     // Private key file using PKCS #1 encoding
     public static final String P1_BEGIN_MARKER = "-----BEGIN RSA PRIVATE KEY"; //$NON-NLS-1$
