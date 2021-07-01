@@ -14,7 +14,7 @@ import androidx.recyclerview.widget.*
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.middleware.dev.nsd.NsdConfig
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.TelemetryClient2
-import com.nextgenbroadcast.mobile.middleware.dev.telemetry.TelemetryEvent
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.entity.ClientTelemetryEvent
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.observer.ITelemetryObserver
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.observer.WebTelemetryObserver
 import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.TelemetryDevice
@@ -217,7 +217,7 @@ class ScoreboardActivity : AppCompatActivity() {
     class DeviceListAdapter(
         private val inflater: LayoutInflater,
         private val listener: DeviceItemClickListener,
-        private val getFlowForDevice: (TelemetryDevice) -> Flow<TelemetryEvent>?
+        private val getFlowForDevice: (TelemetryDevice) -> Flow<ClientTelemetryEvent>?
     ) : ListAdapter<TelemetryDevice, DeviceListAdapter.Holder>(DIFF_CALLBACK) {
 
         interface DeviceItemClickListener {

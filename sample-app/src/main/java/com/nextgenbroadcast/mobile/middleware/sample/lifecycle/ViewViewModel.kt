@@ -2,8 +2,8 @@ package com.nextgenbroadcast.mobile.middleware.sample.lifecycle
 
 import androidx.lifecycle.*
 import com.nextgenbroadcast.mobile.core.model.AVService
-import com.nextgenbroadcast.mobile.middleware.telemetry.reader.LocationFrequencyType
-import com.nextgenbroadcast.mobile.middleware.telemetry.reader.SensorFrequencyType
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.reader.LocationFrequencyType
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.reader.SensorFrequencyType
 
 class ViewViewModel : ViewModel() {
     val sources = MutableLiveData<List<Pair<String, String>>>(emptyList())

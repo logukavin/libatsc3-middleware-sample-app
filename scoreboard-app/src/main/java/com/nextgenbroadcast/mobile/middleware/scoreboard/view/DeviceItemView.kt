@@ -8,7 +8,7 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.nextgenbroadcast.mobile.core.LOG
-import com.nextgenbroadcast.mobile.middleware.dev.telemetry.TelemetryEvent
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.entity.ClientTelemetryEvent
 import com.nextgenbroadcast.mobile.middleware.scoreboard.R
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.mapNotNull
@@ -34,7 +34,7 @@ class DeviceItemView @JvmOverloads constructor(
         removeBtn = findViewById(R.id.device_remove_btn)
     }
 
-    fun observe(flow: Flow<TelemetryEvent>?) {
+    fun observe(flow: Flow<ClientTelemetryEvent>?) {
         phyChart.setDataSource(
             flow?.mapNotNull { event ->
                 try {

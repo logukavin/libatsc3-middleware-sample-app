@@ -1,7 +1,8 @@
 package com.nextgenbroadcast.mobile.middleware.telemetry.control
 
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.control.ITelemetryControl
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.entity.TelemetryControl
 import com.nextgenbroadcast.mobile.middleware.server.web.IMiddlewareWebServer
-import com.nextgenbroadcast.mobile.middleware.telemetry.entity.TelemetryControl
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.channels.sendBlocking
