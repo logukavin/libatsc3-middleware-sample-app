@@ -15,10 +15,11 @@ import org.bouncycastle.crypto.generators.RSAKeyPairGenerator
 import org.bouncycastle.crypto.params.RSAKeyGenerationParameters
 import org.bouncycastle.crypto.params.RSAKeyParameters
 import org.bouncycastle.crypto.params.RSAPrivateCrtKeyParameters
-import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
+import java.io.*
 import java.math.BigInteger
 import java.security.*
+import java.security.cert.Certificate
+import java.security.cert.CertificateException
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
 import java.security.spec.PKCS8EncodedKeySpec
@@ -132,4 +133,54 @@ object CertificateUtils {
         require(this is X509Certificate) { "Public hash generation requires X509 certificates" }
         return this.sha256Hash().base64()
     }
+
+    fun createKeyStore(certStream: InputStream, privateKeyStream: InputStream, keyPassword: String): KeyStore? {
+        var certs: Collection<Certificate?>? = null
+        var privateKey: PrivateKey? = null
+
+        try {
+            certs = BufferedInputStream(certStream).use { stream ->
+                CertificateFactory.getInstance(CERTIFICATE_ALGORITHM).generateCertificates(stream)
+            }
+        } catch (e: IOException) {
+            LOG.i(TAG, "Failed to load certificate file", e)
+        } catch (e: CertificateException) {
+            LOG.i(TAG, "Failed to load certificate file", e)
+        }
+
+        try {
+            privateKey = DataInputStream(privateKeyStream).use { stream ->
+                PrivateKeyReader.getPrivateKey(stream, KEY_ALGORITHM)
+            }
+        } catch (e: IOException) {
+            LOG.i(TAG, "Failed to load private key from file", e)
+        } catch (e: GeneralSecurityException) {
+            LOG.i(TAG, "Failed to load private key from file", e)
+        }
+
+        if (certs != null && privateKey != null) {
+            try {
+                val keyStore = KeyStore.getInstance(KeyStore.getDefaultType()).apply {
+                    load(null)
+                }
+
+                keyStore.setKeyEntry("alias", privateKey, keyPassword.toCharArray(), certs.filterNotNull().toTypedArray())
+
+                return keyStore
+            } catch (e: KeyStoreException) {
+                LOG.i(TAG, "Failed to create key store", e)
+            } catch (e: NoSuchAlgorithmException) {
+                LOG.i(TAG, "Failed to create key store", e)
+            } catch (e: CertificateException) {
+                LOG.i(TAG, "Failed to create key store", e)
+            } catch (e: IOException) {
+                LOG.i(TAG, "Failed to create key store", e)
+            }
+        }
+
+        return null
+    }
+
+    // randomly generated key password for the key in the KeyStore
+    fun generatePassword(): String = BigInteger(128, SecureRandom()).toString(32)
 }

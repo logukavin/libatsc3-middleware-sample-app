@@ -13,10 +13,12 @@ import android.net.nsd.NsdServiceInfo
 import android.net.wifi.WifiManager
 import androidx.core.content.edit
 import androidx.media.MediaBrowserServiceCompat
+import com.amazonaws.services.iot.client.core.AwsIotRuntimeException
 import com.google.firebase.installations.FirebaseInstallations
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.nextgenbroadcast.mobile.core.LOG
+import com.nextgenbroadcast.mobile.core.cert.CertificateUtils
 import com.nextgenbroadcast.mobile.core.model.PhyFrequency
 import com.nextgenbroadcast.mobile.middleware.*
 import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverCore
@@ -74,6 +76,9 @@ internal class TelemetryHolder(
     private val sharedPreferences: SharedPreferences by lazy {
         context.getSharedPreferences(SHARED_PREFERENCES_NAME, Context.MODE_PRIVATE)
     }
+
+    @Volatile
+    private var isClosed = false
 
     private var telemetryBroker: TelemetryBroker? = null
     private var remoteControl: RemoteControlBroker? = null
@@ -148,10 +153,12 @@ internal class TelemetryHolder(
 
         FirebaseInstallations.getInstance().id.addOnCompleteListener { task ->
             if (task.isSuccessful) {
-                val deviceId = task.result
-                initializeAWSIoThing(deviceId)
-                if (MiddlewareConfig.DEV_TOOLS) {
-                    registerNsdService(deviceId)
+                if (!isClosed) {
+                    val deviceId = task.result
+                    registerAWSIoThing(deviceId)
+                    if (MiddlewareConfig.DEV_TOOLS) {
+                        registerNsdService(deviceId)
+                    }
                 }
             } else {
                 LOG.e(TAG, "Can't create Telemetry because Firebase ID not received.", task.exception)
@@ -160,18 +167,15 @@ internal class TelemetryHolder(
     }
 
     fun close() {
+        isClosed = true
+
         telemetryBroker?.close()
         telemetryBroker = null
 
         remoteControl?.stop()
         remoteControl = null
 
-        awsIoThing?.let { thing ->
-            CoroutineScope(Dispatchers.Main).launch {
-                thing.close()
-            }
-        }
-        awsIoThing = null
+        unregisterAWSIoThing()
 
         if (MiddlewareConfig.DEV_TOOLS) {
             unregisterNsdService()
@@ -208,11 +212,20 @@ internal class TelemetryHolder(
         telemetryBroker?.removeWriter(WebTelemetryWriter::class.java)
     }
 
-    private fun initializeAWSIoThing(serialNumber: String) {
-        val thing = AWSIoThing(serialNumber,
-                encryptedSharedPreferences(context, IoT_PREFERENCE),
-                context.assets
-        ).also {
+    private fun registerAWSIoThing(serialNumber: String) {
+        val thing = AWSIoThing(
+            AWSIOT_RECEIVER_TEMPLATE_NAME,
+            AWSIOT_CLIENT_ID_FORMAT,
+            AWSIOT_EVENT_TOPIC_FORMAT,
+            serialNumber,
+            encryptedSharedPreferences(context, IoT_PREFERENCE),
+        ) { keyPassword ->
+            CertificateUtils.createKeyStore(
+                context.assets.open("9200fd27be-certificate.pem.crt"),
+                context.assets.open("9200fd27be-private.pem.key"),
+                keyPassword
+            ) ?: throw AwsIotRuntimeException("Failed to read certificate from resources")
+        }.also {
             awsIoThing = it
         }
 
@@ -221,8 +234,21 @@ internal class TelemetryHolder(
         )
 
         remoteControl?.addControl(
-                AWSIoTelemetryControl(thing)
+                AWSIoTelemetryControl(
+                    AWSIOT_TOPIC_CONTROL,
+                    AWSIOT_GLOBAL_TOPIC_CONTROL,
+                    thing
+                )
         )
+    }
+
+    private fun unregisterAWSIoThing() {
+        awsIoThing?.let { thing ->
+            CoroutineScope(Dispatchers.Main).launch {
+                thing.close()
+            }
+        }
+        awsIoThing = null
     }
 
     private fun executeCommand(action: String, arguments: Map<String, String>) {
@@ -408,6 +434,12 @@ internal class TelemetryHolder(
         private const val CONNECTION_HOST = "0.0.0.0"
         private const val CONNECTION_TCP_PORT = 8081
         private const val CONNECTION_UDP_PORT = 6969
+
+        private const val AWSIOT_RECEIVER_TEMPLATE_NAME = "ATSC3MobileReceiverProvisioning"
+        private const val AWSIOT_CLIENT_ID_FORMAT = "ATSC3MobileReceiver_${AWSIoThing.AWSIOT_FORMAT_SERIAL}"
+        private const val AWSIOT_EVENT_TOPIC_FORMAT = "telemetry/${AWSIoThing.AWSIOT_FORMAT_SERIAL}"
+        private const val AWSIOT_TOPIC_CONTROL = "control/${AWSIoThing.AWSIOT_FORMAT_SERIAL}"
+        private const val AWSIOT_GLOBAL_TOPIC_CONTROL = "global/command/request/#"
 
         const val SHARED_PREFERENCES_NAME = "telemetry_pref"
         const val PREF_DEBUG_INFO_KEY = "telemetry_info_debug"
