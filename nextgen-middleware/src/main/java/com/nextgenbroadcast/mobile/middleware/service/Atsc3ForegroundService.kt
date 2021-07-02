@@ -183,7 +183,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
                         alertNotificationHelper.showNotification(msg, alert.id, alert.effective)
                         startActivity(
                             AlertDialogActivity.newIntent(
-                                this@Atsc3ForegroundService, msg, alert.effective
+                                this@Atsc3ForegroundService, msg, alert.effective, alert.id
                             )
                         )
                     }
