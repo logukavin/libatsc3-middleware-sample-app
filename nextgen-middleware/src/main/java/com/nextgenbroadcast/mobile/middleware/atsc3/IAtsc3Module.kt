@@ -23,4 +23,5 @@ interface IAtsc3Module {
     fun getCurrentConfiguration(): Pair<String, Map<Any, Atsc3ServiceLocationTable>>?
 
     fun getVersionInfo(): Map<String, String?>
+    fun getSerialNum(): String
 }
