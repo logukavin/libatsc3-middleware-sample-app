@@ -38,11 +38,12 @@ class AlertDialogActivity : AppCompatActivity() {
         const val ALERT_MESSAGE: String = "alert_message"
         const val ALERT_EFFECTIVE_TIME: String = "effective_time"
 
-        fun newIntent(context: Context, msg: String, effectiveTime: String?): Intent {
+        fun newIntent(context: Context, msg: String, effectiveTime: String?, tag:String): Intent {
             return Intent(context, AlertDialogActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK
                 putExtra(ALERT_MESSAGE, msg)
                 putExtra(ALERT_EFFECTIVE_TIME, effectiveTime)
+                putExtra(AlertNotificationHelper.ALERT_NOTIFICATION_TAG, tag)
             }
         }
     }
