@@ -39,7 +39,7 @@ class DeviceItemView @JvmOverloads constructor(
             flow?.mapNotNull { event ->
                 try {
                     val payload = gson.fromJson<PhyPayload>(event.payload, phyType)
-                    Pair(event.timestamp, payload.snr1000.toDouble() / 1000)
+                    Pair(payload.timeStamp, payload.snr1000.toDouble() / 1000)
                 } catch (e: Exception) {
                     LOG.w(TAG, "Can't parse telemetry event payload", e)
                     null
@@ -51,7 +51,8 @@ class DeviceItemView @JvmOverloads constructor(
     }
 
     data class PhyPayload(
-        val snr1000: Int
+        val snr1000: Int,
+        val timeStamp: Long
     )
 
     companion object {

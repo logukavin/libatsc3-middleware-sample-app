@@ -4,5 +4,9 @@ data class TelemetryDevice(
     val id: String,
     val host: String,
     val port: Int,
-    val isLost: Boolean = false
-)
+    val availableOnNSD: Boolean = false,
+    val availableOnAWS: Boolean = false
+) {
+    val isLost: Boolean
+        get() = !availableOnNSD && !availableOnAWS
+}

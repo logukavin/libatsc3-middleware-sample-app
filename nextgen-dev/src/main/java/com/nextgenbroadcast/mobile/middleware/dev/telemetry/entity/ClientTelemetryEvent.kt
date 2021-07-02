@@ -9,7 +9,7 @@ class ClientTelemetryEvent() {
         private set
     var payload: JsonElement = JsonNull.INSTANCE
         private set
-    val timestamp: Long = System.currentTimeMillis()
+    //val timestamp: Long = System.currentTimeMillis()
 
     constructor(topic: String, payload: JsonElement) : this() {
         this.topic = topic
