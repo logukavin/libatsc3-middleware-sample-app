@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tool="http://schemas.android.com/tools"
+    android:id="@+id/layout"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@color/but_dismiss_bg_color"
+    android:orientation="vertical"
+    android:baselineAligned="false">
+
+    <TextView
+        android:id="@+id/textViewNotificationExpandedTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="@color/white"
+        android:textSize="13sp"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="8dp"
+        tool:text="Title" />
+
+    <TextView
+        android:id="@+id/textViewAlertExpandedText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ellipsize="marquee"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        tool:text="Title"
+        android:textColor="@color/white"
+        android:textSize="13sp" />
+
+    <TextView
+        android:id="@+id/textViewAlertExpandedDismiss"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ellipsize="marquee"
+        android:layout_margin="16dp"
+        android:text="@string/dismiss"
+        android:textAllCaps="true"
+        android:gravity="center_horizontal"
+        android:textColor="@color/white"
+        android:textSize="13sp" />
+
+</LinearLayout>

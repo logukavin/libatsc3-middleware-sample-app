@@ -170,34 +170,26 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
             }
         }
 
-        /// TODO test data should be removed
-//        startActivity(AlertDialogActivity.newIntent(this@Atsc3ForegroundService, "Simple warning message"))
-//        startActivity(AlertDialogActivity.newIntent(this@Atsc3ForegroundService, "Simple warning message2"))
-//        startActivity(AlertDialogActivity.newIntent(this@Atsc3ForegroundService, "Simple warning message3"))
-//        alertNotificationHelper.showNotification("Simple warning message1", (System.currentTimeMillis()/10000).toInt() + 2)
-//        alertNotificationHelper.showNotification("Simple warning message2", (System.currentTimeMillis()/10000).toInt() +3)
-//       alertNotificationHelper.showNotification("Simple warning message3", (System.currentTimeMillis()/10000).toInt() + 4)
-
         serviceScope.launch {
             atsc3Receiver.serviceController.alertList.collect { alerts ->
-                val messages = alerts.flatMap { it.messages ?: emptyList() }
-                if (messages.isEmpty()) return@collect
-                withContext(Dispatchers.Main) {
-                    var msgCounter = 0
-                    messages.forEach { msg ->
-                        alertNotificationHelper.showNotification(
-                            msg,
-                            System.currentTimeMillis().toInt() + msgCounter
-                        )
+                val locale = Locale.getDefault().language
+
+                alerts.forEach { alert ->
+                    val message = alert.messages?.get(locale) ?: alert.messages?.get(
+                        alert.messages?.keys?.first()
+                    )
+
+                    message?.let { msg ->
+                        alertNotificationHelper.showNotification(msg, alert.id, alert.effective)
                         startActivity(
                             AlertDialogActivity.newIntent(
-                                this@Atsc3ForegroundService,
-                                msg
+                                this@Atsc3ForegroundService, msg, alert.effective
                             )
                         )
-                        msgCounter++
                     }
+
                 }
+
             }
         }
     }

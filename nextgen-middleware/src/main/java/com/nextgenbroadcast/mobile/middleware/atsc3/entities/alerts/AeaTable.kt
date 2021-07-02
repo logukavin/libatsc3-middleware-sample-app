@@ -9,7 +9,7 @@ data class AeaTable(
         var effective: String? = null,
         var expires: ZonedDateTime? = null,
         var xml: String = "",
-        var messages: MutableList<String>? = mutableListOf()
+        var messages: MutableMap<String, String>? = mutableMapOf()
 ) {
     companion object {
         const val CANCEL_ALERT = "cancel"
