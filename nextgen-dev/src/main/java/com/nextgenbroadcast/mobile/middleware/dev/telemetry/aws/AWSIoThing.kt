@@ -5,8 +5,6 @@ import com.amazonaws.services.iot.client.*
 import com.amazonaws.services.iot.client.core.AwsIotRuntimeException
 import com.google.gson.*
 import com.nextgenbroadcast.mobile.core.LOG
-import com.nextgenbroadcast.mobile.middleware.dev.telemetry.entity.TelemetryControl
-import com.nextgenbroadcast.mobile.middleware.dev.telemetry.entity.TelemetryPayload
 import com.nextgenbroadcast.mobile.core.cert.CertificateUtils
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
@@ -41,10 +39,6 @@ class AWSIoThing(
     @Volatile
     private var thingAwsIotClient: AWSIotMqttClient? = null
 
-    suspend fun publish(topic: String, payload: TelemetryPayload) {
-        publish(topic, gson.toJson(payload))
-    }
-
     //jjustman-2021-05-06 - adding try/catch for 05-06 06:53:17.405 12729 18824 E AndroidRuntime: com.amazonaws.services.iot.client.AWSIotException: com.amazonaws.services.iot.client.core.AwsIotRetryableException: Client is not connected (32104)
     //                      this can occur if we are pushing events with a stale MQTT connection and have exceeded the AWSIot internal publishQueue.size() limited by client.getMaxOfflineQueueSize()
 
@@ -65,7 +59,7 @@ class AWSIoThing(
         }
     }
 
-    suspend fun subscribe(topic: String, block: (topic: String, command: TelemetryControl) -> Unit) {
+    suspend fun subscribe(topic: String, block: (topic: String, payload: String?) -> Unit) {
         val client = requireClient()
         val controlTopic = topic.replace(AWSIOT_FORMAT_SERIAL, clientId)
 
@@ -73,14 +67,7 @@ class AWSIoThing(
             suspendCancellableCoroutine<AWSIotMessage?> { cont ->
                 client.subscribe(object : AWSIotTopicKtx(cont, controlTopic) {
                     override fun onMessage(message: AWSIotMessage) {
-                        val payload = message.stringPayload
-                        val command = if (payload.isNullOrBlank()) {
-                            TelemetryControl()
-                        } else {
-                            gson.fromJson(payload, TelemetryControl::class.java)
-                        }
-
-                        block(message.topic, command)
+                        block(message.topic, message.stringPayload)
                     }
                 })
             }
@@ -324,6 +311,5 @@ class AWSIoThing(
 
         private const val AWSIOT_KEEPALIVE_INTERVAL_MS = 30000
         private const val AWSIOT_NUM_CLIENT_THREADS = 5
-
     }
 }
