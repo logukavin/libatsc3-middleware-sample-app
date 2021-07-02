@@ -9,6 +9,7 @@ import java.util.*
 
 object DateUtils {
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ", Locale.US)
+    private val alertDateFormat = SimpleDateFormat("yyy-MM-dd HH:mm", Locale.US)
 
     fun format(date: Date, default: String) = format(date) ?: default
 
@@ -50,5 +51,12 @@ object DateUtils {
 
     fun hoursTillNow(date: LocalDateTime): Long {
         return Duration.between(date, LocalDateTime.now()).toHours()
+    }
+
+    fun parseAlertDate(value: String): String {
+        parse(value, null)?.let { date ->
+            return alertDateFormat.format(date)
+        }
+        return value
     }
 }
