@@ -1,8 +1,5 @@
 package com.nextgenbroadcast.mobile.middleware.scoreboard
 
-import android.content.Context
-import android.net.nsd.NsdManager
-import android.net.nsd.NsdServiceInfo
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -11,36 +8,35 @@ import android.widget.ArrayAdapter
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.postDelayed
 import androidx.recyclerview.widget.*
+import com.google.firebase.installations.FirebaseInstallations
 import com.nextgenbroadcast.mobile.core.LOG
-import com.nextgenbroadcast.mobile.middleware.dev.nsd.NsdConfig
-import com.nextgenbroadcast.mobile.middleware.dev.telemetry.TelemetryClient2
-import com.nextgenbroadcast.mobile.middleware.dev.telemetry.TelemetryEvent
-import com.nextgenbroadcast.mobile.middleware.dev.telemetry.observer.ITelemetryObserver
-import com.nextgenbroadcast.mobile.middleware.dev.telemetry.observer.WebTelemetryObserver
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.entity.ClientTelemetryEvent
 import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.TelemetryDevice
+import com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry.TelemetryManager
 import com.nextgenbroadcast.mobile.middleware.scoreboard.view.DeviceItemView
 import kotlinx.android.synthetic.main.activity_scoreboard.*
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.launch
 
 class ScoreboardActivity : AppCompatActivity() {
-    private val nsdManager by lazy {
-        getSystemService(Context.NSD_SERVICE) as NsdManager
-    }
-
-    private val nsdServices = mutableMapOf<String, NsdServiceInfo?>()
-    private val devices = linkedMapOf<String, TelemetryDevice>()
-    private val deviceObservers = mutableMapOf<String, ITelemetryObserver>()
-
-    private val telemetryClient: TelemetryClient2 = TelemetryClient2(100)
-
     private lateinit var deviceAdapter: DeviceListAdapter
     private lateinit var deviceSpinnerAdapter: ArrayAdapter<String>
 
+    private var telemetryManager: TelemetryManager? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        FirebaseInstallations.getInstance().id.addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                if (!isFinishing) {
+                    task.result?.let { deviceId ->
+                        createTelemetryManager(deviceId)
+                    }
+                }
+            } else {
+                LOG.e(TAG, "Can't create Telemetry because Firebase ID not received.", task.exception)
+            }
+        }
 
         setContentView(R.layout.activity_scoreboard)
 
@@ -51,12 +47,10 @@ class ScoreboardActivity : AppCompatActivity() {
         deviceAdapter =
             DeviceListAdapter(layoutInflater, object : DeviceListAdapter.DeviceItemClickListener {
                 override fun onDeleteClick(device: TelemetryDevice) {
-                    removeDevice(device)
+                    removeChartForDevice(device)
                 }
             }) { device ->
-                deviceObservers[device.id]?.let { observer ->
-                    telemetryClient.getFlow(observer)
-                }
+                telemetryManager?.getFlow(device)
             }
         chart_list.layoutManager = LinearLayoutManager(this)
         chart_list.adapter = deviceAdapter
@@ -66,8 +60,8 @@ class ScoreboardActivity : AppCompatActivity() {
         add_device_btn.setOnClickListener {
             val deviceId = device_spinner.selectedItem as? String
             if (deviceId != null) {
-                devices[deviceId]?.let { device ->
-                    addDevice(device)
+                telemetryManager?.getDeviceById(deviceId)?.let { device ->
+                    addChartForDevice(device)
                 }
             }
         }
@@ -81,57 +75,31 @@ class ScoreboardActivity : AppCompatActivity() {
     override fun onStart() {
         super.onStart()
 
-        try {
-            nsdManager.discoverServices(NsdConfig.SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, discoveryListener)
-        } catch (e: Exception) {
-            LOG.d(TAG, "Failed to start NSD service discovering", e)
-        }
-
-        telemetryClient.start()
+        telemetryManager?.start()
     }
 
     override fun onStop() {
         super.onStop()
 
-        telemetryClient.stop()
-
-        try {
-            nsdManager.stopServiceDiscovery(discoveryListener)
-        } catch (e: Exception) {
-            LOG.d(TAG, "Failed to stop NSD service discovering", e)
-        }
+        telemetryManager?.stop()
     }
 
-    fun updateDeviceList() {
-        val nsdDevices = nsdServices.mapNotNull {
-            val info = it.value
-            info?.attributes?.get("id")?.decodeToString()?.let { id ->
-                id to TelemetryDevice(id, info.host.hostAddress, info.port)
-            }
-        }.toMap()
-
-        CoroutineScope(Dispatchers.Main).launch {
-            devices.keys.subtract(nsdDevices.keys).forEach {
-                devices[it]?.let { device ->
-                    devices[it] = device.copy(isLost = true)
-                }
-            }
-
-            devices.putAll(nsdDevices)
-
+    private fun createTelemetryManager(serialNum: String) {
+        telemetryManager = TelemetryManager(applicationContext, serialNum) { deviceIds ->
             deviceSpinnerAdapter.clear()
-            deviceSpinnerAdapter.addAll(devices.filterValues { !it.isLost }.keys)
+            deviceSpinnerAdapter.addAll(deviceIds)
 
-            syncAdapter()
+            syncChartAdapter()
+        }.also {
+            it.start()
         }
     }
 
-    private fun addDevice(device: TelemetryDevice) {
-        val observer = WebTelemetryObserver(device.host, device.port, listOf("phy"))
-        telemetryClient.addObserver(observer)
-        deviceObservers[device.id] = observer
+    private fun addChartForDevice(device: TelemetryDevice) {
+        val connected = telemetryManager?.connectDevice(device) ?: false
+        if (!connected) return
 
-        syncAdapter()
+        syncChartAdapter()
 
         // scroll to the last, just added element
         chart_list.postDelayed(200) {
@@ -142,82 +110,21 @@ class ScoreboardActivity : AppCompatActivity() {
         }
     }
 
-    private fun removeDevice(device: TelemetryDevice) {
-        deviceObservers.remove(device.id)?.let { observer ->
-            telemetryClient.removeObserver(observer)
-        }
-
-        syncAdapter()
+    private fun removeChartForDevice(device: TelemetryDevice) {
+        telemetryManager?.disconnectDevice(device)
+        syncChartAdapter()
     }
 
-    private fun syncAdapter() {
-        val chartDevices = devices.filterKeys { id ->
-            deviceObservers.containsKey(id)
-        }
-
-        deviceAdapter.submitList(chartDevices.values.toList())
-    }
-
-    private val discoveryListener = object : NsdManager.DiscoveryListener {
-        override fun onDiscoveryStarted(regType: String) {
-            LOG.d(TAG, "NSD Service discovery started")
-        }
-
-        override fun onServiceFound(service: NsdServiceInfo) {
-            LOG.d(TAG, "Service discovery success $service")
-
-            if (service.serviceName.startsWith(NsdConfig.SERVICE_NAME)) {
-                if (!nsdServices.containsKey(service.serviceName)) {
-                    nsdServices[service.serviceName] = null
-                    nsdManager.resolveService(service, object : NsdManager.ResolveListener {
-                        override fun onResolveFailed(serviceInfo: NsdServiceInfo, errorCode: Int) {
-                            LOG.e(TAG, "Failed to resolve NSD service: $errorCode")
-                        }
-
-                        override fun onServiceResolved(serviceInfo: NsdServiceInfo) {
-                            LOG.e(TAG, "NSD service resolved. $serviceInfo")
-
-                            val deviceId = serviceInfo.attributes["id"]?.contentToString()
-                            nsdServices[serviceInfo.serviceName] = if (!deviceId.isNullOrBlank()) {
-                                serviceInfo
-                            } else null
-
-                            updateDeviceList()
-                        }
-                    })
-                }
-            }
-        }
-
-        override fun onServiceLost(service: NsdServiceInfo) {
-            LOG.e(TAG, "service lost: $service")
-
-            nsdServices.remove(service.serviceName)
-
-            updateDeviceList()
-        }
-
-        override fun onDiscoveryStopped(serviceType: String) {
-            LOG.i(TAG, "Discovery stopped: $serviceType")
-        }
-
-        override fun onStartDiscoveryFailed(serviceType: String, errorCode: Int) {
-            LOG.e(TAG, "Discovery failed: Error code:$errorCode")
-
-            nsdManager.stopServiceDiscovery(this)
-        }
-
-        override fun onStopDiscoveryFailed(serviceType: String, errorCode: Int) {
-            LOG.e(TAG, "Discovery failed: Error code:$errorCode")
-
-            nsdManager.stopServiceDiscovery(this)
+    private fun syncChartAdapter() {
+        telemetryManager?.let { manager ->
+            deviceAdapter.submitList(manager.getConnectedDevices())
         }
     }
 
     class DeviceListAdapter(
         private val inflater: LayoutInflater,
         private val listener: DeviceItemClickListener,
-        private val getFlowForDevice: (TelemetryDevice) -> Flow<TelemetryEvent>?
+        private val getFlowForDevice: (TelemetryDevice) -> Flow<ClientTelemetryEvent>?
     ) : ListAdapter<TelemetryDevice, DeviceListAdapter.Holder>(DIFF_CALLBACK) {
 
         interface DeviceItemClickListener {

@@ -16,8 +16,8 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.utils.iterateSubTags
 import com.nextgenbroadcast.mobile.middleware.atsc3.utils.readTextTag
 import com.nextgenbroadcast.mobile.middleware.sample.databinding.DialogSettingsBinding
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.ViewViewModel
-import com.nextgenbroadcast.mobile.middleware.telemetry.reader.LocationFrequencyType
-import com.nextgenbroadcast.mobile.middleware.telemetry.reader.SensorFrequencyType
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.reader.LocationFrequencyType
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.reader.SensorFrequencyType
 import kotlinx.android.synthetic.main.dialog_settings.*
 import kotlinx.android.synthetic.main.dialog_settings.view.*
 

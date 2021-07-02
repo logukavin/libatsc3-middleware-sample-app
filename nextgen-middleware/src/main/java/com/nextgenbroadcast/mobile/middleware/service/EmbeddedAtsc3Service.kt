@@ -7,6 +7,7 @@ import com.nextgenbroadcast.mobile.core.model.*
 import com.nextgenbroadcast.mobile.core.presentation.*
 import com.nextgenbroadcast.mobile.core.presentation.media.IObservablePlayer
 import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
+import com.nextgenbroadcast.mobile.middleware.MiddlewareConfig
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
 import com.nextgenbroadcast.mobile.middleware.server.cert.UserAgentSSLContext
 import kotlinx.coroutines.CoroutineScope
@@ -100,27 +101,47 @@ class EmbeddedAtsc3Service : Atsc3ForegroundService() {
             }
         }
 
-        override val controllerPresenter = object : IControllerPresenter {
-            //TODO: isolate Flow to prevent internal objects blocking with UI
-            // maybe something like this: .stateIn(viewController.scope(), SharingStarted.Lazily, telemetryBroker.readersEnabled.value)
-            override val telemetryEnabled = telemetryHolder.telemetryEnabled.asReadOnly()
-            override val telemetryDelay = telemetryHolder.telemetryDelay.asReadOnly()
-            override val debugInfoSettings = telemetryHolder.debugInfoSettings.asReadOnly()
+        override val controllerPresenter = if (MiddlewareConfig.DEV_TOOLS) {
+            object : IControllerPresenter {
+                //TODO: isolate Flow to prevent internal objects blocking with UI
+                // maybe something like this: .stateIn(viewController.scope(), SharingStarted.Lazily, telemetryBroker.readersEnabled.value)
+                override val telemetryEnabled = telemetryHolder.telemetryEnabled.asReadOnly()
+                override val telemetryDelay = telemetryHolder.telemetryDelay.asReadOnly()
+                override val debugInfoSettings = telemetryHolder.debugInfoSettings.asReadOnly()
 
-            override fun setDebugInfoVisible(type: String, visible: Boolean) {
-                telemetryHolder.setInfoVisible(visible, type)
+                override fun setDebugInfoVisible(type: String, visible: Boolean) {
+                    telemetryHolder.setInfoVisible(visible, type)
+                }
+
+                override fun setTelemetryEnabled(enabled: Boolean) {
+                    telemetryHolder.setTelemetryEnabled(enabled)
+                }
+
+                override fun setTelemetryEnabled(type: String, enabled: Boolean) {
+                    telemetryHolder.setTelemetryEnabled(enabled, type)
+                }
+
+                override fun setTelemetryUpdateDelay(type: String, delayMils: Long) {
+                    telemetryHolder.setTelemetryDelay(delayMils, type)
+                }
             }
+        } else {
+            object : IControllerPresenter {
+                override val telemetryEnabled = MutableStateFlow<Map<String, Boolean>>(emptyMap()).asReadOnly()
+                override val telemetryDelay = MutableStateFlow<Map<String, Long>>(emptyMap()).asReadOnly()
+                override val debugInfoSettings = MutableStateFlow<Map<String, Boolean>>(emptyMap()).asReadOnly()
 
-            override fun setTelemetryEnabled(enabled: Boolean) {
-                telemetryHolder.setTelemetryEnabled(enabled)
-            }
+                override fun setDebugInfoVisible(type: String, visible: Boolean) {
+                }
 
-            override fun setTelemetryEnabled(type: String, enabled: Boolean) {
-                telemetryHolder.setTelemetryEnabled(enabled, type)
-            }
+                override fun setTelemetryEnabled(enabled: Boolean) {
+                }
 
-            override fun setTelemetryUpdateDelay(type: String, delayMils: Long) {
-                telemetryHolder.setTelemetryDelay(delayMils, type)
+                override fun setTelemetryEnabled(type: String, enabled: Boolean) {
+                }
+
+                override fun setTelemetryUpdateDelay(type: String, delayMils: Long) {
+                }
             }
         }
     }

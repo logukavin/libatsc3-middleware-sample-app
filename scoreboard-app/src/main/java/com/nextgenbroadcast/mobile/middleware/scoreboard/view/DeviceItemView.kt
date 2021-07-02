@@ -8,7 +8,7 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.nextgenbroadcast.mobile.core.LOG
-import com.nextgenbroadcast.mobile.middleware.dev.telemetry.TelemetryEvent
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.entity.ClientTelemetryEvent
 import com.nextgenbroadcast.mobile.middleware.scoreboard.R
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.mapNotNull
@@ -34,12 +34,12 @@ class DeviceItemView @JvmOverloads constructor(
         removeBtn = findViewById(R.id.device_remove_btn)
     }
 
-    fun observe(flow: Flow<TelemetryEvent>?) {
+    fun observe(flow: Flow<ClientTelemetryEvent>?) {
         phyChart.setDataSource(
             flow?.mapNotNull { event ->
                 try {
                     val payload = gson.fromJson<PhyPayload>(event.payload, phyType)
-                    Pair(event.timestamp, payload.snr1000.toDouble() / 1000)
+                    Pair(payload.timeStamp, payload.snr1000.toDouble() / 1000)
                 } catch (e: Exception) {
                     LOG.w(TAG, "Can't parse telemetry event payload", e)
                     null
@@ -51,7 +51,8 @@ class DeviceItemView @JvmOverloads constructor(
     }
 
     data class PhyPayload(
-        val snr1000: Int
+        val snr1000: Int,
+        val timeStamp: Long
     )
 
     companion object {
