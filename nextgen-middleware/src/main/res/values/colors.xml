@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="white">#FFFFFF</color>
-    <color name="but_dismiss_bg_color">#801717</color>
+    <color name="alert_color">@android:color/holo_red_dark</color>
 </resources>

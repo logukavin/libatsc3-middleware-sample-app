@@ -9,7 +9,6 @@ import android.content.Context
 import android.content.Intent
 import android.media.AudioAttributes
 import android.net.Uri
-import android.util.Log
 import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
 import com.nextgenbroadcast.mobile.middleware.AlertDialogActivity
@@ -17,8 +16,11 @@ import com.nextgenbroadcast.mobile.middleware.AlertDialogActivity.Companion.ALER
 import com.nextgenbroadcast.mobile.middleware.AlertDialogActivity.Companion.ALERT_MESSAGE
 import com.nextgenbroadcast.mobile.middleware.R
 
-class AlertNotificationHelper(private val context: Context) {
+class AlertNotificationHelper(
+    private val context: Context
+) {
 
+    private val packageName = context.packageName
     private val notificationChannel =
         NotificationChannel(
             ALERT_CHANNEL_ID,
@@ -26,7 +28,7 @@ class AlertNotificationHelper(private val context: Context) {
             NotificationManager.IMPORTANCE_HIGH
         ).apply {
             setSound(
-                Uri.parse(ContentResolver.SCHEME_ANDROID_RESOURCE + "://" + context.packageName + "/" + R.raw.beep_attention_signal_440_hz_3),
+                Uri.parse(ContentResolver.SCHEME_ANDROID_RESOURCE + "://" + packageName + "/" + R.raw.beep_attention_signal_440_hz_3),
                 AudioAttributes.Builder()
                     .setUsage(AudioAttributes.USAGE_NOTIFICATION)
                     .build()
@@ -70,8 +72,8 @@ class AlertNotificationHelper(private val context: Context) {
             PendingIntent.FLAG_CANCEL_CURRENT
         )
 
-        val contentView = RemoteViews(context.packageName, R.layout.alert_notification_view)
-        val contentViewExpanded =  RemoteViews(context.packageName, R.layout.alert_notification_expanded_view)
+        val contentView = RemoteViews(packageName, R.layout.alert_notification_view)
+        val contentViewExpanded = RemoteViews(packageName, R.layout.alert_notification_expanded_view)
 
         contentView.setTextViewText(R.id.textViewAlertTitle, context.getString(R.string.warning))
         contentView.setTextViewText(R.id.textViewAlertText, msg)
@@ -87,7 +89,7 @@ class AlertNotificationHelper(private val context: Context) {
         )
 
         val builder = NotificationCompat.Builder(context, ALERT_CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_baseline_warning_24)
+            .setSmallIcon(R.drawable.ic_warning)
             .setCustomContentView(contentView)
             .setCustomBigContentView(contentViewExpanded)
             .setContentIntent(pendingContentIntent)
@@ -95,8 +97,9 @@ class AlertNotificationHelper(private val context: Context) {
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setPriority(NotificationCompat.PRIORITY_MAX)
 
-        val notification = builder.build()
-        notification.flags = Notification.FLAG_NO_CLEAR
+        val notification = builder.build().apply {
+            flags = Notification.FLAG_NO_CLEAR
+        }
         notificationManager.notify(msgTag, aeaId, notification)
     }
 
