@@ -126,10 +126,13 @@ class ReceiverContentResolver(
         }
     }
 
-    fun getPhyInfo(): Pair<String?, String?>? {
+    fun getPhyInfo(): Triple<String?, String?, String?>? {
         return receiverPhyInfoUri.queryFirst { cursor ->
-            Pair(cursor.getStringOrNull(PhyVersionInfo.INFO_SDK_VERSION),
-                cursor.getStringOrNull(PhyVersionInfo.INFO_FIRMWARE_VERSION))
+            Triple(
+                cursor.getStringOrNull(PhyVersionInfo.INFO_SDK_VERSION),
+                cursor.getStringOrNull(PhyVersionInfo.INFO_FIRMWARE_VERSION),
+                cursor.getStringOrNull(PhyVersionInfo.INFO_PHY_TYPE)
+            )
         }
     }
 
