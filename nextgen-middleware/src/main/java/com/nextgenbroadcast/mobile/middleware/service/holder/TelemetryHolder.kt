@@ -151,15 +151,13 @@ internal class TelemetryHolder(
             start()
         }
 
-        FirebaseInstallations.getInstance().id.addOnCompleteListener { task ->
-            if (task.isSuccessful) {
-                if (!isClosed) {
-                    val deviceId = task.result
-                    registerAWSIoThing(deviceId)
-                    registerNsdService(deviceId)
-                }
+        CoroutineScope(Dispatchers.Main).launch {
+            val deviceId = receiver.getDeviceId()
+            if (deviceId != null) {
+                registerAWSIoThing(deviceId)
+                registerNsdService(deviceId)
             } else {
-                LOG.e(TAG, "Can't create Telemetry because Firebase ID not received.", task.exception)
+                LOG.e(TAG, "Can't create AWS Telemetry because Device ID not available.")
             }
         }
     }

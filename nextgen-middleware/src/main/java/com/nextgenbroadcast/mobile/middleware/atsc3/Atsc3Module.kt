@@ -682,18 +682,24 @@ internal class Atsc3Module(
                 put(PhyVersionInfo.INFO_SDK_VERSION, src.getSdkVersion())
                 put(PhyVersionInfo.INFO_FIRMWARE_VERSION, src.getFirmwareVersion())
                 if (src is UsbAtsc3Source) {
-                    put(PhyVersionInfo.INFO_PHY_TYPE, src.type.toString())
+                    val deviceType = when (src.type) {
+                        Atsc3Source.DEVICE_TYPE_KAILASH -> "KAILASH"
+                        Atsc3Source.DEVICE_TYPE_YOGA -> "YOGA"
+                        Atsc3Source.DEVICE_TYPE_AUTO -> "MARKONE"
+                        else -> src.type.toString()
+                    }
+                    put(PhyVersionInfo.INFO_PHY_TYPE, deviceType)
                 }
             }
         }
     }
 
-    override fun getSerialNum(): String {
+    override fun getSerialNum(): String? {
         var serialId = systemProperties.serialno_str
-        if (serialId.isBlank()) {
+        if (serialId.isNullOrBlank()) {
             serialId = systemProperties.boot_serialno_str
         }
-        return serialId
+        return if (serialId.isNullOrBlank()) null else serialId
     }
 
     private fun applyDefaultConfiguration(src: IAtsc3Source) {

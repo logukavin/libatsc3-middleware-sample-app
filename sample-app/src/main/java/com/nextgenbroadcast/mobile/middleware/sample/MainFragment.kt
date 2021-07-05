@@ -20,12 +20,14 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.setFragmentResultListener
 import androidx.lifecycle.ViewModelProvider
+import com.bugfender.sdk.Bugfender
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.presentation.ApplicationState
+import com.nextgenbroadcast.mobile.middleware.atsc3.PhyVersionInfo
 import com.nextgenbroadcast.mobile.middleware.dev.atsc3.PHYStatistics
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.observer.StaticTelemetryObserver
 import com.nextgenbroadcast.mobile.middleware.sample.view.PhyChart
@@ -353,15 +355,18 @@ class MainFragment : Fragment(), ReceiverContentResolver.Listener {
     }
 
     private fun openInfoDialog() {
-            receiverContentResolver.getPhyInfo()?.let { (sdkVersion, firmwareVersion, deviceType) ->
-            AboutDialog(
-                sdkVersion,
-                firmwareVersion,
-                deviceType,
-                receiverContentResolver.queryReceiverFrequency()
-            ).show(parentFragmentManager, null)
+        var sdkVersion: String? = null
+        var firmwareVersion: String? = null
+        var deviceType: String? = null
+        receiverContentResolver.getPhyInfo()?.let { info ->
+            sdkVersion = info[PhyVersionInfo.INFO_SDK_VERSION]
+            firmwareVersion = info[PhyVersionInfo.INFO_FIRMWARE_VERSION]
+            deviceType = info[PhyVersionInfo.INFO_PHY_TYPE]
         }
+        val frequency = receiverContentResolver.queryReceiverFrequency()
 
+        AboutDialog(sdkVersion, firmwareVersion, deviceType, frequency)
+            .show(parentFragmentManager, null)
     }
 
     private fun openSelectTracksDialog() {
