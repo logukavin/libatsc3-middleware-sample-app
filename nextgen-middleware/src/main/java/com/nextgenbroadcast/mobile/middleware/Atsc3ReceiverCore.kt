@@ -1,5 +1,7 @@
 package com.nextgenbroadcast.mobile.middleware
 
+import androidx.annotation.MainThread
+import com.google.firebase.installations.FirebaseInstallations
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.PhyFrequency
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
@@ -55,6 +57,8 @@ internal class Atsc3ReceiverCore(
 
     private var webGateway: IWebGateway? = null
     private var rpcGateway: IRPCGateway? = null
+
+    private var deviceId: String? = null
 
     // event flows
     val rfPhyMetricsFlow = atsc3Module.rfPhyMetricsFlow.asSharedFlow()
@@ -200,5 +204,30 @@ internal class Atsc3ReceiverCore(
 
     override fun getPhyVersionInfo(): Map<String, String?> {
         return atsc3Module.getVersionInfo()
+    }
+
+    @MainThread
+    override suspend fun getDeviceId(): String? {
+        return deviceId ?: let {
+            atsc3Module.getSerialNum() ?: try {
+                val task = FirebaseInstallations.getInstance().id
+                if (task.isSuccessful) {
+                    task.result
+                } else {
+                    // use loop instead of suspendCancellableCoroutine because it may block the Main thread
+                    // that's must be unblocked to receive addOnCompleteListener callback.
+                    withTimeout(500) {
+                        while (!task.isComplete) {
+                            delay(50)
+                        }
+                        if (task.isSuccessful) task.result else null
+                    }
+                }
+            } catch (e: CancellationException) {
+                null
+            }
+        }.also {
+            deviceId = it
+        }
     }
 }
