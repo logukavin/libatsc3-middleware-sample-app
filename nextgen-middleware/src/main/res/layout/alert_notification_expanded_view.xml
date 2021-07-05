@@ -4,44 +4,44 @@
     android:id="@+id/layout"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="@color/but_dismiss_bg_color"
-    android:orientation="vertical"
-    android:baselineAligned="false">
+    android:background="@color/alert_color"
+    android:baselineAligned="false"
+    android:orientation="vertical">
 
     <TextView
         android:id="@+id/textViewNotificationExpandedTitle"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textColor="@color/white"
-        android:textSize="13sp"
         android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp"
         android:layout_marginTop="8dp"
+        android:layout_marginEnd="16dp"
         android:layout_marginBottom="8dp"
-        android:drawableEnd="@drawable/ic_baseline_arrow_drop_up_24_white"
+        android:drawableEnd="@drawable/ic_arrow_up"
+        android:textColor="@android:color/white"
+        android:textSize="13sp"
         tool:text="Title" />
 
     <TextView
         android:id="@+id/textViewAlertExpandedText"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:ellipsize="marquee"
         android:layout_marginStart="16dp"
         android:layout_marginEnd="16dp"
-        tool:text="Title"
-        android:textColor="@color/white"
-        android:textSize="13sp" />
+        android:ellipsize="marquee"
+        android:textColor="@android:color/white"
+        android:textSize="13sp"
+        tool:text="Descriptionn" />
 
     <TextView
         android:id="@+id/textViewAlertExpandedDismiss"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:ellipsize="marquee"
         android:layout_margin="16dp"
+        android:ellipsize="marquee"
+        android:gravity="center_horizontal"
         android:text="@string/dismiss"
         android:textAllCaps="true"
-        android:gravity="center_horizontal"
-        android:textColor="@color/white"
+        android:textColor="@android:color/white"
         android:textSize="13sp" />
 
 </LinearLayout>

@@ -172,12 +172,12 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
         serviceScope.launch {
             atsc3Receiver.serviceController.alertList.collect { alerts ->
-                val locale = Locale.getDefault().language
+                val locale = atsc3Receiver.settings.locale.language
 
                 alerts.forEach { alert ->
-                    val message = alert.messages?.get(locale) ?: alert.messages?.get(
-                        alert.messages?.keys?.first()
-                    )
+                    val message = alert.messages?.let { msgMap ->
+                        msgMap[locale] ?: msgMap[Locale.US.language] ?: msgMap.values.firstOrNull()
+                    }
 
                     message?.let { msg ->
                         alertNotificationHelper.showNotification(msg, alert.id, alert.effective)
@@ -187,9 +187,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
                             )
                         )
                     }
-
                 }
-
             }
         }
     }
