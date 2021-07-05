@@ -48,8 +48,14 @@ class AlertDialogActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
 
-        if (alertId == intent?.getStringExtra(AlertNotificationHelper.ALERT_NOTIFICATION_TAG)) {
-            finish()
+        intent?.let {
+            // Check it's the same Alert message
+            if (alertId == intent.getStringExtra(AlertNotificationHelper.ALERT_NOTIFICATION_TAG)) {
+                // Just update the mnessage if provided or close otherwise
+                intent.getStringExtra(ALERT_MESSAGE)?.let { message ->
+                    textViewAlertMessage.text = message
+                } ?: finish()
+            }
         }
     }
 
