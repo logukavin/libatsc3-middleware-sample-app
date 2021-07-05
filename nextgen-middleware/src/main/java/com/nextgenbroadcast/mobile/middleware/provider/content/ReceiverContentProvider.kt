@@ -11,6 +11,7 @@ import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverCore
 import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverStandalone
 import com.nextgenbroadcast.mobile.middleware.R
 import com.nextgenbroadcast.mobile.middleware.atsc3.PhyVersionInfo.INFO_FIRMWARE_VERSION
+import com.nextgenbroadcast.mobile.middleware.atsc3.PhyVersionInfo.INFO_PHY_TYPE
 import com.nextgenbroadcast.mobile.middleware.atsc3.PhyVersionInfo.INFO_SDK_VERSION
 import com.nextgenbroadcast.mobile.middleware.server.ServerUtils
 import com.nextgenbroadcast.mobile.middleware.server.cert.IUserAgentSSLContext
@@ -130,9 +131,10 @@ class ReceiverContentProvider : ContentProvider() {
 
             QUERY_PHY_VERSION_INFO -> {
                 val phyVersionInfo = receiver.getPhyVersionInfo()
-                MatrixCursor(arrayOf(INFO_SDK_VERSION, INFO_FIRMWARE_VERSION)).apply {
+                MatrixCursor(arrayOf(INFO_SDK_VERSION, INFO_FIRMWARE_VERSION, INFO_PHY_TYPE)).apply {
                     newRow().add(INFO_SDK_VERSION, phyVersionInfo[INFO_SDK_VERSION])
                             .add(INFO_FIRMWARE_VERSION, phyVersionInfo[INFO_FIRMWARE_VERSION])
+                            .add(INFO_PHY_TYPE, phyVersionInfo[INFO_PHY_TYPE])
                 }
             }
 

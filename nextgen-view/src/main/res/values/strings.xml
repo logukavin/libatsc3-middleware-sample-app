@@ -8,4 +8,5 @@
     <string name="phy_sdk_version">SDK Version:</string>
     <string name="firmware_version">Kernel Version:</string>
     <string name="frequency">Frequency:</string>
+    <string name="deviceType">Device Type:</string>
 </resources>
