@@ -12,8 +12,6 @@ import android.net.Uri
 import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
 import com.nextgenbroadcast.mobile.middleware.AlertDialogActivity
-import com.nextgenbroadcast.mobile.middleware.AlertDialogActivity.Companion.ALERT_EFFECTIVE_TIME
-import com.nextgenbroadcast.mobile.middleware.AlertDialogActivity.Companion.ALERT_MESSAGE
 import com.nextgenbroadcast.mobile.middleware.R
 
 class AlertNotificationHelper(
@@ -52,11 +50,7 @@ class AlertNotificationHelper(
             putExtra(ALERT_NOTIFICATION_TAG, msgTag)
         }
 
-        val contentIntent = Intent(context, AlertDialogActivity::class.java).apply {
-            putExtra(ALERT_MESSAGE, msg)
-            putExtra(ALERT_EFFECTIVE_TIME, msgTime)
-            putExtra(ALERT_NOTIFICATION_TAG, msgTag)
-        }
+        val contentIntent = AlertDialogActivity.newIntent(context, msgTag, msg, msgTime)
 
         val pendingContentIntent = PendingIntent.getActivity(
             context,
