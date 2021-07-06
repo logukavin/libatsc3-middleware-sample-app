@@ -138,11 +138,19 @@ class ReceiverContentResolver(
     }
 
     private fun Cursor.getStringOrNull(columnName: String): String? {
-        return getStringOrNull(getColumnIndex(columnName))
+        return getColumnIndexOrNull(columnName)?.let { index ->
+            getStringOrNull(index)
+        }
     }
 
     private fun Cursor.getIntOrNull(columnName: String): Int? {
-        return getIntOrNull(getColumnIndex(columnName))
+        return getColumnIndexOrNull(columnName)?.let { index ->
+            getIntOrNull(index)
+        }
+    }
+
+    private fun Cursor.getColumnIndexOrNull(columnName: String): Int? {
+        return getColumnIndex(columnName).takeIf { it >= 0 }
     }
 
     private inline fun ContentResolver.registerContentObserver(uri: Uri, crossinline onChange: () -> Unit) {
