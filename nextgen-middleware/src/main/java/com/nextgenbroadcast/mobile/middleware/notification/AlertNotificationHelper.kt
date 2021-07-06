@@ -7,6 +7,7 @@ import android.app.PendingIntent
 import android.content.ContentResolver
 import android.content.Context
 import android.content.Intent
+import android.graphics.BitmapFactory
 import android.media.AudioAttributes
 import android.net.Uri
 import android.widget.RemoteViews
@@ -82,10 +83,18 @@ class AlertNotificationHelper(
             pendingDismissIntent
         )
 
+        val icon = BitmapFactory.decodeResource(context.resources, R.mipmap.ic_warning)
+        val action = NotificationCompat.Action.Builder(
+            0, context.getString(R.string.dismiss), pendingDismissIntent
+        ).build()
+
         val builder = NotificationCompat.Builder(context, ALERT_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_warning)
-            .setCustomContentView(contentView)
-            .setCustomBigContentView(contentViewExpanded)
+            .setContentTitle(context.getString(R.string.warning))
+            .setContentText(msg)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(msg))
+            .addAction(action)
+            .setLargeIcon(icon)
             .setContentIntent(pendingContentIntent)
             .setGroup(ALERT_GROUP_ID)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
