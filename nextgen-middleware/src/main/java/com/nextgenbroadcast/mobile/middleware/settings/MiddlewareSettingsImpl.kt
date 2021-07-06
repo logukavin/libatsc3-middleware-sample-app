@@ -1,6 +1,6 @@
 package com.nextgenbroadcast.mobile.middleware.settings
 
-import android.content.Context
+import android.content.SharedPreferences
 import android.location.Location
 import androidx.core.content.edit
 import com.google.gson.Gson
@@ -8,7 +8,6 @@ import com.google.gson.JsonParseException
 import com.google.gson.reflect.TypeToken
 import com.nextgenbroadcast.mobile.core.DateUtils
 import com.nextgenbroadcast.mobile.core.LOG
-import com.nextgenbroadcast.mobile.middleware.BuildConfig
 import com.nextgenbroadcast.mobile.middleware.analytics.Atsc3Analytics
 import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3Profile
 import com.nextgenbroadcast.mobile.middleware.location.FrequencyLocation
@@ -18,10 +17,9 @@ import org.json.JSONObject
 import java.time.LocalDateTime
 import java.util.*
 
-internal class MiddlewareSettingsImpl private constructor(
-        context: Context
+internal class MiddlewareSettingsImpl (
+    private val preferences: SharedPreferences
 ) : IMiddlewareSettings {
-    private val preferences = context.getSharedPreferences(REPOSITORY_PREFERENCE, Context.MODE_PRIVATE)
     private val gson = Gson()
 
     override val deviceId: String
@@ -85,6 +83,10 @@ internal class MiddlewareSettingsImpl private constructor(
     override var httpsPort = ServerConstants.PORT_AUTOFIT
     override var wsPort = ServerConstants.PORT_AUTOFIT
     override var wssPort = ServerConstants.PORT_AUTOFIT
+
+    fun setDeviceId(id: String) {
+        saveString(DEVICE_ID, id)
+    }
 
     private fun saveString(key: String, value: String): String {
         preferences.edit { putString(key, value) }
@@ -160,7 +162,6 @@ internal class MiddlewareSettingsImpl private constructor(
     companion object {
         val TAG: String = MiddlewareSettingsImpl::class.java.simpleName
 
-        private const val REPOSITORY_PREFERENCE = "${BuildConfig.LIBRARY_PACKAGE_NAME}.preference"
         private const val DEVICE_ID = "device_id"
         private const val ADVERTISING_ID = "advertising_id"
         private const val LAST_REPORT_DATE = "last_report_date"
@@ -171,18 +172,5 @@ internal class MiddlewareSettingsImpl private constructor(
         private const val FREQUENCY_LIST = "frequency_list"
         private const val FREQUENCY_USER = "frequency_user"
         private const val RECEIVER_PROFILE = "receiver_profile"
-
-        @Volatile
-        private var INSTANCE: MiddlewareSettingsImpl? = null
-
-        fun getInstance(context: Context): MiddlewareSettingsImpl {
-            val instance = INSTANCE
-            return instance ?: synchronized(this) {
-                val instance2 = INSTANCE
-                instance2 ?: MiddlewareSettingsImpl(context).also {
-                    INSTANCE = it
-                }
-            }
-        }
     }
 }
