@@ -126,13 +126,14 @@ class ReceiverContentResolver(
         }
     }
 
-    fun getPhyInfo(): Triple<String?, String?, String?>? {
+    fun getPhyInfo(): Map<String, String?>? {
         return receiverPhyInfoUri.queryFirst { cursor ->
-            Triple(
-                cursor.getStringOrNull(PhyVersionInfo.INFO_SDK_VERSION),
-                cursor.getStringOrNull(PhyVersionInfo.INFO_FIRMWARE_VERSION),
-                cursor.getStringOrNull(PhyVersionInfo.INFO_PHY_TYPE)
-            )
+            mutableMapOf<String, String?>().apply {
+                put(PhyVersionInfo.INFO_DEVICE_ID, cursor.getStringOrNull(PhyVersionInfo.INFO_DEVICE_ID))
+                put(PhyVersionInfo.INFO_SDK_VERSION, cursor.getStringOrNull(PhyVersionInfo.INFO_SDK_VERSION))
+                put(PhyVersionInfo.INFO_FIRMWARE_VERSION, cursor.getStringOrNull(PhyVersionInfo.INFO_FIRMWARE_VERSION))
+                put(PhyVersionInfo.INFO_PHY_TYPE, cursor.getStringOrNull(PhyVersionInfo.INFO_PHY_TYPE))
+            }
         }
     }
 
@@ -164,5 +165,16 @@ class ReceiverContentResolver(
         providerClient?.insert(this, ContentValues().apply {
             action(this)
         })
+    }
+
+    companion object {
+        fun getDeviceId(context: Context): String? {
+            val uri = ReceiverContentProvider.getUriForPath(context, ReceiverContentProvider.CONTENT_PHY_VERSION_INFO)
+            return context.contentResolver.query(uri, null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    cursor.getStringOrNull(cursor.getColumnIndex(PhyVersionInfo.INFO_DEVICE_ID))
+                } else null
+            }
+        }
     }
 }
