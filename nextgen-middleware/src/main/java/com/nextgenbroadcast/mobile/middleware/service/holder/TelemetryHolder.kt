@@ -151,15 +151,9 @@ internal class TelemetryHolder(
             start()
         }
 
-        CoroutineScope(Dispatchers.Main).launch {
-            val deviceId = receiver.getDeviceId()
-            if (deviceId != null) {
-                registerAWSIoThing(deviceId)
-                registerNsdService(deviceId)
-            } else {
-                LOG.e(TAG, "Can't create AWS Telemetry because Device ID not available.")
-            }
-        }
+        val deviceId = receiver.settings.deviceId
+        registerAWSIoThing(deviceId)
+        registerNsdService(deviceId)
     }
 
     fun close() {
