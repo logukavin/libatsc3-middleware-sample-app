@@ -6,6 +6,7 @@ import android.util.Log
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.nextgenbroadcast.mobile.core.LOG
+import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverStandalone
 import com.nextgenbroadcast.mobile.middleware.BuildConfig
 import com.nextgenbroadcast.mobile.middleware.Auth0
 import com.nextgenbroadcast.mobile.middleware.net.auth0.Auth0Request
@@ -13,8 +14,6 @@ import com.nextgenbroadcast.mobile.middleware.net.auth0.Auth0Response
 import com.nextgenbroadcast.mobile.middleware.net.await
 import com.nextgenbroadcast.mobile.middleware.net.sinclair.SinclairPlatform
 import com.nextgenbroadcast.mobile.middleware.net.sinclair.Station
-import com.nextgenbroadcast.mobile.middleware.service.init.FrequencyInitializer
-import com.nextgenbroadcast.mobile.middleware.settings.MiddlewareSettingsImpl
 import okhttp3.OkHttpClient
 import java.io.IOException
 
@@ -26,7 +25,7 @@ class FrequencyLocator : IFrequencyLocator {
     }
 
     override suspend fun locateFrequency(context: Context): List<Int> {
-        val settings = MiddlewareSettingsImpl.getInstance(context)
+        val settings = Atsc3ReceiverStandalone.get(context).settings
         val locator = LocationRequester(context)
         val prevFrequencyLocation = settings.frequencyLocation
 

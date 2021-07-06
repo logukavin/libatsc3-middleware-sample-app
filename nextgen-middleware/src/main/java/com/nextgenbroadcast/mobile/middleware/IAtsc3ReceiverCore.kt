@@ -15,6 +15,4 @@ internal interface IAtsc3ReceiverCore {
     fun getReceiverState(): ReceiverState
 
     fun getPhyVersionInfo(): Map<String, String?>
-
-    suspend fun getDeviceId(): String?
 }

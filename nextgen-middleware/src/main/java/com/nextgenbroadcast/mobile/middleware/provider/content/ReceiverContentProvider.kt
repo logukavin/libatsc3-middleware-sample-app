@@ -17,7 +17,6 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.PhyVersionInfo.INFO_SDK_VERS
 import com.nextgenbroadcast.mobile.middleware.server.ServerUtils
 import com.nextgenbroadcast.mobile.middleware.server.cert.IUserAgentSSLContext
 import com.nextgenbroadcast.mobile.middleware.server.cert.UserAgentSSLContext
-import com.nextgenbroadcast.mobile.middleware.settings.MiddlewareSettingsImpl
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import java.nio.ByteBuffer
@@ -27,7 +26,6 @@ class ReceiverContentProvider : ContentProvider() {
     private val uriMatcher = UriMatcher(UriMatcher.NO_MATCH)
     private val stateScope: CoroutineScope = CoroutineScope(Dispatchers.Default)
 
-    private lateinit var settings: MiddlewareSettingsImpl
     private lateinit var receiver: Atsc3ReceiverCore
     private lateinit var authority: String
     private lateinit var appData: StateFlow<AppData?>
@@ -41,7 +39,6 @@ class ReceiverContentProvider : ContentProvider() {
 
         authority = appContext.getString(R.string.receiverContentProvider)
         receiver = Atsc3ReceiverStandalone.get(appContext)
-        settings = MiddlewareSettingsImpl.getInstance(appContext)
 
         with(uriMatcher) {
             addURI(authority, CONTENT_APP_DATA, QUERY_APP_DATA)
@@ -53,6 +50,7 @@ class ReceiverContentProvider : ContentProvider() {
         }
 
         val repository = receiver.repository
+        val settings = receiver.settings
 
         appData = combine(repository.heldPackage, repository.applications, receiver.sessionNum) { held, applications, _ ->
             held?.let {
@@ -130,7 +128,7 @@ class ReceiverContentProvider : ContentProvider() {
 
             QUERY_PHY_VERSION_INFO -> {
                 val phyVersionInfo = receiver.getPhyVersionInfo()
-                val deviceId = runBlocking { receiver.getDeviceId() }
+                val deviceId = receiver.settings.deviceId
                 MatrixCursor(arrayOf(INFO_DEVICE_ID, INFO_SDK_VERSION, INFO_FIRMWARE_VERSION, INFO_PHY_TYPE)).apply {
                     newRow().add(INFO_DEVICE_ID, deviceId)
                             .add(INFO_SDK_VERSION, phyVersionInfo[INFO_SDK_VERSION])
