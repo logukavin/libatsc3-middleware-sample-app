@@ -67,22 +67,6 @@ class AlertNotificationHelper(
             PendingIntent.FLAG_CANCEL_CURRENT
         )
 
-        val contentView = RemoteViews(packageName, R.layout.alert_notification_view)
-        val contentViewExpanded = RemoteViews(packageName, R.layout.alert_notification_expanded_view)
-
-        contentView.setTextViewText(R.id.textViewAlertTitle, context.getString(R.string.warning))
-        contentView.setTextViewText(R.id.textViewAlertText, msg)
-
-        contentViewExpanded.setTextViewText(
-            R.id.textViewNotificationExpandedTitle,
-            context.getString(R.string.warning)
-        )
-        contentViewExpanded.setTextViewText(R.id.textViewAlertExpandedText, msg)
-        contentViewExpanded.setOnClickPendingIntent(
-            R.id.textViewAlertExpandedDismiss,
-            pendingDismissIntent
-        )
-
         val icon = BitmapFactory.decodeResource(context.resources, R.mipmap.ic_warning)
         val action = NotificationCompat.Action.Builder(
             0, context.getString(R.string.dismiss), pendingDismissIntent
