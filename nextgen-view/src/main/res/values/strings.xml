@@ -9,4 +9,5 @@
     <string name="firmware_version">Kernel Version:</string>
     <string name="frequency">Frequency:</string>
     <string name="deviceType">Device Type:</string>
+    <string name="deviceId">Device ID:</string>
 </resources>
