@@ -15,7 +15,8 @@ class AboutDialog(
     private val sdkVersion: String?,
     private val firmwareVersion: String?,
     private val deviceType: String?,
-    private val frequency: Int?
+    private val frequency: Int?,
+    private val deviceId: String?
 ) : DialogFragment() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -69,6 +70,9 @@ class AboutDialog(
                 append(DOUBLE_LINE_BREAK)
                 appendBoldTitle(R.string.deviceType).append(deviceType)
             }
+
+            append(DOUBLE_LINE_BREAK)
+            appendBoldTitle(R.string.deviceId).append(deviceId.orDash())
 
             append(DOUBLE_LINE_BREAK)
             appendBoldTitle(R.string.frequency).append(frequency ?: 0)
