@@ -67,7 +67,7 @@ class AlertNotificationHelper(
             PendingIntent.FLAG_CANCEL_CURRENT
         )
 
-        val icon = BitmapFactory.decodeResource(context.resources, R.mipmap.ic_warning)
+        val icon = BitmapFactory.decodeResource(context.resources, R.drawable.ic_warning)
         val action = NotificationCompat.Action.Builder(
             0, context.getString(R.string.dismiss), pendingDismissIntent
         ).build()
