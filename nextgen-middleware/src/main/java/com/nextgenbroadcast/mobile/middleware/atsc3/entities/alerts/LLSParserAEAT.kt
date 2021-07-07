@@ -62,7 +62,8 @@ class LLSParserAEAT {
                     aea.effective = header.effective
                     aea.expires = XmlUtils.strToDate(header.expires)
                 }
-                "AEAText" -> aea.messages?.add(readAEAText(parser).message)
+                "AEAText" -> readAEAText(parser).also {
+                    aea.messages?.put(it.lang, it.message) }
                 else -> parser.skipTag()
             }
         }
