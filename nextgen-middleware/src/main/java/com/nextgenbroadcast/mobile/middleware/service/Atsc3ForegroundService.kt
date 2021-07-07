@@ -10,7 +10,6 @@ import android.os.*
 import android.os.PowerManager.WakeLock
 import android.support.v4.media.MediaBrowserCompat
 import android.util.Log
-import android.widget.Toast
 import androidx.core.content.ContextCompat
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
@@ -21,12 +20,9 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.source.UsbAtsc3Source
 import com.nextgenbroadcast.mobile.middleware.cache.DownloadManager
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
 import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
+import com.nextgenbroadcast.mobile.middleware.notification.AlertNotificationHelper
 import com.nextgenbroadcast.mobile.middleware.phy.Atsc3DeviceReceiver
-import com.nextgenbroadcast.mobile.middleware.service.holder.LocationHolder
-import com.nextgenbroadcast.mobile.middleware.service.holder.MediaHolder
-import com.nextgenbroadcast.mobile.middleware.service.holder.SrtListHolder
-import com.nextgenbroadcast.mobile.middleware.service.holder.TelemetryHolder
-import com.nextgenbroadcast.mobile.middleware.service.holder.WebServerHolder
+import com.nextgenbroadcast.mobile.middleware.service.holder.*
 import com.nextgenbroadcast.mobile.middleware.service.init.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -74,6 +70,10 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     // Initialization from Service metadata
     private val initializer = ArrayList<WeakReference<IServiceInitializer>>()
     private var isInitialized = false
+
+    private val alertNotificationHelper by lazy {
+        AlertNotificationHelper(this)
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -176,14 +176,22 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
             }
         }
 
-        //TODO: This is temporary solution
         serviceScope.launch {
             atsc3Receiver.serviceController.alertList.collect { alerts ->
-                val messages = alerts.flatMap { it.messages ?: emptyList() }
-                if (messages.isEmpty()) return@collect
-                withContext(Dispatchers.Main) {
-                    messages.forEach { msg ->
-                        Toast.makeText(applicationContext, msg, Toast.LENGTH_LONG).show()
+                val locale = atsc3Receiver.settings.locale.language
+
+                alerts.forEach { alert ->
+                    val message = alert.messages?.let { msgMap ->
+                        msgMap[locale] ?: msgMap[Locale.US.language] ?: msgMap.values.firstOrNull()
+                    }
+
+                    message?.let { msg ->
+                        alertNotificationHelper.showNotification(msg, alert.id, alert.effective)
+                        startActivity(
+                            AlertDialogActivity.newIntent(
+                                this@Atsc3ForegroundService, alert.id, msg, alert.effective
+                            )
+                        )
                     }
                 }
             }

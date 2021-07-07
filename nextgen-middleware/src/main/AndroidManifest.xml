@@ -37,11 +37,19 @@
             android:taskAffinity=".ServiceActivity"
             android:theme="@style/Theme.AppCompat.Light.Dialog" />
 
+        <activity
+            android:name=".AlertDialogActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:theme="@style/Theme.AppCompat.Light.Dialog.Alert" />
+
         <receiver android:name="androidx.media.session.MediaButtonReceiver">
             <intent-filter>
                 <action android:name="android.intent.action.MEDIA_BUTTON" />
             </intent-filter>
         </receiver>
+
+        <receiver android:name=".notification.AlertNotificationReceiver" />
 
         <uses-library
             android:name="org.apache.http.legacy"
