@@ -32,10 +32,8 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
-import kotlin.concurrent.fixedRateTimer
 import kotlin.concurrent.schedule
 import kotlin.math.max
-import kotlin.random.Random
 
 internal class Atsc3Module(
         private val cacheDir: File
@@ -603,13 +601,13 @@ internal class Atsc3Module(
             return
         }
 
-        val pkgUid = "${packageMetadata.packageExtractPath}/${packageMetadata.packageName}"
+        val pkgUID = "${packageMetadata.packageExtractPath}/${packageMetadata.packageName}"
 
-        val pkg = metadataToPackage(pkgUid, packageMetadata)
+        val pkg = packageMetadata.toApplication(pkgUID)
 
-        val appPackage = packageMap[pkgUid]
+        val appPackage = packageMap[pkgUID]
         if (appPackage != pkg) {
-            packageMap[pkgUid] = pkg
+            packageMap[pkgUID] = pkg
             listener?.onApplicationPackageReceived(pkg)
         }
     }
@@ -730,17 +728,17 @@ internal class Atsc3Module(
                 && !packageExtractPath.isNullOrEmpty()
     }
 
-    private fun metadataToPackage(uid: String, packageMetadata: PackageExtractEnvelopeMetadataAndPayload): Atsc3Application {
-        val files = packageMetadata.multipartRelatedPayloadList?.map { file ->
+    private fun PackageExtractEnvelopeMetadataAndPayload.toApplication(uid: String): Atsc3Application {
+        val files = multipartRelatedPayloadList?.map { file ->
             file.contentLocation to Atsc3ApplicationFile(file.contentLocation, file.contentType, file.version)
         }?.toMap() ?: emptyMap<String, Atsc3ApplicationFile>()
 
         return Atsc3Application(
-                uid,
-                packageMetadata.packageName,
-                packageMetadata.appContextIdList.split(" "),
-                getFullPath(packageMetadata.packageExtractPath),
-                files
+            uid,
+            packageName,
+            appContextIdList.split(" "),
+            getFullPath(packageExtractPath),
+            files
         )
     }
 

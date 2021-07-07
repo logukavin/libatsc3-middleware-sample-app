@@ -9,6 +9,7 @@ import com.nextgenbroadcast.mobile.core.model.*
 import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
 import com.nextgenbroadcast.mobile.service.binder.InterprocessServiceBinder
 
+@Deprecated("Use ReceiverContentProvider instead")
 internal class StandaloneClientHandler(
         private val selectorPresenter: InterprocessServiceBinder.SelectorPresenter,
         private val receiverPresenter: InterprocessServiceBinder.ReceiverPresenter,
