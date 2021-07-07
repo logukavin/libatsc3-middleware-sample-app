@@ -67,3 +67,5 @@ dependencies {
     // Chart
     api 'com.jjoe64:graphview:4.2.2'
 }
+
+apply from: '../publish.gradle'
