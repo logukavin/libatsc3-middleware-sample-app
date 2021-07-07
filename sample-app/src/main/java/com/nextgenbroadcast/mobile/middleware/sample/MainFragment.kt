@@ -358,14 +358,16 @@ class MainFragment : Fragment(), ReceiverContentResolver.Listener {
         var sdkVersion: String? = null
         var firmwareVersion: String? = null
         var deviceType: String? = null
+        var deviceId: String? = null
         receiverContentResolver.getPhyInfo()?.let { info ->
             sdkVersion = info[PhyVersionInfo.INFO_SDK_VERSION]
             firmwareVersion = info[PhyVersionInfo.INFO_FIRMWARE_VERSION]
             deviceType = info[PhyVersionInfo.INFO_PHY_TYPE]
+            deviceId = info[PhyVersionInfo.INFO_DEVICE_ID]
         }
         val frequency = receiverContentResolver.queryReceiverFrequency()
 
-        AboutDialog(sdkVersion, firmwareVersion, deviceType, frequency)
+        AboutDialog(sdkVersion, firmwareVersion, deviceType, frequency, deviceId)
             .show(parentFragmentManager, null)
     }
 
