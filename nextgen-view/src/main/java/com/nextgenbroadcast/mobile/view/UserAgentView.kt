@@ -65,7 +65,6 @@ class UserAgentView @JvmOverloads constructor(
         if (isInEditMode) return
 
         clearCache(true)
-        //setInitialScale(100) disabled by request from Ivan Datsiv
         setBackgroundColor(Color.TRANSPARENT)
         settings?.apply {
             javaScriptEnabled = true
@@ -242,17 +241,13 @@ class UserAgentView @JvmOverloads constructor(
     }
 
     fun actionExit() {
-        BANavController.navigateExit(this) { success ->
-            if (!success) sendKeyPress(KeyEvent.KEYCODE_DPAD_LEFT, 105)
-        }
+        sendKeyPress(KeyEvent.KEYCODE_DPAD_LEFT, 105)
 
         listener?.onClose()
     }
 
     fun actionEnter() {
-        BANavController.navigateNext(this) { success ->
-            if (!success) sendKeyPress(KeyEvent.KEYCODE_DPAD_RIGHT, 106)
-        }
+        sendKeyPress(KeyEvent.KEYCODE_DPAD_RIGHT, 106)
 
         listener?.onOpen()
     }

@@ -12,6 +12,7 @@ import com.nextgenbroadcast.mobile.service.handler.StandaloneClientHandler
 import com.nextgenbroadcast.mobile.service.handler.OnIncomingPlayerStateListener
 import kotlinx.coroutines.flow.MutableStateFlow
 
+@Deprecated("Use ReceiverContentProvider instead")
 class InterprocessServiceBinder(
         service: IBinder
 ) : IServiceBinder {
