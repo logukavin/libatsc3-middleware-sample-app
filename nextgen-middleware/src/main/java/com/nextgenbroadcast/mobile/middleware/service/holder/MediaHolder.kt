@@ -88,8 +88,19 @@ internal class MediaHolder(
         }
     }
 
-    fun setQueueSelection(service: AVService?) {
+    fun setSelectedService(service: AVService?) {
         mediaSession.setQueueTitle(service?.shortName)
+
+        mediaSession.setMetadata(
+            MediaMetadataCompat.Builder().apply {
+                if (service != null) {
+                    putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, service.globalId)
+                    putLong(MediaMetadataCompat.METADATA_KEY_DISC_NUMBER, service.category.toLong())
+                    putString(MediaMetadataCompat.METADATA_KEY_TITLE, service.shortName)
+                    putString(MediaMetadataCompat.METADATA_KEY_ARTIST, "${service.majorChannelNo}-${service.minorChannelNo}")
+                }
+            }.build()
+        )
     }
 
     fun selectMediaService(service: AVService) {
@@ -98,13 +109,6 @@ internal class MediaHolder(
         receiver.selectService(service) { result ->
             withContext(Dispatchers.Main) {
                 if (result) {
-                    mediaSession.setMetadata(MediaMetadataCompat.Builder()
-                            .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, service.globalId)
-                            .putLong(MediaMetadataCompat.METADATA_KEY_DISC_NUMBER, service.category.toLong())
-                            .putString(MediaMetadataCompat.METADATA_KEY_TITLE, service.shortName)
-                            .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, "${service.majorChannelNo}-${service.minorChannelNo}")
-                            .build())
-
                     //TODO: we must deactivate it
                     mediaSession.isActive = true
                 }
