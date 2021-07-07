@@ -94,7 +94,7 @@ internal class MiddlewareSettingsImpl (
     }
 
     private fun loadString(key: String): String? {
-        return preferences.getString(key, null)
+        return preferences.ignoreClassCastException { getString(key, null) }
     }
 
     private fun requireString(key: String, action: () -> String): String {
@@ -107,7 +107,7 @@ internal class MiddlewareSettingsImpl (
     }
 
     private fun loadStringSet(key: String): List<String> {
-        return preferences.getStringSet(key, null)?.toList() ?: emptyList()
+        return preferences.ignoreClassCastException { getStringSet(key, null) }?.toList() ?: emptyList()
     }
 
     private fun saveInt(key: String, value: Int): Int {
@@ -116,7 +116,7 @@ internal class MiddlewareSettingsImpl (
     }
 
     private fun loadInt(key: String): Int {
-        return preferences.getInt(key, 0)
+        return preferences.ignoreClassCastException { getInt(key, 0) } ?: 0
     }
 
     private fun stringToFrequencyLocation(flJsonStr: String): FrequencyLocation? {
@@ -158,6 +158,14 @@ internal class MiddlewareSettingsImpl (
 
     private fun expiredReportTime() =
             LocalDateTime.now().minusHours(Atsc3Analytics.MAX_HOURS_BEFORE_SEND_REPORT).minusSeconds(1)
+
+    private inline fun <T, R> T.ignoreClassCastException(block: T.() -> R?): R? {
+        return try {
+            block(this)
+        } catch (e: ClassCastException) {
+            null
+        }
+    }
 
     companion object {
         val TAG: String = MiddlewareSettingsImpl::class.java.simpleName
