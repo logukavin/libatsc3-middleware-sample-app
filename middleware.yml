@@ -45,7 +45,7 @@ steps:
       publishJUnitResults: true
       testResultsFiles: '**/TEST-*.xml'
       options: '-PstoreFile=$(storeFile) -Ppassword=$(password) -PkeyAlias=$(keyAlias) -PkeyPassword=$(keyPassword)'
-      tasks: 'clean :nextgen-core:assembleRelease :nextgen-middleware:assembleRelease :nextgen-player:assembleRelease :nextgen-view:assembleRelease'
+      tasks: 'clean :nextgen-core:assembleRelease :nextgen-middleware:assembleRelease :nextgen-player:assembleRelease :nextgen-view:assembleRelease :nextgen-dev:assembleRelease'
     displayName: gradlew clean and build
 
 #  - task: Gradle@2
@@ -66,7 +66,7 @@ steps:
       publishJUnitResults: true
       testResultsFiles: '**/TEST-*.xml'
       options: '-PartifactVersion=$(ARTIFACT_VERSION) -PstoreFile=$(storeFile) -Ppassword=$(password) -PkeyAlias=$(keyAlias) -PkeyPassword=$(keyPassword)'
-      tasks: ':nextgen-core:publish :nextgen-middleware:publish :nextgen-player:publish :nextgen-view:publish'
+      tasks: ':nextgen-core:publish :nextgen-middleware:publish :nextgen-player:publish :nextgen-view:publish :nextgen-dev:publish'
     displayName: gradlew publish
 
   - task: CopyFiles@2
