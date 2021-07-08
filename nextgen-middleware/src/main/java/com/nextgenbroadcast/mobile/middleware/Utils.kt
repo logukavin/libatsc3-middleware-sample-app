@@ -1,9 +1,13 @@
 package com.nextgenbroadcast.mobile.middleware
 
+import android.content.ActivityNotFoundException
 import android.content.Context
+import android.content.Intent
 import android.content.SharedPreferences
+import androidx.core.content.ContextCompat
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.SLTConstants
 
 fun encryptedSharedPreferences(context: Context, fileName: String): SharedPreferences {
@@ -23,4 +27,22 @@ fun getApkBaseServicePackage(serviceCategory: Int, globalServiceId: String): Str
     return if(serviceCategory == SLTConstants.SERVICE_CATEGORY_ABS && globalServiceId.startsWith(apkServiceGlobalIdPrefix)) {
         globalServiceId.substring(apkServiceGlobalIdPrefix.length)
     } else null
+}
+
+fun startTVApplication(context: Context) {
+    try {
+        val intent = Intent(context.getString(R.string.defaultActionWatch)).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        ContextCompat.startActivity(
+            context,
+            Intent.createChooser(intent, context.getString(R.string.tv_application_selection_title))
+                .apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                },
+            null
+        )
+    } catch (e: ActivityNotFoundException) {
+        LOG.i("startTVApplication", "Unable to start TV application", e)
+    }
 }
