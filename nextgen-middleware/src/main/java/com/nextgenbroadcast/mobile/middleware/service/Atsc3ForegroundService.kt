@@ -425,6 +425,11 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         //TODO: process case with second connected device
         if (usbManager.hasPermission(device)) {
             openRoute(device, deviceType, forceOpen)
+
+            // ensure TV app is visible
+            if (forceOpen) {
+                startTVApplication(this)
+            }
         } else {
             requestDevicePermission(device, deviceType, forceOpen)
         }
