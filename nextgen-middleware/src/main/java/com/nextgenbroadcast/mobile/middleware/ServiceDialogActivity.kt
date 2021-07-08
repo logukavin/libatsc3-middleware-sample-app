@@ -36,15 +36,7 @@ internal class ServiceDialogActivity : AppCompatActivity() {
     }
 
     private fun watchTV() {
-        try {
-            val intent = Intent(getString(R.string.defaultActionWatch)).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            ContextCompat.startActivity(this, Intent.createChooser(intent, getString(R.string.tv_application_selection_title)), null)
-        } catch (e: ActivityNotFoundException) {
-            LOG.i(TAG, "Unable to start TV application", e)
-        }
-
+        startTVApplication(this)
         finish()
     }
 
