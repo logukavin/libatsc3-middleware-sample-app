@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.text.method.ScrollingMovementMethod
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.NotificationManagerCompat
 import com.nextgenbroadcast.mobile.core.DateUtils
@@ -25,7 +26,7 @@ class AlertDialogActivity : AppCompatActivity() {
         setFinishOnTouchOutside(false)
 
         title = resources.getString(R.string.warning)
-
+        textViewAlertMessage.movementMethod = ScrollingMovementMethod()
         intent.getStringExtra(ALERT_EFFECTIVE_TIME)?.let { time ->
             textViewAlertTime.text = DateUtils.parse(time, null)?.let { date ->
                 dateFormat.format(date)
