@@ -40,9 +40,6 @@ internal class Atsc3ReceiverCore(
     private val mainScope: CoroutineScope = CoroutineScope(Dispatchers.Main)
     private var viewScope: CoroutineScope? = null
 
-    private val _sessionNum = MutableStateFlow(0)
-    val sessionNum = _sessionNum.asStateFlow()
-
     private val _errorFlow = MutableSharedFlow<String>(0, 10, BufferOverflow.DROP_OLDEST)
     val errorFlow = _errorFlow.asSharedFlow()
 
@@ -85,7 +82,7 @@ internal class Atsc3ReceiverCore(
 
         val appCache = ApplicationCache(atsc3Module.jni_getCacheDir(), downloadManager)
 
-        val view = ViewControllerImpl(repository, settings, mediaFileProvider, analytics, stateScope).also {
+        val view = ViewControllerImpl(repository, mediaFileProvider, analytics, stateScope).also {
             viewController = it
         }
         val web = WebGatewayImpl(serviceController, settings).also {
@@ -196,8 +193,7 @@ internal class Atsc3ReceiverCore(
     }
 
     fun notifyNewSessionStarted() {
-        _sessionNum.value++
-        viewController?.onNewSessionStarted()
+        repository.onNewSessionStarted()
     }
 
     override fun getPhyVersionInfo(): Map<String, String?> {

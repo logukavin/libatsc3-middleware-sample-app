@@ -2,7 +2,6 @@ package com.nextgenbroadcast.mobile.middleware.controller.view
 
 import android.net.Uri
 import androidx.core.net.toUri
-import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.RPMParams
 import com.nextgenbroadcast.mobile.core.presentation.ApplicationState
@@ -11,8 +10,6 @@ import com.nextgenbroadcast.mobile.core.presentation.media.PlayerStateRegistry
 import com.nextgenbroadcast.mobile.middleware.analytics.IAtsc3Analytics
 import com.nextgenbroadcast.mobile.middleware.service.provider.IMediaFileProvider
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
-import com.nextgenbroadcast.mobile.middleware.server.ServerUtils
-import com.nextgenbroadcast.mobile.middleware.settings.IClientSettings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
@@ -20,7 +17,6 @@ import kotlinx.coroutines.launch
 
 internal class ViewControllerImpl(
         private val repository: IRepository,
-        private val settings: IClientSettings,
         private val fileProvider: IMediaFileProvider,
         private val atsc3Analytics: IAtsc3Analytics,
         private val stateScope: CoroutineScope = CoroutineScope(Dispatchers.Default),
@@ -35,28 +31,7 @@ internal class ViewControllerImpl(
     private val playbackSource = MutableStateFlow(PlaybackSource.BROADCAST)
     private val externalMediaUrl = MutableStateFlow<String?>(null)
 
-    override val sessionNum = MutableStateFlow(0)
-
-    override val appData: StateFlow<AppData?> = combine(repository.heldPackage, repository.applications, sessionNum) { held, applications, sNum ->
-        held?.let {
-            val appContextId = held.appContextId ?: return@let null
-            val appUrl = held.bcastEntryPageUrl?.let { entryPageUrl ->
-                ServerUtils.createEntryPoint(entryPageUrl, appContextId, settings)
-            } ?: held.bbandEntryPageUrl ?: return@let null
-            val compatibleServiceIds = held.coupledServices ?: emptyList()
-            val application = applications.firstOrNull { app ->
-                app.appContextIdList.contains(appContextId) && app.packageName == held.bcastEntryPackageUrl
-            }
-
-            AppData(
-                    appContextId,
-                    ServerUtils.addSocketPath(appUrl, settings),
-                    compatibleServiceIds,
-                    application?.cachePath
-            )
-
-        }
-    }.stateIn(stateScope, SharingStarted.Eagerly, null)
+    override val appData = repository.appData.stateIn(stateScope, SharingStarted.Eagerly, null)
 
     override val appState = MutableStateFlow(ApplicationState.UNAVAILABLE)
 
@@ -162,10 +137,6 @@ internal class ViewControllerImpl(
         mainScope.launch {
             rmpStop()
         }
-    }
-
-    override fun onNewSessionStarted() {
-        sessionNum.value++
     }
 
     private fun reportPlaybackState(state: PlaybackState) {

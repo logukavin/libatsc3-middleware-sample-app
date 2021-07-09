@@ -14,7 +14,6 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.PhyVersionInfo.INFO_DEVICE_I
 import com.nextgenbroadcast.mobile.middleware.atsc3.PhyVersionInfo.INFO_FIRMWARE_VERSION
 import com.nextgenbroadcast.mobile.middleware.atsc3.PhyVersionInfo.INFO_PHY_TYPE
 import com.nextgenbroadcast.mobile.middleware.atsc3.PhyVersionInfo.INFO_SDK_VERSION
-import com.nextgenbroadcast.mobile.middleware.server.ServerUtils
 import com.nextgenbroadcast.mobile.middleware.server.cert.IUserAgentSSLContext
 import com.nextgenbroadcast.mobile.middleware.server.cert.UserAgentSSLContext
 import kotlinx.coroutines.*
@@ -49,28 +48,7 @@ class ReceiverContentProvider : ContentProvider() {
             addURI(authority, CONTENT_PHY_VERSION_INFO, QUERY_PHY_VERSION_INFO)
         }
 
-        val repository = receiver.repository
-        val settings = receiver.settings
-
-        appData = combine(repository.heldPackage, repository.applications, receiver.sessionNum) { held, applications, _ ->
-            held?.let {
-                val appContextId = held.appContextId ?: return@let null
-                val appUrl = held.bcastEntryPageUrl?.let { entryPageUrl ->
-                    ServerUtils.createEntryPoint(entryPageUrl, appContextId, settings)
-                } ?: held.bbandEntryPageUrl ?: return@let null
-                val compatibleServiceIds = held.coupledServices ?: emptyList()
-                val application = applications.firstOrNull { app ->
-                    app.appContextIdList.contains(appContextId) && app.packageName == held.bcastEntryPackageUrl
-                }
-
-                AppData(
-                        appContextId,
-                        ServerUtils.addSocketPath(appUrl, settings),
-                        compatibleServiceIds,
-                        application?.cachePath
-                )
-            }
-        }.stateIn(stateScope, SharingStarted.Eagerly, null)
+        appData = receiver.repository.appData.stateIn(stateScope, SharingStarted.Eagerly, null)
 
         val contentResolver = appContext.contentResolver
 

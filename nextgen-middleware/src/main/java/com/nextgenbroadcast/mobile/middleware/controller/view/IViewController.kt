@@ -9,8 +9,6 @@ import com.nextgenbroadcast.mobile.core.presentation.media.IObservablePlayer
 import kotlinx.coroutines.flow.StateFlow
 
 internal interface IViewController {
-    val sessionNum: StateFlow<Int>
-
     val appData: StateFlow<AppData?>
     val appState: StateFlow<ApplicationState>
 
@@ -19,8 +17,6 @@ internal interface IViewController {
     val rmpLayoutParams: StateFlow<RPMParams>
     val rmpMediaTime: StateFlow<Long>
     val rmpPlaybackRate: StateFlow<Float>
-
-    fun onNewSessionStarted()
 
     fun setApplicationState(state: ApplicationState)
 
