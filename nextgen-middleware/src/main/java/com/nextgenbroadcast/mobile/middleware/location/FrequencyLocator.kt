@@ -6,6 +6,7 @@ import android.util.Log
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.nextgenbroadcast.mobile.core.LOG
+import com.nextgenbroadcast.mobile.core.initialization.IFrequencyLocator
 import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverStandalone
 import com.nextgenbroadcast.mobile.middleware.BuildConfig
 import com.nextgenbroadcast.mobile.middleware.Auth0

@@ -1,9 +1,9 @@
-package com.nextgenbroadcast.mobile.middleware.sample.initialization
+package com.nextgenbroadcast.mobile.middleware.dev.initialization
 
 import android.content.Context
 import com.nextgenbroadcast.mobile.core.FileUtils
 import com.nextgenbroadcast.mobile.core.LOG
-import com.nextgenbroadcast.mobile.middleware.location.IFrequencyLocator
+import com.nextgenbroadcast.mobile.core.initialization.IFrequencyLocator
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 
