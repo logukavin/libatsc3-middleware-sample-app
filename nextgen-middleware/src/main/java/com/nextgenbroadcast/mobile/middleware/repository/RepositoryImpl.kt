@@ -4,16 +4,23 @@ import android.location.Location
 import android.util.Log
 import com.nextgenbroadcast.mobile.core.model.MediaUrl
 import com.nextgenbroadcast.mobile.core.model.AVService
+import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.alerts.AeaTable
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPackage
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.SGUrl
+import com.nextgenbroadcast.mobile.middleware.server.ServerUtils
+import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
 import java.time.ZonedDateTime
 import java.util.concurrent.ConcurrentHashMap
 
-internal class RepositoryImpl : IRepository {
+internal class RepositoryImpl(
+    private val settings: IMiddlewareSettings
+) : IRepository {
     private val _applications = ConcurrentHashMap<String, Atsc3Application>()
+    private val sessionNum = MutableStateFlow(0)
 
     override val selectedService = MutableStateFlow<AVService?>(null)
     override val serviceGuideUrls = MutableStateFlow<List<SGUrl>>(emptyList())
@@ -24,6 +31,25 @@ internal class RepositoryImpl : IRepository {
     override val applications = MutableStateFlow<List<Atsc3Application>>(emptyList())
     override val services = MutableStateFlow<List<AVService>>(emptyList())
     override val heldPackage = MutableStateFlow<Atsc3HeldPackage?>(null)
+    override val appData = combine(heldPackage, applications, sessionNum) { held, applications, _ ->
+        held?.let {
+            val appContextId = held.appContextId ?: return@let null
+            val appUrl = held.bcastEntryPageUrl?.let { entryPageUrl ->
+                ServerUtils.createEntryPoint(entryPageUrl, appContextId, settings)
+            } ?: held.bbandEntryPageUrl ?: return@let null
+            val compatibleServiceIds = held.coupledServices ?: emptyList()
+            val application = applications.firstOrNull { app ->
+                app.appContextIdList.contains(appContextId) && app.packageName == held.bcastEntryPackageUrl
+            }
+
+            AppData(
+                appContextId,
+                ServerUtils.addSocketPath(appUrl, settings),
+                compatibleServiceIds,
+                application?.cachePath
+            )
+        }
+    }
 
     override val lastLocation = MutableStateFlow<Location?>(null)
 
@@ -105,6 +131,10 @@ internal class RepositoryImpl : IRepository {
         heldPackage.value = null
         routeMediaUrl.value = null
         alertsForNotify.value = emptyList()
+    }
+
+    override fun onNewSessionStarted() {
+        sessionNum.value++
     }
 
     companion object {
