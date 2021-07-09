@@ -69,7 +69,7 @@ internal class MediaHolder(
         MediaButtonReceiver.handleIntent(mediaSession, intent)
     }
 
-    fun setQueue(services: List<AVService>) {
+    fun onServiceListChanged(services: List<AVService>) {
         val queue = services.map { service ->
             MediaSessionCompat.QueueItem(
                     MediaDescriptionCompat.Builder()
@@ -88,7 +88,9 @@ internal class MediaHolder(
         }
     }
 
-    fun setSelectedService(service: AVService?) {
+    fun onServiceChanged(service: AVService?) {
+        player.reset()
+
         mediaSession.setQueueTitle(service?.shortName)
 
         mediaSession.setMetadata(
@@ -116,7 +118,7 @@ internal class MediaHolder(
         }
     }
 
-    fun setPlaybackState(state: PlaybackState) {
+    fun onPlaybackStateChanged(state: PlaybackState) {
         if (state == PlaybackState.PLAYING) {
             setPlaybackState(PlaybackStateCompat.STATE_PLAYING)
         } else {
@@ -144,13 +146,15 @@ internal class MediaHolder(
         mediaSession.setPlaybackState(stateBuilder.build())
     }
 
-    fun startPlaybackIfServicerAvailable(mediaUrl: MediaUrl?) {
+    fun onMediaUrlChanged(mediaUrl: MediaUrl?) {
         val service = mediaUrl?.let {
             receiver.findServiceById(mediaUrl.bsid, mediaUrl.serviceId)
         } ?: return
 
         if (receiver.playEmbedded(service)) {
             player.play(receiver.mediaFileProvider.getMediaFileUri(mediaUrl.url))
+        } else {
+            player.reset()
         }
     }
 

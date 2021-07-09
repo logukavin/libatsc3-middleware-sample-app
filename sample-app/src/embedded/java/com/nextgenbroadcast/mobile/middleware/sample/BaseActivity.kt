@@ -35,7 +35,6 @@ abstract class BaseActivity : AppCompatActivity() {
     }
 
     fun bindService() {
-
         Log.e(this.toString(), String.format("bindService: enter: invoked with mediaBrowser.isConnected: %s, isBound: %s", mediaBrowser.isConnected, isBound))
         // The media session connection will start ForegroundService that requires permission.
         // This method called after permission request, that's why it should be here.
@@ -55,7 +54,6 @@ abstract class BaseActivity : AppCompatActivity() {
         }.also { intent ->
             bindService(intent, connection, BIND_AUTO_CREATE)
             Log.e(this.toString(), String.format("bindService: exit: after bindService(intent, connection) with mediaBrowser.isConnected: %s, isBound: %s, intent: %s, connection: %s", mediaBrowser.isConnected, isBound, intent, connection))
-
         }
     }
 
@@ -125,8 +123,4 @@ abstract class BaseActivity : AppCompatActivity() {
     companion object {
         val TAG: String = BaseActivity::class.java.simpleName
     }
-}
-
-fun openRoute(context: Context, path: String) {
-    Atsc3ForegroundService.openRoute(context, path)
 }
