@@ -7,7 +7,7 @@ import android.util.Log
 import com.nextgenbroadcast.mobile.core.model.PhyFrequency
 import com.nextgenbroadcast.mobile.middleware.IAtsc3ReceiverCore
 import com.nextgenbroadcast.mobile.middleware.atsc3.utils.*
-import com.nextgenbroadcast.mobile.middleware.location.IFrequencyLocator
+import com.nextgenbroadcast.mobile.core.initialization.IFrequencyLocator
 import kotlinx.coroutines.*
 import java.util.concurrent.TimeUnit
 
