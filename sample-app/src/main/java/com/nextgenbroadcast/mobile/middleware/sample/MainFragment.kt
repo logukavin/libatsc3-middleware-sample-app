@@ -20,7 +20,6 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.setFragmentResultListener
 import androidx.lifecycle.ViewModelProvider
-import com.bugfender.sdk.Bugfender
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.AppData
@@ -73,7 +72,7 @@ class MainFragment : Fragment(), ReceiverContentResolver.Listener {
 
     private val getContent = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let {
-            openRoute(requireContext(), uri.toString())
+            receiverContentResolver.openRoute(uri.toString())
         }
     }
 
@@ -171,7 +170,7 @@ class MainFragment : Fragment(), ReceiverContentResolver.Listener {
                 showFileChooser()
             } else {
                 viewViewModel.sources.value?.getOrNull(position - 1)?.let { (_, path) ->
-                    openRoute(requireContext(), path)
+                    receiverContentResolver.openRoute(path)
                 }
             }
         }
@@ -444,11 +443,7 @@ class MainFragment : Fragment(), ReceiverContentResolver.Listener {
     }
 
     private fun selectService(service: AVService) {
-        requireActivity().mediaController?.transportControls?.let { controls ->
-            controls.playFromMediaId(service.globalId, null)
-            //receiver_player.stopPlayback()
-            //setBAAvailability(false)
-        }
+        receiverContentResolver.selectService(service)
     }
 
     private fun setSelectedService(serviceName: String?) {

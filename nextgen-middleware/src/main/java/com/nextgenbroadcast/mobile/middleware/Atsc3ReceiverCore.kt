@@ -168,6 +168,14 @@ internal class Atsc3ReceiverCore(
         _errorFlow.tryEmit(message)
     }
 
+    fun getSelectedService(): AVService? {
+        return repository.selectedService.value
+    }
+
+    fun getFrequency(): Int {
+        return serviceController.receiverFrequency.value
+    }
+
     fun getNextService() = serviceController.getNearbyService(1)
 
     fun getPreviousService() = serviceController.getNearbyService(-1)
