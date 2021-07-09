@@ -12,8 +12,8 @@ apply plugin: 'com.google.firebase.crashlytics'
 apply plugin: 'com.google.firebase.firebase-perf'
 apply plugin: 'com.github.triplet.play'
 
-def appVersionCode = project.hasProperty('versionCode') ? versionCode.toInteger() : 6
-def appVersion = "1.0.6"
+def appVersionCode = project.hasProperty('versionCode') ? versionCode.toInteger() : 7
+def appVersion = "1.0.7"
 
 def getCertPropertyCode(propertyName) {
     if (project.hasProperty(propertyName)) {
