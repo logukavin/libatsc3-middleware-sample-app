@@ -4,7 +4,7 @@ import android.net.Uri
 import androidx.core.net.toUri
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.RPMParams
-import com.nextgenbroadcast.mobile.core.presentation.ApplicationState
+import com.nextgenbroadcast.mobile.core.model.ApplicationState
 import com.nextgenbroadcast.mobile.core.presentation.media.IObservablePlayer
 import com.nextgenbroadcast.mobile.core.presentation.media.PlayerStateRegistry
 import com.nextgenbroadcast.mobile.middleware.analytics.IAtsc3Analytics

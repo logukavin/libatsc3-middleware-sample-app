@@ -4,7 +4,7 @@ import android.net.Uri
 import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.RPMParams
-import com.nextgenbroadcast.mobile.core.presentation.ApplicationState
+import com.nextgenbroadcast.mobile.core.model.ApplicationState
 import com.nextgenbroadcast.mobile.core.presentation.media.IObservablePlayer
 import kotlinx.coroutines.flow.StateFlow
 

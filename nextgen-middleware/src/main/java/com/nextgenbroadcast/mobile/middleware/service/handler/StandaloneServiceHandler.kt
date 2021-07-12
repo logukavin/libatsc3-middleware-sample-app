@@ -4,7 +4,7 @@ import android.os.*
 import androidx.core.os.bundleOf
 import com.nextgenbroadcast.mobile.core.getParcelable
 import com.nextgenbroadcast.mobile.core.model.*
-import com.nextgenbroadcast.mobile.core.presentation.ApplicationState
+import com.nextgenbroadcast.mobile.core.model.ApplicationState
 import com.nextgenbroadcast.mobile.core.presentation.media.IObservablePlayer
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
 import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
