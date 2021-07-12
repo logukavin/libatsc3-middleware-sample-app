@@ -1,6 +1,7 @@
 package com.nextgenbroadcast.mobile.core.presentation
 
 import com.nextgenbroadcast.mobile.core.model.AppData
+import com.nextgenbroadcast.mobile.core.model.ApplicationState
 import kotlinx.coroutines.flow.StateFlow
 
 @Deprecated("Use the ReceiverContentProvider instead")
