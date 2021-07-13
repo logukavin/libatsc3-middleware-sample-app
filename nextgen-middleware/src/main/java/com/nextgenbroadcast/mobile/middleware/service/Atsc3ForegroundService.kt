@@ -133,7 +133,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         serviceScope.launch {
             playbackState.collect { state ->
                 withContext(Dispatchers.Main) {
-                    media.setPlaybackState(state)
+                    media.onPlaybackStateChanged(state)
                 }
             }
         }
@@ -155,7 +155,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         serviceScope.launch {
             atsc3Receiver.serviceController.routeServices.collect { services ->
                 withContext(Dispatchers.Main) {
-                    media.setQueue(services)
+                    media.onServiceListChanged(services)
                 }
             }
         }
@@ -163,7 +163,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         serviceScope.launch {
             atsc3Receiver.serviceController.selectedService.collect { service ->
                 withContext(Dispatchers.Main) {
-                    media.setSelectedService(service)
+                    media.onServiceChanged(service)
                 }
             }
         }
@@ -171,7 +171,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         serviceScope.launch {
             atsc3Receiver.repository.routeMediaUrl.collect { mediaPath ->
                 withContext(Dispatchers.Main) {
-                    media.startPlaybackIfServicerAvailable(mediaPath)
+                    media.onMediaUrlChanged(mediaPath)
                 }
             }
         }

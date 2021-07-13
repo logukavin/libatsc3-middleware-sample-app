@@ -11,6 +11,7 @@ import android.os.Handler
 import android.os.Looper
 import androidx.core.database.getIntOrNull
 import androidx.core.database.getStringOrNull
+import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.presentation.ApplicationState
@@ -26,11 +27,13 @@ class ReceiverContentResolver(
     private val handler = Handler(Looper.getMainLooper())
     private val observers = mutableListOf<ContentObserver>()
 
+    private val receiverRouteUri = ReceiverContentProvider.getUriForPath(context, ReceiverContentProvider.CONTENT_RECEIVER_ROUTE)
+    private val receiverFrequencyUri = ReceiverContentProvider.getUriForPath(context, ReceiverContentProvider.CONTENT_RECEIVER_FREQUENCY)
+    private val receiverServiceUri = ReceiverContentProvider.getUriForPath(context, ReceiverContentProvider.CONTENT_RECEIVER_SERVICE)
     private val appDataUri = ReceiverContentProvider.getUriForPath(context, ReceiverContentProvider.CONTENT_APP_DATA)
     private val appStateUri = ReceiverContentProvider.getUriForPath(context, ReceiverContentProvider.CONTENT_APP_STATE)
     private val certificateUri = ReceiverContentProvider.getUriForPath(context, ReceiverContentProvider.CONTENT_SERVER_CERTIFICATE)
     private val receiverStateUri = ReceiverContentProvider.getUriForPath(context, ReceiverContentProvider.CONTENT_RECEIVER_STATE)
-    private val receiverFrequencyUri = ReceiverContentProvider.getUriForPath(context, ReceiverContentProvider.CONTENT_RECEIVER_FREQUENCY)
     private val receiverPhyInfoUri = ReceiverContentProvider.getUriForPath(context, ReceiverContentProvider.CONTENT_PHY_VERSION_INFO)
 
     private var providerClient: ContentProviderClient? = null
@@ -59,15 +62,19 @@ class ReceiverContentResolver(
         providerClient?.close()
     }
 
-    fun publishApplicationState(state: ApplicationState) {
-        appStateUri.insert {
-            it.put(ReceiverContentProvider.APP_STATE_VALUE, state.name)
+    fun openRoute(path: String) {
+        receiverRouteUri.insert {
+            it.put(ReceiverContentProvider.COLUMN_ROUTE_PATH, path)
         }
+    }
+
+    fun closeRoute() {
+        receiverRouteUri.delete()
     }
 
     fun tune(freqKhz: Int) {
         receiverFrequencyUri.insert {
-            it.put(ReceiverContentProvider.RECEIVER_FREQUENCY, freqKhz)
+            it.put(ReceiverContentProvider.COLUMN_FREQUENCY, freqKhz)
         }
     }
 
@@ -80,28 +87,42 @@ class ReceiverContentResolver(
         }.array()
 
         receiverFrequencyUri.insert {
-            it.put(ReceiverContentProvider.RECEIVER_FREQUENCY_LIST, frequencyListBytes)
+            it.put(ReceiverContentProvider.COLUMN_FREQUENCY_LIST, frequencyListBytes)
+        }
+    }
+
+    fun selectService(service: AVService) {
+        receiverServiceUri.insert {
+            it.put(ReceiverContentProvider.COLUMN_SERVICE_BSID, service.bsid)
+            it.put(ReceiverContentProvider.COLUMN_SERVICE_ID, service.id)
+            it.put(ReceiverContentProvider.COLUMN_SERVICE_GLOBAL_ID, service.globalId)
+        }
+    }
+
+    fun publishApplicationState(state: ApplicationState) {
+        appStateUri.insert {
+            it.put(ReceiverContentProvider.COLUMN_APP_STATE_VALUE, state.name)
         }
     }
 
     fun queryServerCertificate(): String? {
         return certificateUri.queryFirst { cursor ->
-            cursor.getStringOrNull(ReceiverContentProvider.SERVER_CERTIFICATE)
+            cursor.getStringOrNull(ReceiverContentProvider.COLUMN_CERTIFICATE)
         }
     }
 
     fun queryReceiverFrequency(): Int? {
         return receiverFrequencyUri.queryFirst { cursor ->
-            cursor.getIntOrNull(ReceiverContentProvider.RECEIVER_FREQUENCY)
+            cursor.getIntOrNull(ReceiverContentProvider.COLUMN_FREQUENCY)
         }
     }
 
     fun queryAppData(): AppData? {
         return appDataUri.queryFirst { cursor ->
-            val appContextID = cursor.getStringOrNull(ReceiverContentProvider.APP_CONTEXT_ID)
-            val appEntryPage = cursor.getStringOrNull(ReceiverContentProvider.APP_ENTRY_PAGE)
-            val appServiceIds = cursor.getStringOrNull(ReceiverContentProvider.APP_SERVICE_IDS)
-            val appCachePath = cursor.getStringOrNull(ReceiverContentProvider.APP_CACHE_PATH)
+            val appContextID = cursor.getStringOrNull(ReceiverContentProvider.COLUMN_APP_CONTEXT_ID)
+            val appEntryPage = cursor.getStringOrNull(ReceiverContentProvider.COLUMN_APP_ENTRY_PAGE)
+            val appServiceIds = cursor.getStringOrNull(ReceiverContentProvider.COLUMN_APP_SERVICE_IDS)
+            val appCachePath = cursor.getStringOrNull(ReceiverContentProvider.COLUMN_APP_CACHE_PATH)
 
             if (appContextID != null && appEntryPage != null) {
                 val serviceIds = appServiceIds?.split(" ")?.mapNotNull {
@@ -115,9 +136,9 @@ class ReceiverContentResolver(
 
     fun queryReceiverState(): ReceiverState? {
         return receiverStateUri.queryFirst { cursor ->
-            val stateCode = cursor.getIntOrNull(ReceiverContentProvider.RECEIVER_STATE_CODE)
-            val stateIndex = cursor.getIntOrNull(ReceiverContentProvider.RECEIVER_STATE_INDEX)
-            val stateCount = cursor.getIntOrNull(ReceiverContentProvider.RECEIVER_STATE_COUNT)
+            val stateCode = cursor.getIntOrNull(ReceiverContentProvider.COLUMN_STATE_CODE)
+            val stateIndex = cursor.getIntOrNull(ReceiverContentProvider.COLUMN_STATE_INDEX)
+            val stateCount = cursor.getIntOrNull(ReceiverContentProvider.COLUMN_STATE_COUNT)
 
             val state = ReceiverState.State.values().firstOrNull { it.code == stateCode }
             if (state != null) {
@@ -173,6 +194,10 @@ class ReceiverContentResolver(
         providerClient?.insert(this, ContentValues().apply {
             action(this)
         })
+    }
+
+    private fun Uri.delete() {
+        providerClient?.delete(this, null, null)
     }
 
     companion object {
