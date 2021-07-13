@@ -17,7 +17,7 @@ import java.util.concurrent.TimeUnit
 import kotlin.math.max
 import kotlin.math.min
 
-class PhyChart @JvmOverloads constructor(
+class PhyChartView @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
 ) : TemporalChartView(context, attrs, defStyleAttr) {
 

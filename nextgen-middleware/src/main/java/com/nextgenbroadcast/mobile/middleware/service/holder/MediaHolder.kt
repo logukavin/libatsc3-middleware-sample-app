@@ -9,6 +9,7 @@ import android.support.v4.media.MediaDescriptionCompat
 import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
+import androidx.annotation.MainThread
 import androidx.media.MediaBrowserServiceCompat
 import androidx.media.session.MediaButtonReceiver
 import com.nextgenbroadcast.mobile.core.LOG
@@ -36,6 +37,7 @@ internal class MediaHolder(
 
     val embeddedPlayerState = MutableStateFlow(PlaybackState.IDLE)
 
+    @MainThread
     fun open() {
         stateBuilder = PlaybackStateCompat.Builder()
         mediaSession = MediaSessionCompat(context, Atsc3ForegroundService.TAG).apply {
@@ -54,17 +56,19 @@ internal class MediaHolder(
                 }
 
                 override fun onPlaybackSpeedChanged(speed: Float) {
-                    receiver.viewController?.rmpPlaybackRateChanged(speed)
+                    receiver.viewController.rmpPlaybackRateChanged(speed)
                 }
             })
         }
     }
 
+    @MainThread
     fun close() {
         player.reset()
         mediaSession.release()
     }
 
+    @MainThread
     fun handleIntent(intent: Intent?) {
         MediaButtonReceiver.handleIntent(mediaSession, intent)
     }
@@ -170,21 +174,29 @@ internal class MediaHolder(
         }
     }
 
+    fun pausePlayback() {
+        if (player.isInitialized) {
+            player.pause()
+        } else {
+            receiver.repository.setRequestedMediaState(PlaybackState.PAUSED)
+        }
+    }
+
+    fun resumePlayback() {
+        if (player.isInitialized) {
+            player.tryReplay()
+        } else {
+            receiver.repository.setRequestedMediaState(PlaybackState.PLAYING)
+        }
+    }
+
     inner class MediaSessionCallback : MediaSessionCompat.Callback() {
         override fun onPlay() {
-            if (player.isInitialized) {
-                player.tryReplay()
-            } else {
-                receiver.viewController?.rmpResume()
-            }
+            resumePlayback()
         }
 
         override fun onPause() {
-            if (player.isInitialized) {
-                player.pause()
-            } else {
-                receiver.viewController?.rmpPause()
-            }
+            pausePlayback()
         }
 
         override fun onSkipToNext() {

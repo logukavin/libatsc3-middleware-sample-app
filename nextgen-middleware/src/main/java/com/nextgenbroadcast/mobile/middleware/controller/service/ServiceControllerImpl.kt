@@ -21,6 +21,7 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.source.*
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
 import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
 import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -34,8 +35,7 @@ internal class ServiceControllerImpl(
         private val atsc3Module: IAtsc3Module,
         private val atsc3Analytics: IAtsc3Analytics,
         private val serviceGuideReader: IServiceGuideDeliveryUnitReader,
-        private val stateScope: CoroutineScope = CoroutineScope(Dispatchers.IO),
-        private val onError: ((message: String) -> Unit)? = null
+        private val stateScope: CoroutineScope = CoroutineScope(Dispatchers.IO)
 ) : IServiceController, Atsc3ModuleListener {
 
     private val mainScope = CoroutineScope(Dispatchers.Main)
@@ -47,10 +47,6 @@ internal class ServiceControllerImpl(
 
     private val atsc3State = MutableStateFlow<Atsc3ModuleState?>(Atsc3ModuleState.IDLE)
     private val atsc3Configuration = MutableStateFlow<Triple<Int, Int, Boolean>?>(null)
-
-    override val selectedService = repository.selectedService
-    override val serviceGuideUrls = repository.serviceGuideUrls
-    override val applications = repository.applications
 
     override val receiverState: StateFlow<ReceiverState> = combine(atsc3State, repository.selectedService, repository.services, atsc3Configuration) { state, service, services, config ->
         val (configIndex, configCount, configKnown) = config ?: Triple(-1, -1, false)
@@ -73,7 +69,7 @@ internal class ServiceControllerImpl(
         services.filter { !it.hidden }
     }.stateIn(stateScope, SharingStarted.Eagerly, emptyList())
 
-    override val alertList = repository.alertsForNotify
+    override val errorFlow = MutableSharedFlow<String>(0, 10, BufferOverflow.DROP_OLDEST)
 
     init {
         atsc3Module.setListener(this)
@@ -143,7 +139,10 @@ internal class ServiceControllerImpl(
     override fun onServicePackageChanged(pkg: Atsc3HeldPackage?) {
         mainScope.launch {
             cancelHeldReset()
-            repository.setHeldPackage(pkg)
+            val updated = repository.setHeldPackage(pkg)
+            if (updated) {
+                repository.resetMediaSate()
+            }
         }
     }
 
@@ -166,7 +165,7 @@ internal class ServiceControllerImpl(
 
     override fun onError(message: String) {
         mainScope.launch {
-            onError?.invoke(message)
+            errorFlow.emit(message)
         }
     }
 
@@ -257,6 +256,7 @@ internal class ServiceControllerImpl(
                     repository.setHeldPackage(null)
                     repository.setSelectedService(null)
                 }
+                repository.resetMediaSate()
             }
 
             res
@@ -334,6 +334,7 @@ internal class ServiceControllerImpl(
         heldResetJob = mainScope.launch {
             delay(BA_LOADING_TIMEOUT)
             repository.setHeldPackage(null)
+            repository.resetMediaSate()
             heldResetJob = null
         }
     }

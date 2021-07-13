@@ -1,6 +1,7 @@
 package com.nextgenbroadcast.mobile.middleware.service.holder
 
 import android.content.Context
+import androidx.annotation.MainThread
 import com.nextgenbroadcast.mobile.core.FileUtils
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.middleware.service.SrtConfigReader
@@ -11,6 +12,7 @@ class SrtListHolder(
 ) {
     private val externalSrtServices: MutableList<Triple<String, String, Boolean>> = mutableListOf()
 
+    @MainThread
     fun open() {
         try {
             FileUtils.openExternalFileDescriptor(context, EXTERNAL_FILE_NAME)?.use { file ->

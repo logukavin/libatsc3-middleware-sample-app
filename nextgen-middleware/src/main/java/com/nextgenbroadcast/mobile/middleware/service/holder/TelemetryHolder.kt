@@ -11,9 +11,9 @@ import android.media.AudioManager
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
 import android.net.wifi.WifiManager
+import androidx.annotation.MainThread
 import androidx.core.content.edit
 import androidx.media.MediaBrowserServiceCompat
-import com.google.firebase.installations.FirebaseInstallations
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.nextgenbroadcast.mobile.core.LOG
@@ -108,7 +108,10 @@ internal class TelemetryHolder(
     val telemetryDelay: StateFlow<Map<String, Long>>
         get() = telemetryBroker?.readersDelay ?: MutableStateFlow(emptyMap())
 
+    @MainThread
     fun open() {
+        if (telemetryBroker != null) return
+
         telemetryBroker = TelemetryBroker(
                 listOf(
                         BatteryTelemetryReader(context),
@@ -156,6 +159,7 @@ internal class TelemetryHolder(
         registerNsdService(deviceId)
     }
 
+    @MainThread
     fun close() {
         isClosed = true
 

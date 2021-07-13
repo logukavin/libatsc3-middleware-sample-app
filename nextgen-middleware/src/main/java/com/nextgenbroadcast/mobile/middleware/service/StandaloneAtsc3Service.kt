@@ -7,20 +7,22 @@ import com.nextgenbroadcast.mobile.core.model.PhyFrequency
 import com.nextgenbroadcast.mobile.middleware.service.handler.StandaloneServiceHandler
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
 import com.nextgenbroadcast.mobile.core.presentation.IReceiverPresenter
+import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverCore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
+@Deprecated("Use ReceiverContentProvider instead")
 class StandaloneAtsc3Service : Atsc3ForegroundService() {
 
     private var serviceHandler: StandaloneServiceHandler? = null
 
-    override fun createServiceBinder(serviceController: IServiceController): IBinder {
+    override fun createServiceBinder(receiver: Atsc3ReceiverCore): IBinder {
         return Messenger(
                 StandaloneServiceHandler(
                         receiverPresenter = object : IReceiverPresenter {
-                            override val receiverState = serviceController.receiverState.asReadOnly()
-                            override val freqKhz = serviceController.receiverFrequency.asReadOnly()
+                            override val receiverState = receiver.serviceController.receiverState.asReadOnly()
+                            override val freqKhz = receiver.serviceController.receiverFrequency.asReadOnly()
 
                             override fun openRoute(path: String): Boolean {
                                 openRoute(this@StandaloneAtsc3Service, path)
@@ -33,12 +35,12 @@ class StandaloneAtsc3Service : Atsc3ForegroundService() {
 
                             override fun tune(frequency: PhyFrequency) {
                                 CoroutineScope(Dispatchers.Default).launch {
-                                    serviceController.tune(frequency)
+                                    receiver.serviceController.tune(frequency)
                                 }
                             }
                         },
-                        serviceController = serviceController,
-                        requireViewController = ::requireViewController
+                        serviceController = receiver.serviceController,
+                        requireViewController = { receiver.viewController }
                 ).also {
                     serviceHandler = it
                 }

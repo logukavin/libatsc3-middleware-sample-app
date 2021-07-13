@@ -17,9 +17,6 @@ import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.middleware.*
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.Atsc3Source
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.UsbAtsc3Source
-import com.nextgenbroadcast.mobile.middleware.cache.DownloadManager
-import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
-import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
 import com.nextgenbroadcast.mobile.middleware.notification.AlertNotificationHelper
 import com.nextgenbroadcast.mobile.middleware.phy.Atsc3DeviceReceiver
 import com.nextgenbroadcast.mobile.middleware.service.holder.*
@@ -37,11 +34,12 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     private val powerManager: PowerManager by lazy {
         getSystemService(Context.POWER_SERVICE) as PowerManager
     }
+    private val alertNotificationHelper by lazy {
+        AlertNotificationHelper(this)
+    }
 
     //TODO: create own scope?
     private val serviceScope = CoroutineScope(Dispatchers.Default)
-
-    private val viewPlayerState = MutableStateFlow(PlaybackState.IDLE)
 
     private lateinit var state: StateFlow<Triple<ReceiverState?, AVService?, PlaybackState?>>
     private lateinit var playbackState: StateFlow<PlaybackState>
@@ -53,10 +51,6 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
     // Media Service
     private lateinit var media: MediaHolder
-
-    // View Presentation
-    private var deviceReceiver: Atsc3DeviceReceiver? = null
-    private var destroyPresentationLayerJob: Job? = null
 
     // Telemetry
     internal lateinit var telemetryHolder: TelemetryHolder
@@ -71,9 +65,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     private val initializer = ArrayList<WeakReference<IServiceInitializer>>()
     private var isInitialized = false
 
-    private val alertNotificationHelper by lazy {
-        AlertNotificationHelper(this)
-    }
+    private var deviceReceiver: Atsc3DeviceReceiver? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -118,7 +110,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     }
 
     private fun startStateObservation() {
-        playbackState = combine(media.embeddedPlayerState, viewPlayerState) { firstState, secondState ->
+        playbackState = combine(media.embeddedPlayerState, atsc3Receiver.viewController.rmpState) { firstState, secondState ->
             if (firstState == PlaybackState.PLAYING || secondState == PlaybackState.PLAYING) {
                 PlaybackState.PLAYING
             } else if (firstState == PlaybackState.PAUSED || secondState == PlaybackState.PAUSED) {
@@ -138,7 +130,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
             }
         }
 
-        state = combine(atsc3Receiver.serviceController.receiverState, atsc3Receiver.serviceController.selectedService, playbackState) { receiverState, selectedService, playbackState ->
+        state = combine(atsc3Receiver.serviceController.receiverState, atsc3Receiver.repository.selectedService, playbackState) { receiverState, selectedService, playbackState ->
             Triple(receiverState, selectedService, playbackState)
         }.stateIn(serviceScope, SharingStarted.Eagerly, Triple(ReceiverState.idle(), null, PlaybackState.IDLE))
 
@@ -153,6 +145,16 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         }
 
         serviceScope.launch {
+            atsc3Receiver.serviceController.receiverState.map { it.state }.collect { receiverState ->
+                if (receiverState == ReceiverState.State.IDLE) {
+                    onRouteClosed()
+                } else if (receiverState >= ReceiverState.State.READY) {
+                    onRouteOpened()
+                }
+            }
+        }
+
+        serviceScope.launch {
             atsc3Receiver.serviceController.routeServices.collect { services ->
                 withContext(Dispatchers.Main) {
                     media.onServiceListChanged(services)
@@ -161,7 +163,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         }
 
         serviceScope.launch {
-            atsc3Receiver.serviceController.selectedService.collect { service ->
+            atsc3Receiver.repository.selectedService.collect { service ->
                 withContext(Dispatchers.Main) {
                     media.onServiceChanged(service)
                 }
@@ -177,7 +179,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         }
 
         serviceScope.launch {
-            atsc3Receiver.serviceController.alertList.collect { alerts ->
+            atsc3Receiver.repository.alertsForNotify.collect { alerts ->
                 val locale = atsc3Receiver.settings.locale.language
 
                 alerts.forEach { alert ->
@@ -205,7 +207,9 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
             ref.get()?.cancel()
         }
 
-        destroyViewPresentation()
+        if (wakeLock.isHeld) {
+            wakeLock.release()
+        }
 
         media.close()
         webServer.close()
@@ -216,46 +220,19 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         }
     }
 
-    internal abstract fun createServiceBinder(serviceController: IServiceController): IBinder
+    internal abstract fun createServiceBinder(receiver: Atsc3ReceiverCore): IBinder
 
     override fun onBind(intent: Intent): IBinder? {
         if (intent.action == SERVICE_INTERFACE) {
-            media.stopPlaybackIfInitialized()
-
-            val playAudioOnBoard = intent.getBooleanExtra(EXTRA_PLAY_AUDIO_ON_BOARD, true)
-
-            cancelViewPresentationDestroying()
-            createViewPresentationAndStartService(playAudioOnBoard)
-
             maybeInitialize()
 
-            return createServiceBinder(atsc3Receiver.serviceController)
+            return createServiceBinder(atsc3Receiver)
         }
 
         return super.onBind(intent)
     }
 
-    override fun onRebind(intent: Intent) {
-        if (intent.action == SERVICE_INTERFACE) {
-            media.stopPlaybackIfInitialized()
-
-            cancelViewPresentationDestroying()
-            webServer.open()
-        }
-
-        super.onRebind(intent)
-    }
-
     override fun onUnbind(intent: Intent): Boolean {
-        if (intent.action == SERVICE_INTERFACE) {
-            cancelViewPresentationDestroying()
-            if (isStartedAsForeground) {
-                destroyViewPresentationDelayed()
-            } else {
-                destroyViewPresentation()
-            }
-        }
-
         super.onUnbind(intent)
 
         return true // allow reBind
@@ -288,9 +265,9 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
                     }
                 }
 
-                ACTION_RMP_PLAY -> atsc3Receiver.viewController?.rmpResume()
+                ACTION_RMP_PLAY -> media.resumePlayback()
 
-                ACTION_RMP_PAUSE -> atsc3Receiver.viewController?.rmpPause()
+                ACTION_RMP_PAUSE -> media.pausePlayback()
 
                 ACTION_OPEN_ROUTE -> openRoute(intent.getStringExtra(EXTRA_ROUTE_PATH))
 
@@ -321,6 +298,21 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         }
 
         result.sendResult(emptyList())
+    }
+
+
+    private fun onRouteOpened() {
+        if (!wakeLock.isHeld) {
+            wakeLock.acquire()
+        }
+        webServer.open()
+    }
+
+    private fun onRouteClosed() {
+        if (wakeLock.isHeld) {
+            wakeLock.release()
+        }
+        webServer.close()
     }
 
     private fun maybeInitialize() {
@@ -409,7 +401,6 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         }
 
         unregisterDeviceReceiver()
-        destroyViewPresentation()
         stopForeground()
         stopSelf()
     }
@@ -472,67 +463,8 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
     override fun getReceiverState() = atsc3Receiver.getReceiverState()
 
-    private fun createViewPresentationAndStartService(ignoreAudioServiceMedia: Boolean) {
-        // we release it only when destroy presentation layer
-        if (wakeLock.isHeld) return
-
-        val downloadManager = DownloadManager()
-        atsc3Receiver.createViewPresentation(downloadManager, ignoreAudioServiceMedia) { view, viewScope ->
-            viewScope.launch {
-                view.rmpState.onCompletion {
-                    viewPlayerState.value = PlaybackState.IDLE
-                }.collect { state ->
-                    viewPlayerState.value = state
-                }
-            }
-        }
-
-        webServer.open()
-
-        //TODO: add lock limitation??
-        wakeLock.acquire()
-    }
-
-    private fun destroyViewPresentation() {
-        if (wakeLock.isHeld) {
-            wakeLock.release()
-        }
-
-        // Don't really destroy View Presentation because it could be pointed by Binder and re-binded
-        //atsc3Receiver.stopAndDestroyViewPresentation()
-        webServer.close()
-    }
-
-    private fun destroyViewPresentationDelayed() {
-        destroyPresentationLayerJob = CoroutineScope(Dispatchers.IO).launch {
-            delay(PRESENTATION_DESTROYING_DELAY)
-            withContext(Dispatchers.Main) {
-                destroyViewPresentation()
-                destroyPresentationLayerJob = null
-            }
-        }
-    }
-
-    private fun cancelViewPresentationDestroying() {
-        destroyPresentationLayerJob?.let {
-            it.cancel()
-            destroyPresentationLayerJob = null
-        }
-    }
-
-    internal fun requireViewController(): IViewController {
-        if (atsc3Receiver.viewController == null) {
-            createViewPresentationAndStartService(atsc3Receiver.ignoreAudioServiceMedia)
-        }
-        return atsc3Receiver.viewController ?: throw InitializationException()
-    }
-
-    class InitializationException : RuntimeException()
-
     companion object {
         val TAG: String = Atsc3ForegroundService::class.java.simpleName
-
-        private const val PRESENTATION_DESTROYING_DELAY = 1000L
 
         const val SERVICE_INTERFACE = "${BuildConfig.LIBRARY_PACKAGE_NAME}.INTERFACE"
 

@@ -1,11 +1,11 @@
 package com.nextgenbroadcast.mobile.middleware.gateway.web
 
-import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
+import com.nextgenbroadcast.mobile.middleware.repository.IRepository
 import com.nextgenbroadcast.mobile.middleware.settings.IServerSettings
 
 internal class WebGatewayImpl (
-        serviceController: IServiceController,
-        private val settings: IServerSettings
+    repository: IRepository,
+    private val settings: IServerSettings
 ) : IWebGateway {
     override val hostName = settings.hostName
     override var httpPort: Int
@@ -21,5 +21,5 @@ internal class WebGatewayImpl (
         get() = settings.wssPort
         set(value) { settings.wssPort = value }
 
-    override val appCache = serviceController.applications
+    override val appCache = repository.applications
 }
