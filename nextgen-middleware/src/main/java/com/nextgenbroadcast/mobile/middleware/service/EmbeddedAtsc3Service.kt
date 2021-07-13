@@ -10,6 +10,7 @@ import com.nextgenbroadcast.mobile.core.presentation.media.IObservablePlayer
 import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
 import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverCore
 import com.nextgenbroadcast.mobile.middleware.MiddlewareConfig
+import com.nextgenbroadcast.mobile.middleware.atsc3.source.IAtsc3Source
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
 import com.nextgenbroadcast.mobile.middleware.server.cert.UserAgentSSLContext
 import kotlinx.coroutines.CoroutineScope
@@ -17,17 +18,63 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
+@Deprecated("Use ReceiverContentProvider instead")
 class EmbeddedAtsc3Service : Atsc3ForegroundService() {
 
     override fun createServiceBinder(receiver: Atsc3ReceiverCore): IBinder =
-            ServiceBinder(receiver.serviceController)
+            ServiceBinder(/*receiver.serviceController*/object : IServiceController {
+                override val receiverState: StateFlow<ReceiverState>
+                    get() = TODO("Not yet implemented")
+                override val receiverFrequency: StateFlow<Int>
+                    get() = TODO("Not yet implemented")
+                override val routeServices: StateFlow<List<AVService>>
+                    get() = TODO("Not yet implemented")
+                override val errorFlow: SharedFlow<String>
+                    get() = TODO("Not yet implemented")
+
+                override suspend fun openRoute(source: IAtsc3Source, force: Boolean): Boolean {
+                    TODO("Not yet implemented")
+                }
+
+                override suspend fun closeRoute() {
+                    TODO("Not yet implemented")
+                }
+
+                override suspend fun tune(frequency: PhyFrequency) {
+                    TODO("Not yet implemented")
+                }
+
+                override suspend fun selectService(service: AVService): Boolean {
+                    TODO("Not yet implemented")
+                }
+
+                override suspend fun cancelScanning() {
+                    TODO("Not yet implemented")
+                }
+
+                override fun findServiceById(globalServiceId: String): AVService? {
+                    TODO("Not yet implemented")
+                }
+
+                override fun getNearbyService(offset: Int): AVService? {
+                    TODO("Not yet implemented")
+                }
+
+                override fun getCurrentService(): AVService? {
+                    TODO("Not yet implemented")
+                }
+
+                override fun getCurrentRouteMediaUrl(): MediaUrl? {
+                    TODO("Not yet implemented")
+                }
+            })
 
     internal inner class ServiceBinder(
             private val serviceController: IServiceController
     ) : Binder(), IServiceBinder {
         override val receiverPresenter: IReceiverPresenter = object : IReceiverPresenter {
-            override val receiverState = serviceController.receiverState.asReadOnly()
-            override val freqKhz = serviceController.receiverFrequency.asReadOnly()
+            override val receiverState = MutableStateFlow(ReceiverState.idle())//serviceController.receiverState.asReadOnly()
+            override val freqKhz = MutableStateFlow(0)//serviceController.receiverFrequency.asReadOnly()
 
             override fun openRoute(path: String): Boolean {
                 openRoute(this@EmbeddedAtsc3Service, path)
@@ -39,20 +86,20 @@ class EmbeddedAtsc3Service : Atsc3ForegroundService() {
             }
 
             override fun tune(frequency: PhyFrequency) {
-                CoroutineScope(Dispatchers.Default).launch {
-                    serviceController.tune(frequency)
-                }
+//                CoroutineScope(Dispatchers.Default).launch {
+//                    serviceController.tune(frequency)
+//                }
             }
         }
 
         override val selectorPresenter: ISelectorPresenter = object : ISelectorPresenter {
-            override val sltServices = serviceController.routeServices.asReadOnly()
+            override val sltServices = MutableStateFlow(emptyList<AVService>())//serviceController.routeServices.asReadOnly()
             override val selectedService = MutableStateFlow<AVService?>(null)//serviceController.selectedService.asReadOnly()
 
             override fun selectService(service: AVService) {
-                CoroutineScope(Dispatchers.Default).launch {
-                    serviceController.selectService(service)
-                }
+//                CoroutineScope(Dispatchers.Default).launch {
+//                    serviceController.selectService(service)
+//                }
             }
         }
 

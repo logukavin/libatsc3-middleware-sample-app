@@ -156,7 +156,7 @@ internal class MediaHolder(
         } ?: return
 
         if (receiver.playEmbedded(service)) {
-            player.play(receiver.mediaFileProvider.getMediaFileUri(mediaUrl.url))
+            player.play(receiver.getMediaUri(mediaUrl))
         } else {
             player.reset()
         }
@@ -175,6 +175,9 @@ internal class MediaHolder(
     }
 
     fun pausePlayback() {
+        // ignore action if playback forced to stop
+        if (receiver.repository.requestedMediaState.value == PlaybackState.IDLE) return
+
         if (player.isInitialized) {
             player.pause()
         } else {
@@ -183,6 +186,9 @@ internal class MediaHolder(
     }
 
     fun resumePlayback() {
+        // ignore action if playback forced to stop
+        if (receiver.repository.requestedMediaState.value == PlaybackState.IDLE) return
+
         if (player.isInitialized) {
             player.tryReplay()
         } else {

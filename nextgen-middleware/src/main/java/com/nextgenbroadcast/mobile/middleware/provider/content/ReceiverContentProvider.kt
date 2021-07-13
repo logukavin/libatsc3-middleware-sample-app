@@ -94,7 +94,7 @@ class ReceiverContentProvider : ContentProvider() {
 
         val receiverStateUri = getUriForPath(appContext, CONTENT_RECEIVER_STATE)
         stateScope.launch {
-            receiver.serviceController.receiverState.collect {
+            receiver.observeReceiverState {
                 contentResolver.notifyChange(receiverStateUri, null)
             }
         }

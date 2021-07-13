@@ -7,9 +7,7 @@ import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverCore
 import com.nextgenbroadcast.mobile.middleware.cache.ApplicationCache
 import com.nextgenbroadcast.mobile.middleware.cache.DownloadManager
 import com.nextgenbroadcast.mobile.middleware.gateway.rpc.IRPCGateway
-import com.nextgenbroadcast.mobile.middleware.gateway.rpc.RPCGatewayImpl
 import com.nextgenbroadcast.mobile.middleware.gateway.web.IWebGateway
-import com.nextgenbroadcast.mobile.middleware.gateway.web.WebGatewayImpl
 import com.nextgenbroadcast.mobile.middleware.server.cert.UserAgentSSLContext
 import com.nextgenbroadcast.mobile.middleware.server.web.IMiddlewareWebServer
 import com.nextgenbroadcast.mobile.middleware.server.web.MiddlewareWebServer
@@ -30,10 +28,7 @@ internal class WebServerHolder(
     fun open() {
         if (webServer != null) return
 
-        val viewController = receiver.viewController
         val appContext = context.applicationContext
-        val repository = receiver.repository
-        val settings = receiver.settings
         val downloadManager = DownloadManager()
         val appCache = ApplicationCache(appContext.cacheDir, downloadManager)
         val sslContext = UserAgentSSLContext.newInstance(appContext)
@@ -41,10 +36,10 @@ internal class WebServerHolder(
         val scope = CoroutineScope(Dispatchers.Default).also {
             stateScope = it
         }
-        val web = WebGatewayImpl(repository, settings).also {
+        val web = receiver.createWebGateway().also {
             webGateway = it
         }
-        val rpc = RPCGatewayImpl(repository, viewController, receiver.serviceController, appCache, settings, scope).also {
+        val rpc = receiver.createRPCGateway(appCache, scope).also {
             rpcGateway = it
         }
 

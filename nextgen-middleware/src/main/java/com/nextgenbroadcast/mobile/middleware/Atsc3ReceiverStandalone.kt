@@ -49,7 +49,6 @@ internal object Atsc3ReceiverStandalone {
         }
 
         val mediaFileProvider = MediaFileProvider(appContext)
-
         val repository = RepositoryImpl(mediaFileProvider, settings)
 
         val db = SGDataBase.getDatabase(appContext)
@@ -65,7 +64,7 @@ internal object Atsc3ReceiverStandalone {
         val scheduler = AnalyticScheduler(WorkManager.getInstance(appContext))
         val analytics = Atsc3Analytics(clockSource, appContext.filesDir, repository, settings, scheduler)
 
-        return Atsc3ReceiverCore(atsc3Module, settings, repository, serviceGuideReader, mediaFileProvider, analytics).apply {
+        return Atsc3ReceiverCore(atsc3Module, settings, repository, serviceGuideReader, analytics).apply {
             MainScope().launch {
                 errorFlow.collect { message ->
                     Toast.makeText(appContext, message, Toast.LENGTH_SHORT).show()

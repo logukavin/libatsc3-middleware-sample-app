@@ -11,7 +11,6 @@ import android.os.PowerManager.WakeLock
 import android.support.v4.media.MediaBrowserCompat
 import android.util.Log
 import androidx.core.content.ContextCompat
-import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.middleware.*
@@ -41,7 +40,6 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     //TODO: create own scope?
     private val serviceScope = CoroutineScope(Dispatchers.Default)
 
-    private lateinit var state: StateFlow<Triple<ReceiverState?, AVService?, PlaybackState?>>
     private lateinit var playbackState: StateFlow<PlaybackState>
 
     // Receiver Core
@@ -130,12 +128,8 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
             }
         }
 
-        state = combine(atsc3Receiver.serviceController.receiverState, atsc3Receiver.repository.selectedService, playbackState) { receiverState, selectedService, playbackState ->
-            Triple(receiverState, selectedService, playbackState)
-        }.stateIn(serviceScope, SharingStarted.Eagerly, Triple(ReceiverState.idle(), null, PlaybackState.IDLE))
-
         serviceScope.launch {
-            state.collect { (receiverState, selectedService, playbackState) ->
+            atsc3Receiver.observeCombinedState(playbackState) { (receiverState, selectedService, playbackState) ->
                 withContext(Dispatchers.Main) {
                     if (isForeground) {
                         pushNotification(createNotificationBuilder(receiverState, selectedService, playbackState))
@@ -145,17 +139,20 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         }
 
         serviceScope.launch {
-            atsc3Receiver.serviceController.receiverState.map { it.state }.collect { receiverState ->
-                if (receiverState == ReceiverState.State.IDLE) {
-                    onRouteClosed()
-                } else if (receiverState >= ReceiverState.State.READY) {
-                    onRouteOpened()
+            atsc3Receiver.observeReceiverState { state ->
+                withContext(Dispatchers.Main) {
+                    val receiverState = state.state
+                    if (receiverState == ReceiverState.State.IDLE) {
+                        onRouteClosed()
+                    } else if (receiverState >= ReceiverState.State.READY) {
+                        onRouteOpened()
+                    }
                 }
             }
         }
 
         serviceScope.launch {
-            atsc3Receiver.serviceController.routeServices.collect { services ->
+            atsc3Receiver.observeRouteServices { services ->
                 withContext(Dispatchers.Main) {
                     media.onServiceListChanged(services)
                 }

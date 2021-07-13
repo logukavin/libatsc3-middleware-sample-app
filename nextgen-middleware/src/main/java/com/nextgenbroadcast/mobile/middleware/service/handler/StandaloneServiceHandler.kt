@@ -16,7 +16,7 @@ import kotlinx.coroutines.flow.collect
 
 internal class StandaloneServiceHandler(
         private val receiverPresenter: IReceiverPresenter,
-        private val serviceController: IServiceController,
+        private val serviceController: IServiceController?,
         private val requireViewController: () -> IViewController
 ) : Handler() {
 
@@ -52,9 +52,9 @@ internal class StandaloneServiceHandler(
 
             IServiceBinder.ACTION_SELECT_SERVICE -> {
                 msg.data.getParcelable(AVService::class.java, IServiceBinder.PARAM_SELECT_SERVICE)?.let {
-                    runBlocking {
-                        serviceController.selectService(it)
-                    }
+//                    runBlocking {
+//                        serviceController.selectService(it)
+//                    }
                 }
             }
 
@@ -120,31 +120,31 @@ internal class StandaloneServiceHandler(
     }
 
     private fun observeReceiverState(sendToMessenger: Messenger) {
-        stateScope.launch {
-            serviceController.receiverState.collect { state ->
-                sendToMessenger.send(buildMessage(
-                        IServiceBinder.TYPE_RECEIVER_STATE,
-                        bundleOf(
-                                IServiceBinder.PARAM_RECEIVER_STATE to state
-                        ),
-                        ReceiverState::class.java.classLoader
-                ))
-            }
-        }
+//        stateScope.launch {
+//            serviceController.receiverState.collect { state ->
+//                sendToMessenger.send(buildMessage(
+//                        IServiceBinder.TYPE_RECEIVER_STATE,
+//                        bundleOf(
+//                                IServiceBinder.PARAM_RECEIVER_STATE to state
+//                        ),
+//                        ReceiverState::class.java.classLoader
+//                ))
+//            }
+//        }
     }
 
     private fun observeServiceList(sendToMessenger: Messenger) {
-        stateScope.launch {
-            serviceController.routeServices.collect { services ->
-                sendToMessenger.send(buildMessage(
-                        IServiceBinder.TYPE_SERVICE_LIST,
-                        bundleOf(
-                                IServiceBinder.PARAM_SERVICE_LIST to ArrayList<AVService>(services)
-                        ),
-                        AVService::class.java.classLoader
-                ))
-            }
-        }
+//        stateScope.launch {
+//            serviceController.routeServices.collect { services ->
+//                sendToMessenger.send(buildMessage(
+//                        IServiceBinder.TYPE_SERVICE_LIST,
+//                        bundleOf(
+//                                IServiceBinder.PARAM_SERVICE_LIST to ArrayList<AVService>(services)
+//                        ),
+//                        AVService::class.java.classLoader
+//                ))
+//            }
+//        }
     }
 
     private fun observeSelectedService(sendToMessenger: Messenger) {
@@ -203,17 +203,17 @@ internal class StandaloneServiceHandler(
     }
 
     private fun observeFrequency(sendToMessenger: Messenger) {
-        stateScope.launch {
-            serviceController.receiverFrequency.collect { freqKhz ->
-                sendToMessenger.send(buildMessage(
-                        IServiceBinder.ACTION_TYNE_FREQUENCY,
-                        bundleOf(
-                                IServiceBinder.PARAM_FREQUENCY_KHZ to freqKhz
-                        ),
-                        AVService::class.java.classLoader
-                ))
-            }
-        }
+//        stateScope.launch {
+//            serviceController.receiverFrequency.collect { freqKhz ->
+//                sendToMessenger.send(buildMessage(
+//                        IServiceBinder.ACTION_TYNE_FREQUENCY,
+//                        bundleOf(
+//                                IServiceBinder.PARAM_FREQUENCY_KHZ to freqKhz
+//                        ),
+//                        AVService::class.java.classLoader
+//                ))
+//            }
+//        }
     }
 
     private fun buildMessage(dataType: Int, args: Bundle? = null, classLoader: ClassLoader? = null): Message = Message.obtain(null, dataType).apply {
