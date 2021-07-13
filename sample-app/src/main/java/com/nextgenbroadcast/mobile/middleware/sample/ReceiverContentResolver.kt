@@ -1,4 +1,4 @@
-package com.nextgenbroadcast.mobile.middleware.sample.resolver
+package com.nextgenbroadcast.mobile.middleware.sample
 
 import android.content.ContentProviderClient
 import android.content.ContentResolver
@@ -9,12 +9,11 @@ import android.database.Cursor
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
+import androidx.core.database.getDoubleOrNull
 import androidx.core.database.getIntOrNull
 import androidx.core.database.getStringOrNull
-import com.nextgenbroadcast.mobile.core.model.AVService
-import com.nextgenbroadcast.mobile.core.model.AppData
-import com.nextgenbroadcast.mobile.core.model.ReceiverState
-import com.nextgenbroadcast.mobile.core.model.ApplicationState
+import androidx.core.net.toUri
+import com.nextgenbroadcast.mobile.core.model.*
 import com.nextgenbroadcast.mobile.middleware.atsc3.PhyVersionInfo
 import com.nextgenbroadcast.mobile.middleware.provider.content.ReceiverContentProvider
 import java.nio.ByteBuffer
@@ -32,6 +31,7 @@ class ReceiverContentResolver(
     private val receiverServiceUri = ReceiverContentProvider.getUriForPath(context, ReceiverContentProvider.CONTENT_RECEIVER_SERVICE)
     private val appDataUri = ReceiverContentProvider.getUriForPath(context, ReceiverContentProvider.CONTENT_APP_DATA)
     private val appStateUri = ReceiverContentProvider.getUriForPath(context, ReceiverContentProvider.CONTENT_APP_STATE)
+    private val receiverPlayerUri = ReceiverContentProvider.getUriForPath(context, ReceiverContentProvider.CONTENT_RECEIVER_MEDIA_PLAYER)
     private val certificateUri = ReceiverContentProvider.getUriForPath(context, ReceiverContentProvider.CONTENT_SERVER_CERTIFICATE)
     private val receiverStateUri = ReceiverContentProvider.getUriForPath(context, ReceiverContentProvider.CONTENT_RECEIVER_STATE)
     private val receiverPhyInfoUri = ReceiverContentProvider.getUriForPath(context, ReceiverContentProvider.CONTENT_PHY_VERSION_INFO)
@@ -41,11 +41,18 @@ class ReceiverContentResolver(
     interface Listener {
         fun onDataReceived(appData: AppData?)
         fun onReceiverStateChanged(state: ReceiverState)
+        fun onReceiverPlayerChanged(mediaUri: Uri?, params: RPMParams, state: PlaybackState)
     }
 
     fun register() {
         contentResolver.registerContentObserver(appDataUri) {
             listener.onDataReceived(queryAppData())
+        }
+
+        contentResolver.registerContentObserver(receiverPlayerUri) {
+            queryPlayerData()?.let { (mediaUri, layoutParams, state) ->
+                listener.onReceiverPlayerChanged(mediaUri, layoutParams, state)
+            }
         }
 
         contentResolver.registerContentObserver(receiverStateUri) {
@@ -105,6 +112,18 @@ class ReceiverContentResolver(
         }
     }
 
+    fun publishPlayerState(state: PlaybackState, position: Long, rate: Float) {
+        receiverPlayerUri.update {
+            it.put(ReceiverContentProvider.COLUMN_PLAYER_STATE, state.state)
+            it.put(ReceiverContentProvider.COLUMN_PLAYER_POSITION, position)
+            it.put(ReceiverContentProvider.COLUMN_PLAYER_RATE, rate)
+        }
+    }
+
+    fun resetPlayerState() {
+        receiverPlayerUri.delete()
+    }
+
     fun queryServerCertificate(): String? {
         return certificateUri.queryFirst { cursor ->
             cursor.getStringOrNull(ReceiverContentProvider.COLUMN_CERTIFICATE)
@@ -131,6 +150,21 @@ class ReceiverContentResolver(
 
                 AppData(appContextID, appEntryPage, serviceIds, appCachePath)
             } else null
+        }
+    }
+
+    //TODO: combine to one local model
+    fun queryPlayerData(): Triple<Uri?, RPMParams, PlaybackState>? {
+        return receiverPlayerUri.queryFirst { cursor ->
+            val mediaUri = cursor.getStringOrNull(ReceiverContentProvider.COLUMN_PLAYER_MEDIA_URL)?.toUri()
+            val scale = cursor.getDoubleOrNull(ReceiverContentProvider.COLUMN_PLAYER_LAYOUT_SCALE) ?: 100.0
+            val x = cursor.getIntOrNull(ReceiverContentProvider.COLUMN_PLAYER_LAYOUT_X) ?: 0
+            val y = cursor.getIntOrNull(ReceiverContentProvider.COLUMN_PLAYER_LAYOUT_Y) ?: 0
+            val state = cursor.getIntOrNull(ReceiverContentProvider.COLUMN_PLAYER_STATE)?.let {
+                PlaybackState.valueOf(it)
+            } ?: PlaybackState.IDLE
+
+            Triple(mediaUri, RPMParams(scale, x, y), state)
         }
     }
 
@@ -170,6 +204,12 @@ class ReceiverContentResolver(
         }
     }
 
+    private fun Cursor.getDoubleOrNull(columnName: String): Double? {
+        return getColumnIndexOrNull(columnName)?.let { index ->
+            getDoubleOrNull(index)
+        }
+    }
+
     private fun Cursor.getColumnIndexOrNull(columnName: String): Int? {
         return getColumnIndex(columnName).takeIf { it >= 0 }
     }
@@ -194,6 +234,12 @@ class ReceiverContentResolver(
         providerClient?.insert(this, ContentValues().apply {
             action(this)
         })
+    }
+
+    private inline fun Uri.update(action: (values: ContentValues) -> Unit) {
+        providerClient?.update(this, ContentValues().apply {
+            action(this)
+        }, null, null)
     }
 
     private fun Uri.delete() {

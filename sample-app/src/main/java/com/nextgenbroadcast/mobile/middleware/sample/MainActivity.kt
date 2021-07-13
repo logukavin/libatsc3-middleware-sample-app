@@ -31,10 +31,8 @@ import com.nextgenbroadcast.mobile.core.presentation.IControllerPresenter
 import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
 import com.nextgenbroadcast.mobile.middleware.getApkBaseServicePackage
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.ViewViewModel
-import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.factory.UserAgentViewModelFactory
 import com.nextgenbroadcast.mobile.middleware.service.media.MediaSessionConstants
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.ReceiverTelemetry
-import dagger.android.AndroidInjection
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
@@ -48,18 +46,9 @@ class MainActivity : BaseActivity() {
         packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)
     }
 
-    private var controlerPresentationJob: Job? = null
+    private var controllerPresentationJob: Job? = null
 
     override fun onBind(binder: IServiceBinder) {
-        val factory = UserAgentViewModelFactory(
-                application,
-                binder.userAgentPresenter,
-                binder.mediaPlayerPresenter,
-                binder.receiverPresenter
-        )
-
-        getMainFragment()?.onBind(factory)
-
         binder.controllerPresenter?.let { controllerPresenter ->
             bindControlPresenter(controllerPresenter)
         }
@@ -67,10 +56,8 @@ class MainActivity : BaseActivity() {
 
     override fun onUnbind() {
         viewViewModel.clearSubscriptions(this)
-        controlerPresentationJob?.cancel()
-        controlerPresentationJob = null
-
-        getMainFragment()?.onUnbind()
+        controllerPresentationJob?.cancel()
+        controllerPresentationJob = null
     }
 
     override fun onSourcesAvailable(sources: List<MediaBrowserCompat.MediaItem>) {
@@ -103,7 +90,6 @@ class MainActivity : BaseActivity() {
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
-        AndroidInjection.inject(this)
         super.onCreate(savedInstanceState)
 
         appUpdateManager = AppUpdateManagerFactory.create(applicationContext)
@@ -236,7 +222,7 @@ class MainActivity : BaseActivity() {
 
     private fun bindControlPresenter(controllerPresenter: IControllerPresenter) {
         with(viewViewModel) {
-            controlerPresentationJob = lifecycleScope.launch {
+            controllerPresentationJob = lifecycleScope.launch {
                 launch {
                     controllerPresenter.debugInfoSettings.collect { debugInfoSetting ->
                         val isDebugInfoEnable = debugInfoSetting[ReceiverTelemetry.INFO_DEBUG] ?: false
@@ -370,8 +356,6 @@ class MainActivity : BaseActivity() {
             Log.w(TAG, "appUpdateInfoTask.onFailureListener: failedInfo: $failedInfo")
         }
     }
-
-    private fun getMainFragment() = supportFragmentManager.findFragmentByTag(MainFragment.TAG) as? MainFragment
 
     private val mediaControllerCallback = object : MediaController.Callback() {
         override fun onQueueChanged(queue: MutableList<MediaSession.QueueItem>?) {

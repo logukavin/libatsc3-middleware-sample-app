@@ -9,6 +9,7 @@ import com.nextgenbroadcast.mobile.middleware.analytics.Atsc3Analytics
 import com.nextgenbroadcast.mobile.middleware.analytics.scheduler.AnalyticScheduler
 import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3Module
 import com.nextgenbroadcast.mobile.middleware.atsc3.IAtsc3Module
+import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.ServiceGuideDeliveryUnitReader
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.db.RoomServiceGuideStore
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.db.SGDataBase
 import com.nextgenbroadcast.mobile.middleware.repository.RepositoryImpl
@@ -47,7 +48,9 @@ internal object Atsc3ReceiverStandalone {
             }
         }
 
-        val repository = RepositoryImpl(settings)
+        val mediaFileProvider = MediaFileProvider(appContext)
+
+        val repository = RepositoryImpl(mediaFileProvider, settings)
 
         val db = SGDataBase.getDatabase(appContext)
         val serviceGuideStore = RoomServiceGuideStore(db).apply {
@@ -56,14 +59,13 @@ internal object Atsc3ReceiverStandalone {
                 appContext.contentResolver.notifyChange(serviceContentUri, null)
             }
         }
-
-        val mediaFileProvider = MediaFileProvider(appContext)
+        val serviceGuideReader = ServiceGuideDeliveryUnitReader(serviceGuideStore)
 
         val clockSource = Settings.Global.getInt(appContext.contentResolver, Settings.Global.AUTO_TIME, 0)
         val scheduler = AnalyticScheduler(WorkManager.getInstance(appContext))
         val analytics = Atsc3Analytics(clockSource, appContext.filesDir, repository, settings, scheduler)
 
-        return Atsc3ReceiverCore(atsc3Module, settings, repository, serviceGuideStore, mediaFileProvider, analytics).apply {
+        return Atsc3ReceiverCore(atsc3Module, settings, repository, serviceGuideReader, mediaFileProvider, analytics).apply {
             MainScope().launch {
                 errorFlow.collect { message ->
                     Toast.makeText(appContext, message, Toast.LENGTH_SHORT).show()

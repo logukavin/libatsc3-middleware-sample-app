@@ -58,7 +58,9 @@ internal class StandaloneServiceHandler(
                 }
             }
 
-            IServiceBinder.ACTION_RMP_LAYOUT_RESET -> requireViewController().rmpLayoutReset()
+            IServiceBinder.ACTION_RMP_LAYOUT_RESET -> {
+//                requireViewController().rmpLayoutReset()
+            }
 
             IServiceBinder.ACTION_RMP_PLAYBACK_STATE_CHANGED -> {
                 msg.data.getParcelable(PlaybackState::class.java, IServiceBinder.PARAM_RMP_PLAYBACK_STATE)?.let {
@@ -77,11 +79,11 @@ internal class StandaloneServiceHandler(
             }
 
             IServiceBinder.CALLBACK_ADD_PLAYER_STATE_CHANGE -> {
-                requireViewController().addOnPlayerSateChangedCallback(playerStateListener)
+                //requireViewController().addOnPlayerSateChangedCallback(playerStateListener)
             }
 
             IServiceBinder.CALLBACK_REMOVE_PLAYER_STATE_CHANGE -> {
-                requireViewController().addOnPlayerSateChangedCallback(playerStateListener)
+                //requireViewController().addOnPlayerSateChangedCallback(playerStateListener)
             }
 
             IServiceBinder.ACTION_TYNE_FREQUENCY -> {
@@ -146,58 +148,58 @@ internal class StandaloneServiceHandler(
     }
 
     private fun observeSelectedService(sendToMessenger: Messenger) {
-        stateScope.launch {
-            serviceController.selectedService.collect { selectedService ->
-                sendToMessenger.send(buildMessage(
-                        IServiceBinder.TYPE_SERVICE_SELECTED,
-                        bundleOf(
-                                IServiceBinder.PARAM_SERVICE_SELECTED to selectedService
-                        ),
-                        AVService::class.java.classLoader
-                ))
-            }
-        }
+//        stateScope.launch {
+//            serviceController.selectedService.collect { selectedService ->
+//                sendToMessenger.send(buildMessage(
+//                        IServiceBinder.TYPE_SERVICE_SELECTED,
+//                        bundleOf(
+//                                IServiceBinder.PARAM_SERVICE_SELECTED to selectedService
+//                        ),
+//                        AVService::class.java.classLoader
+//                ))
+//            }
+//        }
     }
 
     private fun observeAppData(sendToMessenger: Messenger) {
-        stateScope.launch {
-            requireViewController().appData.collect { appData ->
-                sendToMessenger.send(buildMessage(
-                        IServiceBinder.TYPE_APPDATA,
-                        bundleOf(
-                                IServiceBinder.PARAM_APPDATA to appData
-                        ),
-                        AppData::class.java.classLoader
-                ))
-            }
-        }
+//        stateScope.launch {
+//            requireViewController().appData.collect { appData ->
+//                sendToMessenger.send(buildMessage(
+//                        IServiceBinder.TYPE_APPDATA,
+//                        bundleOf(
+//                                IServiceBinder.PARAM_APPDATA to appData
+//                        ),
+//                        AppData::class.java.classLoader
+//                ))
+//            }
+//        }
     }
 
     private fun observeRPMLayoutParams(sendToMessenger: Messenger) {
-        stateScope.launch {
-            requireViewController().rmpLayoutParams.collect { rpmLayoutParams ->
-                sendToMessenger.send(buildMessage(
-                        IServiceBinder.TYPE_RMP_LAYOUT_PARAMS,
-                        bundleOf(
-                                IServiceBinder.PARAM_RMP_LAYOUT_PARAMS to rpmLayoutParams
-                        ),
-                        RPMParams::class.java.classLoader
-                ))
-            }
-        }
+//        stateScope.launch {
+//            requireViewController().rmpLayoutParams.collect { rpmLayoutParams ->
+//                sendToMessenger.send(buildMessage(
+//                        IServiceBinder.TYPE_RMP_LAYOUT_PARAMS,
+//                        bundleOf(
+//                                IServiceBinder.PARAM_RMP_LAYOUT_PARAMS to rpmLayoutParams
+//                        ),
+//                        RPMParams::class.java.classLoader
+//                ))
+//            }
+//        }
     }
 
     private fun observeRPMMediaUrl(sendToMessenger: Messenger) {
-        stateScope.launch {
-            requireViewController().rmpMediaUri.collect { uri ->
-                sendToMessenger.send(buildMessage(
-                        IServiceBinder.TYPE_RMP_MEDIA_URI,
-                        bundleOf(
-                                IServiceBinder.PARAM_RMP_MEDIA_URI to uri
-                        )
-                ))
-            }
-        }
+//        stateScope.launch {
+//            requireViewController().rmpMediaUri.collect { uri ->
+//                sendToMessenger.send(buildMessage(
+//                        IServiceBinder.TYPE_RMP_MEDIA_URI,
+//                        bundleOf(
+//                                IServiceBinder.PARAM_RMP_MEDIA_URI to uri
+//                        )
+//                ))
+//            }
+//        }
     }
 
     private fun observeFrequency(sendToMessenger: Messenger) {

@@ -54,10 +54,8 @@ internal class Atsc3Module(
     private val serviceToSourceConfig = ConcurrentHashMap<Int, Int>()
     private val packageMap = HashMap<String, Atsc3Application>()
 
-    var selectedServiceBsid = -1
-        private set
-    var selectedServiceId = -1
-        private set
+    private var selectedServiceBsid = -1
+    private var selectedServiceId = -1
     private var suspendedServiceSelection: Boolean = false
     private var selectedServiceSLSProtocol = -1
     private var selectedServiceHeld: Atsc3Held? = null
@@ -417,6 +415,10 @@ internal class Atsc3Module(
 
     override fun isIdle(): Boolean {
         return getState() == Atsc3ModuleState.IDLE
+    }
+
+    override fun getSelectedBSID(): Int {
+        return selectedServiceBsid
     }
 
     private fun reset() {

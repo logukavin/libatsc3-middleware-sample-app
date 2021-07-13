@@ -2,35 +2,29 @@ package com.nextgenbroadcast.mobile.middleware.sample.view
 
 import android.content.Context
 import android.net.Uri
-import android.os.Handler
-import android.os.Looper
 import android.util.AttributeSet
 import com.google.android.exoplayer2.Player
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
 import com.google.android.exoplayer2.ui.PlayerView
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
-import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.RMPViewModel
 import com.nextgenbroadcast.mobile.player.Atsc3MediaPlayer
 import com.nextgenbroadcast.mobile.player.MMTConstants
+import java.util.*
+import kotlin.concurrent.fixedRateTimer
+
+typealias OnPlaybackChangeListener = (state: PlaybackState, position: Long, rate: Float) -> Unit
 
 class ReceiverPlayerView @JvmOverloads constructor(
         context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
 ) : PlayerView(context, attrs, defStyleAttr) {
+
     private val atsc3Player = Atsc3MediaPlayer(context).apply {
         resetWhenLostAudioFocus = false
     }
-    private val updateMediaTimeHandler = Handler(Looper.getMainLooper())
-
-    private var rmpViewModel: RMPViewModel? = null
 
     private var buffering = false
-
-    val playbackPosition
-        get() = player?.currentPosition ?: 0
-
-    val playbackSpeed: Float
-        get() = player?.playbackParameters?.speed ?: 0f
+    private var onPlaybackChangeListener: OnPlaybackChangeListener? = null
 
     override fun onFinishInflate() {
         super.onFinishInflate()
@@ -39,14 +33,12 @@ class ReceiverPlayerView @JvmOverloads constructor(
 
         atsc3Player.setListener(object : Atsc3MediaPlayer.EventListener {
             override fun onPlayerStateChanged(state: PlaybackState) {
-                rmpViewModel?.setCurrentPlayerState(state)
+                onPlaybackChangeListener?.invoke(state, atsc3Player.playbackPosition, atsc3Player.playbackSpeed)
 
                 if (state == PlaybackState.PLAYING) {
-                    //window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
                     keepScreenOn = true
                     startMediaTimeUpdate()
                 } else {
-                    //window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
                     keepScreenOn = false
                     cancelMediaTimeUpdate()
                 }
@@ -57,23 +49,18 @@ class ReceiverPlayerView @JvmOverloads constructor(
             }
 
             override fun onPlaybackSpeedChanged(speed: Float) {
-                rmpViewModel?.setCurrentPlaybackRate(speed)
+                // will be updated with position in timer
             }
         })
     }
 
-    fun bind(viewModel: RMPViewModel) {
-        rmpViewModel = viewModel
-
-        viewModel.setCurrentPlayerState(atsc3Player.playbackState)
-        viewModel.setCurrentPlaybackRate(playbackSpeed)
-    }
-
-    fun unbind() {
-        rmpViewModel = null
+    fun setOnPlaybackChangeListener(listener: OnPlaybackChangeListener) {
+        onPlaybackChangeListener = listener
     }
 
     fun play(mediaUri: Uri) {
+        if (atsc3Player.lastMediaUri == mediaUri && atsc3Player.isPlaying) return
+
         val mimeType = context.contentResolver.getType(mediaUri)
 
         LOG.i(TAG, String.format("play: with mediaUri: %s and mimeType: %s", mediaUri, mimeType))
@@ -97,6 +84,8 @@ class ReceiverPlayerView @JvmOverloads constructor(
     }
 
     fun tryReplay() {
+        if (atsc3Player.isPlaying) return
+
         atsc3Player.tryReplay()
         // ensure we still observing correct player
         player = atsc3Player.player
@@ -135,29 +124,29 @@ class ReceiverPlayerView @JvmOverloads constructor(
         removeCallbacks(enableBufferingProgress)
     }
 
+    fun getTrackSelector(): DefaultTrackSelector? {
+        return atsc3Player.trackSelector
+    }
+
     private val enableBufferingProgress = Runnable {
         setShowBuffering(SHOW_BUFFERING_ALWAYS)
     }
 
     private val updateMediaTimeRunnable = object : Runnable {
         override fun run() {
-            rmpViewModel?.setCurrentMediaTime(playbackPosition)
+            onPlaybackChangeListener?.invoke(atsc3Player.playbackState, atsc3Player.playbackPosition, atsc3Player.playbackSpeed)
 
-            updateMediaTimeHandler.postDelayed(this, MEDIA_TIME_UPDATE_DELAY)
+            postDelayed(this, MEDIA_TIME_UPDATE_DELAY)
         }
     }
 
     private fun startMediaTimeUpdate() {
-        updateMediaTimeHandler.removeCallbacks(updateMediaTimeRunnable)
-        updateMediaTimeHandler.postDelayed(updateMediaTimeRunnable, MEDIA_TIME_UPDATE_DELAY)
+        removeCallbacks(updateMediaTimeRunnable)
+        postDelayed(updateMediaTimeRunnable, MEDIA_TIME_UPDATE_DELAY)
     }
 
     private fun cancelMediaTimeUpdate() {
-        updateMediaTimeHandler.removeCallbacks(updateMediaTimeRunnable)
-    }
-
-    fun getTrackSelector(): DefaultTrackSelector? {
-        return atsc3Player.trackSelector
+        removeCallbacks(updateMediaTimeRunnable)
     }
 
     companion object {

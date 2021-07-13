@@ -6,10 +6,6 @@
         <import type="android.view.View" />
 
         <variable
-            name="receiverModel"
-            type="com.nextgenbroadcast.mobile.middleware.sample.lifecycle.ReceiverViewModel" />
-
-        <variable
             name="viewModel"
             type="com.nextgenbroadcast.mobile.middleware.sample.lifecycle.ViewViewModel" />
     </data>
@@ -39,7 +35,7 @@
                 android:id="@+id/state_description"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@{receiverModel.stateDescription}"
+                android:text="@{viewModel.stateDescription}"
                 android:textColor="@color/white"
                 android:layout_margin="20dp"
                 app:layout_constraintBottom_toTopOf="@+id/progress_bar"
@@ -57,7 +53,7 @@
                 android:minHeight="0dp"
                 android:text="@string/receiver_scanning_cancel_btn"
                 android:textAllCaps="false"
-                android:visibility="@{receiverModel.isCancelable ? View.VISIBLE : View.GONE }"
+                android:visibility="@{viewModel.isCancelable ? View.VISIBLE : View.GONE }"
                 app:layout_constraintBottom_toBottomOf="@+id/state_description"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toEndOf="@+id/state_description"
@@ -86,7 +82,7 @@
                 android:background="@color/semi_transparent"
                 android:paddingStart="10dp"
                 android:paddingEnd="10dp"
-                android:text="@{receiverModel.appDataLog}"
+                android:text="@{viewModel.appDataLog}"
                 android:textColor="@color/white"
                 android:textSize="10sp"
                 android:visibility="@{viewModel.showDebugInfo ? View.VISIBLE : View.GONE}"
@@ -111,7 +107,7 @@
                 app:layout_constraintStart_toStartOf="@+id/receiver_player"
                 app:layout_constraintTop_toBottomOf="@+id/atsc3_data_log" />
 
-            <com.nextgenbroadcast.mobile.middleware.sample.view.PhyChart
+            <com.nextgenbroadcast.mobile.middleware.sample.view.PhyChartView
                 android:id="@+id/phy_chart"
                 android:layout_width="match_parent"
                 android:layout_height="@dimen/phy_chart_height"
@@ -160,7 +156,7 @@
                 android:textStyle="bold" />
 
             <ListView
-                android:id="@+id/serviceList"
+                android:id="@+id/service_list"
                 android:layout_width="@dimen/service_spinner_width"
                 android:layout_height="wrap_content"
                 android:background="@color/white"

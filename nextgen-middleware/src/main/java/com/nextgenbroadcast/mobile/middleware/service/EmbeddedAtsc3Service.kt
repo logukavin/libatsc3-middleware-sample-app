@@ -1,5 +1,6 @@
 package com.nextgenbroadcast.mobile.middleware.service
 
+import android.net.Uri
 import android.os.Binder
 import android.os.IBinder
 import com.nextgenbroadcast.mobile.core.asReadOnly
@@ -7,6 +8,7 @@ import com.nextgenbroadcast.mobile.core.model.*
 import com.nextgenbroadcast.mobile.core.presentation.*
 import com.nextgenbroadcast.mobile.core.presentation.media.IObservablePlayer
 import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
+import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverCore
 import com.nextgenbroadcast.mobile.middleware.MiddlewareConfig
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
 import com.nextgenbroadcast.mobile.middleware.server.cert.UserAgentSSLContext
@@ -17,8 +19,8 @@ import kotlinx.coroutines.launch
 
 class EmbeddedAtsc3Service : Atsc3ForegroundService() {
 
-    override fun createServiceBinder(serviceController: IServiceController): IBinder =
-            ServiceBinder(serviceController)
+    override fun createServiceBinder(receiver: Atsc3ReceiverCore): IBinder =
+            ServiceBinder(receiver.serviceController)
 
     internal inner class ServiceBinder(
             private val serviceController: IServiceController
@@ -45,7 +47,7 @@ class EmbeddedAtsc3Service : Atsc3ForegroundService() {
 
         override val selectorPresenter: ISelectorPresenter = object : ISelectorPresenter {
             override val sltServices = serviceController.routeServices.asReadOnly()
-            override val selectedService = serviceController.selectedService.asReadOnly()
+            override val selectedService = MutableStateFlow<AVService?>(null)//serviceController.selectedService.asReadOnly()
 
             override fun selectService(service: AVService) {
                 CoroutineScope(Dispatchers.Default).launch {
@@ -55,14 +57,13 @@ class EmbeddedAtsc3Service : Atsc3ForegroundService() {
         }
 
         override val userAgentPresenter = object : IUserAgentPresenter {
-            private val viewController = requireViewController()
+            //private val viewController = requireViewController()
             private val sslContext = UserAgentSSLContext.newInstance(applicationContext)
 
-            override val appData = viewController.appData.asReadOnly()
-            override val appState = viewController.appState.asReadOnly()
+            override val appData = MutableStateFlow<AppData?>(null)//viewController.appData.asReadOnly()
 
             override fun setApplicationState(state: ApplicationState) {
-                viewController.setApplicationState(state)
+                //viewController.setApplicationState(state)
             }
 
             override fun getWebServerCertificateHash(): String? {
@@ -71,33 +72,33 @@ class EmbeddedAtsc3Service : Atsc3ForegroundService() {
         }
 
         override val mediaPlayerPresenter = object : IMediaPlayerPresenter {
-            private val viewController = requireViewController()
+            //private val viewController = requireViewController()
 
-            override val rmpLayoutParams = viewController.rmpLayoutParams.asReadOnly()
-            override val rmpMediaUri = viewController.rmpMediaUri.asReadOnly()
+            override val rmpLayoutParams = MutableStateFlow(RPMParams())//viewController.rmpLayoutParams.asReadOnly()
+            override val rmpMediaUri = MutableStateFlow<Uri?>(null)//viewController.rmpMediaUri.asReadOnly()
 
             override fun rmpLayoutReset() {
-                viewController.rmpLayoutReset()
+                //viewController.rmpLayoutReset()
             }
 
             override fun rmpPlaybackChanged(state: PlaybackState) {
-                viewController.rmpPlaybackChanged(state)
+                //viewController.rmpPlaybackChanged(state)
             }
 
             override fun rmpPlaybackRateChanged(speed: Float) {
-                viewController.rmpPlaybackRateChanged(speed)
+                //viewController.rmpPlaybackRateChanged(speed)
             }
 
             override fun rmpMediaTimeChanged(currentTime: Long) {
-                viewController.rmpMediaTimeChanged(currentTime)
+                //viewController.rmpMediaTimeChanged(currentTime)
             }
 
             override fun addOnPlayerSateChangedCallback(callback: IObservablePlayer.IPlayerStateListener) {
-                viewController.addOnPlayerSateChangedCallback(callback)
+                //viewController.addOnPlayerSateChangedCallback(callback)
             }
 
             override fun removeOnPlayerSateChangedCallback(callback: IObservablePlayer.IPlayerStateListener) {
-                viewController.removeOnPlayerSateChangedCallback(callback)
+                //viewController.removeOnPlayerSateChangedCallback(callback)
             }
         }
 
