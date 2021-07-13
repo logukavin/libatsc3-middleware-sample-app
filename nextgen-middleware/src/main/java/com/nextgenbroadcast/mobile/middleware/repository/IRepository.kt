@@ -53,4 +53,5 @@ internal interface IRepository {
     fun resetMediaSate()
 
     fun incSessionNum()
+    fun getRouteMediaUri(routeMediaUrl: MediaUrl): Uri
 }

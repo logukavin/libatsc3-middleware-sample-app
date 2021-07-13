@@ -42,7 +42,7 @@ internal class RepositoryImpl(
     override val routeMediaUri: Flow<Uri?> = combine(playbackSource, routeMediaUrl, externalMediaUrl) { source, routeMediaUrl, externalMediaUrl ->
         if (source == PlaybackSource.BROADCAST) {
             routeMediaUrl?.let {
-                fileProvider.getMediaFileUri(routeMediaUrl.url)
+                getRouteMediaUri(routeMediaUrl)
             }
         } else {
             externalMediaUrl?.toUri()
@@ -184,6 +184,10 @@ internal class RepositoryImpl(
 
     override fun incSessionNum() {
         sessionNum.value++
+    }
+
+    override fun getRouteMediaUri(routeMediaUrl: MediaUrl): Uri {
+        return fileProvider.getMediaFileUri(routeMediaUrl.url)
     }
 
     companion object {
