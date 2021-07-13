@@ -47,7 +47,7 @@ internal object Atsc3ReceiverStandalone {
             }
         }
 
-        val repository = RepositoryImpl()
+        val repository = RepositoryImpl(settings)
 
         val db = SGDataBase.getDatabase(appContext)
         val serviceGuideStore = RoomServiceGuideStore(db).apply {

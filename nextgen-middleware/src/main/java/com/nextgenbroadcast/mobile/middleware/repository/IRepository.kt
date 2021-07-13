@@ -3,10 +3,12 @@ package com.nextgenbroadcast.mobile.middleware.repository
 import android.location.Location
 import com.nextgenbroadcast.mobile.core.model.MediaUrl
 import com.nextgenbroadcast.mobile.core.model.AVService
+import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.alerts.AeaTable
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPackage
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.SGUrl
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 
 internal interface IRepository {
@@ -22,6 +24,7 @@ internal interface IRepository {
     val applications: StateFlow<List<Atsc3Application>>
     val services: StateFlow<List<AVService>>
     val heldPackage: StateFlow<Atsc3HeldPackage?>
+    val appData: Flow<AppData?>
 
     val lastLocation: StateFlow<Location?>
 
@@ -42,4 +45,6 @@ internal interface IRepository {
     fun updateLastLocation(location: Location?)
 
     fun reset()
+
+    fun onNewSessionStarted()
 }

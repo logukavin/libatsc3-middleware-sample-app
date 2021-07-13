@@ -1,4 +1,4 @@
-package com.nextgenbroadcast.mobile.middleware.location
+package com.nextgenbroadcast.mobile.core.initialization
 
 import android.content.Context
 
