@@ -96,7 +96,7 @@ internal class MediaHolder(
         player.reset()
 
         mediaSession.setQueueTitle(service?.shortName)
-
+        mediaSession.isActive = service != null
         mediaSession.setMetadata(
             MediaMetadataCompat.Builder().apply {
                 if (service != null) {
@@ -111,15 +111,7 @@ internal class MediaHolder(
 
     fun selectMediaService(service: AVService) {
         player.reset()
-
-        receiver.selectService(service) { result ->
-            withContext(Dispatchers.Main) {
-                if (result) {
-                    //TODO: we must deactivate it
-                    mediaSession.isActive = true
-                }
-            }
-        }
+        receiver.selectService(service)
     }
 
     fun onPlaybackStateChanged(state: PlaybackState) {
