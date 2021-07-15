@@ -1,4 +1,4 @@
-package com.nextgenbroadcast.mobile.middleware.sample.useragent
+package com.nextgenbroadcast.mobile.middleware.sample.adapter
 
 import android.content.Context
 import android.view.LayoutInflater

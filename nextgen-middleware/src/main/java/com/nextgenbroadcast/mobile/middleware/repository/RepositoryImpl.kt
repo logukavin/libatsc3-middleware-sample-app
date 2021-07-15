@@ -1,35 +1,57 @@
 package com.nextgenbroadcast.mobile.middleware.repository
 
 import android.location.Location
+import android.net.Uri
 import android.util.Log
-import com.nextgenbroadcast.mobile.core.model.MediaUrl
-import com.nextgenbroadcast.mobile.core.model.AVService
-import com.nextgenbroadcast.mobile.core.model.AppData
+import androidx.core.net.toUri
+import com.nextgenbroadcast.mobile.core.model.*
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.alerts.AeaTable
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPackage
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.SGUrl
+import com.nextgenbroadcast.mobile.middleware.controller.PlaybackSource
 import com.nextgenbroadcast.mobile.middleware.server.ServerUtils
+import com.nextgenbroadcast.mobile.middleware.service.provider.IMediaFileProvider
 import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import java.time.ZonedDateTime
 import java.util.concurrent.ConcurrentHashMap
 
 internal class RepositoryImpl(
+    private val fileProvider: IMediaFileProvider,
     private val settings: IMiddlewareSettings
 ) : IRepository {
     private val _applications = ConcurrentHashMap<String, Atsc3Application>()
     private val sessionNum = MutableStateFlow(0)
 
+    // Receiver
+    override val routes = MutableStateFlow<List<RouteUrl>>(emptyList())
+    override val services = MutableStateFlow<List<AVService>>(emptyList())
     override val selectedService = MutableStateFlow<AVService?>(null)
     override val serviceGuideUrls = MutableStateFlow<List<SGUrl>>(emptyList())
     override val alertsForNotify = MutableStateFlow<List<AeaTable>>(emptyList())
+    override val lastLocation = MutableStateFlow<Location?>(null)
 
+    // Media Player
     override val routeMediaUrl = MutableStateFlow<MediaUrl?>(null)
+    override val externalMediaUrl = MutableStateFlow<String?>(null)
+    override val playbackSource = MutableStateFlow(PlaybackSource.BROADCAST)
+    override val layoutParams = MutableStateFlow(RPMParams())
+    override val requestedMediaState = MutableStateFlow(PlaybackState.PLAYING)
+    override val routeMediaUri: Flow<Uri?> = combine(playbackSource, routeMediaUrl, externalMediaUrl) { source, routeMediaUrl, externalMediaUrl ->
+        if (source == PlaybackSource.BROADCAST) {
+            routeMediaUrl?.let {
+                getRouteMediaUri(routeMediaUrl)
+            }
+        } else {
+            externalMediaUrl?.toUri()
+        }
+    }
 
+    // User Agent
     override val applications = MutableStateFlow<List<Atsc3Application>>(emptyList())
-    override val services = MutableStateFlow<List<AVService>>(emptyList())
     override val heldPackage = MutableStateFlow<Atsc3HeldPackage?>(null)
     override val appData = combine(heldPackage, applications, sessionNum) { held, applications, _ ->
         held?.let {
@@ -51,8 +73,6 @@ internal class RepositoryImpl(
         }
     }
 
-    override val lastLocation = MutableStateFlow<Location?>(null)
-
     override fun addOrUpdateApplication(application: Atsc3Application) {
         _applications[application.uid] = application
         applications.value = _applications.values.toList()
@@ -62,6 +82,10 @@ internal class RepositoryImpl(
         return _applications.elements().toList().firstOrNull { app ->
             app.appContextIdList.contains(appContextId)
         }
+    }
+
+    override fun setRoutes(routes: List<RouteUrl>) {
+        this.routes.value = routes
     }
 
     override fun setServices(services: List<AVService>) {
@@ -84,13 +108,39 @@ internal class RepositoryImpl(
         return services.value.firstOrNull(predicate)
     }
 
-    override fun setHeldPackage(data: Atsc3HeldPackage?) {
-        heldPackage.value = data
+    override fun setHeldPackage(data: Atsc3HeldPackage?): Boolean {
+        return synchronized(heldPackage) {
+            val oldValue = heldPackage.value
+            heldPackage.value = data
+            oldValue != data
+        }
     }
 
     override fun setMediaUrl(mediaUrl: MediaUrl?) {
         Log.d(TAG, "setMediaUrl: $mediaUrl")
         routeMediaUrl.value = mediaUrl
+    }
+
+    override fun setLayoutParams(params: RPMParams) {
+        layoutParams.value = params
+    }
+
+    override fun setExternalMediaUrl(mediaUrl: String?) {
+        if (mediaUrl != null) {
+            playbackSource.value = PlaybackSource.BROADBAND
+        } else {
+            playbackSource.value = PlaybackSource.BROADCAST
+        }
+        externalMediaUrl.value = mediaUrl
+    }
+
+    override fun setRequestedMediaState(state: PlaybackState) {
+        requestedMediaState.value = state
+    }
+
+    override fun resetMediaSate() {
+        layoutParams.value = RPMParams()
+        requestedMediaState.value = PlaybackState.PLAYING
     }
 
     override fun setAlertList(newAlerts: List<AeaTable>) {
@@ -129,12 +179,20 @@ internal class RepositoryImpl(
         serviceGuideUrls.value = emptyList()
         services.value = emptyList()
         heldPackage.value = null
-        routeMediaUrl.value = null
         alertsForNotify.value = emptyList()
+        routeMediaUrl.value = null
+        externalMediaUrl.value = null
+        playbackSource.value = PlaybackSource.BROADCAST
+        layoutParams.value = RPMParams()
+        requestedMediaState.value = PlaybackState.PLAYING
     }
 
-    override fun onNewSessionStarted() {
+    override fun incSessionNum() {
         sessionNum.value++
+    }
+
+    override fun getRouteMediaUri(routeMediaUrl: MediaUrl): Uri {
+        return fileProvider.getMediaFileUri(routeMediaUrl.url)
     }
 
     companion object {

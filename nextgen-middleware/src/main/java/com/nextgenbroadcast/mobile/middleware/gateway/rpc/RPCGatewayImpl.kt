@@ -9,6 +9,7 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.SGUrl
 import com.nextgenbroadcast.mobile.middleware.cache.IApplicationCache
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
 import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
+import com.nextgenbroadcast.mobile.middleware.repository.IRepository
 import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
 import com.nextgenbroadcast.mobile.middleware.rpc.notification.NotificationType
 import com.nextgenbroadcast.mobile.middleware.rpc.notification.RPCNotificationHelper
@@ -22,12 +23,13 @@ import kotlinx.coroutines.flow.combine
 import java.util.concurrent.CopyOnWriteArrayList
 
 internal class RPCGatewayImpl(
-        private val viewController: IViewController,
-        private val serviceController: IServiceController,
-        private val applicationCache: IApplicationCache,
-        private val settings: IMiddlewareSettings,
-        private val stateScope: CoroutineScope = CoroutineScope(Dispatchers.Default),
-        private val ioScope: CoroutineScope = CoroutineScope(Dispatchers.IO)
+    private val repository: IRepository,
+    private val viewController: IViewController,
+    private val serviceController: IServiceController,
+    private val applicationCache: IApplicationCache,
+    private val settings: IMiddlewareSettings,
+    private val stateScope: CoroutineScope = CoroutineScope(Dispatchers.Default),
+    private val ioScope: CoroutineScope = CoroutineScope(Dispatchers.IO)
 ) : IRPCGateway {
     private val rpcNotifier = RPCNotificationHelper(this::sendNotification)
     private val serviceGuideUrls = HashSet<SGUrl>()
@@ -37,13 +39,15 @@ internal class RPCGatewayImpl(
     private val subscribedNotifications: MutableSet<NotificationType> = mutableSetOf()
     private var mergedAlerts: List<AeaTable> = emptyList()
 
+    private val selectedService = repository.selectedService
+
     override val deviceId = settings.deviceId
     override val advertisingId = settings.advertisingId
     override val language: String = settings.locale.language
     override val queryServiceId: String?
-        get() = serviceController.getCurrentService()?.globalId
+        get() = selectedService.value?.globalId
     override val mediaUrl: String?
-        get() = serviceController.getCurrentRouteMediaUrl()?.url
+        get() = repository.routeMediaUrl.value?.url
     override val playbackState: PlaybackState
         get() = viewController.rmpState.value
     private val rmpPlaybackTime: Long
@@ -55,7 +59,7 @@ internal class RPCGatewayImpl(
 
     init {
         stateScope.launch {
-            viewController.appData.combine(serviceController.selectedService) { appData, service ->
+            repository.appData.combine(selectedService) { appData, service ->
                 Pair(appData, service)
             }.collect { (appData, service) ->
                 if (appData != null && service != null) {
@@ -65,7 +69,7 @@ internal class RPCGatewayImpl(
         }
 
         stateScope.launch {
-            serviceController.serviceGuideUrls.collect { urls ->
+            repository.serviceGuideUrls.collect { urls ->
                 if (!urls.isNullOrEmpty()) {
                     onServiceGuidUrls(urls)
                     serviceGuideUrls.addAll(urls)
@@ -74,7 +78,7 @@ internal class RPCGatewayImpl(
         }
 
         stateScope.launch {
-            viewController.appData.combine(serviceController.applications) { appData, applications ->
+            repository.appData.combine(repository.applications) { appData, applications ->
                 if (appData != null) {
                     applications.filter { app ->
                         app.cachePath == appData.cachePath
@@ -100,7 +104,7 @@ internal class RPCGatewayImpl(
         }
 
         stateScope.launch {
-            serviceController.alertList.collect { list ->
+            repository.alertsForNotify.collect { list ->
                 if (list.isNotEmpty()) {
                     val result = list.subtract(mergedAlerts).toList()
                     onAlertingChanged(result.mapToRpcAlertList())
@@ -129,15 +133,17 @@ internal class RPCGatewayImpl(
     }
 
     override fun updateRMPPosition(scaleFactor: Double, xPos: Double, yPos: Double) {
-        viewController.updateRMPPosition(scaleFactor, xPos, yPos)
+        viewController.requestPlayerLayout(scaleFactor, xPos, yPos)
     }
 
+    //TODO: currently delay not supported and blocked on RPC level
     override fun requestMediaPlay(mediaUrl: String?, delay: Long) {
-        viewController.requestMediaPlay(mediaUrl, delay)
+        viewController.requestPlayerState(PlaybackState.PLAYING, mediaUrl)
     }
 
+    //TODO: currently delay not supported and blocked on RPC level
     override fun requestMediaStop(delay: Long) {
-        viewController.requestMediaStop(delay)
+        viewController.requestPlayerState(PlaybackState.IDLE)
     }
 
     override fun subscribeNotifications(notifications: Set<NotificationType>): Set<NotificationType> {
@@ -194,7 +200,7 @@ internal class RPCGatewayImpl(
     }
 
     override fun requestServiceChange(globalServiceId: String): Boolean {
-        return serviceController.findServiceById(globalServiceId)?.let { service ->
+        return repository.findServiceBy(globalServiceId)?.let { service ->
             runBlocking {
                 serviceController.selectService(service)
             }
@@ -202,7 +208,7 @@ internal class RPCGatewayImpl(
     }
 
     override fun getAlertChangingData(alertingTypes: List<String>): List<AlertingRpcResponse.Alert> {
-        val rpcAlertList = serviceController.alertList.value.mapToRpcAlertList()
+        val rpcAlertList = repository.alertsForNotify.value.mapToRpcAlertList()
         return if (alertingTypes.isEmpty()) {
             rpcAlertList
         } else {

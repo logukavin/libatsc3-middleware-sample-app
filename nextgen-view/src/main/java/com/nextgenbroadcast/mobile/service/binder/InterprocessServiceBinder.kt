@@ -54,7 +54,6 @@ class InterprocessServiceBinder(
 
     inner class UserAgentPresenter : IUserAgentPresenter {
         override val appData = MutableStateFlow<AppData?>(null)
-        override val appState = MutableStateFlow(ApplicationState.UNAVAILABLE)
 
         override fun setApplicationState(state: ApplicationState) {
             sendAction(IServiceBinder.ACTION_BA_STATE_CHANGED, bundleOf(

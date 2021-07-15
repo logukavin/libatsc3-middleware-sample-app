@@ -19,6 +19,7 @@ interface IAtsc3Module {
     fun stop()
     fun close()
     fun isIdle(): Boolean
+    fun getSelectedBSID(): Int
 
     fun getCurrentConfiguration(): Pair<String, Map<Any, Atsc3ServiceLocationTable>>?
 
