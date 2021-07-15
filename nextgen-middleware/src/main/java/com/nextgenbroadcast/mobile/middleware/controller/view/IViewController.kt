@@ -16,4 +16,8 @@ internal interface IViewController {
     fun rmpPlaybackChanged(state: PlaybackState)
     fun rmpPlaybackRateChanged(speed: Float)
     fun rmpMediaTimeChanged(currentTime: Long)
+
+    fun requestPlayerLayout(scaleFactor: Double, xPos: Double, yPos: Double)
+    fun requestPlayerState(state: PlaybackState)
+    fun requestPlayerState(state: PlaybackState, externalMediaUrl: String?)
 }

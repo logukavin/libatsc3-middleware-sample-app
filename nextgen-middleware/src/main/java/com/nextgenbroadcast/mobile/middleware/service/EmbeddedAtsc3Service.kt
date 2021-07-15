@@ -18,9 +18,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
-@Deprecated("Use ReceiverContentProvider instead")
 class EmbeddedAtsc3Service : Atsc3ForegroundService() {
 
+    @Deprecated("Use ReceiverContentProvider instead")
     override fun createServiceBinder(receiver: Atsc3ReceiverCore): IBinder =
             ServiceBinder(/*receiver.serviceController*/object : IServiceController {
                 override val receiverState: StateFlow<ReceiverState>

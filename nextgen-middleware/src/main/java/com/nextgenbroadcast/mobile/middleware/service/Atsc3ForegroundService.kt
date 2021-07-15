@@ -54,7 +54,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     internal lateinit var telemetryHolder: TelemetryHolder
 
     // Srt
-    private lateinit var srtList: SrtListHolder
+    private lateinit var srtListHolder: SrtListHolder
 
     // Location
     private lateinit var locationHolder: LocationHolder
@@ -100,9 +100,11 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
                 }
         )
 
-        srtList = SrtListHolder(applicationContext).apply {
-            open()
+        srtListHolder = SrtListHolder(applicationContext).apply {
+            read()
         }
+
+        atsc3Receiver.setRouteList(srtListHolder.getFullSrtList())
 
         startStateObservation()
     }
@@ -288,8 +290,8 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
     override fun onLoadChildren(parentId: String, result: Result<List<MediaBrowserCompat.MediaItem>>) {
         if (MediaHolder.isRoot(parentId)) {
-            result.sendResult(srtList.getFullSrtList().map { (title, path, id) ->
-                MediaHolder.getItem(title, path, id)
+            result.sendResult(srtListHolder.getFullSrtList().map { source ->
+                MediaHolder.getItem(source.title, source.path, source.id)
             })
             return
         }
@@ -353,7 +355,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
             Log.d(TAG, "Can't initialize, something is wrong in metadata", e)
         }
 
-        val sourcePath = srtList.getDefaultRoute()
+        val sourcePath = srtListHolder.getDefaultRoutes()
         if (sourcePath != null) {
             openRoute(applicationContext, sourcePath)
         }

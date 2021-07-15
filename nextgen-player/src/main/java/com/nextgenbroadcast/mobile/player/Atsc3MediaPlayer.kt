@@ -70,6 +70,9 @@ class Atsc3MediaPlayer(
     val isPlaying: Boolean
         get() = _player?.isPlaying ?: false
 
+    val isPaused: Boolean
+        get() = !playWhenReady
+
     val playbackState: PlaybackState
         get() = _player?.let {
             playbackState(it.playbackState, it.playWhenReady)

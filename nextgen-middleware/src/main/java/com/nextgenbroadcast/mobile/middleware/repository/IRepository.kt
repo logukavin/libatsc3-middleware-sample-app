@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.StateFlow
 
 internal interface IRepository {
     // Receiver
+    val routes: StateFlow<List<RouteUrl>>
     val services: StateFlow<List<AVService>>
     val selectedService: StateFlow<AVService?>
     val serviceGuideUrls: StateFlow<List<SGUrl>>
@@ -39,6 +40,7 @@ internal interface IRepository {
     fun addOrUpdateApplication(application: Atsc3Application)
     fun findApplication(appContextId: String): Atsc3Application?
 
+    fun setRoutes(soutes: List<RouteUrl>)
     fun setServices(services: List<AVService>)
     fun setSelectedService(service: AVService?)
     fun findServiceBy(globalServiceId: String): AVService?
@@ -47,7 +49,7 @@ internal interface IRepository {
 
     fun setHeldPackage(data: Atsc3HeldPackage?): Boolean
     fun setMediaUrl(mediaUrl: MediaUrl?)
-    fun setLayoutParams(scaleFactor: Double, xPos: Double, yPos: Double)
+    fun setLayoutParams(params: RPMParams)
     fun setExternalMediaUrl(mediaUrl: String?)
     fun setRequestedMediaState(state: PlaybackState)
     fun resetMediaSate()

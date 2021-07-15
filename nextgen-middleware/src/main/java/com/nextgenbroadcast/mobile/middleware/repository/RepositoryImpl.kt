@@ -27,6 +27,7 @@ internal class RepositoryImpl(
     private val sessionNum = MutableStateFlow(0)
 
     // Receiver
+    override val routes = MutableStateFlow<List<RouteUrl>>(emptyList())
     override val services = MutableStateFlow<List<AVService>>(emptyList())
     override val selectedService = MutableStateFlow<AVService?>(null)
     override val serviceGuideUrls = MutableStateFlow<List<SGUrl>>(emptyList())
@@ -83,6 +84,10 @@ internal class RepositoryImpl(
         }
     }
 
+    override fun setRoutes(routes: List<RouteUrl>) {
+        this.routes.value = routes
+    }
+
     override fun setServices(services: List<AVService>) {
         this.services.value = services
     }
@@ -116,8 +121,8 @@ internal class RepositoryImpl(
         routeMediaUrl.value = mediaUrl
     }
 
-    override fun setLayoutParams(scaleFactor: Double, xPos: Double, yPos: Double) {
-        layoutParams.value = RPMParams(scaleFactor, xPos.toInt(), yPos.toInt())
+    override fun setLayoutParams(params: RPMParams) {
+        layoutParams.value = params
     }
 
     override fun setExternalMediaUrl(mediaUrl: String?) {

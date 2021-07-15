@@ -133,18 +133,17 @@ internal class RPCGatewayImpl(
     }
 
     override fun updateRMPPosition(scaleFactor: Double, xPos: Double, yPos: Double) {
-        repository.setLayoutParams(scaleFactor, xPos, yPos)
+        viewController.requestPlayerLayout(scaleFactor, xPos, yPos)
     }
 
     //TODO: currently delay not supported and blocked on RPC level
     override fun requestMediaPlay(mediaUrl: String?, delay: Long) {
-        repository.setExternalMediaUrl(mediaUrl)
-        repository.setRequestedMediaState(PlaybackState.PLAYING)
+        viewController.requestPlayerState(PlaybackState.PLAYING, mediaUrl)
     }
 
     //TODO: currently delay not supported and blocked on RPC level
     override fun requestMediaStop(delay: Long) {
-        repository.setRequestedMediaState(PlaybackState.IDLE)
+        viewController.requestPlayerState(PlaybackState.IDLE)
     }
 
     override fun subscribeNotifications(notifications: Set<NotificationType>): Set<NotificationType> {
