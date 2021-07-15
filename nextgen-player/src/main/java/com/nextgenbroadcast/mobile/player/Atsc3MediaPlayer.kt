@@ -49,8 +49,10 @@ class Atsc3MediaPlayer(
     private var rmpState: PlaybackState? = null
     private var resetPlayerJob: Job? = null
 
-    private var lastMediaUri: Uri? = null
-    private var lastMimeType: String? = null
+    var lastMediaUri: Uri? = null
+        private set
+    var lastMimeType: String? = null
+        private set
 
     val player: Player?
         get() = _player
@@ -68,10 +70,19 @@ class Atsc3MediaPlayer(
     val isPlaying: Boolean
         get() = _player?.isPlaying ?: false
 
+    val isPaused: Boolean
+        get() = !playWhenReady
+
     val playbackState: PlaybackState
         get() = _player?.let {
             playbackState(it.playbackState, it.playWhenReady)
         } ?: PlaybackState.IDLE
+
+    val playbackPosition
+        get() = _player?.currentPosition ?: 0
+
+    val playbackSpeed: Float
+        get() = _player?.playbackParameters?.speed ?: 0f
 
     val isInitialized: Boolean
         get() = playbackState != PlaybackState.IDLE

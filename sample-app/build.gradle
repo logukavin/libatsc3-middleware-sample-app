@@ -156,7 +156,6 @@ play {
 }
 
 def coreKtxVersion = rootProject.ext.coreKtxVersion
-def daggerVersion = rootProject.ext.daggerVersion
 def lifecycleVersion = rootProject.ext.lifecycleVersion
 def coroutinesVersion = rootProject.ext.coroutinesVersion
 def startupRuntime = rootProject.ext.startupRuntime
@@ -187,11 +186,6 @@ dependencies {
     implementation "androidx.lifecycle:lifecycle-livedata-ktx:$lifecycleVersion"
     implementation "androidx.lifecycle:lifecycle-common-java8:$lifecycleVersion"
     implementation "androidx.lifecycle:lifecycle-service:$lifecycleVersion"
-
-    implementation "com.google.dagger:dagger:$daggerVersion"
-    implementation "com.google.dagger:dagger-android:$daggerVersion"
-    kapt "com.google.dagger:dagger-compiler:$daggerVersion"
-    kapt "com.google.dagger:dagger-android-processor:$daggerVersion"
 
     implementation "androidx.coordinatorlayout:coordinatorlayout:1.1.0"
     implementation 'com.google.android.material:material:1.3.0'
