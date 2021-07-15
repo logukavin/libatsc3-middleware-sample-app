@@ -41,7 +41,7 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
 import java.util.*
 
-class MainFragment : Fragment(), ReceiverContentResolver.Listener {
+class MainFragment : Fragment() {
     private val viewViewModel: ViewViewModel by activityViewModels()
 
     private lateinit var serviceAdapter: ServiceAdapter
@@ -89,7 +89,7 @@ class MainFragment : Fragment(), ReceiverContentResolver.Listener {
             }
         })
 
-        receiverContentResolver = ReceiverContentResolver(context, this)
+        receiverContentResolver = ReceiverContentResolver(context)
 
         telemetryClient = TelemetryClient(
             StaticTelemetryObserver(),
@@ -201,20 +201,14 @@ class MainFragment : Fragment(), ReceiverContentResolver.Listener {
             receiverContentResolver.publishPlayerState(state, position, rate)
         }
 
-        observeData()
+        observeLocalData()
     }
 
     override fun onStart() {
         super.onStart()
 
         receiverContentResolver.register()
-
-        // get initial data
-        onDataReceived(receiverContentResolver.queryAppData())
-        onReceiverStateChanged(receiverContentResolver.queryReceiverState() ?: ReceiverState.idle())
-        receiverContentResolver.queryPlayerData()?.let { (mediaUri, layoutParams, state) ->
-            onReceiverPlayerChanged(mediaUri, layoutParams, state)
-        }
+        subscribeReceiverData()
 
         if (viewViewModel.showPhyChart.value == true) {
             telemetryClient.start(false)
@@ -242,67 +236,70 @@ class MainFragment : Fragment(), ReceiverContentResolver.Listener {
         phyLoggingJob = null
     }
 
-    override fun onDataReceived(appData: AppData?) {
-        switchApplication(appData)
-        viewViewModel.appData.value = appData
-    }
+    private fun subscribeReceiverData() {
+        receiverContentResolver.observeApplicationData { appData ->
+            switchApplication(appData)
+            viewViewModel.appData.value = appData
+        }
 
-    override fun onReceiverStateChanged(state: ReceiverState) {
-        viewViewModel.receiverState.value = state
+        receiverContentResolver.observeReceiverState { state ->
+            viewViewModel.receiverState.value = state
 
-        when (state.state) {
-            ReceiverState.State.IDLE -> {
-                // exit PIP mode when Receiver is de-initialized
-                val activity = requireActivity()
-                if (activity.isInPictureInPictureMode) {
-                    startActivity(Intent(activity, MainActivity::class.java).apply {
-                        flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-                    })
+            when (state.state) {
+                ReceiverState.State.IDLE -> {
+                    // exit PIP mode when Receiver is de-initialized
+                    val activity = requireActivity()
+                    if (activity.isInPictureInPictureMode) {
+                        startActivity(Intent(activity, MainActivity::class.java).apply {
+                            flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+                        })
+                    }
                 }
-            }
 
-            ReceiverState.State.READY -> {
-                // Automatically start playing the first service in list when Receiver became ready
-                with(viewViewModel.defaultService) {
-                    removeObservers(this@MainFragment)
-                    observe(this@MainFragment) { defaultService ->
-                        if (defaultService != null) {
-                            removeObservers(this@MainFragment)
-                            selectService(defaultService)
+                ReceiverState.State.READY -> {
+                    // Automatically start playing the first service in list when Receiver became ready
+                    with(viewViewModel.defaultService) {
+                        removeObservers(this@MainFragment)
+                        observe(this@MainFragment) { defaultService ->
+                            if (defaultService != null) {
+                                removeObservers(this@MainFragment)
+                                selectService(defaultService)
+                            }
                         }
                     }
                 }
+
+                else -> {
+                }
+            }
+        }
+
+        receiverContentResolver.observePlayerState { mediaUri, params, state ->
+            Log.d(TAG, "Receiver Media Player changed - uri: $mediaUri, params: $params, state: $state")
+
+            viewViewModel.mediaUri.value = mediaUri
+
+            updateRMPLayout(
+                params.x.toFloat() / 100,
+                params.y.toFloat() / 100,
+                params.scale.toFloat() / 100
+            )
+
+            if (mediaUri != null) {
+                receiver_player.play(mediaUri)
+            } else {
+                receiver_player.stopAndClear()
             }
 
-            else -> {}
+            when (state) {
+                PlaybackState.PAUSED -> receiver_player.pause()
+                PlaybackState.PLAYING -> receiver_player.tryReplay()
+                PlaybackState.IDLE -> receiver_player.stop()
+            }
         }
     }
 
-    override fun onReceiverPlayerChanged(mediaUri: Uri?, params: RPMParams, state: PlaybackState) {
-        Log.d(TAG, "Receiver Media Player changed - uri: $mediaUri, params: $params, state: $state")
-
-        viewViewModel.mediaUri.value = mediaUri
-
-        updateRMPLayout(
-            params.x.toFloat() / 100,
-            params.y.toFloat() / 100,
-            params.scale.toFloat() / 100
-        )
-
-        if (mediaUri != null) {
-            receiver_player.play(mediaUri)
-        } else {
-            receiver_player.stopAndClear()
-        }
-
-        when(state) {
-            PlaybackState.PAUSED -> receiver_player.pause()
-            PlaybackState.PLAYING -> receiver_player.tryReplay()
-            PlaybackState.IDLE -> receiver_player.stop()
-        }
-    }
-
-    private fun observeData() {
+    private fun observeLocalData() {
         viewViewModel.showPhyInfo.mapWith(viewViewModel.showDebugInfo) { (showPhy, showInfo) ->
             (showInfo ?: true) && (showPhy ?: false)
         }.observe(viewLifecycleOwner) { phyInfoEnabled ->

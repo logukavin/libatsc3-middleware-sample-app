@@ -42,9 +42,11 @@ class ReceiverContentProvider : ContentProvider() {
         receiver = Atsc3ReceiverStandalone.get(appContext)
 
         with(uriMatcher) {
+            addURI(authority, CONTENT_RECEIVER_ROUTE_LIST, QUERY_RECEIVER_ROUTE_LIST)
             addURI(authority, CONTENT_RECEIVER_ROUTE, QUERY_RECEIVER_ROUTE)
             addURI(authority, CONTENT_RECEIVER_FREQUENCY, QUERY_RECEIVER_FREQUENCY)
             addURI(authority, CONTENT_RECEIVER_SERVICE, QUERY_RECEIVER_SERVICE)
+            addURI(authority, CONTENT_RECEIVER_SERVICE_LIST, QUERY_RECEIVER_SERVICE_LIST)
             addURI(authority, CONTENT_PHY_VERSION_INFO, QUERY_PHY_VERSION_INFO)
             addURI(authority, CONTENT_APP_DATA, QUERY_APP_DATA)
             addURI(authority, CONTENT_APP_STATE, QUERY_APP_STATE)
@@ -61,10 +63,24 @@ class ReceiverContentProvider : ContentProvider() {
         rmpLayoutParams = repository.layoutParams
         rmpState = repository.requestedMediaState
 
+        val receiverRouteListUri = getUriForPath(appContext, CONTENT_RECEIVER_ROUTE_LIST)
+        stateScope.launch {
+            repository.routes.collect {
+                contentResolver.notifyChange(receiverRouteListUri, null)
+            }
+        }
+
         val receiverServiceUri = getUriForPath(appContext, CONTENT_RECEIVER_SERVICE)
         stateScope.launch {
             repository.selectedService.collect {
                 contentResolver.notifyChange(receiverServiceUri, null)
+            }
+        }
+
+        val receiverServiceListUri = getUriForPath(appContext, CONTENT_RECEIVER_SERVICE_LIST)
+        stateScope.launch {
+            receiver.observeRouteServices {
+                contentResolver.notifyChange(receiverServiceListUri, null)
             }
         }
 
@@ -104,6 +120,17 @@ class ReceiverContentProvider : ContentProvider() {
 
     override fun query(uri: Uri, projection: Array<String>?, selection: String?, selectionArgs: Array<String>?, sortOrder: String?): Cursor? {
         return when (uriMatcher.match(uri)) {
+            QUERY_RECEIVER_ROUTE_LIST -> {
+                MatrixCursor(arrayOf(COLUMN_ROUTE_ID, COLUMN_ROUTE_PATH, COLUMN_ROUTE_NAME)).apply {
+                    receiver.getSourceList().forEach { source ->
+                        newRow()
+                            .add(COLUMN_ROUTE_ID, source.id)
+                            .add(COLUMN_ROUTE_PATH, source.path)
+                            .add(COLUMN_ROUTE_NAME, source.title)
+                    }
+                }
+            }
+
             QUERY_RECEIVER_FREQUENCY -> {
                 MatrixCursor(arrayOf(COLUMN_FREQUENCY)).apply {
                     newRow().add(COLUMN_FREQUENCY, receiver.getFrequency())
@@ -114,6 +141,22 @@ class ReceiverContentProvider : ContentProvider() {
                 MatrixCursor(arrayOf(COLUMN_SERVICE_BSID, COLUMN_SERVICE_ID, COLUMN_SERVICE_GLOBAL_ID,
                     COLUMN_SERVICE_SHORT_NAME, COLUMN_SERVICE_CATEGORY, COLUMN_SERVICE_MAJOR_NO, COLUMN_SERVICE_MINOR_NO)).apply {
                     receiver.getSelectedService()?.let { service ->
+                        newRow()
+                            .add(COLUMN_SERVICE_BSID, service.bsid)
+                            .add(COLUMN_SERVICE_ID, service.id)
+                            .add(COLUMN_SERVICE_GLOBAL_ID, service.globalId)
+                            .add(COLUMN_SERVICE_SHORT_NAME, service.shortName)
+                            .add(COLUMN_SERVICE_CATEGORY, service.category)
+                            .add(COLUMN_SERVICE_MAJOR_NO, service.majorChannelNo)
+                            .add(COLUMN_SERVICE_MINOR_NO, service.minorChannelNo)
+                    }
+                }
+            }
+
+            QUERY_RECEIVER_SERVICE_LIST -> {
+                MatrixCursor(arrayOf(COLUMN_SERVICE_BSID, COLUMN_SERVICE_ID, COLUMN_SERVICE_GLOBAL_ID,
+                    COLUMN_SERVICE_SHORT_NAME, COLUMN_SERVICE_CATEGORY, COLUMN_SERVICE_MAJOR_NO, COLUMN_SERVICE_MINOR_NO)).apply {
+                    receiver.getServiceList().forEach{ service ->
                         newRow()
                             .add(COLUMN_SERVICE_BSID, service.bsid)
                             .add(COLUMN_SERVICE_ID, service.id)
@@ -239,6 +282,14 @@ class ReceiverContentProvider : ContentProvider() {
                     }
                 }
 
+                QUERY_RECEIVER_MEDIA_PLAYER -> {
+                    value.getAsInteger(COLUMN_PLAYER_STATE)?.let { stateCode ->
+                        PlaybackState.valueOf(stateCode)
+                    }?.let { playbackState ->
+                        receiver.viewController.requestPlayerState(playbackState)
+                    }
+                }
+
                 else -> throw IllegalArgumentException("Wrong URI: $uri")
             }
         }
@@ -296,19 +347,23 @@ class ReceiverContentProvider : ContentProvider() {
     }
 
     companion object {
-        private const val QUERY_RECEIVER_ROUTE = 1
-        private const val QUERY_RECEIVER_FREQUENCY = 2
-        private const val QUERY_RECEIVER_SERVICE = 3
-        private const val QUERY_PHY_VERSION_INFO = 4
-        private const val QUERY_APP_DATA = 5
-        private const val QUERY_APP_STATE = 6
-        private const val QUERY_CERTIFICATE = 7
-        private const val QUERY_RECEIVER_STATE = 8
-        private const val QUERY_RECEIVER_MEDIA_PLAYER = 9
+        private const val QUERY_RECEIVER_ROUTE_LIST = 1
+        private const val QUERY_RECEIVER_ROUTE = 2
+        private const val QUERY_RECEIVER_FREQUENCY = 3
+        private const val QUERY_RECEIVER_SERVICE = 4
+        private const val QUERY_RECEIVER_SERVICE_LIST = 5
+        private const val QUERY_PHY_VERSION_INFO = 6
+        private const val QUERY_APP_DATA = 7
+        private const val QUERY_APP_STATE = 8
+        private const val QUERY_CERTIFICATE = 9
+        private const val QUERY_RECEIVER_STATE = 10
+        private const val QUERY_RECEIVER_MEDIA_PLAYER = 11
 
+        const val CONTENT_RECEIVER_ROUTE_LIST = "receiverRouteList"
         const val CONTENT_RECEIVER_ROUTE = "receiverOpenRoute"
         const val CONTENT_RECEIVER_FREQUENCY = "receiverFrequency"
         const val CONTENT_RECEIVER_SERVICE = "receiverService"
+        const val CONTENT_RECEIVER_SERVICE_LIST = "receiverServiceList"
         const val CONTENT_PHY_VERSION_INFO = "receiverPhyInfo"
         const val CONTENT_APP_DATA = "appData"
         const val CONTENT_APP_STATE = "appState"
@@ -327,7 +382,9 @@ class ReceiverContentProvider : ContentProvider() {
         const val COLUMN_STATE_CODE = "receiverStateValue"
         const val COLUMN_STATE_INDEX = "receiverStateIndex"
         const val COLUMN_STATE_COUNT = "receiverStateCount"
+        const val COLUMN_ROUTE_ID = "receiverRouteId"
         const val COLUMN_ROUTE_PATH = "receiverRoutePath"
+        const val COLUMN_ROUTE_NAME = "receiverRouteName"
         const val COLUMN_FREQUENCY = "receiverFrequency"
         const val COLUMN_FREQUENCY_LIST = "receiverFrequencyList"
 

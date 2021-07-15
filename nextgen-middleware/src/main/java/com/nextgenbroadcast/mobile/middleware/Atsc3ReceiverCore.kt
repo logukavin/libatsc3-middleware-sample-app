@@ -34,7 +34,7 @@ internal class Atsc3ReceiverCore(
     private val mainScope: CoroutineScope = CoroutineScope(Dispatchers.Main)
 
     private val serviceController: IServiceController = ServiceControllerImpl(repository, settings, atsc3Module, analytics, serviceGuideReader, coreScope)
-    val viewController: IViewController = ViewControllerImpl(analytics)
+    val viewController: IViewController = ViewControllerImpl(repository, analytics)
 
     var ignoreAudioServiceMedia: Boolean = true
         private set
@@ -62,6 +62,10 @@ internal class Atsc3ReceiverCore(
 
     fun isIdle(): Boolean {
         return atsc3Module.isIdle()
+    }
+
+    override fun setRouteList(routes: List<RouteUrl>) {
+        repository.setRoutes(routes)
     }
 
     override fun openRoute(source: IAtsc3Source, force: Boolean, onOpen: suspend (result: Boolean) -> Unit) {
@@ -100,8 +104,16 @@ internal class Atsc3ReceiverCore(
         return serviceController.receiverState.value
     }
 
+    fun getSourceList(): List<RouteUrl> {
+        return repository.routes.value
+    }
+
     fun getSelectedService(): AVService? {
         return repository.selectedService.value
+    }
+
+    fun getServiceList(): List<AVService> {
+        return serviceController.routeServices.value
     }
 
     fun getFrequency(): Int {

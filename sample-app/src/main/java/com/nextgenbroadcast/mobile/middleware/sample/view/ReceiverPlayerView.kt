@@ -59,7 +59,7 @@ class ReceiverPlayerView @JvmOverloads constructor(
     }
 
     fun play(mediaUri: Uri) {
-        if (atsc3Player.lastMediaUri == mediaUri && atsc3Player.isPlaying) return
+        if (atsc3Player.lastMediaUri == mediaUri && (atsc3Player.isPlaying || atsc3Player.isPaused)) return
 
         val mimeType = context.contentResolver.getType(mediaUri)
 

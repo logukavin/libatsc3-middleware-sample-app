@@ -2,10 +2,13 @@ package com.nextgenbroadcast.mobile.middleware.controller.view
 
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.ApplicationState
+import com.nextgenbroadcast.mobile.core.model.RPMParams
 import com.nextgenbroadcast.mobile.middleware.analytics.IAtsc3Analytics
+import com.nextgenbroadcast.mobile.middleware.repository.IRepository
 import kotlinx.coroutines.flow.*
 
 internal class ViewControllerImpl(
+    private val repository: IRepository,
     private val analytics: IAtsc3Analytics
 ) : IViewController {
 
@@ -18,6 +21,19 @@ internal class ViewControllerImpl(
     override fun setApplicationState(state: ApplicationState) {
         appState.value = state
         reportApplicationState(state)
+    }
+
+    override fun requestPlayerLayout(scaleFactor: Double, xPos: Double, yPos: Double) {
+        repository.setLayoutParams(RPMParams(scaleFactor, xPos.toInt(), yPos.toInt()))
+    }
+
+    override fun requestPlayerState(state: PlaybackState) {
+        repository.setRequestedMediaState(state)
+    }
+
+    override fun requestPlayerState(state: PlaybackState, externalMediaUrl: String?) {
+        repository.setExternalMediaUrl(externalMediaUrl)
+        repository.setRequestedMediaState(state)
     }
 
     override fun rmpPlaybackChanged(state: PlaybackState) {
