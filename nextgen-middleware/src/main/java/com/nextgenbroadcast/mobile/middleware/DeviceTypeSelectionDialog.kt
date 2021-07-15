@@ -27,7 +27,7 @@ class DeviceTypeSelectionDialog : AppCompatActivity() {
         }
 
         val configName = getString(R.string.externalPhyConfig)
-        val typeOverload = if (configName.isNotBlank()) {
+        val typeOverload: Int? = if (configName.isNotBlank()) {
             FileUtils.readExternalFileAsString(this, configName)?.let { str ->
                 when {
                     "YOGA".equals(str, true) -> Atsc3Source.DEVICE_TYPE_YOGA
