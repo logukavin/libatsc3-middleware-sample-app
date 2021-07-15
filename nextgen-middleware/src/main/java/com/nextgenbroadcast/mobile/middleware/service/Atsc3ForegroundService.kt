@@ -222,13 +222,15 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     internal abstract fun createServiceBinder(receiver: Atsc3ReceiverCore): IBinder
 
     override fun onBind(intent: Intent): IBinder? {
+        var binder = super.onBind(intent)
+
         if (intent.action == SERVICE_INTERFACE) {
             maybeInitialize()
 
-            return createServiceBinder(atsc3Receiver)
+            binder = createServiceBinder(atsc3Receiver)
         }
 
-        return super.onBind(intent)
+        return binder
     }
 
     override fun onUnbind(intent: Intent): Boolean {
@@ -362,6 +364,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     }
 
     private fun openRoute(sourcePath: String?) {
+        startForeground()
         // change source to file. So, let's unregister device receiver
         unregisterDeviceReceiver()
 
