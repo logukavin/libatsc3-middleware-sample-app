@@ -107,6 +107,8 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         atsc3Receiver.setRouteList(srtListHolder.getFullSrtList())
 
         startStateObservation()
+
+        maybeInitialize()
     }
 
     private fun startStateObservation() {
@@ -225,8 +227,6 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         var binder = super.onBind(intent)
 
         if (intent.action == SERVICE_INTERFACE) {
-            maybeInitialize()
-
             binder = createServiceBinder(atsc3Receiver)
         }
 

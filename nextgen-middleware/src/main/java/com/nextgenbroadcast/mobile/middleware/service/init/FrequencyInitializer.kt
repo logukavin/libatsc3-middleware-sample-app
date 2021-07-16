@@ -51,8 +51,11 @@ internal class FrequencyInitializer(
                     if (!isActive || isCanceled) return@forEach
 
                     try {
-                        val parser = context.resources.getXml(resource)
-                        val defaultFrequencies = readAttributes(parser)
+                        val defaultFrequencies: List<Int> = try {
+                            readAttributes(context.resources.getXml(resource))
+                        } catch (e: Resources.NotFoundException) {
+                            emptyList()
+                        }
 
                         val instance: Any = component.getDeclaredConstructor().newInstance()
                         val locator = instance as IFrequencyLocator
