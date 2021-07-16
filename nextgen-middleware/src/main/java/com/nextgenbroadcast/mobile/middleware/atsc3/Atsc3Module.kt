@@ -654,8 +654,10 @@ internal class Atsc3Module(
     }
 
     override fun pushBwPhyStatistics(bwPhyStatistics: BwPhyStatistics) {
-        PHYStatistics.PHYBWStatistics = "BW: $bwPhyStatistics".also {
-            log(it)
+        if (USE_DEV_STATISTIC) {
+            PHYStatistics.PHYBWStatistics = "BW: $bwPhyStatistics".also {
+                log(it)
+            }
         }
     }
 
