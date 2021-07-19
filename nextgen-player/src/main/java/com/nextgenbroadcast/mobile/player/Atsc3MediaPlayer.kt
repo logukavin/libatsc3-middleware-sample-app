@@ -13,6 +13,7 @@ import com.google.android.exoplayer2.source.dash.DefaultDashChunkSource
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector.SelectionOverride
 import com.google.android.exoplayer2.trackselection.TrackSelector
+import com.google.android.exoplayer2.upstream.ContentDataSource
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
 import com.google.android.exoplayer2.upstream.DefaultLoadErrorHandlingPolicy
 import com.google.android.exoplayer2.util.Util
@@ -231,7 +232,7 @@ class Atsc3MediaPlayer(
     private fun createMediaSource(mediaUri: Uri, mimeType: String?): MediaSource {
         return if (mimeType == MMTConstants.MIME_MMT_VIDEO || mimeType == MMTConstants.MIME_MMT_AUDIO) {
             MMTMediaSource.Factory({
-                Atsc3ContentDataSource(context)
+                ContentDataSource(context)
             }, {
                 arrayOf(Atsc3MMTExtractor())
             }).apply {
