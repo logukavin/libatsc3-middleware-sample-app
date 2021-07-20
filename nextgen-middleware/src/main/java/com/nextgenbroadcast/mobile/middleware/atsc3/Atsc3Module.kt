@@ -42,25 +42,44 @@ internal class Atsc3Module(
     private val atsc3NdkApplicationBridge = Atsc3NdkApplicationBridge(this)
     private val atsc3NdkPHYBridge = Atsc3NdkPHYBridge(this)
     private val systemProperties = atsc3NdkApplicationBridge.atsc3_slt_alc_get_system_properties()
-
+    private val serviceLocationTable = ConcurrentHashMap<Int, Atsc3ServiceLocationTable>()
+    private val serviceToSourceConfig = ConcurrentHashMap<Int, Int>()
+    private val applicationPackageMap = ConcurrentHashMap<String, Atsc3Application>()  // TODO: concurent? onPackageExtractCompleted
     private val stateLock = ReentrantLock()
-    private var state = Atsc3ModuleState.IDLE
-    private var source: IAtsc3Source? = null
-    private var currentSourceConfiguration: Int = -1
+    private val configurationTimer = Timer()
+
     private var lastTunedFreqList: List<Int> = emptyList()
     private var defaultConfiguration: Map<Any, Atsc3ServiceLocationTable>? = null
 
-    private val serviceLocationTable = ConcurrentHashMap<Int, Atsc3ServiceLocationTable>()
-    private val serviceToSourceConfig = ConcurrentHashMap<Int, Int>()
-    private val packageMap = HashMap<String, Atsc3Application>()
+    @Volatile
+    private var state = Atsc3ModuleState.IDLE
 
+    @Volatile
+    private var source: IAtsc3Source? = null
+
+    @Volatile
+    private var currentSourceConfiguration: Int = -1
+
+    @Volatile
     private var selectedServiceBsid = -1
+
+    @Volatile
     private var selectedServiceId = -1
+
+    @Volatile
     private var suspendedServiceSelection: Boolean = false
+
+    @Volatile
     private var selectedServiceSLSProtocol = -1
+
+    @Volatile
     private var selectedServiceHeld: Atsc3Held? = null
+
+    @Volatile
     private var selectedServicePackage: Atsc3HeldPackage? = null
-    private var selectedServiceHeldXml: String? = null //TODO: use TOI instead
+
+    @Volatile
+    private var selectedServiceHeldXml: String? = null
 
     @Volatile
     private var phyDemodLock: Boolean = false
@@ -71,9 +90,8 @@ internal class Atsc3Module(
     @Volatile
     private var listener: Atsc3ModuleListener? = null
 
+    @Volatile
     private var nextSourceJob: Job? = null
-
-    private val configurationTimer = Timer()
 
     @Volatile
     private var nextSourceConfigTuneTimeoutTask: TimerTask? = null
@@ -141,7 +159,7 @@ internal class Atsc3Module(
 
                         if (source is ConfigurableAtsc3Source<*>) {
                             val configIndex = findNextConfigIndexToSniff(source.getCurrentConfigIndex())
-                            source.initCurrentConfiguration(configIndex)
+                            source.setInitialConfiguration(configIndex)
                         }
                     }
                 }
@@ -235,7 +253,7 @@ internal class Atsc3Module(
 
             if (result != IAtsc3Source.RESULT_ERROR) {
                 //jjustman-2021-05-19 - this is not quite true, we shouldn't actually set our "new" state until either onSls or onSourceConfigTimeout occurs..
-                //vmatiash-2021-05-28 - refactored - we apply new configuration but to not switch to TUNED until receive SLT
+                //vmatiash-2021-05-28 - refactored - we apply new configuration but not switching to TUNED until SLT received
                 setSourceConfig(result)
                 val newState = if (result > 0 && isScanning) Atsc3ModuleState.SCANNING else Atsc3ModuleState.SNIFFING
                 setState(newState)
@@ -289,16 +307,18 @@ internal class Atsc3Module(
         return nextConfigIndex
     }
 
-    @Synchronized
     private fun cancelSourceConfigTimeoutTask() {
-        nextSourceConfigTuneTimeoutTask?.let {
+        synchronized(this) {
+            val task = nextSourceConfigTuneTimeoutTask
+            nextSourceConfigTuneTimeoutTask = null
+            task
+        }?.let {
             LOG.i(TAG, "nextSourceConfigTuneTimeoutJob: canceling")
             it.cancel()
-            nextSourceConfigTuneTimeoutTask = null
         }
     }
 
-    fun getState(): Atsc3ModuleState {
+    private fun getState(): Atsc3ModuleState {
         return withStateLock {
             state
         }
@@ -311,43 +331,46 @@ internal class Atsc3Module(
         listener?.onStateChanged(newState)
     }
 
-    private fun getSourceConfig(): Int {
-        return withStateLock {
-            currentSourceConfiguration
-        }
-    }
-
     private fun setSourceConfig(config: Int) {
-        withStateLock {
+        val (configCount, isKnown) = synchronized(this) {
             currentSourceConfiguration = config
+
+            val configCount = when (val src = source) {
+                null -> 0
+                is ConfigurableAtsc3Source<*> -> src.getConfigCount()
+                else -> 1
+            }
+
+            val isKnown = serviceToSourceConfig.values.contains(config)
+
+            Pair(configCount, isKnown)
         }
 
-        val configCount = when (val src = source) {
-            null -> 0
-            is ConfigurableAtsc3Source<*> -> src.getConfigCount()
-            else -> 1
-        }
-
-        listener?.onConfigurationChanged(config, configCount, serviceToSourceConfig.values.contains(config))
+        listener?.onConfigurationChanged(config, configCount, isKnown)
     }
 
     override fun isServiceSelected(bsid: Int, serviceId: Int): Boolean {
-        return selectedServiceBsid == bsid && selectedServiceId == serviceId
+        return getSelectedServiceIdPair().let { (selectedServiceBsid, selectedServiceId) ->
+            selectedServiceBsid == bsid && selectedServiceId == serviceId
+        }
     }
 
-    private var tmpAdditionalServiceOpened = false
+    @Synchronized
+    private fun getSelectedServiceIdPair() = Pair(selectedServiceBsid, selectedServiceId)
 
     override fun selectService(bsid: Int, serviceId: Int): Boolean {
-        if (selectedServiceBsid == bsid && (selectedServiceId == serviceId || state != Atsc3ModuleState.TUNED)) return false
+        synchronized(this) {
+            if (selectedServiceBsid == bsid && (selectedServiceId == serviceId || state != Atsc3ModuleState.TUNED)) return false
 
-        clearHeld()
-        selectedServiceSLSProtocol = -1
+            clearHeld()
 
-        selectedServiceBsid = bsid
-        selectedServiceId = serviceId
+            selectedServiceSLSProtocol = -1
+            selectedServiceBsid = bsid
+            selectedServiceId = serviceId
+        }
 
         serviceToSourceConfig[bsid]?.let { serviceConfig ->
-            if (serviceConfig != getSourceConfig()) {
+            if (serviceConfig != currentSourceConfiguration) {
                 val src = source
                 if (src is ConfigurableAtsc3Source<*>) {
                     withStateLock {
@@ -362,11 +385,15 @@ internal class Atsc3Module(
         return internalSelectService(bsid, serviceId)
     }
 
+    private var tmpAdditionalServiceOpened = false
+
     private fun internalSelectService(bsid: Int, serviceId: Int): Boolean {
         log("internalSelectService: enter: with bsid: $bsid, serviceId: $serviceId");
 
-        selectedServiceSLSProtocol = atsc3NdkApplicationBridge.atsc3_slt_selectService(serviceId)
-        log("internalSelectService: after atsc3NdkApplicationBridge.atsc3_slt_selectService with serviceId: $serviceId, selectedServiceSLSProtocol is: $selectedServiceSLSProtocol")
+        val slsProtocol = atsc3NdkApplicationBridge.atsc3_slt_selectService(serviceId).also {
+            selectedServiceSLSProtocol = it
+        }
+        log("internalSelectService: after atsc3NdkApplicationBridge.atsc3_slt_selectService with serviceId: $serviceId, selectedServiceSLSProtocol is: $slsProtocol")
 
         //TODO: temporary test solution
         if (!tmpAdditionalServiceOpened) {
@@ -379,13 +406,13 @@ internal class Atsc3Module(
             }
         }
 
-        if (selectedServiceSLSProtocol == SLS_PROTOCOL_MMT) {
+        if (slsProtocol == SLS_PROTOCOL_MMT) {
             log("internalSelectService, calling listener?.onServiceMediaReady for MMT, listener: $listener, serviceId: $serviceId, bsid: $bsid")
 
             listener?.onServiceMediaReady(MediaUrl(SCHEME_MMT + serviceId, bsid, serviceId), 0)
         }
 
-        return selectedServiceSLSProtocol > 0
+        return slsProtocol > 0
     }
 
     @Deprecated("Do not work because additional service persistence not implemented in libatsc3")
@@ -418,7 +445,7 @@ internal class Atsc3Module(
     }
 
     override fun getSelectedBSID(): Int {
-        return selectedServiceBsid
+        return getSelectedServiceIdPair().let { (selectedServiceBsid) -> selectedServiceBsid }
     }
 
     private fun reset() {
@@ -429,37 +456,40 @@ internal class Atsc3Module(
         cancelSourceConfigTimeoutTask()
     }
 
-    fun getSelectedServiceMediaUri(): String? {
-        var mediaUri: String? = null
-        if (selectedServiceSLSProtocol == SLS_PROTOCOL_DASH) {
-            val routeMPDFileName = atsc3NdkApplicationBridge.atsc3_slt_alc_get_sls_metadata_fragments_content_locations_from_monitor_service_id(selectedServiceId, CONTENT_TYPE_DASH)
+    private fun getServiceMediaUri(serviceId: Int): String? {
+        val slsProtocol = selectedServiceSLSProtocol
+        return if (slsProtocol == SLS_PROTOCOL_DASH) {
+            val routeMPDFileName = atsc3NdkApplicationBridge.atsc3_slt_alc_get_sls_metadata_fragments_content_locations_from_monitor_service_id(serviceId, CONTENT_TYPE_DASH)
             if (routeMPDFileName.isNotEmpty()) {
-                mediaUri = String.format("%s/%s", jni_getCacheDir(), routeMPDFileName[0])
+                String.format("%s/%s", jni_getCacheDir(), routeMPDFileName[0])
             } else {
-                log("Unable to resolve Dash MPD path from MBMS envelope, service_id: %d", selectedServiceId)
+                log("Unable to resolve Dash MPD path from MBMS envelope, service_id: %d", serviceId)
+                null
             }
-        } else if (selectedServiceSLSProtocol == SLS_PROTOCOL_MMT) {
-            mediaUri = SCHEME_MMT + selectedServiceId
+        } else if (slsProtocol == SLS_PROTOCOL_MMT) {
+            SCHEME_MMT + serviceId
         } else {
-            log("unsupported service protocol: %d", selectedServiceSLSProtocol)
+            log("unsupported service protocol: %d", slsProtocol)
+            null
         }
-
-        return mediaUri
     }
 
     private fun clear() {
-        clearHeld()
-        clearService()
-        serviceLocationTable.clear()
-        serviceToSourceConfig.clear()
+        withStateLock {
+            clearHeld()
+            clearService()
+            serviceLocationTable.clear()
+            serviceToSourceConfig.clear()
 
-        //TODO: temporary test solution
-        if (tmpAdditionalServiceOpened) {
-            atsc3NdkApplicationBridge.atsc3_slt_alc_clear_additional_service_selections()
-            tmpAdditionalServiceOpened = false
+            //TODO: temporary test solution
+            if (tmpAdditionalServiceOpened) {
+                atsc3NdkApplicationBridge.atsc3_slt_alc_clear_additional_service_selections()
+                tmpAdditionalServiceOpened = false
+            }
         }
     }
 
+    @Synchronized
     private fun clearService() {
         suspendedServiceSelection = false
         selectedServiceBsid = -1
@@ -467,18 +497,45 @@ internal class Atsc3Module(
         selectedServiceSLSProtocol = -1
     }
 
+    @Synchronized
     private fun clearHeld() {
         selectedServiceHeld = null
         selectedServicePackage = null
         selectedServiceHeldXml = null
 
         /* it reconnects additional service on service selection that leads to ESG reloading - that's bad.
-        But probably we need it when switching between services with different BSID. Lat's stose BSID in ESG data instead
+        But probably we need it when switching between services with different BSID. Lat's store BSID in ESG data instead
         //TODO: temporary test solution
         if (tmpAdditionalServiceOpened) {
             atsc3NdkApplicationBridge.atsc3_slt_alc_clear_additional_service_selections()
             tmpAdditionalServiceOpened = false
         }*/
+    }
+
+    private fun finishReconfiguration() {
+        setState(Atsc3ModuleState.TUNED)
+
+        processServiceLocationTableAndNotifyListener()
+
+        if (suspendedServiceSelection) {
+            CoroutineScope(Dispatchers.Main).launch {
+                getSelectedServiceIdPair().let { (selectedServiceBsid, selectedServiceId) ->
+                    internalSelectService(selectedServiceBsid, selectedServiceId)
+                }
+            }
+        }
+    }
+
+    private fun processServiceLocationTableAndNotifyListener() {
+        val services = serviceLocationTable
+            .toSortedMap(compareBy { serviceToSourceConfig[it] })
+            .values.flatMap { it.services }
+
+        val urls = getSelectedServiceIdPair().let { (selectedServiceBsid) ->
+            serviceLocationTable[selectedServiceBsid]?.urls ?: emptyMap()
+        }
+
+        fireServiceLocationTableChanged(services, urls)
     }
 
     //////////////////////////////////////////////////////////////
@@ -499,14 +556,15 @@ internal class Atsc3Module(
             return
         }
 
-        val slt = LLSParserSLT().parseXML(slt_payload_xml)
-        withStateLock {
-            serviceLocationTable[slt.bsid] = slt
-            serviceToSourceConfig[slt.bsid] = getSourceConfig()
-        }
-
         // getState() is blocking method and must not be called if isReconfiguring = true
+        // this call lock until state changing is finished
         val currentState = getState()
+
+        val slt = LLSParserSLT().parseXML(slt_payload_xml)
+        synchronized(this) {
+            serviceLocationTable[slt.bsid] = slt
+            serviceToSourceConfig[slt.bsid] = currentSourceConfiguration
+        }
 
         log("onSltTablePresent, currentState: $currentState, skip: $shouldSkip, slt_xml:\n$slt_payload_xml")
 
@@ -514,32 +572,12 @@ internal class Atsc3Module(
             applyNextSourceConfig()
         } else if (currentState != Atsc3ModuleState.IDLE) {
             if (!suspendedServiceSelection) {
-                selectedServiceBsid = slt.bsid
+                synchronized(this) {
+                    selectedServiceBsid = slt.bsid
+                }
             }
             finishReconfiguration()
         }
-    }
-
-    private fun finishReconfiguration() {
-        setState(Atsc3ModuleState.TUNED)
-
-        processServiceLocationTableAndNotifyListener()
-
-        if (suspendedServiceSelection) {
-            CoroutineScope(Dispatchers.Main).launch {
-                internalSelectService(selectedServiceBsid, selectedServiceId)
-            }
-        }
-    }
-
-    private fun processServiceLocationTableAndNotifyListener() {
-        val services = serviceLocationTable
-                .toSortedMap(compareBy { serviceToSourceConfig[it] })
-                .values.flatMap { it.services }
-
-        val urls = serviceLocationTable[selectedServiceBsid]?.urls ?: emptyMap()
-
-        fireServiceLocationTableChanged(services, urls)
     }
 
     override fun onAeatTablePresent(aeatPayloadXML: String) {
@@ -549,24 +587,33 @@ internal class Atsc3Module(
     override fun onSlsHeldEmissionPresent(serviceId: Int, heldPayloadXML: String) {
         if (getState() == Atsc3ModuleState.SCANNING) return
 
+        val selectedServiceId = getSelectedServiceIdPair().let { (_, selectedServiceId) -> selectedServiceId }
+
         log("onSlsHeldEmissionPresent, $serviceId, selectedServiceID: $selectedServiceId, HELD: $heldPayloadXML")
 
         if (serviceId == selectedServiceId) {
             if (heldPayloadXML != selectedServiceHeldXml) {
-                selectedServiceHeldXml = heldPayloadXML
+                val held = HeldXmlParser().parseXML(heldPayloadXML)
+                val pkg = held?.findActivePackage()
+                val notify = synchronized(this) {
+                    if (heldPayloadXML != selectedServiceHeldXml) {
+                        selectedServiceHeldXml = heldPayloadXML
+                        selectedServiceHeld = held
 
-                val held = HeldXmlParser().parseXML(heldPayloadXML).also { held ->
-                    selectedServiceHeld = held
+                        if (held != null) {
+                            log("onSlsHeldEmissionPresent, pkg: $pkg")
+
+                            if (pkg != selectedServicePackage) {
+                                selectedServicePackage = pkg
+                                return@synchronized true
+                            }
+                        }
+                    }
+                    false
                 }
 
-                if (held != null) {
-                    val pkg = held.findActivePackage()
-                    log("onSlsHeldEmissionPresent, pkg: $pkg")
-
-                    if (pkg != selectedServicePackage) {
-                        selectedServicePackage = pkg
-                        listener?.onServicePackageChanged(pkg)
-                    }
+                if (notify) {
+                    listener?.onServicePackageChanged(pkg)
                 }
             }
         }
@@ -587,7 +634,9 @@ internal class Atsc3Module(
             CONTENT_TYPE_SGDU -> {
                 //TODO: check that data from an actual source configuration or share current bsid/serviceId with SGDU
                 cache_file_path?.let {
-                    listener?.onServiceGuideUnitReceived(getFullPath(cache_file_path), selectedServiceBsid)
+                    getSelectedServiceIdPair().let { (selectedServiceBsid) ->
+                        listener?.onServiceGuideUnitReceived(getFullPath(cache_file_path), selectedServiceBsid)
+                    }
                 }
             }
         }
@@ -604,12 +653,10 @@ internal class Atsc3Module(
         }
 
         val pkgUID = "${packageMetadata.packageExtractPath}/${packageMetadata.packageName}"
-
         val pkg = packageMetadata.toApplication(pkgUID)
-
-        val appPackage = packageMap[pkgUID]
+        val appPackage = applicationPackageMap[pkgUID]
         if (appPackage != pkg) {
-            packageMap[pkgUID] = pkg
+            applicationPackageMap[pkgUID] = pkg
             listener?.onApplicationPackageReceived(pkg)
         }
     }
@@ -618,9 +665,11 @@ internal class Atsc3Module(
         LOG.i(TAG, "routeDash_force_player_reload_mpd with serviceId: $serviceID")
         if (getState() == Atsc3ModuleState.SCANNING) return
 
-        if (serviceID == selectedServiceId) {
-            getSelectedServiceMediaUri()?.let { mpdPath ->
-                listener?.onServiceMediaReady(MediaUrl(mpdPath, selectedServiceBsid, serviceID), MPD_UPDATE_DELAY)
+        getSelectedServiceIdPair().let { (selectedServiceBsid, selectedServiceId) ->
+            if (serviceID == selectedServiceId) {
+                getServiceMediaUri(serviceID)?.let { mpdPath ->
+                    listener?.onServiceMediaReady(MediaUrl(mpdPath, selectedServiceBsid, selectedServiceId), MPD_UPDATE_DELAY)
+                }
             }
         }
     }
@@ -719,11 +768,13 @@ internal class Atsc3Module(
     private fun fireServiceLocationTableChanged(services: List<Atsc3Service>, urls: Map<Int, String>) {
         log("fireServiceLocationTableChanged, services: $services, urls: $urls")
 
-        listener?.onServiceLocationTableChanged(
+        getSelectedServiceIdPair().let { (selectedServiceBsid) ->
+            listener?.onServiceLocationTableChanged(
                 selectedServiceBsid,
                 Collections.unmodifiableList(services),
                 urls[SLTConstants.URL_TYPE_REPORT_SERVER]
-        )
+            )
+        }
     }
 
     private fun PackageExtractEnvelopeMetadataAndPayload.isValid(): Boolean {
