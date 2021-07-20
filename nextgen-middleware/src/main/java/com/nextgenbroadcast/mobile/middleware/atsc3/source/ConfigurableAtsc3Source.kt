@@ -42,7 +42,7 @@ abstract class ConfigurableAtsc3Source<T>(
 
     fun getCurrentConfigIndex() = currentConfigIndex
 
-    fun initCurrentConfiguration(configIndex: Int) {
+    fun setInitialConfiguration(configIndex: Int) {
         this.currentConfigIndex = configIndex
     }
 
