@@ -16,9 +16,13 @@ import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.TelemetryDevic
 import com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry.TelemetryManager
 import com.nextgenbroadcast.mobile.middleware.scoreboard.view.DeviceItemView
 import kotlinx.android.synthetic.main.activity_scoreboard.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
 
 class ScoreboardActivity : AppCompatActivity() {
     private lateinit var deviceAdapter: DeviceListAdapter
@@ -146,6 +150,17 @@ class ScoreboardActivity : AppCompatActivity() {
         private val getFlowForDevice: (TelemetryDevice) -> Flow<ClientTelemetryEvent>?
     ) : ListAdapter<TelemetryDevice, DeviceListAdapter.Holder>(DIFF_CALLBACK) {
 
+        var selectedDeviceId:String? = null
+
+        init {
+            CoroutineScope(Dispatchers.Main).launch {
+                selectedDeviceIdFlow.collect {
+                    selectedDeviceId = it
+                    this@DeviceListAdapter.notifyDataSetChanged()
+                }
+            }
+        }
+
         interface DeviceItemClickListener {
             fun onDeleteClick(device: TelemetryDevice)
         }
@@ -165,7 +180,7 @@ class ScoreboardActivity : AppCompatActivity() {
             fun bind(device: TelemetryDevice) {
                 with(deviceView) {
                     observe(getFlowForDevice(device))
-                    observeSelectedDeviceId(selectedDeviceIdFlow)
+                    isDeviceSelected = selectedDeviceId.equals(device.id)
                     title.text = device.id
                     lostLabel.visibility = if (device.isLost) View.VISIBLE else View.GONE
                     removeBtn.setOnClickListener {
