@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.postDelayed
@@ -16,12 +17,15 @@ import com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry.TelemetryMana
 import com.nextgenbroadcast.mobile.middleware.scoreboard.view.DeviceItemView
 import kotlinx.android.synthetic.main.activity_scoreboard.*
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 
 class ScoreboardActivity : AppCompatActivity() {
     private lateinit var deviceAdapter: DeviceListAdapter
     private lateinit var deviceSpinnerAdapter: ArrayAdapter<String>
 
     private var telemetryManager: TelemetryManager? = null
+    private var selectedDeviceIdFlow:MutableStateFlow<String?> = MutableStateFlow(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -45,13 +49,27 @@ class ScoreboardActivity : AppCompatActivity() {
         device_spinner.adapter = deviceSpinnerAdapter
 
         deviceAdapter =
-            DeviceListAdapter(layoutInflater, object : DeviceListAdapter.DeviceItemClickListener {
+            DeviceListAdapter(selectedDeviceIdFlow, layoutInflater, object : DeviceListAdapter.DeviceItemClickListener {
                 override fun onDeleteClick(device: TelemetryDevice) {
                     removeChartForDevice(device)
                 }
             }) { device ->
                 telemetryManager?.getFlow(device)
             }
+
+        device_spinner.onItemSelectedListener = object :AdapterView.OnItemSelectedListener{
+            override fun onItemSelected(
+                parent: AdapterView<*>?,
+                view: View?,
+                position: Int,
+                id: Long
+            ) {
+                selectedDeviceIdFlow.value = deviceSpinnerAdapter.getItem(position)
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
+
         chart_list.layoutManager = LinearLayoutManager(this)
         chart_list.adapter = deviceAdapter
         chart_list.addItemDecoration(DividerItemDecoration(this, DividerItemDecoration.VERTICAL))
@@ -122,6 +140,7 @@ class ScoreboardActivity : AppCompatActivity() {
     }
 
     class DeviceListAdapter(
+        private var selectedDeviceIdFlow: StateFlow<String?>,
         private val inflater: LayoutInflater,
         private val listener: DeviceItemClickListener,
         private val getFlowForDevice: (TelemetryDevice) -> Flow<ClientTelemetryEvent>?
@@ -146,6 +165,7 @@ class ScoreboardActivity : AppCompatActivity() {
             fun bind(device: TelemetryDevice) {
                 with(deviceView) {
                     observe(getFlowForDevice(device))
+                    observeSelectedDeviceId(selectedDeviceIdFlow)
                     title.text = device.id
                     lostLabel.visibility = if (device.isLost) View.VISIBLE else View.GONE
                     removeBtn.setOnClickListener {
