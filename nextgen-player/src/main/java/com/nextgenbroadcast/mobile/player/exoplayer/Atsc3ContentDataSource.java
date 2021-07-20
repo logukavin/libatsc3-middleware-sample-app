@@ -20,7 +20,9 @@ import java.nio.channels.FileChannel;
 
 /*
     based on ContentDataSource
+    deprecated because of Pipe based FileDescriptor usage in MMTContentProvider. See MMTFragmentWriter
  */
+@Deprecated
 public class Atsc3ContentDataSource extends BaseDataSource {
 
     /**

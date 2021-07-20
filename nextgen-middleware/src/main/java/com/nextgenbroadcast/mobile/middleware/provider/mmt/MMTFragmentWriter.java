@@ -1,8 +1,5 @@
 package com.nextgenbroadcast.mobile.middleware.provider.mmt;
 
-import android.os.ProxyFileDescriptorCallback;
-import android.system.ErrnoException;
-import android.system.OsConstants;
 import android.util.ArrayMap;
 import android.util.Log;
 import android.util.Pair;
@@ -15,118 +12,91 @@ import org.ngbp.libatsc3.middleware.android.mmt.MmtPacketIdContext;
 import org.ngbp.libatsc3.middleware.android.mmt.MpuMetadata_HEVC_NAL_Payload;
 import org.ngbp.libatsc3.middleware.android.mmt.models.MMTAudioDecoderConfigurationRecord;
 
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
-/*
-    deprecated because of Pipe based FileDescriptor usage in MMTContentProvider. See MMTFragmentWriter
- */
-
-@Deprecated
-public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
-    public static final String TAG = MMTFileDescriptor.class.getSimpleName();
+public class MMTFragmentWriter {
+    public static final String TAG = MMTFragmentWriter.class.getSimpleName();
 
     private static final int MAX_QUEUE_SIZE = 120;
     private static final int MAX_FIRST_MFU_WAIT_TIME = 5000;
     private static final int MAX_KEY_FRAME_WAIT_TIME = 5000;
+    private static final int MAX_FRAGMENT_WAIT_TIME = 100;
 
     private final Boolean audioOnly;
 
-    private final ConcurrentLinkedDeque<Pair<MfuByteBufferFragment, ByteBuffer>> mfuBufferQueue = new ConcurrentLinkedDeque<>();
+    private final LinkedBlockingQueue<Pair<MfuByteBufferFragment, ByteBuffer>> mfuBufferQueue = new LinkedBlockingQueue<>();
     private final ByteBuffer sampleHeaderBuffer = ByteBuffer.allocate(MMTConstants.SIZE_SAMPLE_HEADER);
     private final ArrayMap<Integer, MMTAudioDecoderConfigurationRecord> audioConfigurationMap = new ArrayMap<>();
 
     private ByteBuffer InitMpuMetadata_HEVC_NAL_Payload = null;
-    private ByteBuffer currentSample = null;
     private ByteBuffer headerBuffer;
 
     private long videoMfuPresentationTimestampUs = Long.MAX_VALUE;
     private final ArrayMap<Integer, Long> audioMfuPresentationTimestampMap = new ArrayMap<>();
     private long stppMfuPresentationTimestampUs = Long.MAX_VALUE;
 
-    private boolean isActive = true;
+    private volatile boolean isActive = true;
     private boolean sendFileHeader = true;
-    private boolean readSampleHeader = false;
 
     private long mpuWaitingStartTime;
     private long keyFrameWaitingStartTime;
 
-    public MMTFileDescriptor(boolean audioOnly) {
+    public MMTFragmentWriter(boolean audioOnly) {
         this.audioOnly = audioOnly;
     }
 
-    @Override
-    public long onGetSize() {
-        return Long.MAX_VALUE;
-        // UNKNOWN_LENGTH leads to "FuseUnavailableMountException: AppFuse mount point 262 is unavailable" on Android 10+
-        //return AssetFileDescriptor.UNKNOWN_LENGTH;
-    }
+    public int write(FileOutputStream out) throws IOException {
+        if (!isActive) throw new IOException("Reader is not active");
 
-    @Override
-    public int onRead(long offset, int size, byte[] data) throws ErrnoException {
-        if (!isActive) throw new ErrnoException("onRead", OsConstants.EIO);
-
-        if (size == 0) return 0;
-
-        try {
-            final int bytesRead;
-            if (sendFileHeader) {
-                if (!audioOnly) {
-                    if (!hasMpuMetadata()) {
-                        if (mpuWaitingStartTime == 0) {
-                            mpuWaitingStartTime = System.currentTimeMillis();
-                        }
-
-                        if ((System.currentTimeMillis() - mpuWaitingStartTime) < MAX_FIRST_MFU_WAIT_TIME) {
-                            return 0;
-                        } else {
-                            throw new ErrnoException("onRead", OsConstants.EIO);
-                        }
+        int bytesRead = 0;
+        if (sendFileHeader) {
+            if (!audioOnly) {
+                if (!hasMpuMetadata()) {
+                    if (mpuWaitingStartTime == 0) {
+                        mpuWaitingStartTime = System.currentTimeMillis();
                     }
 
-                    if (keyFrameWaitingStartTime == 0) {
-                        keyFrameWaitingStartTime = System.currentTimeMillis();
-                    }
-
-                    if (!skipUntilKeyFrame() && (System.currentTimeMillis() - keyFrameWaitingStartTime) < MAX_KEY_FRAME_WAIT_TIME) {
+                    if ((System.currentTimeMillis() - mpuWaitingStartTime) < MAX_FIRST_MFU_WAIT_TIME) {
                         return 0;
+                    } else {
+                        throw new IOException("Can't get MPU Metadata");
                     }
                 }
 
-                //TODO: we need better criteria
-                if (audioConfigurationMap.isEmpty()) {
+                if (keyFrameWaitingStartTime == 0) {
+                    keyFrameWaitingStartTime = System.currentTimeMillis();
+                }
+
+                if (!skipUntilKeyFrame() && (System.currentTimeMillis() - keyFrameWaitingStartTime) < MAX_KEY_FRAME_WAIT_TIME) {
                     return 0;
                 }
-
-                if (headerBuffer == null) {
-                    headerBuffer = createFileHeader();
-                }
-                int bytesToRead = Math.min(headerBuffer.remaining(), size);
-                if (bytesToRead > 0) {
-                    headerBuffer.get(data, 0, bytesToRead);
-                }
-
-                sendFileHeader = headerBuffer.remaining() > 0;
-
-                bytesRead = readBufferFully(bytesToRead, size - bytesToRead, data) + bytesToRead;
-            } else {
-                bytesRead = readBufferFully(0, size, data);
             }
 
-            if (bytesRead < 0) throw new ErrnoException("onRead", OsConstants.EIO);
+            //TODO: we need better criteria
+            if (audioConfigurationMap.isEmpty()) {
+                return 0;
+            }
 
-            return bytesRead;
-        } catch (Exception e) {
-            Log.d(TAG, "onRead", e);
+            if (headerBuffer == null) {
+                headerBuffer = createFileHeader();
+            }
 
-            throw new ErrnoException("onRead", OsConstants.EIO, e);
+            bytesRead += writeBuffer(out, headerBuffer);
+            out.flush();
+
+            sendFileHeader = false;
         }
+
+        bytesRead += writeQueue(out);
+
+        return bytesRead;
     }
 
-    @Override
-    public void onRelease() {
+    public void close() {
         isActive = false;
     }
 
@@ -148,7 +118,7 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
 
         // write stream Header data
         fileHeaderBuffer.putInt(headerSize)
-            .putLong(MMTContentProvider.PTS_OFFSET_US);
+                .putLong(MMTContentProvider.PTS_OFFSET_US);
 
         if (videoTrackCount > 0) {
             int videoFormat = getIntegerCodeForString("hev1");
@@ -157,24 +127,20 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
             InitMpuMetadata_HEVC_NAL_Payload.rewind();
 
             fileHeaderBuffer
-                .putInt(MMTConstants.VIDEO_TRACK_HEADER_SIZE + mpuMetadataSize)
-                .put((byte) MMTConstants.TRACK_TYPE_VIDEO)
-                .putInt(videoFormat)
-                .putInt(MmtPacketIdContext.video_packet_id) //TODO: replace MmtPacketIdContext.video_packet_id
-                .putInt(getVideoWidth())
-                .putInt(getVideoHeight())
-                .putFloat(getVideoFrameRate())
-                .putInt(mpuMetadataSize)
-                .put(InitMpuMetadata_HEVC_NAL_Payload);
+                    .putInt(MMTConstants.VIDEO_TRACK_HEADER_SIZE + mpuMetadataSize)
+                    .put((byte) MMTConstants.TRACK_TYPE_VIDEO)
+                    .putInt(videoFormat)
+                    .putInt(MmtPacketIdContext.video_packet_id) //TODO: replace MmtPacketIdContext.video_packet_id
+                    .putInt(getVideoWidth())
+                    .putInt(getVideoHeight())
+                    .putFloat(getVideoFrameRate())
+                    .putInt(mpuMetadataSize)
+                    .put(InitMpuMetadata_HEVC_NAL_Payload);
         }
 
         if (audioTrackCount > 0) {
             //jjustman-2020-12-02 - TODO - pass-thru fourcc from
             int audioFormat = getIntegerCodeForString("ac-4");
-//                if(true) {
-//                    audioFormat = Util.getIntegerCodeForString("mp4a");
-//                    /* jjustman-2020-11-30 - needs special audio codec specific metadata */
-//                }
             for (MMTAudioDecoderConfigurationRecord info : audioConfigurationMap.values()) {
                 fileHeaderBuffer
                         .putInt(MMTConstants.AUDIO_TRACK_HEADER_SIZE)
@@ -190,60 +156,30 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
             int ttmlFormat = getIntegerCodeForString("stpp");
 
             fileHeaderBuffer
-                .putInt(MMTConstants.CC_TRACK_HEADER_SIZE)
-                .put((byte) MMTConstants.TRACK_TYPE_TEXT)
-                .putInt(ttmlFormat)
-                .putInt(MmtPacketIdContext.stpp_packet_id); //TODO: replace MmtPacketIdContext.stpp_packet_id
+                    .putInt(MMTConstants.CC_TRACK_HEADER_SIZE)
+                    .put((byte) MMTConstants.TRACK_TYPE_TEXT)
+                    .putInt(ttmlFormat)
+                    .putInt(MmtPacketIdContext.stpp_packet_id); //TODO: replace MmtPacketIdContext.stpp_packet_id
         }
 
         fileHeaderBuffer.rewind();
         return fileHeaderBuffer;
     }
 
-    private int readBufferFully(int offset, int readLength, byte[] buffer) {
-        //Log.d("!!!", "readBufferFully: offset = " + offset + ", readLength = " + readLength + ", buffer.length = " + buffer.length);
-        int bytesAlreadyRead = 0;
-
-        if (readSampleHeader) {
-            bytesAlreadyRead = readSampleHeader(offset, readLength, buffer);
-        }
-
-        while (bytesAlreadyRead < readLength) {
-            int bytesRead = readBuffer(offset + bytesAlreadyRead, readLength - bytesAlreadyRead, buffer);
-
-            if (bytesRead == 0) {
-                // Fill with an empty packet to avoid unfilled answer that leads to EOF
-                bytesRead = readLength - bytesAlreadyRead;
-                sampleHeaderBuffer.clear();
-                sampleHeaderBuffer
-                        .put((byte) MMTConstants.TRACK_TYPE_UNKNOWN)
-                        .putInt(bytesRead - sampleHeaderBuffer.limit())
-                        .putInt(0) // sample id = 0
-                        .putLong(0) // PresentationTimestampUs = 0
-                        .put((byte) 0); // isKeyFrame = false
-                sampleHeaderBuffer.rewind();
-
-                readSampleHeader(offset + bytesAlreadyRead, readLength - bytesAlreadyRead, buffer);
-            }
-            bytesAlreadyRead += bytesRead;
-        }
-
-        return bytesAlreadyRead;
-    }
-
-    private int readBuffer(int offset, int readLength, byte[] buffer) {
-        if (readLength == 0) {
-            return 0;
-        }
-
-        // get next sample and fill it's header
-        if (currentSample == null) {
+    private int writeQueue(FileOutputStream out) throws IOException {
+        int bytesRead = 0;
+        while (isActive) {
+            // get next sample and fill it's header
             final Pair<MfuByteBufferFragment, ByteBuffer> sample;
-            if ((sample = mfuBufferQueue.poll()) == null) {
-                return 0;
+            try {
+                if ((sample = mfuBufferQueue.poll(MAX_FRAGMENT_WAIT_TIME, TimeUnit.MILLISECONDS)) == null) {
+                    break;
+                }
+            } catch (InterruptedException e) {
+                break;
             }
 
-            currentSample = sample.second;
+            final ByteBuffer currentSample = sample.second;
             final MfuByteBufferFragment fragment = sample.first;
 
             byte sampleType = MMTConstants.TRACK_TYPE_UNKNOWN;
@@ -257,26 +193,6 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
 
             long computedPresentationTimestampUs = getPresentationTimestampUs(fragment);
 
-//            if(lastComputedPresentationTimestampUs - computedPresentationTimestampUs > 10000000) {
-//                Log.w("MMTDataSource", "JJ: >>> packetId had timestamp wraparound!");
-//            }
-//            lastComputedPresentationTimestampUs = computedPresentationTimestampUs;
-//
-//            if((DEBUG_COUNTER++) % 10 == 0) {
-//                Log.d("MMTDataSource", String.format("JJ: >>> packet_id: %d, computedPresentationTimestampUs: %d (%d) mpu_sequence number: %d, sample number: %d, debug_counter: %d",
-//                        currentSample.packet_id,
-//                        computedPresentationTimestampUs,
-//                        currentSample.get_safe_mfu_presentation_time_uS_computed(),
-//                        currentSample.mpu_sequence_number,
-//                        currentSample.sample_number,
-//                        DEBUG_COUNTER));
-//            }
-//
-////            Log.d("!!!", ">>> sample TimeUs: " + computedPresentationTimestampUs
-////                    + ",  sample size: " + toProcessMfuByteBufferFragment.bytebuffer_length
-////                    + ",  sample type: " + sampleType
-////                    + ", sequence number: " + toProcessMfuByteBufferFragment.mpu_sequence_number);
-
             sampleHeaderBuffer.clear();
             sampleHeaderBuffer
                     .put(sampleType)
@@ -286,37 +202,22 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
                     .put(isKeySample(fragment) ? (byte) 1 : (byte) 0);
             sampleHeaderBuffer.rewind();
 
-            readSampleHeader = true;
+            // read the sample header
+            bytesRead += writeBuffer(out, sampleHeaderBuffer);
+
+            // read the sample buffer
+            bytesRead += writeBuffer(out, currentSample);
+
+            out.flush();
         }
 
-        // read the sample header
-        if (readSampleHeader) {
-            return readSampleHeader(offset, readLength, buffer);
-        }
-
-        // read the sample buffer
-        int bytesToRead = Math.min(currentSample.remaining(), readLength);
-        //Log.d("!!!", "currentSample !!! bytesToRead: " + bytesToRead + ", remaining: " + currentSample.second/*.myByteBuffer*/.remaining());
-        if (bytesToRead == 0) {
-            currentSample = null;
-            return 0;
-        }
-
-        currentSample.get(buffer, offset, bytesToRead);
-
-        if (currentSample.remaining() == 0) {
-            // Do not clear, it could be used by another descriptor currentSample.unreferenceByteBuffer();
-            currentSample = null;
-        }
-
-        return bytesToRead;
+        return bytesRead;
     }
 
-    private int readSampleHeader(int offset, int readLength, byte[] buffer) {
-        int bytesToRead = Math.min(sampleHeaderBuffer.remaining(), readLength);
-        sampleHeaderBuffer.get(buffer, offset, bytesToRead);
-        readSampleHeader = sampleHeaderBuffer.remaining() != 0;
-        return bytesToRead;
+    private int writeBuffer(FileOutputStream out, ByteBuffer buffer) throws IOException {
+        int bytesToWrite = buffer.remaining();
+        out.write(buffer.array(), buffer.position(), bytesToWrite);
+        return bytesToWrite;
     }
 
     private boolean hasMpuMetadata() {
@@ -416,11 +317,11 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
             minNonZeroMfuPresentationTimestampForAnchor = stppMfuPresentationTimestampUs;
         }
 
-        if(MMTClockAnchor.SystemClockAnchor == 0) {
+        if (MMTClockAnchor.SystemClockAnchor == 0) {
             MMTClockAnchor.SystemClockAnchor = System.currentTimeMillis();
         }
 
-        if(MMTClockAnchor.MfuClockAnchor < minNonZeroMfuPresentationTimestampForAnchor ) {
+        if (MMTClockAnchor.MfuClockAnchor < minNonZeroMfuPresentationTimestampForAnchor) {
             MMTClockAnchor.MfuClockAnchor = minNonZeroMfuPresentationTimestampForAnchor;
         }
 
@@ -438,7 +339,7 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
         }*/
     }
 
-    private final byte[] header = {(byte) 0xAC, 0x40, (byte)0xFF, (byte)0xFF, 0x00, 0x00, 0x00 };
+    private final byte[] header = {(byte) 0xAC, 0x40, (byte) 0xFF, (byte) 0xFF, 0x00, 0x00, 0x00};
 
     public void PushMfuByteBufferFragment(MfuByteBufferFragment mfuByteBufferFragment) {
         if (!isActive) return;
@@ -490,10 +391,10 @@ public class MMTFileDescriptor extends ProxyFileDescriptorCallback {
                     } else if (isText && MmtPacketIdContext.stpp_packet_statistics.extracted_sample_duration_us > 0) {
                         mfuByteBufferFragment.mfu_presentation_time_uS_computed = mfuByteBufferFragment.mpu_presentation_time_uS_from_SI + (mfuByteBufferFragment.sample_number - 1) * MmtPacketIdContext.stpp_packet_statistics.extracted_sample_duration_us;
                     }
-                    Log.i("MMTFileDescriptor",String.format("mfuByteBufferFragment.mfu_presentation_time_uS_computed is NULL for packet_id: %d, mpu_sequence_number: %d, sample_number: %d, COMPUTED mpu_presentation_time_uS_from_SI: %d", mfuByteBufferFragment.packet_id, mfuByteBufferFragment.mpu_sequence_number, mfuByteBufferFragment.sample_number, mfuByteBufferFragment.mpu_presentation_time_uS_from_SI));
+                    Log.i(TAG, String.format("mfuByteBufferFragment.mfu_presentation_time_uS_computed is NULL for packet_id: %d, mpu_sequence_number: %d, sample_number: %d, COMPUTED mpu_presentation_time_uS_from_SI: %d", mfuByteBufferFragment.packet_id, mfuByteBufferFragment.mpu_sequence_number, mfuByteBufferFragment.sample_number, mfuByteBufferFragment.mpu_presentation_time_uS_from_SI));
 
                 } else {
-                    Log.w("MMTFileDescriptor",String.format("mfuByteBufferFragment.mfu_presentation_time_uS_computed is NULL for packet_id: %d, mpu_sequence_number: %d, sample_number: %d, ORIGINAL mpu_presentation_time_uS_from_SI: %d", mfuByteBufferFragment.packet_id, mfuByteBufferFragment.mpu_sequence_number, mfuByteBufferFragment.sample_number, mfuByteBufferFragment.mpu_presentation_time_uS_from_SI));
+                    Log.w(TAG, String.format("mfuByteBufferFragment.mfu_presentation_time_uS_computed is NULL for packet_id: %d, mpu_sequence_number: %d, sample_number: %d, ORIGINAL mpu_presentation_time_uS_from_SI: %d", mfuByteBufferFragment.packet_id, mfuByteBufferFragment.mpu_sequence_number, mfuByteBufferFragment.sample_number, mfuByteBufferFragment.mpu_presentation_time_uS_from_SI));
                 }
             }
 
