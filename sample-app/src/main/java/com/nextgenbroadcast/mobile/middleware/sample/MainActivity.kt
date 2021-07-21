@@ -151,7 +151,8 @@ class MainActivity : BaseActivity() {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
 
         // permissions could empty if permission request was interrupted
-        if (requestCode == PERMISSION_REQUEST && permissions.isNotEmpty()) {
+        if ((requestCode == PERMISSION_REQUEST_FIRST
+                    || requestCode == PERMISSION_REQUEST_SECOND) && permissions.isNotEmpty()) {
             val requiredPermissions = mutableListOf<String>()
             permissions.forEachIndexed { i, permission ->
                 if (grantResults[i] != PackageManager.PERMISSION_GRANTED) {
@@ -159,16 +160,22 @@ class MainActivity : BaseActivity() {
                 }
             }
 
-            if (requiredPermissions.isNotEmpty()) {
-                if (requiredPermissions.contains(Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
-                    Toast.makeText(this, getString(R.string.warning_external_stortage_permission), Toast.LENGTH_SHORT).show()
-                }
-                if (requiredPermissions.contains(Manifest.permission.ACCESS_COARSE_LOCATION)
-                        || requiredPermissions.contains(Manifest.permission.ACCESS_FINE_LOCATION)) {
-                    Toast.makeText(this, getString(R.string.warning_access_background_location_permission), Toast.LENGTH_SHORT).show()
-                }
+            if (requiredPermissions.contains(Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+                Toast.makeText(this, getString(R.string.warning_external_stortage_permission), Toast.LENGTH_LONG).show()
+            }
 
-                requestPermissions(requiredPermissions)
+            if (requiredPermissions.contains(Manifest.permission.ACCESS_COARSE_LOCATION)
+                    || requiredPermissions.contains(Manifest.permission.ACCESS_FINE_LOCATION)) {
+                Toast.makeText(this, getString(R.string.warning_access_background_location_permission), Toast.LENGTH_LONG).show()
+            }
+
+            // Ignore optional permissions
+            requiredPermissions.removeAll(optionalPermissions - necessaryPermissions)
+
+            if (requiredPermissions.isNotEmpty()) {
+                if (requestCode == PERMISSION_REQUEST_FIRST) {
+                    requestPermissions(requiredPermissions, PERMISSION_REQUEST_SECOND)
+                }
             } else {
                 bindService()
             }
@@ -186,23 +193,22 @@ class MainActivity : BaseActivity() {
 
     private fun checkSelfPermission(): Boolean {
         val needsPermission = mutableListOf<String>()
-
-        necessaryPermissions.forEach { permission ->
+        (necessaryPermissions + optionalPermissions).forEach { permission ->
             if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
                 needsPermission.add(permission)
             }
         }
 
         if (needsPermission.isNotEmpty()) {
-            requestPermissions(needsPermission)
+            requestPermissions(needsPermission, PERMISSION_REQUEST_FIRST)
             return false
         }
 
         return true
     }
 
-    private fun requestPermissions(needsPermission: List<String>) {
-        ActivityCompat.requestPermissions(this, needsPermission.toTypedArray(), PERMISSION_REQUEST)
+    private fun requestPermissions(needsPermission: List<String>, requestCode: Int) {
+        ActivityCompat.requestPermissions(this, needsPermission.toTypedArray(), requestCode)
     }
 
     private fun updateSystemUi(config: Configuration) {
@@ -403,13 +409,17 @@ class MainActivity : BaseActivity() {
     }
 
     companion object {
-        private const val PERMISSION_REQUEST = 1000
+        private const val PERMISSION_REQUEST_FIRST = 1000
+        private const val PERMISSION_REQUEST_SECOND = 1001
         private const val APP_UPDATE_REQUEST_CODE = 31337
 
-        val necessaryPermissions = listOf(
-                Manifest.permission.WRITE_EXTERNAL_STORAGE,
-                Manifest.permission.ACCESS_COARSE_LOCATION,
-                Manifest.permission.ACCESS_FINE_LOCATION
+        private val necessaryPermissions = listOf(
+                Manifest.permission.WRITE_EXTERNAL_STORAGE
+        )
+
+        private val optionalPermissions = listOf(
+            Manifest.permission.ACCESS_COARSE_LOCATION,
+            Manifest.permission.ACCESS_FINE_LOCATION
         )
 
         val TAG: String = MainActivity::class.java.simpleName
