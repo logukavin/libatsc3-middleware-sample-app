@@ -28,7 +28,9 @@ class LocationRequester(
     private var locationRequest: Pair<LocationManager, LocationListener>? = null
 
     override fun checkPermission(): Boolean {
-        return ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        return permissions.indexOfFirst { permission ->
+            ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
+        } >= 0
     }
 
     override suspend fun getLastLocation(): Location? {
@@ -185,5 +187,10 @@ class LocationRequester(
 
     companion object {
         val TAG = LocationRequester::class.java.simpleName
+
+        private val permissions = listOf(
+            Manifest.permission.ACCESS_COARSE_LOCATION,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        )
     }
 }

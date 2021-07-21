@@ -4,7 +4,7 @@
     <string name="ba_loading_problem">Failed to load the media application</string>
     <string name="shortcut_preview_mode">Preview - %s</string>
     <string name="warning_external_stortage_permission">External storage permission is required</string>
-    <string name="warning_access_background_location_permission">Location permission is necessary to tune the receiver</string>
+    <string name="warning_access_background_location_permission">Location permission is necessary for correct work of the receiver</string>
     <string name="settings_title">Settings</string>
     <string name="settings_frequency_hint">Receiver frequency in MHz</string>
     <string name="settings_apply_btn">Tune</string>
