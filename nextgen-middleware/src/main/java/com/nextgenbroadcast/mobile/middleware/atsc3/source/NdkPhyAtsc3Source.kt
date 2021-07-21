@@ -8,7 +8,7 @@ class NdkPhyAtsc3Source(
         private val fd: Int,
         private val devicePath: String?,
         private val freqKhz: Int
-) : TunableConfigurableAtsc3Source() {
+) : PhyAtsc3Source() {
 
     override fun openPhyClient(): Atsc3NdkPHYClientBase? {
         try {

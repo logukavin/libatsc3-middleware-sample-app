@@ -117,7 +117,7 @@ internal class Atsc3Module(
         if (src is ITunableSource) {
             reset()
 
-            if (src is TunableConfigurableAtsc3Source) {
+            if (src is PhyAtsc3Source) {
                 src.setConfigs(frequencyList)
 
                 if (USE_PERSISTED_CONFIGURATION) {
@@ -388,7 +388,7 @@ internal class Atsc3Module(
     private var tmpAdditionalServiceOpened = false
 
     private fun internalSelectService(bsid: Int, serviceId: Int): Boolean {
-        log("internalSelectService: enter: with bsid: $bsid, serviceId: $serviceId");
+        log("internalSelectService: enter: with bsid: $bsid, serviceId: $serviceId")
 
         val slsProtocol = atsc3NdkApplicationBridge.atsc3_slt_selectService(serviceId).also {
             selectedServiceSLSProtocol = it
@@ -400,7 +400,7 @@ internal class Atsc3Module(
             serviceLocationTable[bsid]?.services?.firstOrNull {
                 it.serviceCategory == SLTConstants.SERVICE_CATEGORY_ESG
             }?.let { service ->
-                log("internalSelectService, calling atsc3_slt_alc_select_additional_service with service.serviceId: $service.serviceId");
+                log("internalSelectService, calling atsc3_slt_alc_select_additional_service with service.serviceId: $service.serviceId")
 
                 tmpAdditionalServiceOpened = atsc3NdkApplicationBridge.atsc3_slt_alc_select_additional_service(service.serviceId) > 0
             }
@@ -696,7 +696,7 @@ internal class Atsc3Module(
                     log(it)
                 }
             } catch (ex: Exception) {
-                Log.w(TAG, "exception when dumping PHYRFStatistics: $ex");
+                Log.w(TAG, "exception when dumping PHYRFStatistics: $ex")
             }
             PHYStatistics.rfMetricsFlow.tryEmit(rfPhyStatistics)
         }
