@@ -7,7 +7,7 @@ import com.nextgenbroadcast.mobile.core.LOG
 import org.ngbp.libatsc3.middleware.android.phy.Atsc3NdkPHYClientBase
 import org.ngbp.libatsc3.middleware.android.phy.Atsc3UsbDevice
 
-class UsbAtsc3Source(
+class UsbPhyAtsc3Source(
         private val usbManager: UsbManager,
         private val device: UsbDevice,
         val type: Int
@@ -86,7 +86,7 @@ class UsbAtsc3Source(
     }
 
     companion object {
-        private val TAG: String = UsbAtsc3Source::class.java.simpleName
+        private val TAG: String = UsbPhyAtsc3Source::class.java.simpleName
 
         fun getSaankhyaFX3DeviceType(device: UsbDevice) = getSaankhyaFX3DeviceType(device.vendorId, device.productId, device.manufacturerName)
     }

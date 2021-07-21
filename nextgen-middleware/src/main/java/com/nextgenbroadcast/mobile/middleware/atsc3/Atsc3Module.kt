@@ -734,7 +734,7 @@ internal class Atsc3Module(
             source?.let { src ->
                 put(PhyVersionInfo.INFO_SDK_VERSION, src.getSdkVersion())
                 put(PhyVersionInfo.INFO_FIRMWARE_VERSION, src.getFirmwareVersion())
-                if (src is UsbAtsc3Source) {
+                if (src is UsbPhyAtsc3Source) {
                     val deviceType = when (src.type) {
                         Atsc3Source.DEVICE_TYPE_KAILASH -> "KAILASH"
                         Atsc3Source.DEVICE_TYPE_YOGA -> "YOGA"

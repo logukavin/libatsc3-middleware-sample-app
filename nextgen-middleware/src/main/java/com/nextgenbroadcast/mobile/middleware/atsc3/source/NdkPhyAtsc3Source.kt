@@ -3,7 +3,7 @@ package com.nextgenbroadcast.mobile.middleware.atsc3.source
 import com.nextgenbroadcast.mobile.core.LOG
 import org.ngbp.libatsc3.middleware.android.phy.Atsc3NdkPHYClientBase
 
-class PhyAtsc3Source(
+class NdkPhyAtsc3Source(
         private val phy: Atsc3NdkPHYClientBase,
         private val fd: Int,
         private val devicePath: String?,
@@ -42,6 +42,6 @@ class PhyAtsc3Source(
     }
 
     companion object {
-        val TAG: String = PhyAtsc3Source::class.java.simpleName
+        val TAG: String = NdkPhyAtsc3Source::class.java.simpleName
     }
 }
