@@ -184,7 +184,7 @@ internal class ServiceControllerImpl(
                     }
 
                     val lastProfile = getLastProfileForSource(source)
-                    if (atsc3Module.connect(source, lastProfile?.configs)) {
+                    if (atsc3Module.open(source, lastProfile?.configs)) {
                         return@withLock true
                     }
                 }

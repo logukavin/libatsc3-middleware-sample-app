@@ -143,7 +143,7 @@ internal class Atsc3Module(
         }
     }
 
-    override fun connect(source: IAtsc3Source, defaultConfig: Map<Any, Atsc3ServiceLocationTable>?): Boolean {
+    override fun open(source: IAtsc3Source, defaultConfig: Map<Any, Atsc3ServiceLocationTable>?): Boolean {
         log("Connecting to: $source")
 
         close()
@@ -430,13 +430,16 @@ internal class Atsc3Module(
     }
 
     override fun close() {
-        source?.close()
-        source = null
+        val src = source
+        if (src !is PhyAtsc3Source || src.isConnectable) {
+            src?.close()
+            source = null
 
-        defaultConfiguration = null
+            defaultConfiguration = null
+            setSourceConfig(-1)
+        }
 
         lastTunedFreqList = emptyList()
-        setSourceConfig(-1)
         reset()
     }
 

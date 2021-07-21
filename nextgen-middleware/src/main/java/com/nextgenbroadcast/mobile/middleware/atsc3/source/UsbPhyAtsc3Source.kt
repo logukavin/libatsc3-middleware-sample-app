@@ -11,7 +11,7 @@ class UsbPhyAtsc3Source(
         private val usbManager: UsbManager,
         private val device: UsbDevice,
         val type: Int
-) : PhyAtsc3Source() {
+) : PhyAtsc3Source(isConnectable = true) {
 
     override fun openPhyClient(): Atsc3NdkPHYClientBase? {
         val candidatePHYList = getPHYImplementations(device)

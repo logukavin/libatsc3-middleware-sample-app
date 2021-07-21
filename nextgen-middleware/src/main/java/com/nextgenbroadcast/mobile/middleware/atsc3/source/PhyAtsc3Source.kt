@@ -1,6 +1,9 @@
 package com.nextgenbroadcast.mobile.middleware.atsc3.source
 
-abstract class PhyAtsc3Source : ConfigurableAtsc3Source<Int>(emptyList()), ITunableSource {
+abstract class PhyAtsc3Source(
+    val isConnectable: Boolean
+) : ConfigurableAtsc3Source<Int>(emptyList()), ITunableSource {
+
     override fun tune(freqKhz: Int) {
         super.tune(freqKhz)
     }
