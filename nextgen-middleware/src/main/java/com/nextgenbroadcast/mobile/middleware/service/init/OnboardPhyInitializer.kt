@@ -5,7 +5,7 @@ import android.content.res.Resources
 import android.content.res.XmlResourceParser
 import android.util.Log
 import com.nextgenbroadcast.mobile.middleware.IAtsc3ReceiverCore
-import com.nextgenbroadcast.mobile.middleware.atsc3.source.PhyAtsc3Source
+import com.nextgenbroadcast.mobile.middleware.atsc3.source.NdkPhyAtsc3Source
 import com.nextgenbroadcast.mobile.middleware.atsc3.utils.XmlUtils
 import kotlinx.coroutines.suspendCancellableCoroutine
 import org.ngbp.libatsc3.middleware.android.phy.Atsc3NdkPHYClientBase
@@ -41,7 +41,7 @@ internal class OnboardPhyInitializer(
 
                     try {
                         connected = suspendCancellableCoroutine { cont ->
-                            receiver.openRoute(PhyAtsc3Source(phy, fd, devicePath, freqKhz)) { result ->
+                            receiver.openRoute(NdkPhyAtsc3Source(phy, fd, devicePath, freqKhz)) { result ->
                                 cont.resume(result)
                             }
                         }

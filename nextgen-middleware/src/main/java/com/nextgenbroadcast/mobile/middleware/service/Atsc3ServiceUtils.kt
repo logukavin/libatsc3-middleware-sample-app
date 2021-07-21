@@ -8,7 +8,7 @@ import com.nextgenbroadcast.mobile.middleware.DeviceTypeSelectionDialog
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.*
 
 fun startAtsc3ServiceForDevice(context: Context, device: UsbDevice, forceOpen: Boolean) {
-    val type = UsbAtsc3Source.getSaankhyaFX3DeviceType(device)
+    val type = UsbPhyAtsc3Source.getSaankhyaFX3DeviceType(device)
     when {
         type == Atsc3Source.DEVICE_TYPE_PREBOOT -> {
             context.startActivity(DeviceTypeSelectionDialog.newIntent(context, device))
