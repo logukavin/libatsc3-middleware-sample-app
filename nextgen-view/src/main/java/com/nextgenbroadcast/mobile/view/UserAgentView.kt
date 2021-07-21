@@ -16,6 +16,7 @@ import android.webkit.*
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.distinctUntilChanged
+import com.nextgenbroadcast.mobile.core.Atsc3Config
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.core.cert.CertificateUtils.publicHash
 import kotlinx.coroutines.*
@@ -70,6 +71,7 @@ class UserAgentView @JvmOverloads constructor(
             javaScriptEnabled = true
             domStorageEnabled = true
             mediaPlaybackRequiresUserGesture = false
+            userAgentString = getAtsc3UserAgent()
         }
         if (BuildConfig.DEBUG) {
             setWebContentsDebuggingEnabled(true)
@@ -87,6 +89,13 @@ class UserAgentView @JvmOverloads constructor(
         captureContentVisibility = captureContent
 
         return !isCaptureEmpty()
+    }
+
+    private fun getAtsc3UserAgent(): String {
+        val defaultUserAgent = WebSettings.getDefaultUserAgent(context)
+        val atsc3Date = "${Atsc3Config.A300_YEAR}-${Atsc3Config.A300_MONTH}"
+        val capabilities = String.format("%04X", Atsc3Config.CAPABILITIES)
+        return "ATSC3/$atsc3Date ($capabilities) $defaultUserAgent"
     }
 
     private fun isCaptureEmpty(): Boolean {
