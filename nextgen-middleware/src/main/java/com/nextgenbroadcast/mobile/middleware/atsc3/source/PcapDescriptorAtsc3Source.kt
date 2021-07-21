@@ -33,6 +33,6 @@ class PcapDescriptorAtsc3Source(
     }
 
     companion object {
-        val TAG: String = PcapFileAtsc3Source::class.java.simpleName
+        val TAG: String = PcapDescriptorAtsc3Source::class.java.simpleName
     }
 }

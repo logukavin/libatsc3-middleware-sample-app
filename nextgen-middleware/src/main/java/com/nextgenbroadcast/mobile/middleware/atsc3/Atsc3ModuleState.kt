@@ -5,5 +5,5 @@ enum class Atsc3ModuleState {
     SCANNING,   // enumerating over the source configurations (frequencies) and collecting SLT data
     SNIFFING,   // source configured (tuned) and awaiting for SLT data
     TUNED,      // source successfully configured (tuned) and SLT data available
-    STOPPED     // the sourec was stopped but not disconnected
+    STOPPED     // the source was stopped but not disconnected
 }

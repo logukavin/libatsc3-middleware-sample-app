@@ -31,7 +31,7 @@ abstract class Atsc3Source : IAtsc3Source {
     }
 
     @Synchronized
-    fun tune(freqKhz: Int) {
+    protected open fun tune(freqKhz: Int) {
         atsc3NdkPHYClientInstance?.tune(freqKhz, 0)
     }
 
