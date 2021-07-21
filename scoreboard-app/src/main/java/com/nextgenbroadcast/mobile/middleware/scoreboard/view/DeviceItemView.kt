@@ -25,6 +25,7 @@ class DeviceItemView @JvmOverloads constructor(
     lateinit var lostLabel: TextView
     lateinit var phyChart: PhyChart
     lateinit var removeBtn: Button
+    lateinit var deviceItemView: DeviceItemView
 
     var isDeviceSelected = false
 
@@ -35,6 +36,7 @@ class DeviceItemView @JvmOverloads constructor(
         lostLabel = findViewById(R.id.device_lost_label)
         phyChart = findViewById(R.id.device_phy_chart)
         removeBtn = findViewById(R.id.device_remove_btn)
+        deviceItemView = findViewById(R.id.deviceItemView)
     }
 
     fun observe(flow: Flow<ClientTelemetryEvent>?, socket: DatagramSocketWrapper) {

@@ -4,7 +4,6 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.postDelayed
@@ -56,19 +55,6 @@ class ScoreboardActivity : AppCompatActivity() {
             }
         }) { device ->
             telemetryManager?.getFlow(device)
-        }
-
-        device_spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(
-                parent: AdapterView<*>?,
-                view: View?,
-                position: Int,
-                id: Long
-            ) {
-                deviceAdapter.setSelectedDeviceId(deviceSpinnerAdapter.getItem(position))
-            }
-
-            override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
 
         chart_list.layoutManager = LinearLayoutManager(this)
@@ -153,11 +139,6 @@ class ScoreboardActivity : AppCompatActivity() {
             fun onDeleteClick(device: TelemetryDevice)
         }
 
-        fun setSelectedDeviceId(id: String?) {
-            selectedDeviceId = id
-            notifyItemRangeChanged(0, itemCount, Any())
-        }
-
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): Holder {
             val view = inflater.inflate(R.layout.chart_item_view, parent, false) as DeviceItemView
             return Holder(view)
@@ -174,10 +155,15 @@ class ScoreboardActivity : AppCompatActivity() {
                 with(deviceView) {
                     observe(getFlowForDevice(device), socket)
                     isDeviceSelected = selectedDeviceId.equals(device.id)
+                    deviceItemView.setBackgroundColor(context.getColor(if(isDeviceSelected) R.color.yellow_device_item_bg else R.color.white))
                     title.text = device.id
                     lostLabel.visibility = if (device.isLost) View.VISIBLE else View.GONE
                     removeBtn.setOnClickListener {
                         listener.onDeleteClick(device)
+                    }
+                    phyChart.setOnClickListener{
+                        selectedDeviceId = device.id
+                        notifyItemRangeChanged(0, itemCount, Any())
                     }
                 }
             }
