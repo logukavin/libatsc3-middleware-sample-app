@@ -13,23 +13,21 @@ import com.google.firebase.installations.FirebaseInstallations
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.entity.ClientTelemetryEvent
 import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.TelemetryDevice
+import com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry.DatagramSocketWrapper
 import com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry.TelemetryManager
 import com.nextgenbroadcast.mobile.middleware.scoreboard.view.DeviceItemView
 import kotlinx.android.synthetic.main.activity_scoreboard.*
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.launch
 
 class ScoreboardActivity : AppCompatActivity() {
     private lateinit var deviceAdapter: DeviceListAdapter
     private lateinit var deviceSpinnerAdapter: ArrayAdapter<String>
 
+    private val socket: DatagramSocketWrapper by lazy {
+        DatagramSocketWrapper(applicationContext)
+    }
+
     private var telemetryManager: TelemetryManager? = null
-    private var selectedDeviceIdFlow:MutableStateFlow<String?> = MutableStateFlow(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -48,27 +46,26 @@ class ScoreboardActivity : AppCompatActivity() {
 
         setContentView(R.layout.activity_scoreboard)
 
-        deviceSpinnerAdapter =
-            ArrayAdapter<String>(this, android.R.layout.simple_dropdown_item_1line)
+        deviceSpinnerAdapter = ArrayAdapter<String>(this, android.R.layout.simple_dropdown_item_1line)
         device_spinner.adapter = deviceSpinnerAdapter
 
-        deviceAdapter =
-            DeviceListAdapter(selectedDeviceIdFlow, layoutInflater, object : DeviceListAdapter.DeviceItemClickListener {
-                override fun onDeleteClick(device: TelemetryDevice) {
-                    removeChartForDevice(device)
-                }
-            }) { device ->
-                telemetryManager?.getFlow(device)
+        deviceAdapter = DeviceListAdapter(layoutInflater, socket, object :
+            DeviceListAdapter.DeviceItemClickListener {
+            override fun onDeleteClick(device: TelemetryDevice) {
+                removeChartForDevice(device)
             }
+        }) { device ->
+            telemetryManager?.getFlow(device)
+        }
 
-        device_spinner.onItemSelectedListener = object :AdapterView.OnItemSelectedListener{
+        device_spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(
                 parent: AdapterView<*>?,
                 view: View?,
                 position: Int,
                 id: Long
             ) {
-                selectedDeviceIdFlow.value = deviceSpinnerAdapter.getItem(position)
+                deviceAdapter.setSelectedDeviceId(deviceSpinnerAdapter.getItem(position))
             }
 
             override fun onNothingSelected(parent: AdapterView<*>?) {}
@@ -144,25 +141,21 @@ class ScoreboardActivity : AppCompatActivity() {
     }
 
     class DeviceListAdapter(
-        private var selectedDeviceIdFlow: StateFlow<String?>,
         private val inflater: LayoutInflater,
+        private val socket: DatagramSocketWrapper,
         private val listener: DeviceItemClickListener,
         private val getFlowForDevice: (TelemetryDevice) -> Flow<ClientTelemetryEvent>?
     ) : ListAdapter<TelemetryDevice, DeviceListAdapter.Holder>(DIFF_CALLBACK) {
 
-        var selectedDeviceId:String? = null
-
-        init {
-            CoroutineScope(Dispatchers.Main).launch {
-                selectedDeviceIdFlow.collect {
-                    selectedDeviceId = it
-                    this@DeviceListAdapter.notifyDataSetChanged()
-                }
-            }
-        }
+        private var selectedDeviceId: String? = null
 
         interface DeviceItemClickListener {
             fun onDeleteClick(device: TelemetryDevice)
+        }
+
+        fun setSelectedDeviceId(id: String?) {
+            selectedDeviceId = id
+            notifyItemRangeChanged(0, itemCount, Any())
         }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): Holder {
@@ -179,7 +172,7 @@ class ScoreboardActivity : AppCompatActivity() {
         ) : RecyclerView.ViewHolder(deviceView) {
             fun bind(device: TelemetryDevice) {
                 with(deviceView) {
-                    observe(getFlowForDevice(device))
+                    observe(getFlowForDevice(device), socket)
                     isDeviceSelected = selectedDeviceId.equals(device.id)
                     title.text = device.id
                     lostLabel.visibility = if (device.isLost) View.VISIBLE else View.GONE

@@ -25,30 +25,27 @@ class DeviceItemView @JvmOverloads constructor(
     lateinit var lostLabel: TextView
     lateinit var phyChart: PhyChart
     lateinit var removeBtn: Button
-    private val socket: DatagramSocketWrapper by lazy {
-        DatagramSocketWrapper(context)
-    }
-   var isDeviceSelected = false
 
+    var isDeviceSelected = false
 
     override fun onFinishInflate() {
         super.onFinishInflate()
+
         title = findViewById(R.id.device_name_view)
         lostLabel = findViewById(R.id.device_lost_label)
         phyChart = findViewById(R.id.device_phy_chart)
         removeBtn = findViewById(R.id.device_remove_btn)
     }
 
-    fun observe(flow: Flow<ClientTelemetryEvent>?) {
+    fun observe(flow: Flow<ClientTelemetryEvent>?, socket: DatagramSocketWrapper) {
         phyChart.setDataSource(
             flow?.mapNotNull { event ->
                 try {
                     val payload = gson.fromJson<PhyPayload>(event.payload, phyType)
-                    Pair(payload.timeStamp, payload.snr1000.toDouble() / 1000)
-                    val timestamp = payload.timeStamp
                     val payloadValue = payload.snr1000.toDouble() / 1000
+                    val timestamp = payload.timeStamp
                     if (isDeviceSelected) {
-                        socket.sendUdpMessage("${title.text},${payload.timeStamp},$payloadValue")
+                        socket.sendUdpMessage("${title.text},$timestamp,$payloadValue")
                     }
                     Pair(timestamp, payloadValue)
                 } catch (e: Exception) {
