@@ -201,7 +201,6 @@ internal class ServiceControllerImpl(
 
     override suspend fun closeRoute() {
         withContext(atsc3Scope.coroutineContext) {
-            atsc3Module.stop() // call to stopRoute is not a mistake. We use it to close previously opened file
             atsc3Module.close()
         }
 

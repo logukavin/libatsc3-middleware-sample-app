@@ -91,9 +91,6 @@ internal class Atsc3Module(
     private var listener: Atsc3ModuleListener? = null
 
     @Volatile
-    private var nextSourceJob: Job? = null
-
-    @Volatile
     private var nextSourceConfigTuneTimeoutTask: TimerTask? = null
 
     override val rfPhyMetricsFlow = MutableSharedFlow<RfPhyStatistics>(3, 0, BufferOverflow.DROP_OLDEST)
@@ -201,16 +198,10 @@ internal class Atsc3Module(
         }
     }
 
-    @Synchronized
     private fun applyNextSourceConfig() {
-        val job = nextSourceJob
-        log("applyNextSourceConfig with job: $job, isActive: ${job?.isActive}")
+        log("applyNextSourceConfig")
 
-        if (job != null && job.isActive) {
-            return
-        }
-
-        nextSourceJob = CoroutineScope(Dispatchers.Main).launch {
+        withStateLock {
             // reset state before reconfiguration
             setSourceConfig(-1)
             val src = source
@@ -423,15 +414,10 @@ internal class Atsc3Module(
         return false
     }
 
-    override fun stop() {
-        source?.stop()
-
-        setState(Atsc3ModuleState.STOPPED)
-    }
-
     override fun close() {
         val src = source
         if (src !is PhyAtsc3Source || src.isConnectable) {
+            src?.stop() // call to stopRoute is not a mistake. We use it to close previously opened file
             src?.close()
             source = null
 
@@ -516,12 +502,12 @@ internal class Atsc3Module(
     }
 
     private fun finishReconfiguration() {
-        setState(Atsc3ModuleState.TUNED)
+        withStateLock {
+            setState(Atsc3ModuleState.TUNED)
 
-        processServiceLocationTableAndNotifyListener()
+            processServiceLocationTableAndNotifyListener()
 
-        if (suspendedServiceSelection) {
-            CoroutineScope(Dispatchers.Main).launch {
+            if (suspendedServiceSelection) {
                 getSelectedServiceIdPair().let { (selectedServiceBsid, selectedServiceId) ->
                     internalSelectService(selectedServiceBsid, selectedServiceId)
                 }
