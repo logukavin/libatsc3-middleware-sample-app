@@ -91,9 +91,6 @@ internal class Atsc3Module(
     private var listener: Atsc3ModuleListener? = null
 
     @Volatile
-    private var nextSourceJob: Job? = null
-
-    @Volatile
     private var nextSourceConfigTuneTimeoutTask: TimerTask? = null
 
     override val rfPhyMetricsFlow = MutableSharedFlow<RfPhyStatistics>(3, 0, BufferOverflow.DROP_OLDEST)
@@ -117,7 +114,7 @@ internal class Atsc3Module(
         if (src is ITunableSource) {
             reset()
 
-            if (src is TunableConfigurableAtsc3Source) {
+            if (src is PhyAtsc3Source) {
                 src.setConfigs(frequencyList)
 
                 if (USE_PERSISTED_CONFIGURATION) {
@@ -143,7 +140,7 @@ internal class Atsc3Module(
         }
     }
 
-    override fun connect(source: IAtsc3Source, defaultConfig: Map<Any, Atsc3ServiceLocationTable>?): Boolean {
+    override fun open(source: IAtsc3Source, defaultConfig: Map<Any, Atsc3ServiceLocationTable>?): Boolean {
         log("Connecting to: $source")
 
         close()
@@ -201,16 +198,10 @@ internal class Atsc3Module(
         }
     }
 
-    @Synchronized
     private fun applyNextSourceConfig() {
-        val job = nextSourceJob
-        log("applyNextSourceConfig with job: $job, isActive: ${job?.isActive}")
+        log("applyNextSourceConfig")
 
-        if (job != null && job.isActive) {
-            return
-        }
-
-        nextSourceJob = CoroutineScope(Dispatchers.Main).launch {
+        withStateLock {
             // reset state before reconfiguration
             setSourceConfig(-1)
             val src = source
@@ -388,7 +379,7 @@ internal class Atsc3Module(
     private var tmpAdditionalServiceOpened = false
 
     private fun internalSelectService(bsid: Int, serviceId: Int): Boolean {
-        log("internalSelectService: enter: with bsid: $bsid, serviceId: $serviceId");
+        log("internalSelectService: enter: with bsid: $bsid, serviceId: $serviceId")
 
         val slsProtocol = atsc3NdkApplicationBridge.atsc3_slt_selectService(serviceId).also {
             selectedServiceSLSProtocol = it
@@ -400,7 +391,7 @@ internal class Atsc3Module(
             serviceLocationTable[bsid]?.services?.firstOrNull {
                 it.serviceCategory == SLTConstants.SERVICE_CATEGORY_ESG
             }?.let { service ->
-                log("internalSelectService, calling atsc3_slt_alc_select_additional_service with service.serviceId: $service.serviceId");
+                log("internalSelectService, calling atsc3_slt_alc_select_additional_service with service.serviceId: $service.serviceId")
 
                 tmpAdditionalServiceOpened = atsc3NdkApplicationBridge.atsc3_slt_alc_select_additional_service(service.serviceId) > 0
             }
@@ -423,20 +414,18 @@ internal class Atsc3Module(
         return false
     }
 
-    override fun stop() {
-        source?.stop()
-
-        setState(Atsc3ModuleState.STOPPED)
-    }
-
     override fun close() {
-        source?.close()
-        source = null
+        val src = source
+        if (src !is PhyAtsc3Source || src.isConnectable) {
+            src?.stop() // call to stopRoute is not a mistake. We use it to close previously opened file
+            src?.close()
+            source = null
 
-        defaultConfiguration = null
+            defaultConfiguration = null
+            setSourceConfig(-1)
+        }
 
         lastTunedFreqList = emptyList()
-        setSourceConfig(-1)
         reset()
     }
 
@@ -513,12 +502,12 @@ internal class Atsc3Module(
     }
 
     private fun finishReconfiguration() {
-        setState(Atsc3ModuleState.TUNED)
+        withStateLock {
+            setState(Atsc3ModuleState.TUNED)
 
-        processServiceLocationTableAndNotifyListener()
+            processServiceLocationTableAndNotifyListener()
 
-        if (suspendedServiceSelection) {
-            CoroutineScope(Dispatchers.Main).launch {
+            if (suspendedServiceSelection) {
                 getSelectedServiceIdPair().let { (selectedServiceBsid, selectedServiceId) ->
                     internalSelectService(selectedServiceBsid, selectedServiceId)
                 }
@@ -696,7 +685,7 @@ internal class Atsc3Module(
                     log(it)
                 }
             } catch (ex: Exception) {
-                Log.w(TAG, "exception when dumping PHYRFStatistics: $ex");
+                Log.w(TAG, "exception when dumping PHYRFStatistics: $ex")
             }
             PHYStatistics.rfMetricsFlow.tryEmit(rfPhyStatistics)
         }
@@ -734,7 +723,7 @@ internal class Atsc3Module(
             source?.let { src ->
                 put(PhyVersionInfo.INFO_SDK_VERSION, src.getSdkVersion())
                 put(PhyVersionInfo.INFO_FIRMWARE_VERSION, src.getFirmwareVersion())
-                if (src is UsbAtsc3Source) {
+                if (src is UsbPhyAtsc3Source) {
                     val deviceType = when (src.type) {
                         Atsc3Source.DEVICE_TYPE_KAILASH -> "KAILASH"
                         Atsc3Source.DEVICE_TYPE_YOGA -> "YOGA"

@@ -223,7 +223,7 @@ class ServiceControllerTest {
         val type = PcapAtsc3Source.PcapType.DEMUXED
         val sourceMock = PcapFileAtsc3Source(path, type)
 
-        `when`(atsc3Module.connect(sourceMock)).thenReturn(false)
+        `when`(atsc3Module.open(sourceMock)).thenReturn(false)
 
         val result = serviceController.openRoute(sourceMock)
 
@@ -232,8 +232,8 @@ class ServiceControllerTest {
         verify(serviceGuideReader).clearAll()
         verify(repository).reset()
 
-        verify(atsc3Module).connect(sourceMock)
-        Assert.assertFalse(atsc3Module.connect(sourceMock))
+        verify(atsc3Module).open(sourceMock)
+        Assert.assertFalse(atsc3Module.open(sourceMock))
 
         Assert.assertFalse(result)
     }
@@ -244,7 +244,7 @@ class ServiceControllerTest {
         val type = PcapAtsc3Source.PcapType.DEMUXED
         val sourceMock = PcapFileAtsc3Source(path, type)
 
-        `when`(atsc3Module.connect(sourceMock)).thenReturn(true)
+        `when`(atsc3Module.open(sourceMock)).thenReturn(true)
 
         val result = serviceController.openRoute(sourceMock)
 
@@ -253,8 +253,8 @@ class ServiceControllerTest {
         verify(serviceGuideReader).clearAll()
         verify(repository).reset()
 
-        verify(atsc3Module).connect(sourceMock)
-        Assert.assertTrue(atsc3Module.connect(sourceMock))
+        verify(atsc3Module).open(sourceMock)
+        Assert.assertTrue(atsc3Module.open(sourceMock))
 
         Assert.assertTrue(result)
     }
@@ -265,7 +265,7 @@ class ServiceControllerTest {
         val type = PcapAtsc3Source.PcapType.STLTP
         val sourceMock = PcapFileAtsc3Source(path, type)
 
-        `when`(atsc3Module.connect(sourceMock)).thenReturn(false)
+        `when`(atsc3Module.open(sourceMock)).thenReturn(false)
 
         val result = serviceController.openRoute(sourceMock)
 
@@ -274,8 +274,8 @@ class ServiceControllerTest {
         verify(serviceGuideReader).clearAll()
         verify(repository).reset()
 
-        verify(atsc3Module).connect(sourceMock)
-        Assert.assertFalse(atsc3Module.connect(sourceMock))
+        verify(atsc3Module).open(sourceMock)
+        Assert.assertFalse(atsc3Module.open(sourceMock))
 
         Assert.assertFalse(result)
     }
@@ -286,7 +286,7 @@ class ServiceControllerTest {
         val type = PcapAtsc3Source.PcapType.STLTP
         val sourceMock = PcapFileAtsc3Source(path, type)
 
-        `when`(atsc3Module.connect(sourceMock)).thenReturn(true)
+        `when`(atsc3Module.open(sourceMock)).thenReturn(true)
 
         val result = serviceController.openRoute(sourceMock)
 
@@ -295,8 +295,8 @@ class ServiceControllerTest {
         verify(serviceGuideReader).clearAll()
         verify(repository).reset()
 
-        verify(atsc3Module).connect(sourceMock)
-        Assert.assertTrue(atsc3Module.connect(sourceMock))
+        verify(atsc3Module).open(sourceMock)
+        Assert.assertTrue(atsc3Module.open(sourceMock))
 
         Assert.assertTrue(result)
     }
@@ -307,7 +307,7 @@ class ServiceControllerTest {
         val sources = path.split('\n')
         val sourceMock = SrtListAtsc3Source(sources)
 
-        `when`(atsc3Module.connect(sourceMock)).thenReturn(false)
+        `when`(atsc3Module.open(sourceMock)).thenReturn(false)
 
         val result = serviceController.openRoute(sourceMock)
 
@@ -316,8 +316,8 @@ class ServiceControllerTest {
         verify(serviceGuideReader).clearAll()
         verify(repository).reset()
 
-        verify(atsc3Module).connect(sourceMock)
-        Assert.assertFalse(atsc3Module.connect(sourceMock))
+        verify(atsc3Module).open(sourceMock)
+        Assert.assertFalse(atsc3Module.open(sourceMock))
 
         Assert.assertFalse(result)
     }
@@ -328,7 +328,7 @@ class ServiceControllerTest {
         val sources = path.split('\n')
         val sourceMock = SrtListAtsc3Source(sources)
 
-        `when`(atsc3Module.connect(sourceMock)).thenReturn(true)
+        `when`(atsc3Module.open(sourceMock)).thenReturn(true)
 
         val result = serviceController.openRoute(sourceMock)
 
@@ -337,8 +337,8 @@ class ServiceControllerTest {
         verify(serviceGuideReader).clearAll()
         verify(repository).reset()
 
-        verify(atsc3Module).connect(sourceMock)
-        Assert.assertTrue(atsc3Module.connect(sourceMock))
+        verify(atsc3Module).open(sourceMock)
+        Assert.assertTrue(atsc3Module.open(sourceMock))
 
         Assert.assertTrue(result)
     }
@@ -348,7 +348,7 @@ class ServiceControllerTest {
         val path = "srt://path"
         val sourceMock = SrtAtsc3Source(path)
 
-        `when`(atsc3Module.connect(sourceMock)).thenReturn(false)
+        `when`(atsc3Module.open(sourceMock)).thenReturn(false)
 
         val result = serviceController.openRoute(sourceMock)
 
@@ -357,8 +357,8 @@ class ServiceControllerTest {
         verify(serviceGuideReader).clearAll()
         verify(repository).reset()
 
-        verify(atsc3Module).connect(sourceMock)
-        Assert.assertFalse(atsc3Module.connect(sourceMock))
+        verify(atsc3Module).open(sourceMock)
+        Assert.assertFalse(atsc3Module.open(sourceMock))
 
         Assert.assertFalse(result)
     }
@@ -368,7 +368,7 @@ class ServiceControllerTest {
         val path = "srt://path"
         val sourceMock = SrtAtsc3Source(path)
 
-        `when`(atsc3Module.connect(sourceMock)).thenReturn(true)
+        `when`(atsc3Module.open(sourceMock)).thenReturn(true)
 
         val result = serviceController.openRoute(sourceMock)
 
@@ -377,8 +377,8 @@ class ServiceControllerTest {
         verify(serviceGuideReader).clearAll()
         verify(repository).reset()
 
-        verify(atsc3Module).connect(sourceMock)
-        Assert.assertTrue(atsc3Module.connect(sourceMock))
+        verify(atsc3Module).open(sourceMock)
+        Assert.assertTrue(atsc3Module.open(sourceMock))
 
         Assert.assertTrue(result)
     }
@@ -386,7 +386,7 @@ class ServiceControllerTest {
     @Test
     fun testOpenRouteBySourceNotConnectedReturnFalse() {
         val sourceMock = mock(IAtsc3Source::class.java)
-        `when`(atsc3Module.connect(sourceMock)).thenReturn(false)
+        `when`(atsc3Module.open(sourceMock)).thenReturn(false)
 
         val result = serviceController.openRoute(sourceMock)
 
@@ -395,8 +395,8 @@ class ServiceControllerTest {
         verify(serviceGuideReader).clearAll()
         verify(repository).reset()
 
-        verify(atsc3Module).connect(sourceMock)
-        Assert.assertFalse(atsc3Module.connect(sourceMock))
+        verify(atsc3Module).open(sourceMock)
+        Assert.assertFalse(atsc3Module.open(sourceMock))
 
         Assert.assertFalse(result)
     }
@@ -404,7 +404,7 @@ class ServiceControllerTest {
     @Test
     fun testOpenRouteBySourceConnectedWithITunableSourceReturnTrue() {
         val sourceMock = mock(MockTunableAtsc3Source::class.java)
-        `when`(atsc3Module.connect(sourceMock)).thenReturn(true)
+        `when`(atsc3Module.open(sourceMock)).thenReturn(true)
 
         val result = serviceController.openRoute(sourceMock)
 
@@ -413,8 +413,8 @@ class ServiceControllerTest {
         verify(serviceGuideReader).clearAll()
         verify(repository).reset()
 
-        verify(atsc3Module).connect(sourceMock)
-        Assert.assertTrue(atsc3Module.connect(sourceMock))
+        verify(atsc3Module).open(sourceMock)
+        Assert.assertTrue(atsc3Module.open(sourceMock))
         Assert.assertTrue(sourceMock is ITunableSource)
 
         Assert.assertTrue(result)
@@ -423,7 +423,7 @@ class ServiceControllerTest {
     @Test
     fun testOpenRouteBySourceConnectedWithoutITunableSourceReturnTrue() {
         val sourceMock = mock(MockAtsc3Source::class.java)
-        `when`(atsc3Module.connect(sourceMock)).thenReturn(true)
+        `when`(atsc3Module.open(sourceMock)).thenReturn(true)
 
         val result = serviceController.openRoute(sourceMock)
 
@@ -433,8 +433,8 @@ class ServiceControllerTest {
         verify(serviceGuideReader).clearAll()
         verify(repository).reset()
 
-        verify(atsc3Module).connect(sourceMock)
-        Assert.assertTrue(atsc3Module.connect(sourceMock))
+        verify(atsc3Module).open(sourceMock)
+        Assert.assertTrue(atsc3Module.open(sourceMock))
         Assert.assertFalse(sourceMock is ITunableSource)
 
         Assert.assertTrue(result)

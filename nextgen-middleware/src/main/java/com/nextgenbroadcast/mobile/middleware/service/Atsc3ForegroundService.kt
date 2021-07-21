@@ -15,7 +15,7 @@ import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.middleware.*
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.Atsc3Source
-import com.nextgenbroadcast.mobile.middleware.atsc3.source.UsbAtsc3Source
+import com.nextgenbroadcast.mobile.middleware.atsc3.source.UsbPhyAtsc3Source
 import com.nextgenbroadcast.mobile.middleware.notification.AlertNotificationHelper
 import com.nextgenbroadcast.mobile.middleware.phy.Atsc3DeviceReceiver
 import com.nextgenbroadcast.mobile.middleware.service.holder.*
@@ -379,7 +379,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         startForeground()
         unregisterDeviceReceiver()
 
-        atsc3Receiver.openRoute(UsbAtsc3Source(usbManager, device, deviceType), forceOpen)
+        atsc3Receiver.openRoute(UsbPhyAtsc3Source(usbManager, device, deviceType), forceOpen)
 
         // Register BroadcastReceiver to detect when device is disconnected
         registerDeviceReceiver(device)
