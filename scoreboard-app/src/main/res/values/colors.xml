@@ -9,4 +9,5 @@
     <color name="alert">#FFFF0F0F</color>
 
     <color name="chart_grid_color">#4CFFFFFF</color>
+    <color name="yellow_device_item_bg">#FFFFB7</color>
 </resources>
