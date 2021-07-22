@@ -22,7 +22,7 @@ class AWSIoTelemetryWriter(
     override suspend fun write(eventFlow: Flow<TelemetryEvent>) {
         eventFlow.collect { event ->
             try {
-                LOG.d(TAG, "AWS IoT event: ${event.topic} - ${event.payload}")
+                //LOG.d(TAG, "AWS IoT event: ${event.topic} - ${event.payload}")
                 thing.publish(event.topic, gson.toJson(event.payload))
             } catch (e: AwsIotRuntimeException) {
                 LOG.e(TAG, "Can't publish telemetry topic: ${event.topic}", e)
