@@ -51,7 +51,10 @@ internal class ServiceControllerImpl(
         val (configIndex, configCount, configKnown) = config ?: Triple(-1, -1, false)
         if (state == null || state == Atsc3ModuleState.IDLE) {
             ReceiverState.idle()
-        } else if (state == Atsc3ModuleState.SCANNING || (state == Atsc3ModuleState.SNIFFING && !configKnown && configCount > 1)) {
+        } else if (state == Atsc3ModuleState.SCANNING
+            // converts last config index in scanning series (ignoring known configs) to scanning state
+            || (state == Atsc3ModuleState.SNIFFING && !configKnown && configCount > 1)
+        ) {
             ReceiverState.scanning(configIndex, configCount)
         } else if (services.isEmpty()) {
             ReceiverState.tuning(configIndex, configCount)
