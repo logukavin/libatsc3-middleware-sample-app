@@ -10,17 +10,17 @@ interface IAtsc3Module {
 
     fun setListener(listener: Atsc3ModuleListener?)
 
-    fun open(source: IAtsc3Source, defaultConfig: Map<Any, Atsc3ServiceLocationTable>? = null): Boolean
-    fun tune(frequencyList: List<Int>, force: Boolean)
-    fun cancelScanning()
-    fun selectAdditionalService(serviceId: Int): Boolean
+    suspend fun open(source: IAtsc3Source, defaultConfig: Map<Any, Atsc3ServiceLocationTable>? = null): Boolean
+    suspend fun tune(frequencyList: List<Int>, force: Boolean)
+    suspend fun cancelScanning()
+    suspend fun selectAdditionalService(serviceId: Int): Boolean
+    suspend fun selectService(bsid: Int, serviceId: Int): Boolean
+    suspend fun close()
+    suspend fun getCurrentConfiguration(): Pair<String, Map<Any, Atsc3ServiceLocationTable>>?
+
     fun isServiceSelected(bsid: Int, serviceId: Int): Boolean
-    fun selectService(bsid: Int, serviceId: Int): Boolean
-    fun close()
     fun isIdle(): Boolean
     fun getSelectedBSID(): Int
-
-    fun getCurrentConfiguration(): Pair<String, Map<Any, Atsc3ServiceLocationTable>>?
 
     fun getVersionInfo(): Map<String, String?>
     fun getSerialNum(): String?

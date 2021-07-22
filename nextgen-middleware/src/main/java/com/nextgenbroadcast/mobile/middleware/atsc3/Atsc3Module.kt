@@ -30,6 +30,7 @@ import org.ngbp.libatsc3.middleware.android.phy.models.RfPhyStatistics
 import java.io.File
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.schedule
@@ -47,6 +48,7 @@ internal class Atsc3Module(
     private val applicationPackageMap = ConcurrentHashMap<String, Atsc3Application>()  // TODO: concurent? onPackageExtractCompleted
     private val stateLock = ReentrantLock()
     private val configurationTimer = Timer()
+    private val stateScope = CoroutineScope(Executors.newSingleThreadExecutor().asCoroutineDispatcher())
 
     private var lastTunedFreqList: List<Int> = emptyList()
     private var defaultConfiguration: Map<Any, Atsc3ServiceLocationTable>? = null
@@ -105,96 +107,104 @@ internal class Atsc3Module(
      * The first one will be used as default.
      * frequencyList - list of frequencies in KHz
      */
-    override fun tune(frequencyList: List<Int>, force: Boolean) {
-        val freqKhz = frequencyList.firstOrNull() ?: 0
-        val demodLock = phyDemodLock
-        if (!force && (demodLock || (freqKhz != 0 && lastTunedFreqList.isEquals(frequencyList)))) return
+    override suspend fun tune(frequencyList: List<Int>, force: Boolean) {
+        withContext(stateScope.coroutineContext) {
+            val freqKhz = frequencyList.firstOrNull() ?: 0
+            val demodLock = phyDemodLock
+            if (!force && (demodLock || (freqKhz != 0 && lastTunedFreqList.isEquals(frequencyList)))) return@withContext
 
-        val src = source
-        if (src is ITunableSource) {
-            reset()
+            val src = source
+            if (src is ITunableSource) {
+                reset()
 
-            if (src is PhyAtsc3Source) {
-                src.setConfigs(frequencyList)
+                if (src is PhyAtsc3Source) {
+                    src.setConfigs(frequencyList)
 
-                if (USE_PERSISTED_CONFIGURATION) {
-                    withStateLock {
-                        applyDefaultConfiguration(src)
-                    }
-                }
-
-                setSourceConfig(-1)
-                val config = if (USE_PERSISTED_CONFIGURATION) {
-                    findNextConfigIndexToSniff(src.getCurrentConfigIndex())
-                } else {
-                    src.getCurrentConfigIndex()
-                }
-                applySourceConfig(src, config, src.getConfigCount() > 1)
-
-                lastTunedFreqList = frequencyList
-            } else {
-                lastTunedFreqList = listOf(freqKhz)
-
-                src.tune(freqKhz)
-            }
-        }
-    }
-
-    override fun open(source: IAtsc3Source, defaultConfig: Map<Any, Atsc3ServiceLocationTable>?): Boolean {
-        log("Connecting to: $source")
-
-        close()
-
-        try {
-            this.source = source
-
-            return withStateLock {
-                defaultConfiguration = defaultConfig
-                if (USE_PERSISTED_CONFIGURATION) {
-                    if (source.getConfigCount() > 0) {
-                        applyDefaultConfiguration(source)
-
-                        if (source is ConfigurableAtsc3Source<*>) {
-                            val configIndex = findNextConfigIndexToSniff(source.getCurrentConfigIndex())
-                            source.setInitialConfiguration(configIndex)
+                    if (USE_PERSISTED_CONFIGURATION) {
+                        log("tune()")
+                        withStateLock {
+                            applyDefaultConfiguration(src)
                         }
                     }
-                }
 
-                val result = source.open()
-                if (result == IAtsc3Source.RESULT_ERROR) {
-                    close()
+                    setSourceConfig(-1)
+                    val config = if (USE_PERSISTED_CONFIGURATION) {
+                        findNextConfigIndexToSniff(src.getCurrentConfigIndex())
+                    } else {
+                        src.getCurrentConfigIndex()
+                    }
+                    applySourceConfig(src, config, src.getConfigCount() > 1)
+
+                    lastTunedFreqList = frequencyList
                 } else {
-                    setSourceConfig(result)
-                    val newState = when {
-                        result > 0 -> Atsc3ModuleState.SCANNING
-                        source.getConfigCount() > 0 -> Atsc3ModuleState.SNIFFING
-                        else -> Atsc3ModuleState.IDLE
-                    }
-                    setState(newState)
-                    if (source.getConfigCount() > 1) {
-                        startSourceConfigTimeoutTask()
-                    }
-                    return@withStateLock true
+                    lastTunedFreqList = listOf(freqKhz)
+
+                    src.tune(freqKhz)
                 }
-                return@withStateLock false
             }
-        } catch (e: Exception) {
-            LOG.e(TAG, "Error when opening the source: $source", e)
-
-            this.source = null
         }
-
-        return false
     }
 
-    override fun cancelScanning() {
-        cancelSourceConfigTimeoutTask()
+    override suspend fun open(source: IAtsc3Source, defaultConfig: Map<Any, Atsc3ServiceLocationTable>?): Boolean {
+        return withContext(stateScope.coroutineContext) {
+            log("Connecting to: $source")
 
-        if (serviceLocationTable.isEmpty()) {
-            setState(Atsc3ModuleState.IDLE)
-        } else {
-            finishReconfiguration()
+            close()
+
+            try {
+                this@Atsc3Module.source = source
+
+                return@withContext withStateLock {
+                    defaultConfiguration = defaultConfig
+                    if (USE_PERSISTED_CONFIGURATION) {
+                        if (source.getConfigCount() > 0) {
+                            applyDefaultConfiguration(source)
+
+                            if (source is ConfigurableAtsc3Source<*>) {
+                                val configIndex =
+                                    findNextConfigIndexToSniff(source.getCurrentConfigIndex())
+                                source.setInitialConfiguration(configIndex)
+                            }
+                        }
+                    }
+
+                    val result = source.open()
+                    if (result == IAtsc3Source.RESULT_ERROR) {
+                        close()
+                    } else {
+                        setSourceConfig(result)
+                        val newState = when {
+                            result > 0 -> Atsc3ModuleState.SCANNING
+                            source.getConfigCount() > 0 -> Atsc3ModuleState.SNIFFING
+                            else -> Atsc3ModuleState.IDLE
+                        }
+                        setState(newState)
+                        if (source.getConfigCount() > 1) {
+                            startSourceConfigTimeoutTask()
+                        }
+                        return@withStateLock true
+                    }
+                    return@withStateLock false
+                }
+            } catch (e: Exception) {
+                LOG.e(TAG, "Error when opening the source: $source", e)
+
+                this@Atsc3Module.source = null
+            }
+
+            return@withContext false
+        }
+    }
+
+    override suspend fun cancelScanning() {
+        withContext(stateScope.coroutineContext) {
+            cancelSourceConfigTimeoutTask()
+
+            if (serviceLocationTable.isEmpty()) {
+                setState(Atsc3ModuleState.IDLE)
+            } else {
+                finishReconfiguration()
+            }
         }
     }
 
@@ -217,7 +227,7 @@ internal class Atsc3Module(
         }
     }
 
-    private fun <T> withStateLock(action: () -> T): T {
+    private inline fun <T> withStateLock(action: () -> T): T {
         try {
             stateLock.lock()
 
@@ -228,9 +238,9 @@ internal class Atsc3Module(
     }
 
     private fun applySourceConfig(src: ConfigurableAtsc3Source<*>, config: Int, isScanning: Boolean): Int {
-        cancelSourceConfigTimeoutTask()
-
         log("applySourceConfig with src: $src, config: $config")
+
+        cancelSourceConfigTimeoutTask()
 
         return withStateLock {
             if (src.getConfigCount() < 1) return@withStateLock IAtsc3Source.RESULT_ERROR
@@ -340,40 +350,37 @@ internal class Atsc3Module(
         listener?.onConfigurationChanged(config, configCount, isKnown)
     }
 
-    override fun isServiceSelected(bsid: Int, serviceId: Int): Boolean {
-        return getSelectedServiceIdPair().let { (selectedServiceBsid, selectedServiceId) ->
-            selectedServiceBsid == bsid && selectedServiceId == serviceId
-        }
-    }
-
     @Synchronized
     private fun getSelectedServiceIdPair() = Pair(selectedServiceBsid, selectedServiceId)
 
-    override fun selectService(bsid: Int, serviceId: Int): Boolean {
-        synchronized(this) {
-            if (selectedServiceBsid == bsid && (selectedServiceId == serviceId || state != Atsc3ModuleState.TUNED)) return false
+    override suspend fun selectService(bsid: Int, serviceId: Int): Boolean {
+        return withContext(stateScope.coroutineContext) {
+            synchronized(this) {
+                if (selectedServiceBsid == bsid && (selectedServiceId == serviceId || state != Atsc3ModuleState.TUNED)) return@withContext false
 
-            clearHeld()
+                clearHeld()
 
-            selectedServiceSLSProtocol = -1
-            selectedServiceBsid = bsid
-            selectedServiceId = serviceId
-        }
-
-        serviceToSourceConfig[bsid]?.let { serviceConfig ->
-            if (serviceConfig != currentSourceConfiguration) {
-                val src = source
-                if (src is ConfigurableAtsc3Source<*>) {
-                    withStateLock {
-                        applySourceConfig(src, serviceConfig, false)
-                        suspendedServiceSelection = true
-                    }
-                    return true
-                }
+                selectedServiceSLSProtocol = -1
+                selectedServiceBsid = bsid
+                selectedServiceId = serviceId
             }
-        } ?: log("selectService - source configuration for bsid: $bsid NOT FOUND")
 
-        return internalSelectService(bsid, serviceId)
+            serviceToSourceConfig[bsid]?.let { serviceConfig ->
+                if (serviceConfig != currentSourceConfiguration) {
+                    val src = source
+                    if (src is ConfigurableAtsc3Source<*>) {
+                        log("selectService()")
+                        withStateLock {
+                            applySourceConfig(src, serviceConfig, false)
+                            suspendedServiceSelection = true
+                        }
+                        return@withContext true
+                    }
+                }
+            } ?: log("selectService - source configuration for bsid: $bsid NOT FOUND")
+
+            return@withContext internalSelectService(bsid, serviceId)
+        }
     }
 
     private var tmpAdditionalServiceOpened = false
@@ -407,30 +414,41 @@ internal class Atsc3Module(
     }
 
     @Deprecated("Do not work because additional service persistence not implemented in libatsc3")
-    override fun selectAdditionalService(serviceId: Int): Boolean {
+    override suspend fun selectAdditionalService(serviceId: Int): Boolean {
+//        atsc3Scope.launch {
 //        //atsc3NdkApplicationBridge.atsc3_slt_alc_clear_additional_service_selections()
 //        val protocol = atsc3NdkApplicationBridge.atsc3_slt_alc_select_additional_service(serviceId)
 //        return protocol > 0
         return false
     }
 
-    override fun close() {
-        val src = source
-        if (src !is PhyAtsc3Source || src.isConnectable) {
-            src?.stop() // call to stopRoute is not a mistake. We use it to close previously opened file
-            src?.close()
-            source = null
+    override suspend fun close() {
+        withContext(stateScope.coroutineContext) {
+            val src = source
+            if (src !is PhyAtsc3Source || src.isConnectable) {
+                src?.stop() // call to stopRoute is not a mistake. We use it to close previously opened file
+                src?.close()
+                source = null
 
-            defaultConfiguration = null
-            setSourceConfig(-1)
+                defaultConfiguration = null
+                setSourceConfig(-1)
+            }
+
+            lastTunedFreqList = emptyList()
+            reset()
         }
+    }
 
-        lastTunedFreqList = emptyList()
-        reset()
+    override fun isServiceSelected(bsid: Int, serviceId: Int): Boolean {
+        return getSelectedServiceIdPair().let { (selectedServiceBsid, selectedServiceId) ->
+            selectedServiceBsid == bsid && selectedServiceId == serviceId
+        }
     }
 
     override fun isIdle(): Boolean {
-        return getState() == Atsc3ModuleState.IDLE
+        // We can't use sync state because it could lock Main thread. But state changing operations
+        // are sequential on ServiceController level.
+        return /*getState()*/state == Atsc3ModuleState.IDLE
     }
 
     override fun getSelectedBSID(): Int {
@@ -557,15 +575,17 @@ internal class Atsc3Module(
 
         log("onSltTablePresent, currentState: $currentState, skip: $shouldSkip, slt_xml:\n$slt_payload_xml")
 
-        if (currentState == Atsc3ModuleState.SCANNING) {
-            applyNextSourceConfig()
-        } else if (currentState != Atsc3ModuleState.IDLE) {
-            if (!suspendedServiceSelection) {
-                synchronized(this) {
-                    selectedServiceBsid = slt.bsid
+        stateScope.launch {
+            if (currentState == Atsc3ModuleState.SCANNING) {
+                applyNextSourceConfig()
+            } else if (currentState != Atsc3ModuleState.IDLE) {
+                if (!suspendedServiceSelection) {
+                    synchronized(this) {
+                        selectedServiceBsid = slt.bsid
+                    }
                 }
+                finishReconfiguration()
             }
-            finishReconfiguration()
         }
     }
 
@@ -703,9 +723,10 @@ internal class Atsc3Module(
 
     //////////////////////////////////////////////////////////////
 
-    override fun getCurrentConfiguration(): Pair<String, Map<Any, Atsc3ServiceLocationTable>>? {
-        val src = source ?: return null
-        return Pair(
+    override suspend fun getCurrentConfiguration(): Pair<String, Map<Any, Atsc3ServiceLocationTable>>? {
+        return withContext(stateScope.coroutineContext) {
+            val src = source ?: return@withContext null
+            Pair(
                 src::class.java.simpleName,
                 serviceToSourceConfig.mapNotNull { (bsid, configIndex) ->
                     src.getConfigByIndex(configIndex).let { config ->
@@ -714,7 +735,8 @@ internal class Atsc3Module(
                         }
                     }
                 }.toMap()
-        )
+            )
+        }
     }
 
     override fun getVersionInfo(): Map<String, String?> {
