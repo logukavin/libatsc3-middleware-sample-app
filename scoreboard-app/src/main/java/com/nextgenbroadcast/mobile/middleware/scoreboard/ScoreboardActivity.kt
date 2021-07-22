@@ -155,16 +155,23 @@ class ScoreboardActivity : AppCompatActivity() {
                 with(deviceView) {
                     observe(getFlowForDevice(device), socket)
                     isDeviceSelected = selectedDeviceId.equals(device.id)
-                    deviceItemView.setBackgroundColor(context.getColor(if(isDeviceSelected) R.color.yellow_device_item_bg else R.color.white))
+                    deviceItemView.setBackgroundColor(context.getColor(if (isDeviceSelected) R.color.yellow_device_item_bg else R.color.white))
                     title.text = device.id
                     lostLabel.visibility = if (device.isLost) View.VISIBLE else View.GONE
+
                     removeBtn.setOnClickListener {
                         listener.onDeleteClick(device)
                     }
-                    phyChart.setOnClickListener{
-                        selectedDeviceId = device.id
+
+                    phyChart.setOnClickListener {
+                        selectedDeviceId = if (selectedDeviceId != device.id) {
+                            device.id
+                        } else {
+                            null
+                        }
                         notifyItemRangeChanged(0, itemCount, Any())
                     }
+
                 }
             }
         }
