@@ -39,7 +39,6 @@ internal class ServiceControllerImpl(
 ) : IServiceController, Atsc3ModuleListener {
 
     private val mainScope = CoroutineScope(Dispatchers.Main)
-    private val atsc3Scope = CoroutineScope(Executors.newSingleThreadExecutor().asCoroutineDispatcher())
     private val atsc3ScopeLock = Mutex()
 
     private var heldResetJob: Job? = null
@@ -129,9 +128,7 @@ internal class ServiceControllerImpl(
             services.firstOrNull { service ->
                 service.serviceCategory == SLTConstants.SERVICE_CATEGORY_ESG
             }?.let { service ->
-                atsc3Scope.launch {
-                    atsc3Module.selectAdditionalService(service.serviceId)
-                }
+                atsc3Module.selectAdditionalService(service.serviceId)
             }
         }
     }
@@ -176,12 +173,10 @@ internal class ServiceControllerImpl(
     }
 
     override suspend fun openRoute(source: IAtsc3Source, force: Boolean): Boolean {
-        return withContext(atsc3Scope.coroutineContext) {
+        return withContext(Dispatchers.Main) {
             val opened = atsc3ScopeLock.withLock {
                 if (force || atsc3Module.isIdle()) {
-                    withContext(Dispatchers.Main) {
-                        clearRouteData()
-                    }
+                    clearRouteData()
 
                     val lastProfile = getLastProfileForSource(source)
                     if (atsc3Module.open(source, lastProfile?.configs)) {
@@ -200,9 +195,7 @@ internal class ServiceControllerImpl(
     }
 
     override suspend fun closeRoute() {
-        withContext(atsc3Scope.coroutineContext) {
-            atsc3Module.close()
-        }
+        atsc3Module.close()
 
         withContext(Dispatchers.Main) {
             clearRouteData()
@@ -219,53 +212,47 @@ internal class ServiceControllerImpl(
     }
 
     override suspend fun selectService(service: AVService): Boolean {
-        return withContext(atsc3Scope.coroutineContext) {
+        return withContext(Dispatchers.Main) {
             if (atsc3Module.isServiceSelected(service.bsid, service.id)) return@withContext true
 
             val res = atsc3ScopeLock.withLock {
-                withContext(Dispatchers.Main) {
-                    // Reset current media. New media url will be received after service selection.
-                    resetMediaUrl()
+                // Reset current media. New media url will be received after service selection.
+                resetMediaUrl()
 
-                    // Reset the current HELD if it's not compatible new service or start delayed reset otherwise.
-                    // Delayed reset will be canceled when a new HELD been received for selected service.
-                    repository.heldPackage.value?.let { currentHeld ->
-                        // Is new service compatible with current HELD?
-                        //TODO: we should check held broadcaster, but don't have it in held
-                        if (currentHeld.coupledServices?.contains(service.id) == true) {
-                            resetHeldWithDelay()
-                        } else {
-                            repository.setHeldPackage(null)
-                        }
+                // Reset the current HELD if it's not compatible new service or start delayed reset otherwise.
+                // Delayed reset will be canceled when a new HELD been received for selected service.
+                repository.heldPackage.value?.let { currentHeld ->
+                    // Is new service compatible with current HELD?
+                    //TODO: we should check held broadcaster, but don't have it in held
+                    if (currentHeld.coupledServices?.contains(service.id) == true) {
+                        resetHeldWithDelay()
+                    } else {
+                        repository.setHeldPackage(null)
                     }
                 }
 
                 atsc3Module.selectService(service.bsid, service.id)
             }
 
-            withContext(Dispatchers.Main) {
-                if (res) {
-                    atsc3Analytics.startSession(service.bsid, service.id, service.globalId, service.category)
+            if (res) {
+                atsc3Analytics.startSession(service.bsid, service.id, service.globalId, service.category)
 
-                    // Store successfully selected service. This will lead to RMP reset
-                    repository.setSelectedService(service)
-                } else {
-                    cancelHeldReset()
-                    // Reset HELD and service if service can't be selected
-                    repository.setHeldPackage(null)
-                    repository.setSelectedService(null)
-                }
-                repository.resetMediaSate()
+                // Store successfully selected service. This will lead to RMP reset
+                repository.setSelectedService(service)
+            } else {
+                cancelHeldReset()
+                // Reset HELD and service if service can't be selected
+                repository.setHeldPackage(null)
+                repository.setSelectedService(null)
             }
+            repository.resetMediaSate()
 
             res
         }
     }
 
     override suspend fun cancelScanning() {
-        withContext(atsc3Scope.coroutineContext) {
-            atsc3Module.cancelScanning()
-        }
+        atsc3Module.cancelScanning()
     }
 
     override suspend fun tune(frequency: PhyFrequency) {
@@ -285,13 +272,11 @@ internal class ServiceControllerImpl(
                     resetMediaUrl()
                 }
 
-                val tuned = withContext(atsc3Scope.coroutineContext) {
-                    // ignore auto tune if receiver already tuned or scanning
-                    if (atsc3Module.isIdle() || forceTune) {
-                        atsc3Module.tune(frequencyList, forceTune)
-                        true
-                    } else false
-                }
+                // ignore auto tune if receiver already tuned or scanning
+                val tuned = if (atsc3Module.isIdle() || forceTune) {
+                    atsc3Module.tune(frequencyList, forceTune)
+                    true
+                } else false
 
                 if (tuned) {
                     // Store the first one because it will be used as default
@@ -381,19 +366,17 @@ internal class ServiceControllerImpl(
         }
     }
 
-    private fun storeCurrentProfile() {
-        atsc3Scope.launch {
-            val location = repository.lastLocation.value
-            if (location != null && location.latitude != 0.0 && location.longitude != 0.0) {
-                settings.receiverProfile = atsc3Module.getCurrentConfiguration()?.let { (srcType, config) ->
+    private suspend fun storeCurrentProfile() {
+        val location = repository.lastLocation.value
+        if (location != null && location.latitude != 0.0 && location.longitude != 0.0) {
+            settings.receiverProfile = atsc3Module.getCurrentConfiguration()?.let { (srcType, config) ->
                     Atsc3Profile(
-                            srcType,
-                            config,
-                            System.currentTimeMillis(),
-                            Atsc3Profile.SimpleLocation(location.latitude, location.longitude)
+                        srcType,
+                        config,
+                        System.currentTimeMillis(),
+                        Atsc3Profile.SimpleLocation(location.latitude, location.longitude)
                     )
                 }
-            }
         }
     }
 
