@@ -127,7 +127,6 @@ internal class Atsc3Module(
                         }
                     }
 
-                    setSourceConfig(-1)
                     val config = if (USE_PERSISTED_CONFIGURATION) {
                         findNextConfigIndexToSniff(src.getCurrentConfigIndex())
                     } else {
@@ -212,8 +211,6 @@ internal class Atsc3Module(
         log("applyNextSourceConfig")
 
         withStateLock {
-            // reset state before reconfiguration
-            setSourceConfig(-1)
             val src = source
             if (src is ConfigurableAtsc3Source<*>) {
                 val nextConfigIndex = if (USE_PERSISTED_CONFIGURATION) {
@@ -243,7 +240,10 @@ internal class Atsc3Module(
         cancelSourceConfigTimeoutTask()
 
         return withStateLock {
-            if (src.getConfigCount() < 1) return@withStateLock IAtsc3Source.RESULT_ERROR
+            if (src.getConfigCount() < 1) {
+                setSourceConfig(-1)
+                return@withStateLock IAtsc3Source.RESULT_ERROR
+            }
 
             isReconfiguring = true
             val result = try {
@@ -261,6 +261,8 @@ internal class Atsc3Module(
                 if (isScanning) {
                     startSourceConfigTimeoutTask()
                 }
+            } else {
+                setSourceConfig(-1)
             }
 
             return@withStateLock result
@@ -564,7 +566,8 @@ internal class Atsc3Module(
         }
 
         // getState() is blocking method and must not be called if isReconfiguring = true
-        // this call lock until state changing is finished
+        // this call lock until state changing is finished.
+        // It's also important to have it before reading currentSourceConfiguration to get correct state.
         val currentState = getState()
 
         val slt = LLSParserSLT().parseXML(slt_payload_xml)
