@@ -121,7 +121,6 @@ internal class Atsc3Module(
                     src.setConfigs(frequencyList)
 
                     if (USE_PERSISTED_CONFIGURATION) {
-                        log("tune()")
                         withStateLock {
                             applyDefaultConfiguration(src)
                         }
@@ -371,7 +370,6 @@ internal class Atsc3Module(
                 if (serviceConfig != currentSourceConfiguration) {
                     val src = source
                     if (src is ConfigurableAtsc3Source<*>) {
-                        log("selectService()")
                         withStateLock {
                             applySourceConfig(src, serviceConfig, false)
                             suspendedServiceSelection = true
