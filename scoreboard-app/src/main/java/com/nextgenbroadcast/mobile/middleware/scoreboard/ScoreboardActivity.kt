@@ -16,7 +16,6 @@ import com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry.DatagramSocke
 import com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry.TelemetryManager
 import com.nextgenbroadcast.mobile.middleware.scoreboard.view.DeviceItemView
 import kotlinx.android.synthetic.main.activity_scoreboard.*
-import kotlinx.android.synthetic.main.chart_item_view.view.*
 import kotlinx.coroutines.flow.Flow
 
 class ScoreboardActivity : AppCompatActivity() {
@@ -151,8 +150,8 @@ class ScoreboardActivity : AppCompatActivity() {
 
         inner class Holder(
             private val deviceView: DeviceItemView
-        ) : RecyclerView.ViewHolder(deviceView), View.OnClickListener {
-            lateinit var currentDevice: TelemetryDevice
+        ) : RecyclerView.ViewHolder(deviceView) {
+            private var currentDevice: TelemetryDevice? = null
 
             fun bind(device: TelemetryDevice) {
                 with(deviceView) {
@@ -167,25 +166,17 @@ class ScoreboardActivity : AppCompatActivity() {
                         listener.onDeleteClick(device)
                     }
 
-                    deviceItemView.setOnClickListener(this@Holder)
-                    device_phy_chart.setOnClickListener(this@Holder)
-
-                }
-            }
-
-            override fun onClick(v: View?) {
-                when (v?.id) {
-                    R.id.device_phy_chart, R.id.deviceItemView -> {
-                        selectedDeviceId = if (selectedDeviceId != currentDevice.id) {
-                            currentDevice.id
+                    deviceView.setOnClickListener {
+                        selectedDeviceId = if (selectedDeviceId != currentDevice?.id) {
+                            currentDevice?.id
                         } else {
                             null
                         }
                         notifyItemRangeChanged(0, itemCount, Any())
                     }
+
                 }
             }
-
         }
 
         companion object {

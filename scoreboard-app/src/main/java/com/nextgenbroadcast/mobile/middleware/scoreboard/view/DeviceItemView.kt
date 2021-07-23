@@ -60,6 +60,11 @@ class DeviceItemView @JvmOverloads constructor(
         )
     }
 
+    override fun setOnClickListener(listener: OnClickListener?) {
+        super.setOnClickListener(listener)
+        phyChart.setOnClickListener(listener)
+    }
+
     data class PhyPayload(
         val snr1000: Int,
         val timeStamp: Long
