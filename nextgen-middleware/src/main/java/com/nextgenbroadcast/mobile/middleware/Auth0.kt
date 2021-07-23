@@ -9,4 +9,5 @@ object Auth0 {
     external fun password(): String
     external fun clientId(): String
     external fun clientSecret(): String
+    external fun clientKey(): String
 }

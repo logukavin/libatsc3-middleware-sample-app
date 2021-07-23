@@ -28,3 +28,10 @@ Java_com_nextgenbroadcast_mobile_middleware_Auth0_clientSecret(JNIEnv *env, jobj
     std::string str = "rZYm-grsEEaQGSbJSgZIaLIrjAFs_oLVt5u0Wl1zfvVFKlA0VYrt8qwGm4AFKdsH";
     return env->NewStringUTF(str.c_str());
 }
+
+extern "C"
+JNIEXPORT jstring JNICALL
+Java_com_nextgenbroadcast_mobile_middleware_Auth0_clientKey(JNIEnv *env, jobject thiz) {
+    std::string str = "a123sd123fasdf";
+    return env->NewStringUTF(str.c_str());
+}
