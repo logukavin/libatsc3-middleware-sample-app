@@ -114,7 +114,7 @@ open class TemporalChartView @JvmOverloads constructor(
 
             try {
                 graphSeries.appendData(dataPoint, true, maxValueCount.toInt())
-            } catch (e: IndexOutOfBoundsException) {
+            } catch (e: Exception) {
                 LOG.d(TAG, "Failed to append new value: $dataPoint", e)
             }
 

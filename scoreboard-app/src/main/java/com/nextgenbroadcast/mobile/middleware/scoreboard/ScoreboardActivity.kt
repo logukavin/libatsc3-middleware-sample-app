@@ -16,6 +16,7 @@ import com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry.DatagramSocke
 import com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry.TelemetryManager
 import com.nextgenbroadcast.mobile.middleware.scoreboard.view.DeviceItemView
 import kotlinx.android.synthetic.main.activity_scoreboard.*
+import kotlinx.android.synthetic.main.chart_item_view.view.*
 import kotlinx.coroutines.flow.Flow
 
 class ScoreboardActivity : AppCompatActivity() {
@@ -150,9 +151,12 @@ class ScoreboardActivity : AppCompatActivity() {
 
         inner class Holder(
             private val deviceView: DeviceItemView
-        ) : RecyclerView.ViewHolder(deviceView) {
+        ) : RecyclerView.ViewHolder(deviceView), View.OnClickListener {
+            lateinit var currentDevice: TelemetryDevice
+
             fun bind(device: TelemetryDevice) {
                 with(deviceView) {
+                    currentDevice = device
                     observe(getFlowForDevice(device), socket)
                     isDeviceSelected = selectedDeviceId.equals(device.id)
                     deviceItemView.setBackgroundColor(context.getColor(if (isDeviceSelected) R.color.yellow_device_item_bg else R.color.white))
@@ -163,17 +167,25 @@ class ScoreboardActivity : AppCompatActivity() {
                         listener.onDeleteClick(device)
                     }
 
-                    phyChart.setOnClickListener {
-                        selectedDeviceId = if (selectedDeviceId != device.id) {
-                            device.id
+                    deviceItemView.setOnClickListener(this@Holder)
+                    device_phy_chart.setOnClickListener(this@Holder)
+
+                }
+            }
+
+            override fun onClick(v: View?) {
+                when (v?.id) {
+                    R.id.device_phy_chart, R.id.deviceItemView -> {
+                        selectedDeviceId = if (selectedDeviceId != currentDevice.id) {
+                            currentDevice.id
                         } else {
                             null
                         }
                         notifyItemRangeChanged(0, itemCount, Any())
                     }
-
                 }
             }
+
         }
 
         companion object {
