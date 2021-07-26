@@ -12,6 +12,7 @@ import com.google.firebase.installations.FirebaseInstallations
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.entity.ClientTelemetryEvent
 import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.TelemetryDevice
+import com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry.DatagramSocketWrapper
 import com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry.TelemetryManager
 import com.nextgenbroadcast.mobile.middleware.scoreboard.view.DeviceItemView
 import kotlinx.android.synthetic.main.activity_scoreboard.*
@@ -20,6 +21,10 @@ import kotlinx.coroutines.flow.Flow
 class ScoreboardActivity : AppCompatActivity() {
     private lateinit var deviceAdapter: DeviceListAdapter
     private lateinit var deviceSpinnerAdapter: ArrayAdapter<String>
+
+    private val socket: DatagramSocketWrapper by lazy {
+        DatagramSocketWrapper(applicationContext)
+    }
 
     private var telemetryManager: TelemetryManager? = null
 
@@ -40,18 +45,18 @@ class ScoreboardActivity : AppCompatActivity() {
 
         setContentView(R.layout.activity_scoreboard)
 
-        deviceSpinnerAdapter =
-            ArrayAdapter<String>(this, android.R.layout.simple_dropdown_item_1line)
+        deviceSpinnerAdapter = ArrayAdapter<String>(this, android.R.layout.simple_dropdown_item_1line)
         device_spinner.adapter = deviceSpinnerAdapter
 
-        deviceAdapter =
-            DeviceListAdapter(layoutInflater, object : DeviceListAdapter.DeviceItemClickListener {
-                override fun onDeleteClick(device: TelemetryDevice) {
-                    removeChartForDevice(device)
-                }
-            }) { device ->
-                telemetryManager?.getFlow(device)
+        deviceAdapter = DeviceListAdapter(layoutInflater, socket, object :
+            DeviceListAdapter.DeviceItemClickListener {
+            override fun onDeleteClick(device: TelemetryDevice) {
+                removeChartForDevice(device)
             }
+        }) { device ->
+            telemetryManager?.getFlow(device)
+        }
+
         chart_list.layoutManager = LinearLayoutManager(this)
         chart_list.adapter = deviceAdapter
         chart_list.addItemDecoration(DividerItemDecoration(this, DividerItemDecoration.VERTICAL))
@@ -123,9 +128,12 @@ class ScoreboardActivity : AppCompatActivity() {
 
     class DeviceListAdapter(
         private val inflater: LayoutInflater,
+        private val socket: DatagramSocketWrapper,
         private val listener: DeviceItemClickListener,
         private val getFlowForDevice: (TelemetryDevice) -> Flow<ClientTelemetryEvent>?
     ) : ListAdapter<TelemetryDevice, DeviceListAdapter.Holder>(DIFF_CALLBACK) {
+
+        private var selectedDeviceId: String? = null
 
         interface DeviceItemClickListener {
             fun onDeleteClick(device: TelemetryDevice)
@@ -143,14 +151,30 @@ class ScoreboardActivity : AppCompatActivity() {
         inner class Holder(
             private val deviceView: DeviceItemView
         ) : RecyclerView.ViewHolder(deviceView) {
+            private var currentDevice: TelemetryDevice? = null
+
             fun bind(device: TelemetryDevice) {
                 with(deviceView) {
-                    observe(getFlowForDevice(device))
+                    currentDevice = device
+                    observe(getFlowForDevice(device), socket)
+                    isDeviceSelected = selectedDeviceId.equals(device.id)
+                    deviceItemView.setBackgroundColor(context.getColor(if (isDeviceSelected) R.color.yellow_device_item_bg else R.color.white))
                     title.text = device.id
                     lostLabel.visibility = if (device.isLost) View.VISIBLE else View.GONE
+
                     removeBtn.setOnClickListener {
                         listener.onDeleteClick(device)
                     }
+
+                    deviceView.setOnClickListener {
+                        selectedDeviceId = if (selectedDeviceId != currentDevice?.id) {
+                            currentDevice?.id
+                        } else {
+                            null
+                        }
+                        notifyItemRangeChanged(0, itemCount, Any())
+                    }
+
                 }
             }
         }
