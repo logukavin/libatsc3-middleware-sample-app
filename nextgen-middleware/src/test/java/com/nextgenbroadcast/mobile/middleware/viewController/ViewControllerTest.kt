@@ -7,8 +7,6 @@ import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.RPMParams
 import com.nextgenbroadcast.mobile.core.model.ApplicationState
-import com.nextgenbroadcast.mobile.core.presentation.media.IObservablePlayer
-import com.nextgenbroadcast.mobile.core.presentation.media.PlayerStateRegistry
 import com.nextgenbroadcast.mobile.middleware.analytics.IAtsc3Analytics
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPackage
@@ -35,7 +33,7 @@ import org.powermock.modules.junit4.PowerMockRunner
 
 @ExperimentalCoroutinesApi
 @RunWith(PowerMockRunner::class)
-@PrepareForTest(ViewControllerImpl::class, IRepository::class, IClientSettings::class, IMediaFileProvider::class, IAtsc3Analytics::class, PlayerStateRegistry::class, IObservablePlayer.IPlayerStateListener::class)
+@PrepareForTest(ViewControllerImpl::class, IRepository::class, IClientSettings::class, IMediaFileProvider::class, IAtsc3Analytics::class)
 class ViewControllerTest {
 
     private val testDispatcher = TestCoroutineDispatcher()
@@ -75,9 +73,6 @@ class ViewControllerTest {
     private val applications: StateFlow<List<Atsc3Application>> = MutableStateFlow(emptyList())
     private var selectedService: StateFlow<AVService?> = MutableStateFlow(null)
 
-    @Mock
-    private lateinit var callback: IObservablePlayer.IPlayerStateListener
-
     @Before
     fun initController() {
         Mockito.`when`(repository.heldPackage).thenReturn(heldPackage)
@@ -88,16 +83,13 @@ class ViewControllerTest {
         Mockito.`when`(repository.findServiceBy(bsid, serviceId)).thenReturn(mockedAVService)
         Mockito.`when`(mediaFileProvider.getMediaFileUri(mockUrl)).thenReturn(mockUrl.toUri())
 
-        viewController = ViewControllerImpl(repository, settings, mediaFileProvider, analytics, testScope, TestCoroutineScope(testDispatcher)).apply {
-            addOnPlayerSateChangedCallback(callback)
-        }
+        viewController = ViewControllerImpl(repository, analytics)
 
         Dispatchers.setMain(testDispatcher)
     }
 
     @After
     fun cleanUp() {
-        viewController.removeOnPlayerSateChangedCallback(callback)
         testDispatcher.cleanupTestCoroutines()
         testScope.cleanupTestCoroutines()
     }

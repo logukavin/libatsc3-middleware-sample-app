@@ -1,4 +1,4 @@
-package com.nextgenbroadcast.mobile.core.presentation
+package com.nextgenbroadcast.mobile.middleware.dev.presentation
 
 import kotlinx.coroutines.flow.StateFlow
 

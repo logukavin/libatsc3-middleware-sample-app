@@ -1,4 +1,4 @@
-package com.nextgenbroadcast.mobile.middleware.atsc3.entities
+package com.nextgenbroadcast.mobile.core.atsc3
 
 object SLTConstants {
     const val SERVICE_CATEGORY_AV = 1   // Linear A/V Service

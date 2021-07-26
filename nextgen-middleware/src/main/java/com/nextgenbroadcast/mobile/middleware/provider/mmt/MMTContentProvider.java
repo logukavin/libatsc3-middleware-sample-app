@@ -11,10 +11,7 @@ import android.database.Cursor;
 import android.database.MatrixCursor;
 import android.net.Uri;
 import android.os.AsyncTask;
-import android.os.Handler;
-import android.os.HandlerThread;
 import android.os.ParcelFileDescriptor;
-import android.os.storage.StorageManager;
 import android.provider.OpenableColumns;
 import android.util.Log;
 
@@ -27,7 +24,7 @@ import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverStandalone;
 import com.nextgenbroadcast.mobile.player.MMTConstants;
 import com.nextgenbroadcast.mobile.core.model.AVService;
 import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverCore;
-import com.nextgenbroadcast.mobile.middleware.atsc3.entities.SLTConstants;
+import com.nextgenbroadcast.mobile.core.atsc3.SLTConstants;
 
 import org.ngbp.libatsc3.middleware.Atsc3NdkMediaMMTBridge;
 import org.ngbp.libatsc3.middleware.android.ATSC3PlayerFlags;
@@ -41,7 +38,6 @@ import org.ngbp.libatsc3.middleware.android.mmt.models.MMTAudioDecoderConfigurat
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 

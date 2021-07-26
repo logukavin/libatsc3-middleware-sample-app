@@ -1,4 +1,4 @@
-package com.nextgenbroadcast.mobile.middleware.service.media
+package com.nextgenbroadcast.mobile.core.media
 
 object MediaSessionConstants {
     const val MEDIA_PLAYBACK_EXTRA_EMBEDDED = "embedded"

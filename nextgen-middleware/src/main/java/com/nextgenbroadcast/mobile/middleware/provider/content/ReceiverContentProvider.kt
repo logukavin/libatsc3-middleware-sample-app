@@ -8,10 +8,10 @@ import com.nextgenbroadcast.mobile.core.model.*
 import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverCore
 import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverStandalone
 import com.nextgenbroadcast.mobile.middleware.R
-import com.nextgenbroadcast.mobile.middleware.atsc3.PhyVersionInfo.INFO_DEVICE_ID
-import com.nextgenbroadcast.mobile.middleware.atsc3.PhyVersionInfo.INFO_FIRMWARE_VERSION
-import com.nextgenbroadcast.mobile.middleware.atsc3.PhyVersionInfo.INFO_PHY_TYPE
-import com.nextgenbroadcast.mobile.middleware.atsc3.PhyVersionInfo.INFO_SDK_VERSION
+import com.nextgenbroadcast.mobile.core.atsc3.PhyVersionInfo.INFO_DEVICE_ID
+import com.nextgenbroadcast.mobile.core.atsc3.PhyVersionInfo.INFO_FIRMWARE_VERSION
+import com.nextgenbroadcast.mobile.core.atsc3.PhyVersionInfo.INFO_PHY_TYPE
+import com.nextgenbroadcast.mobile.core.atsc3.PhyVersionInfo.INFO_SDK_VERSION
 import com.nextgenbroadcast.mobile.middleware.server.cert.IUserAgentSSLContext
 import com.nextgenbroadcast.mobile.middleware.server.cert.UserAgentSSLContext
 import com.nextgenbroadcast.mobile.middleware.service.Atsc3ForegroundService
