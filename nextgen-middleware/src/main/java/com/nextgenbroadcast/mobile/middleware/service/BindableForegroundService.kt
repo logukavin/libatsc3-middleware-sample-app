@@ -9,7 +9,7 @@ import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.middleware.R
-import com.nextgenbroadcast.mobile.middleware.atsc3.entities.SLTConstants
+import com.nextgenbroadcast.mobile.core.atsc3.SLTConstants
 import com.nextgenbroadcast.mobile.middleware.notification.NotificationHelper
 
 abstract class BindableForegroundService : MediaBrowserServiceCompat() {

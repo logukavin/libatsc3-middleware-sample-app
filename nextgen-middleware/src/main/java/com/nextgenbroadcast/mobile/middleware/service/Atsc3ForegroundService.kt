@@ -208,9 +208,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
             ref.get()?.cancel()
         }
 
-        if (wakeLock.isHeld) {
-            wakeLock.release()
-        }
+        unlockService()
 
         media.close()
         webServer.close()
@@ -270,7 +268,10 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
                 ACTION_RMP_PAUSE -> media.pausePlayback()
 
-                ACTION_OPEN_ROUTE -> openRoute(intent.getStringExtra(EXTRA_ROUTE_PATH))
+                ACTION_OPEN_ROUTE -> openRoute(
+                    intent.getStringExtra(EXTRA_ROUTE_PATH),
+                    intent.getBooleanExtra(EXTRA_FORCE_OPEN, true)
+                )
 
                 ACTION_CLOSE_ROUTE -> closeRoute()
 
@@ -283,11 +284,8 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     }
 
     override fun onGetRoot(clientPackageName: String, clientUid: Int, rootHints: Bundle?): BrowserRoot? {
-        return if (clientPackageName == packageName) {
-            MediaHolder.getRoot()
-        } else {
-            null
-        }
+        //TODO: implement allowBrowsing() check like clientPackageName == packageName
+        return MediaHolder.getRoot()
     }
 
     override fun onLoadChildren(parentId: String, result: Result<List<MediaBrowserCompat.MediaItem>>) {
@@ -300,7 +298,6 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
         result.sendResult(emptyList())
     }
-
 
     private fun onRouteOpened() {
         if (!wakeLock.isHeld) {
@@ -359,18 +356,18 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
         val sourcePath = srtListHolder.getDefaultRoutes()
         if (sourcePath != null) {
-            openRoute(applicationContext, sourcePath)
+            openRoute(applicationContext, sourcePath, false)
         }
     }
 
-    private fun openRoute(sourcePath: String?) {
+    private fun openRoute(sourcePath: String?, forceOpen: Boolean) {
         startForeground()
         // change source to file. So, let's unregister device receiver
         unregisterDeviceReceiver()
 
         sourcePath?.let {
             routePathToSource(applicationContext, sourcePath)?.let { source ->
-                atsc3Receiver.openRoute(source, true)
+                atsc3Receiver.openRoute(source, forceOpen)
             }
         }
     }
@@ -390,21 +387,20 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
         atsc3Receiver.closeRoute()
 
-        if (isBinded) {
-            stopSelf()
-        } else {
-            killService()
+        if (!isBinded) {
+            unlockService()
         }
+
+        stopSelf()
     }
 
-    private fun killService() {
+    private fun unlockService() {
         if (wakeLock.isHeld) {
             wakeLock.release()
         }
 
         unregisterDeviceReceiver()
         stopForeground()
-        stopSelf()
     }
 
     private fun onDeviceAttached(device: UsbDevice?, deviceType: Int, forceOpen: Boolean) {
@@ -512,9 +508,10 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
             }
         }
 
-        fun openRoute(context: Context, filePath: String) {
+        fun openRoute(context: Context, filePath: String, forceOpen: Boolean = true) {
             newIntent(context, ACTION_OPEN_ROUTE).let { serviceIntent ->
                 serviceIntent.putExtra(EXTRA_ROUTE_PATH, filePath)
+                serviceIntent.putExtra(EXTRA_FORCE_OPEN, forceOpen)
                 ContextCompat.startForegroundService(context, serviceIntent)
             }
         }

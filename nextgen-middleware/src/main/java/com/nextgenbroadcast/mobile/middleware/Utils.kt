@@ -8,7 +8,6 @@ import androidx.core.content.ContextCompat
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import com.nextgenbroadcast.mobile.core.LOG
-import com.nextgenbroadcast.mobile.middleware.atsc3.entities.SLTConstants
 
 fun encryptedSharedPreferences(context: Context, fileName: String): SharedPreferences {
     val appContext = context.applicationContext
@@ -19,14 +18,6 @@ fun encryptedSharedPreferences(context: Context, fileName: String): SharedPrefer
             EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
             EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
     )
-}
-
-private const val apkServiceGlobalIdPrefix = "apk:"
-
-fun getApkBaseServicePackage(serviceCategory: Int, globalServiceId: String): String? {
-    return if(serviceCategory == SLTConstants.SERVICE_CATEGORY_ABS && globalServiceId.startsWith(apkServiceGlobalIdPrefix)) {
-        globalServiceId.substring(apkServiceGlobalIdPrefix.length)
-    } else null
 }
 
 fun startTVApplication(context: Context) {
