@@ -10,6 +10,7 @@ import com.google.gson.reflect.TypeToken
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.entity.ClientTelemetryEvent
 import com.nextgenbroadcast.mobile.middleware.scoreboard.R
+import com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry.DatagramSocketWrapper
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.mapNotNull
 
@@ -24,6 +25,9 @@ class DeviceItemView @JvmOverloads constructor(
     lateinit var lostLabel: TextView
     lateinit var phyChart: PhyChart
     lateinit var removeBtn: Button
+    lateinit var deviceItemView: DeviceItemView
+
+    var isDeviceSelected = false
 
     override fun onFinishInflate() {
         super.onFinishInflate()
@@ -32,14 +36,20 @@ class DeviceItemView @JvmOverloads constructor(
         lostLabel = findViewById(R.id.device_lost_label)
         phyChart = findViewById(R.id.device_phy_chart)
         removeBtn = findViewById(R.id.device_remove_btn)
+        deviceItemView = findViewById(R.id.deviceItemView)
     }
 
-    fun observe(flow: Flow<ClientTelemetryEvent>?) {
+    fun observe(flow: Flow<ClientTelemetryEvent>?, socket: DatagramSocketWrapper) {
         phyChart.setDataSource(
             flow?.mapNotNull { event ->
                 try {
                     val payload = gson.fromJson<PhyPayload>(event.payload, phyType)
-                    Pair(payload.timeStamp, payload.snr1000.toDouble() / 1000)
+                    val payloadValue = payload.snr1000.toDouble() / 1000
+                    val timestamp = payload.timeStamp
+                    if (isDeviceSelected) {
+                        socket.sendUdpMessage("${title.text},$timestamp,$payloadValue")
+                    }
+                    Pair(timestamp, payloadValue)
                 } catch (e: Exception) {
                     LOG.w(TAG, "Can't parse telemetry event payload", e)
                     null
@@ -48,6 +58,11 @@ class DeviceItemView @JvmOverloads constructor(
                 PhyChart.DataSource(it)
             }
         )
+    }
+
+    override fun setOnClickListener(listener: OnClickListener?) {
+        super.setOnClickListener(listener)
+        phyChart.setOnClickListener(listener)
     }
 
     data class PhyPayload(
