@@ -1,5 +1,6 @@
 package com.nextgenbroadcast.mobile.middleware.net
 
+import android.util.Base64
 import kotlinx.coroutines.suspendCancellableCoroutine
 import okhttp3.Call
 import okhttp3.Callback
@@ -34,4 +35,8 @@ suspend fun <T> Call.await(action: (Response) -> T): T {
             }
         })
     }
+}
+
+fun getAuthKey(clientId: String): String {
+    return Base64.encodeToString("middleware:$clientId".encodeToByteArray(), Base64.NO_WRAP)
 }
