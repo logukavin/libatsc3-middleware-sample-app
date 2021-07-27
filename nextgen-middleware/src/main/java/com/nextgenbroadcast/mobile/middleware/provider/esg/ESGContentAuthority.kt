@@ -1,9 +1,8 @@
-package com.nextgenbroadcast.mobile.middleware.service.provider.esgProvider
+package com.nextgenbroadcast.mobile.middleware.provider.esg
 
 import android.content.Context
 import android.net.Uri
 import com.nextgenbroadcast.mobile.middleware.R
-import com.nextgenbroadcast.mobile.middleware.provider.esg.ESGContentProvider
 
 object ESGContentAuthority {
     private var serviceContentUri: Uri? = null
