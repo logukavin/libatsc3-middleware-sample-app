@@ -5,9 +5,7 @@ import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverCore
 
 class StandaloneAtsc3Service : Atsc3ForegroundService() {
 
-    override fun createServiceBinder(receiver: Atsc3ReceiverCore): IBinder {
-        return Messenger(Handler()).binder
-    }
+    override fun createServiceBinder(receiver: Atsc3ReceiverCore): IBinder? = null
 
     companion object {
         init {
