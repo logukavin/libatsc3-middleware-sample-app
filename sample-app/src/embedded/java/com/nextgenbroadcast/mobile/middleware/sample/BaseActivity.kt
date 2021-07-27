@@ -1,7 +1,6 @@
 package com.nextgenbroadcast.mobile.middleware.sample
 
 import android.content.ComponentName
-import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.os.Bundle
@@ -13,7 +12,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.middleware.R
-import com.nextgenbroadcast.mobile.middleware.dev.service.binder.IServiceBinder
+import com.nextgenbroadcast.mobile.core.dev.service.binder.IServiceBinder
 import com.nextgenbroadcast.mobile.middleware.service.Atsc3ForegroundService
 import com.nextgenbroadcast.mobile.middleware.service.EmbeddedAtsc3Service
 

@@ -29,8 +29,8 @@ import androidx.lifecycle.lifecycleScope
 import com.nextgenbroadcast.mobile.core.getApkBaseServicePackage
 import com.nextgenbroadcast.mobile.core.media.MediaSessionConstants
 import com.nextgenbroadcast.mobile.core.model.AVService
-import com.nextgenbroadcast.mobile.middleware.dev.presentation.IControllerPresenter
-import com.nextgenbroadcast.mobile.middleware.dev.service.binder.IServiceBinder
+import com.nextgenbroadcast.mobile.core.dev.service.presentation.IControllerPresenter
+import com.nextgenbroadcast.mobile.core.dev.service.binder.IServiceBinder
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.ViewViewModel
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.ReceiverTelemetry
 import kotlinx.coroutines.Job
