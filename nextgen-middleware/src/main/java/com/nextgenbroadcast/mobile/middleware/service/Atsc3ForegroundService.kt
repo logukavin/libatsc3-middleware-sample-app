@@ -18,6 +18,7 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.source.Atsc3Source
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.UsbPhyAtsc3Source
 import com.nextgenbroadcast.mobile.middleware.notification.AlertNotificationHelper
 import com.nextgenbroadcast.mobile.middleware.phy.Atsc3DeviceReceiver
+import com.nextgenbroadcast.mobile.middleware.server.web.IMiddlewareWebServer
 import com.nextgenbroadcast.mobile.middleware.service.holder.*
 import com.nextgenbroadcast.mobile.middleware.service.init.*
 import kotlinx.coroutines.*
@@ -85,19 +86,8 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         }
 
         webServer = WebServerHolder(applicationContext, atsc3Receiver,
-                { server ->
-                    // used to rebuild data related to server
-                    atsc3Receiver.notifyNewSessionStarted()
-
-                    if (MiddlewareConfig.DEV_TOOLS) {
-                        telemetryHolder.notifyWebServerStarted(server)
-                    }
-                },
-                {
-                    if (MiddlewareConfig.DEV_TOOLS) {
-                        telemetryHolder.notifyWebServerStopped()
-                    }
-                }
+            this::onWebServerCreated,
+            this::onWebServerDestroyed
         )
 
         srtListHolder = SrtListHolder(applicationContext).apply {
@@ -109,6 +99,21 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         startStateObservation()
 
         maybeInitialize()
+    }
+
+    private fun onWebServerCreated(server: IMiddlewareWebServer) {
+        // used to rebuild data related to server
+        atsc3Receiver.notifyNewSessionStarted()
+
+        if (MiddlewareConfig.DEV_TOOLS) {
+            telemetryHolder.notifyWebServerStarted(server)
+        }
+    }
+
+    private fun onWebServerDestroyed() {
+        if (MiddlewareConfig.DEV_TOOLS) {
+            telemetryHolder.notifyWebServerStopped()
+        }
     }
 
     private fun startStateObservation() {
@@ -219,7 +224,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         }
     }
 
-    internal abstract fun createServiceBinder(receiver: Atsc3ReceiverCore): IBinder
+    internal abstract fun createServiceBinder(receiver: Atsc3ReceiverCore): IBinder?
 
     override fun onBind(intent: Intent): IBinder? {
         var binder = super.onBind(intent)
