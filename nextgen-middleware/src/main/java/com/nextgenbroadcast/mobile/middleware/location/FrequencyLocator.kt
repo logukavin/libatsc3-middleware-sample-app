@@ -14,8 +14,6 @@ import com.nextgenbroadcast.mobile.middleware.net.await
 import com.nextgenbroadcast.mobile.middleware.net.sinclair.SinclairPlatform
 import com.nextgenbroadcast.mobile.middleware.net.sinclair.Station
 import okhttp3.OkHttpClient
-import java.io.IOException
-
 
 class FrequencyLocator : IFrequencyLocator {
 
@@ -60,7 +58,6 @@ class FrequencyLocator : IFrequencyLocator {
     }
 
     private suspend fun getFrequenciesByLocation(latitude: Double, longitude: Double): List<Int> {
-
 //        val request = Auth0Request.Builder()
 //            .username(Auth0.username())
 //            .password(Auth0.password())
@@ -78,18 +75,15 @@ class FrequencyLocator : IFrequencyLocator {
 //                val frequenciesRequest = SinclairPlatform(BuildConfig.SinclairPlatformUrl).frequenciesRequest(token, latitude, longitude)
 
         try {
-            val frequenciesRequest =
-                SinclairPlatform(BuildConfig.SinclairPlatformUrl).frequenciesRequest(latitude, longitude, Auth0.clientKey())
+            val frequenciesRequest = SinclairPlatform(BuildConfig.SinclairPlatformUrl)
+                .frequenciesRequest(latitude, longitude, Auth0.clientKey())
 
             LOG.d(TAG, "getFrequenciesByLocation, frequenciesRequest is: $frequenciesRequest")
-            val stations: List<Station>? =
-                httpClient.newCall(frequenciesRequest).await { response ->
-                    response.body?.let { body ->
-                        Gson().fromJson(body.string(), object :
-                            TypeToken<List<Station>?>() {}.type)
-                    }
+            val stations: List<Station>? = httpClient.newCall(frequenciesRequest).await { response ->
+                response.body?.let { body ->
+                    Gson().fromJson(body.string(), object : TypeToken<List<Station>?>() {}.type)
                 }
-
+            }
 
             if (!stations.isNullOrEmpty()) {
                 LOG.i(TAG, "getFrequenciesByLocation, returning stations: $stations")
@@ -97,7 +91,7 @@ class FrequencyLocator : IFrequencyLocator {
                     station.frequency * 1000
                 }.distinct()
             }
-        } catch (e: IOException) {
+        } catch (e: Exception) {
             LOG.d(TAG, "Error on frequency request", e)
         }
 

@@ -1,23 +1,24 @@
 package com.nextgenbroadcast.mobile.middleware.net.sinclair
 
-import android.util.Base64
 import com.nextgenbroadcast.mobile.core.toDegrees
 import okhttp3.Request
 
 internal class SinclairPlatform(
-    private val baseUrl: String
+    baseUrl: String
 ) {
+    private val propertyUrl = "$baseUrl/api/v1/property"
+
     fun frequenciesRequest(latitude: Double, longitude: Double, clientKey: String): Request {
         return Request.Builder()
-            .url("$baseUrl/api/v1/property/frequencies?latitude=${latitude.toDegrees()}&longitude=${longitude.toDegrees()}")
-            .addHeader("X-NGWP-Authorization", getAuthKey(clientKey))
+            .url("$propertyUrl/frequencies?latitude=${latitude.toDegrees()}&longitude=${longitude.toDegrees()}")
+            .addHeader("X-NGWP-Authorization", clientKey)
             .build()
     }
 
     fun fipsRequest(latitude: Double, longitude: Double, clientKey: String): Request {
         return Request.Builder()
-            .url("$baseUrl/api/v1/property/location-info?latitude=${latitude.toDegrees()}&longitude=${longitude.toDegrees()}")
-            .addHeader("X-NGWP-Authorization", getAuthKey(clientKey))
+            .url("$propertyUrl/location-info?latitude=${latitude.toDegrees()}&longitude=${longitude.toDegrees()}")
+            .addHeader("X-NGWP-Authorization", clientKey)
             .build()
     }
 
@@ -29,8 +30,4 @@ internal class SinclairPlatform(
 //    }
 //
 //    private fun auth(token: String) = "Bearer $token"
-
-    private fun getAuthKey(clientId: String): String {
-        return Base64.encodeToString("middleware:$clientId".encodeToByteArray(), Base64.NO_WRAP)
-    }
 }
