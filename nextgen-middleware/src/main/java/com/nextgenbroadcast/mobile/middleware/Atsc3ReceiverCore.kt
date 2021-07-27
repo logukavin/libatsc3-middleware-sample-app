@@ -5,7 +5,7 @@ import com.nextgenbroadcast.mobile.core.asReadOnly
 import com.nextgenbroadcast.mobile.core.model.*
 import com.nextgenbroadcast.mobile.middleware.analytics.IAtsc3Analytics
 import com.nextgenbroadcast.mobile.middleware.atsc3.IAtsc3Module
-import com.nextgenbroadcast.mobile.middleware.atsc3.entities.SLTConstants
+import com.nextgenbroadcast.mobile.core.atsc3.SLTConstants
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.IServiceGuideDeliveryUnitReader
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.IAtsc3Source
 import com.nextgenbroadcast.mobile.middleware.cache.IApplicationCache

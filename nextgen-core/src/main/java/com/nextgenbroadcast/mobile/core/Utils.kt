@@ -1,6 +1,7 @@
 package com.nextgenbroadcast.mobile.core
 
 import android.location.Location
+import com.nextgenbroadcast.mobile.core.atsc3.SLTConstants
 import java.math.BigInteger
 import java.security.MessageDigest
 
@@ -30,4 +31,12 @@ fun isClass(className: String) = try {
     true
 } catch (e: Exception) {
     false
+}
+
+private const val apkServiceGlobalIdPrefix = "apk:"
+
+fun getApkBaseServicePackage(serviceCategory: Int, globalServiceId: String): String? {
+    return if(serviceCategory == SLTConstants.SERVICE_CATEGORY_ABS && globalServiceId.startsWith(apkServiceGlobalIdPrefix)) {
+        globalServiceId.substring(apkServiceGlobalIdPrefix.length)
+    } else null
 }

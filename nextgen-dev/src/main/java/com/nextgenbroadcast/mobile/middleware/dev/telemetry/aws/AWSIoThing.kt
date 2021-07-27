@@ -38,11 +38,16 @@ class AWSIoThing(
 
     @Volatile
     private var thingAwsIotClient: AWSIotMqttClient? = null
+    @Volatile
+    private var isClosed = false
 
     //jjustman-2021-05-06 - adding try/catch for 05-06 06:53:17.405 12729 18824 E AndroidRuntime: com.amazonaws.services.iot.client.AWSIotException: com.amazonaws.services.iot.client.core.AwsIotRetryableException: Client is not connected (32104)
     //                      this can occur if we are pushing events with a stale MQTT connection and have exceeded the AWSIot internal publishQueue.size() limited by client.getMaxOfflineQueueSize()
 
     suspend fun publish(topic: String, payload: String) {
+        val closed = isClosed
+        if (closed) return
+
         val client = requireClient()
         try {
             if (client.connectionStatus != AWSIotConnectionStatus.DISCONNECTED) {
@@ -60,6 +65,9 @@ class AWSIoThing(
     }
 
     suspend fun subscribe(topic: String, block: (topic: String, payload: String?) -> Unit) {
+        val closed = isClosed
+        if (closed) return
+
         val client = requireClient()
         val controlTopic = topic.replace(AWSIOT_FORMAT_SERIAL, clientId)
 
@@ -79,6 +87,7 @@ class AWSIoThing(
     }
 
     suspend fun close() {
+        isClosed = true
         clientLock.withLock {
             val client = thingAwsIotClient
             thingAwsIotClient = null

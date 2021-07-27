@@ -11,15 +11,13 @@ import androidx.databinding.DataBindingUtil
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.setFragmentResult
-import com.nextgenbroadcast.mobile.middleware.atsc3.utils.iterateDocument
-import com.nextgenbroadcast.mobile.middleware.atsc3.utils.iterateSubTags
-import com.nextgenbroadcast.mobile.middleware.atsc3.utils.readTextTag
 import com.nextgenbroadcast.mobile.middleware.sample.databinding.DialogSettingsBinding
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.ViewViewModel
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.reader.LocationFrequencyType
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.reader.SensorFrequencyType
 import kotlinx.android.synthetic.main.dialog_settings.*
 import kotlinx.android.synthetic.main.dialog_settings.view.*
+import org.xmlpull.v1.XmlPullParser
 
 
 class SettingsDialog : DialogFragment() {
@@ -118,16 +116,7 @@ class SettingsDialog : DialogFragment() {
     }
 
     private fun scanAndDismiss() {
-        val frequencyList = arrayListOf<Int>()
-
-        val xrp = resources.getXml(R.xml.default_frequency_range)
-        xrp.iterateDocument {
-            xrp.iterateSubTags {
-                xrp.readTextTag()?.toIntOrNull()?.let { frequency ->
-                    frequencyList.add(frequency * 1000)
-                }
-            }
-        }
+        val frequencyList = readDefaultFrequencies()
 
         val result = Bundle().apply{
             putIntegerArrayList(PARAM_FREQUENCY, frequencyList)
@@ -135,6 +124,40 @@ class SettingsDialog : DialogFragment() {
         setFragmentResult(REQUEST_KEY_SCAN_RANGE, result)
 
         dismiss()
+    }
+
+    private fun readDefaultFrequencies(): ArrayList<Int> {
+        val frequencyList = arrayListOf<Int>()
+        val xrp = resources.getXml(R.xml.default_frequency_range)
+        while (xrp.next() != XmlPullParser.END_DOCUMENT) {
+            if (xrp.eventType != XmlPullParser.START_TAG) {
+                continue
+            }
+
+            while (xrp.next() != XmlPullParser.END_TAG) {
+                if (xrp.eventType != XmlPullParser.START_TAG) {
+                    continue
+                }
+
+                while (xrp.next() != XmlPullParser.END_TAG) {
+                    if (xrp.eventType == XmlPullParser.TEXT) {
+                        xrp.text?.toIntOrNull()?.let { frequency ->
+                            frequencyList.add(frequency * 1000)
+                        }
+                    } else {
+                        check(xrp.eventType == XmlPullParser.START_TAG)
+                        var depth = 1
+                        while (depth != 0) {
+                            when (xrp.next()) {
+                                XmlPullParser.END_TAG -> depth--
+                                XmlPullParser.START_TAG -> depth++
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return frequencyList
     }
 
     companion object {

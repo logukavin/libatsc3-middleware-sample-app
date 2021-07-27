@@ -92,17 +92,22 @@ android {
         standalone {
             dimension "service_type"
             applicationIdSuffix ".standalone"
-            resValue "string", "app_name", "Atsc3 Standalone Sample App"
-            resValue "string", "nextgenMediaFileProvider", "com.nextgenbroadcast.mobile.middleware.provider.dash.tv"
+
+            resValue("string", "app_name", "Atsc3 Standalone Sample App")
+            resValue("string", "defaultActionWatch", "com.nextgenbroadcast.mobile.middleware.action.watch.tv")
+            resValue("string", "nextgenMediaFileProvider", "com.nextgenbroadcast.mobile.middleware.provider.dash.tv")
             resValue("string", "nextgenMMTContentProvider", "com.nextgenbroadcast.mobile.middleware.provider.mmt.tv")
             resValue("string", "nextgenServicesGuideProvider", "com.nextgenbroadcast.mobile.middleware.provider.esg.tv")
-            resValue("string", "receiverContentProvider", "com.nextgenbroadcast.mobile.middleware.provider.content")
+            resValue("string", "receiverContentProvider", "com.nextgenbroadcast.mobile.middleware.provider.content.tv")
         }
 
         light {
             dimension "service_type"
             applicationIdSuffix ".light"
             resValue "string", "app_name", "Atsc3 Light Sample App"
+
+            resValue("string", "defaultActionWatch", "com.nextgenbroadcast.mobile.middleware.action.watch.tv")
+            resValue("string", "receiverContentProvider", "com.nextgenbroadcast.mobile.middleware.provider.content.tv")
         }
     }
 

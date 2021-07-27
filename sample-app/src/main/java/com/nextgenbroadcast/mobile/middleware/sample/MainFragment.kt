@@ -21,8 +21,8 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.setFragmentResultListener
 import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.nextgenbroadcast.mobile.core.atsc3.PhyVersionInfo
 import com.nextgenbroadcast.mobile.core.model.*
-import com.nextgenbroadcast.mobile.middleware.atsc3.PhyVersionInfo
 import com.nextgenbroadcast.mobile.middleware.dev.atsc3.PHYStatistics
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.observer.StaticTelemetryObserver
 import com.nextgenbroadcast.mobile.middleware.sample.view.PhyChartView

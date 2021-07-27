@@ -1,4 +1,4 @@
-package com.nextgenbroadcast.mobile.middleware.atsc3
+package com.nextgenbroadcast.mobile.core.atsc3
 
 object PhyVersionInfo {
     const val INFO_DEVICE_ID = "deviceId"

@@ -4,6 +4,13 @@
 
     <application>
 
+        <activity android:name=".MainActivity">
+            <intent-filter>
+                <action android:name="com.nextgenbroadcast.mobile.middleware.sample.action.watch" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
         <service
             android:name="com.nextgenbroadcast.mobile.middleware.service.EmbeddedAtsc3Service"
             android:exported="false">

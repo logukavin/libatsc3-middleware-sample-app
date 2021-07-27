@@ -12,8 +12,8 @@ import android.util.Log
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.nextgenbroadcast.mobile.core.LOG
-import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
 import com.nextgenbroadcast.mobile.middleware.R
+import com.nextgenbroadcast.mobile.middleware.dev.service.binder.IServiceBinder
 import com.nextgenbroadcast.mobile.middleware.service.Atsc3ForegroundService
 import com.nextgenbroadcast.mobile.middleware.service.EmbeddedAtsc3Service
 
