@@ -2,11 +2,12 @@ package com.nextgenbroadcast.mobile.middleware.atsc3
 
 import android.util.Log
 import com.nextgenbroadcast.mobile.core.LOG
+import com.nextgenbroadcast.mobile.core.atsc3.PhyVersionInfo
 import com.nextgenbroadcast.mobile.core.model.MediaUrl
 import com.nextgenbroadcast.mobile.core.isEquals
 import com.nextgenbroadcast.mobile.middleware.MiddlewareConfig
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.Atsc3ServiceLocationTable
-import com.nextgenbroadcast.mobile.middleware.atsc3.entities.SLTConstants
+import com.nextgenbroadcast.mobile.core.atsc3.SLTConstants
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.alerts.LLSParserAEAT
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3ApplicationFile

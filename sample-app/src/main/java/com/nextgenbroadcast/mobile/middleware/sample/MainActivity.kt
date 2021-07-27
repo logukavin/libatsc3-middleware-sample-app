@@ -26,12 +26,12 @@ import com.google.android.play.core.install.model.AppUpdateType
 import com.google.android.play.core.install.model.UpdateAvailability
 import com.google.android.play.core.tasks.Task
 import androidx.lifecycle.lifecycleScope
+import com.nextgenbroadcast.mobile.core.getApkBaseServicePackage
+import com.nextgenbroadcast.mobile.core.media.MediaSessionConstants
 import com.nextgenbroadcast.mobile.core.model.AVService
-import com.nextgenbroadcast.mobile.core.presentation.IControllerPresenter
-import com.nextgenbroadcast.mobile.core.service.binder.IServiceBinder
-import com.nextgenbroadcast.mobile.middleware.getApkBaseServicePackage
+import com.nextgenbroadcast.mobile.middleware.dev.presentation.IControllerPresenter
+import com.nextgenbroadcast.mobile.middleware.dev.service.binder.IServiceBinder
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.ViewViewModel
-import com.nextgenbroadcast.mobile.middleware.service.media.MediaSessionConstants
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.ReceiverTelemetry
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collect
