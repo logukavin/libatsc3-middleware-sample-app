@@ -6,13 +6,11 @@ import android.content.UriMatcher
 import android.database.Cursor
 import android.net.Uri
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.db.SGDataBase
-import com.nextgenbroadcast.mobile.middleware.service.provider.esgProvider.ESGContentAuthority
 import java.lang.Integer.parseInt
 import java.util.*
 
 
 class ESGContentProvider : ContentProvider() {
-
     private lateinit var AUTHORITY: String
     private lateinit var SERVICE_CONTENT_URI: Uri
     private lateinit var PROGRAM_CONTENT_URI: Uri

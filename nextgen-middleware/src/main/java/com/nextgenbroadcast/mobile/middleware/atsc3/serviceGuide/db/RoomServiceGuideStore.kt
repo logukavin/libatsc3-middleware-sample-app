@@ -14,8 +14,12 @@ internal class RoomServiceGuideStore(
 
     private var notifyUpdated: (() -> Unit)? = null
 
-    override fun subscribe(notifyUpdated: () -> Unit) {
+    fun subscribe(notifyUpdated: () -> Unit) {
         this.notifyUpdated = notifyUpdated
+    }
+
+    fun unsubscribe() {
+        notifyUpdated = null
     }
 
     override fun clearAll() {

@@ -5,6 +5,7 @@ import android.provider.Settings
 import android.widget.Toast
 import androidx.work.WorkManager
 import com.google.firebase.installations.FirebaseInstallations
+import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.middleware.analytics.Atsc3Analytics
 import com.nextgenbroadcast.mobile.middleware.analytics.scheduler.AnalyticScheduler
 import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3Module
@@ -14,7 +15,7 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.db.RoomServiceG
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.db.SGDataBase
 import com.nextgenbroadcast.mobile.middleware.repository.RepositoryImpl
 import com.nextgenbroadcast.mobile.middleware.service.provider.MediaFileProvider
-import com.nextgenbroadcast.mobile.middleware.service.provider.esgProvider.ESGContentAuthority
+import com.nextgenbroadcast.mobile.middleware.provider.esg.ESGContentAuthority
 import com.nextgenbroadcast.mobile.middleware.settings.MiddlewareSettingsImpl
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collect
@@ -43,8 +44,8 @@ internal object Atsc3ReceiverStandalone {
 
         val preferences = appContext.getSharedPreferences(REPOSITORY_PREFERENCE, Context.MODE_PRIVATE)
         val settings = MiddlewareSettingsImpl(preferences).also { settings ->
-            runBlocking { getDeviceId(atsc3Module) }?.let { devoceId ->
-                settings.setDeviceId(devoceId)
+            runBlocking { getDeviceId(atsc3Module) }?.let { deviceId ->
+                settings.setDeviceId(deviceId)
             }
         }
 
@@ -53,9 +54,17 @@ internal object Atsc3ReceiverStandalone {
 
         val db = SGDataBase.getDatabase(appContext)
         val serviceGuideStore = RoomServiceGuideStore(db).apply {
+            //TODO: ESGContentProvider should observe changes on its own
             subscribe {
                 val serviceContentUri = ESGContentAuthority.getServiceContentUri(appContext)
-                appContext.contentResolver.notifyChange(serviceContentUri, null)
+                try {
+                    appContext.contentResolver.notifyChange(serviceContentUri, null)
+                } catch (e: SecurityException) {
+                    // It seems ESG provider wasn't initialized, unsubscribe changes
+                    unsubscribe()
+                } catch (e: Exception) {
+                    LOG.d("serviceGuideStore", "Failed to notify ESG changes", e)
+                }
             }
         }
         val serviceGuideReader = ServiceGuideDeliveryUnitReader(serviceGuideStore)
@@ -89,7 +98,7 @@ internal object Atsc3ReceiverStandalone {
                         if (task.isSuccessful) task.result else null
                     }
                 }
-            } catch (e: CancellationException) {
+            } catch (e: Exception) {
                 null
             }
         }
