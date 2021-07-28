@@ -135,6 +135,12 @@ class TelemetryManager(
         }
     }
 
+    fun getFlow(deviceId:String):Flow<ClientTelemetryEvent>?{
+        return deviceObservers[deviceId]?.let { observer ->
+            telemetryClient.getFlow(observer)
+        }
+    }
+
     fun connectDevice(device: TelemetryDevice): Boolean {
         val observer = when {
             device.availableOnNSD -> WebTelemetryObserver(device.host, device.port, listOf(AWSIOT_TOPIC_PHY))
