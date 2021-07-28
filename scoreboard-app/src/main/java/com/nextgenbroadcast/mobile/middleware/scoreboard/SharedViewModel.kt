@@ -3,11 +3,11 @@ package com.nextgenbroadcast.mobile.middleware.scoreboard
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.entity.ClientTelemetryEvent
 import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.TelemetryDevice
-import com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry.TelemetryManager
+import kotlinx.coroutines.flow.Flow
 
 class SharedViewModel : ViewModel() {
-    var telemetryManager: TelemetryManager? = null
 
     private var _deviceIdList: MutableLiveData<List<String>> = MutableLiveData(emptyList())
     var deviceIdList: LiveData<List<String>> = _deviceIdList
@@ -15,21 +15,31 @@ class SharedViewModel : ViewModel() {
     private var _connectedDeviceList: MutableLiveData<List<TelemetryDevice>> = MutableLiveData()
     var connectedDeviceList: LiveData<List<TelemetryDevice>> = _connectedDeviceList
 
+    private var _addDeviceToChartEvent: MutableLiveData<String> = MutableLiveData()
+    var addDeviceToChartEvent: LiveData<String> = _addDeviceToChartEvent
+
+    private var _removeDeviceToChartEvent: MutableLiveData<String> = MutableLiveData()
+    var removeDeviceToChartEvent: LiveData<String> = _removeDeviceToChartEvent
+
+    var deviceFlowMap = mutableMapOf<String, Flow<ClientTelemetryEvent>?>()
+
     fun addDevicesIdList(deviceIds: List<String>) {
         _deviceIdList.value = deviceIds
     }
 
     fun addDeviceToChartList(deviceId: String) {
-        telemetryManager?.connectDevice(deviceId)
-        updateConnectedDevices()
+        _addDeviceToChartEvent.value = deviceId
     }
 
     fun removeDeviceFromChartList(deviceId: String) {
-        telemetryManager?.disconnectDevice(deviceId)
-        updateConnectedDevices()
+        _removeDeviceToChartEvent.value = deviceId
     }
 
-    private fun updateConnectedDevices() {
-        _connectedDeviceList.value = telemetryManager?.getConnectedDevices()
+    fun updateConnectedDevices(deviceList: List<TelemetryDevice>) {
+        _connectedDeviceList.value = deviceList
+    }
+
+    fun getFlow(deviceId: String): Flow<ClientTelemetryEvent>? {
+        return deviceFlowMap[deviceId]
     }
 }

@@ -1,59 +1,38 @@
 package com.nextgenbroadcast.mobile.middleware.scoreboard
 
+import android.content.Context
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.ViewModelProvider
+import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.*
-import com.google.firebase.installations.FirebaseInstallations
-import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.entity.ClientTelemetryEvent
 import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.TelemetryDevice
 import com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry.DatagramSocketWrapper
-import com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry.TelemetryManager
 import com.nextgenbroadcast.mobile.middleware.scoreboard.view.DeviceItemView
 import kotlinx.android.synthetic.main.fragment_scoreboard.*
 import kotlinx.coroutines.flow.Flow
 
 class ScoreboardFragment : Fragment() {
     private lateinit var deviceAdapter: DeviceListAdapter
-
-    private val sharedViewModel: SharedViewModel by lazy {
-        ViewModelProvider(requireActivity()).get(SharedViewModel::class.java)
-    }
-    private var socket: DatagramSocketWrapper? = null
-
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View {
+    private val sharedViewModel by activityViewModels<SharedViewModel>()
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         return inflater.inflate(R.layout.fragment_scoreboard, container, false)
     }
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        context?.let { context ->
-            socket = DatagramSocketWrapper(context.applicationContext)
-            FirebaseInstallations.getInstance().id.addOnCompleteListener { task ->
-                if (task.isSuccessful) {
-                    task.result?.let { deviceId ->
-                        createTelemetryManager(deviceId)
-                    }
-                } else {
-                    LOG.e(TAG, "Can't create Telemetry because Firebase ID not received.", task.exception)
-                }
-            }
+    override fun onAttach(context: Context) {
+        super.onAttach(context)
 
-            socket?.let { socket ->
-                deviceAdapter = DeviceListAdapter(layoutInflater, socket) { device ->
-                    sharedViewModel.telemetryManager?.getFlow(device)
-                }
+        DatagramSocketWrapper(requireContext().applicationContext).let { socket ->
+            deviceAdapter = DeviceListAdapter(layoutInflater, socket) { device ->
+                sharedViewModel.getFlow(device.id)
             }
         }
+    }
 
-
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         chart_list.layoutManager = LinearLayoutManager(context)
         chart_list.adapter = deviceAdapter
         chart_list.addItemDecoration(DividerItemDecoration(context, DividerItemDecoration.VERTICAL))
@@ -64,30 +43,8 @@ class ScoreboardFragment : Fragment() {
             chart_list.layoutManager = LinearLayoutManager(context, orientation, false)
         }
 
-        sharedViewModel.connectedDeviceList.observe(viewLifecycleOwner) { connecteDeviceList ->
-            deviceAdapter.submitList(connecteDeviceList)
-        }
-    }
-
-    override fun onStart() {
-        super.onStart()
-
-        sharedViewModel.telemetryManager?.start()
-    }
-
-    override fun onStop() {
-        super.onStop()
-
-        sharedViewModel.telemetryManager?.stop()
-    }
-
-    private fun createTelemetryManager(serialNum: String) {
-        sharedViewModel.telemetryManager = context?.let { context ->
-            TelemetryManager(context, serialNum) { deviceIds ->
-                sharedViewModel.addDevicesIdList(deviceIds)
-            }.also {
-                it.start()
-            }
+        sharedViewModel.connectedDeviceList.observe(viewLifecycleOwner) { connectedDeviceList ->
+            deviceAdapter.submitList(connectedDeviceList)
         }
     }
 
