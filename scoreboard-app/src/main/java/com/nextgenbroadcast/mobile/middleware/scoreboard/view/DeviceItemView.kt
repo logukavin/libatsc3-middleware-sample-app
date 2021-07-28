@@ -2,7 +2,6 @@ package com.nextgenbroadcast.mobile.middleware.scoreboard.view
 
 import android.content.Context
 import android.util.AttributeSet
-import android.widget.Button
 import android.widget.TextView
 import androidx.constraintlayout.widget.ConstraintLayout
 import com.google.gson.Gson
@@ -24,7 +23,6 @@ class DeviceItemView @JvmOverloads constructor(
     lateinit var title: TextView
     lateinit var lostLabel: TextView
     lateinit var phyChart: PhyChart
-    lateinit var removeBtn: Button
     lateinit var deviceItemView: DeviceItemView
 
     var isDeviceSelected = false
@@ -35,7 +33,6 @@ class DeviceItemView @JvmOverloads constructor(
         title = findViewById(R.id.device_name_view)
         lostLabel = findViewById(R.id.device_lost_label)
         phyChart = findViewById(R.id.device_phy_chart)
-        removeBtn = findViewById(R.id.device_remove_btn)
         deviceItemView = findViewById(R.id.deviceItemView)
     }
 

@@ -149,8 +149,12 @@ class TelemetryManager(
         return true
     }
 
-    fun disconnectDevice(device: TelemetryDevice) {
-        deviceObservers.remove(device.id)?.let { observer ->
+    fun connectDevice(deviceId: String) {
+        getDeviceById(deviceId)?.let { connectDevice(it) }
+    }
+
+    fun disconnectDevice(deviceId: String) {
+        deviceObservers.remove(deviceId)?.let { observer ->
             telemetryClient.removeObserver(observer)
         }
     }

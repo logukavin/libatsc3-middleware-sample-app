@@ -4,9 +4,8 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ArrayAdapter
-import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.postDelayed
+import androidx.fragment.app.Fragment
+import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.*
 import com.google.firebase.installations.FirebaseInstallations
 import com.nextgenbroadcast.mobile.core.LOG
@@ -15,129 +14,90 @@ import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.TelemetryDevic
 import com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry.DatagramSocketWrapper
 import com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry.TelemetryManager
 import com.nextgenbroadcast.mobile.middleware.scoreboard.view.DeviceItemView
-import kotlinx.android.synthetic.main.activity_scoreboard.*
+import kotlinx.android.synthetic.main.fragment_scoreboard.*
 import kotlinx.coroutines.flow.Flow
 
-class ScoreboardActivity : AppCompatActivity() {
+class ScoreboardFragment : Fragment() {
     private lateinit var deviceAdapter: DeviceListAdapter
-    private lateinit var deviceSpinnerAdapter: ArrayAdapter<String>
 
-    private val socket: DatagramSocketWrapper by lazy {
-        DatagramSocketWrapper(applicationContext)
+    private val sharedViewModel: SharedViewModel by lazy {
+        ViewModelProvider(requireActivity()).get(SharedViewModel::class.java)
+    }
+    private var socket: DatagramSocketWrapper? = null
+
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
+        return inflater.inflate(R.layout.fragment_scoreboard, container, false)
     }
 
-    private var telemetryManager: TelemetryManager? = null
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-
-        FirebaseInstallations.getInstance().id.addOnCompleteListener { task ->
-            if (task.isSuccessful) {
-                if (!isFinishing) {
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        context?.let { context ->
+            socket = DatagramSocketWrapper(context.applicationContext)
+            FirebaseInstallations.getInstance().id.addOnCompleteListener { task ->
+                if (task.isSuccessful) {
                     task.result?.let { deviceId ->
                         createTelemetryManager(deviceId)
                     }
+                } else {
+                    LOG.e(TAG, "Can't create Telemetry because Firebase ID not received.", task.exception)
                 }
-            } else {
-                LOG.e(TAG, "Can't create Telemetry because Firebase ID not received.", task.exception)
+            }
+
+            socket?.let { socket ->
+                deviceAdapter = DeviceListAdapter(layoutInflater, socket) { device ->
+                    sharedViewModel.telemetryManager?.getFlow(device)
+                }
             }
         }
 
-        setContentView(R.layout.activity_scoreboard)
 
-        deviceSpinnerAdapter = ArrayAdapter<String>(this, android.R.layout.simple_dropdown_item_1line)
-        device_spinner.adapter = deviceSpinnerAdapter
-
-        deviceAdapter = DeviceListAdapter(layoutInflater, socket, object :
-            DeviceListAdapter.DeviceItemClickListener {
-            override fun onDeleteClick(device: TelemetryDevice) {
-                removeChartForDevice(device)
-            }
-        }) { device ->
-            telemetryManager?.getFlow(device)
-        }
-
-        chart_list.layoutManager = LinearLayoutManager(this)
+        chart_list.layoutManager = LinearLayoutManager(context)
         chart_list.adapter = deviceAdapter
-        chart_list.addItemDecoration(DividerItemDecoration(this, DividerItemDecoration.VERTICAL))
+        chart_list.addItemDecoration(DividerItemDecoration(context, DividerItemDecoration.VERTICAL))
         PagerSnapHelper().attachToRecyclerView(chart_list)
-
-        add_device_btn.setOnClickListener {
-            val deviceId = device_spinner.selectedItem as? String
-            if (deviceId != null) {
-                telemetryManager?.getDeviceById(deviceId)?.let { device ->
-                    addChartForDevice(device)
-                }
-            }
-        }
 
         pager_mode_switch.setOnCheckedChangeListener { _, isChecked ->
             val orientation = if (isChecked) RecyclerView.HORIZONTAL else RecyclerView.VERTICAL
-            chart_list.layoutManager = LinearLayoutManager(this, orientation, false)
+            chart_list.layoutManager = LinearLayoutManager(context, orientation, false)
+        }
+
+        sharedViewModel.connectedDeviceList.observe(viewLifecycleOwner) { connecteDeviceList ->
+            deviceAdapter.submitList(connecteDeviceList)
         }
     }
 
     override fun onStart() {
         super.onStart()
 
-        telemetryManager?.start()
+        sharedViewModel.telemetryManager?.start()
     }
 
     override fun onStop() {
         super.onStop()
 
-        telemetryManager?.stop()
+        sharedViewModel.telemetryManager?.stop()
     }
 
     private fun createTelemetryManager(serialNum: String) {
-        telemetryManager = TelemetryManager(applicationContext, serialNum) { deviceIds ->
-            deviceSpinnerAdapter.clear()
-            deviceSpinnerAdapter.addAll(deviceIds)
-
-            syncChartAdapter()
-        }.also {
-            it.start()
-        }
-    }
-
-    private fun addChartForDevice(device: TelemetryDevice) {
-        val connected = telemetryManager?.connectDevice(device) ?: false
-        if (!connected) return
-
-        syncChartAdapter()
-
-        // scroll to the last, just added element
-        chart_list.postDelayed(200) {
-            val position = deviceAdapter.itemCount - 1
-            if (position >= 0) {
-                chart_list.smoothScrollToPosition(position)
+        sharedViewModel.telemetryManager = context?.let { context ->
+            TelemetryManager(context, serialNum) { deviceIds ->
+                sharedViewModel.addDevicesIdList(deviceIds)
+            }.also {
+                it.start()
             }
-        }
-    }
-
-    private fun removeChartForDevice(device: TelemetryDevice) {
-        telemetryManager?.disconnectDevice(device)
-        syncChartAdapter()
-    }
-
-    private fun syncChartAdapter() {
-        telemetryManager?.let { manager ->
-            deviceAdapter.submitList(manager.getConnectedDevices())
         }
     }
 
     class DeviceListAdapter(
         private val inflater: LayoutInflater,
         private val socket: DatagramSocketWrapper,
-        private val listener: DeviceItemClickListener,
         private val getFlowForDevice: (TelemetryDevice) -> Flow<ClientTelemetryEvent>?
     ) : ListAdapter<TelemetryDevice, DeviceListAdapter.Holder>(DIFF_CALLBACK) {
 
         private var selectedDeviceId: String? = null
-
-        interface DeviceItemClickListener {
-            fun onDeleteClick(device: TelemetryDevice)
-        }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): Holder {
             val view = inflater.inflate(R.layout.chart_item_view, parent, false) as DeviceItemView
@@ -161,10 +121,6 @@ class ScoreboardActivity : AppCompatActivity() {
                     deviceItemView.setBackgroundColor(context.getColor(if (isDeviceSelected) R.color.yellow_device_item_bg else R.color.white))
                     title.text = device.id
                     lostLabel.visibility = if (device.isLost) View.VISIBLE else View.GONE
-
-                    removeBtn.setOnClickListener {
-                        listener.onDeleteClick(device)
-                    }
 
                     deviceView.setOnClickListener {
                         selectedDeviceId = if (selectedDeviceId != currentDevice?.id) {
@@ -193,6 +149,6 @@ class ScoreboardActivity : AppCompatActivity() {
     }
 
     companion object {
-        val TAG: String = ScoreboardActivity::class.java.simpleName
+        val TAG: String = ScoreboardFragment::class.java.simpleName
     }
 }
