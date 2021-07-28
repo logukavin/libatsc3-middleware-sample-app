@@ -5,10 +5,8 @@ import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.Response
 import java.io.IOException
-import java.lang.Exception
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
-import kotlin.jvm.Throws
 
 suspend fun Call.await(): Response = await { it }
 
