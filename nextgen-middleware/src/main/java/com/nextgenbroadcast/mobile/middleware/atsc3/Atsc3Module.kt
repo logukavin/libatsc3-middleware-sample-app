@@ -196,11 +196,14 @@ internal class Atsc3Module(
     }
 
     override suspend fun cancelScanning() {
+        log("cancelScanning()")
+
         withContext(stateScope.coroutineContext) {
             cancelSourceConfigTimeoutTask()
 
             if (serviceLocationTable.isEmpty()) {
-                setState(Atsc3ModuleState.IDLE)
+                setState(Atsc3ModuleState.SNIFFING)
+                //setState(Atsc3ModuleState.IDLE) - don't move to IDLE to infinitely wait for a first SLT
             } else {
                 finishReconfiguration()
             }
