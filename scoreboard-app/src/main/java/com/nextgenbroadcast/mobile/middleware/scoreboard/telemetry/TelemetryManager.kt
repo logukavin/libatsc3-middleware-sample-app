@@ -64,9 +64,10 @@ class TelemetryManager(
                 keyPassword
             ) ?: throw IOException("Failed to read certificate from resources")
         }.apply {
-            globalDeviceObserver = AWSTelemetryObserver(AWSIOT_EVENT_TOPIC_FORMAT, this, AWSIOT_CLIENT_ID_ANY, AWSIOT_TOPIC_PING).also {
-                telemetryClient.addObserver(it)
-            }
+            globalDeviceObserver =
+                AWSTelemetryObserver(AWSIOT_EVENT_TOPIC_FORMAT, this, AWSIOT_CLIENT_ID_ANY, AWSIOT_TOPIC_PING).also {
+                    telemetryClient.addObserver(it)
+                }
         }
     }
 
@@ -135,7 +136,7 @@ class TelemetryManager(
         }
     }
 
-    fun getFlow(deviceId:String):Flow<ClientTelemetryEvent>?{
+    fun getFlow(deviceId: String): Flow<ClientTelemetryEvent>? {
         return deviceObservers[deviceId]?.let { observer ->
             telemetryClient.getFlow(observer)
         }
@@ -293,10 +294,12 @@ class TelemetryManager(
         private const val IoT_PREFERENCE = "${BuildConfig.APPLICATION_ID}.awsiot"
 
         private const val AWSIOT_MANAGER_TEMPLATE_NAME = "ATSC3MobileManagerProvisioning"
-        private const val AWSIOT_MANAGER_ID_FORMAT = "ATSC3MobileManager_${AWSIoThing.AWSIOT_FORMAT_SERIAL}"
+        private const val AWSIOT_MANAGER_ID_FORMAT =
+            "ATSC3MobileManager_${AWSIoThing.AWSIOT_FORMAT_SERIAL}"
         private const val AWSIOT_EVENT_TOPIC_FORMAT = "telemetry/${AWSIoThing.AWSIOT_FORMAT_SERIAL}"
         private const val AWSIOT_GLOBAL_EVENT_TOPIC_FORMAT = "global/command/request"
-        private const val AWSIOT_CLIENT_ID_FORMAT = "ATSC3MobileReceiver_${AWSIoThing.AWSIOT_FORMAT_SERIAL}"
+        private const val AWSIOT_CLIENT_ID_FORMAT =
+            "ATSC3MobileReceiver_${AWSIoThing.AWSIOT_FORMAT_SERIAL}"
         private const val AWSIOT_CLIENT_ID_ANY = "+"
 
         private const val AWSIOT_TOPIC_PING = "ping"

@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.Flow
 class ScoreboardFragment : Fragment() {
     private lateinit var deviceAdapter: DeviceListAdapter
     private val sharedViewModel by activityViewModels<SharedViewModel>()
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         return inflater.inflate(R.layout.fragment_scoreboard, container, false)
     }
@@ -25,7 +26,7 @@ class ScoreboardFragment : Fragment() {
     override fun onAttach(context: Context) {
         super.onAttach(context)
 
-        DatagramSocketWrapper(requireContext().applicationContext).let { socket ->
+        DatagramSocketWrapper(context.applicationContext).let { socket ->
             deviceAdapter = DeviceListAdapter(layoutInflater, socket) { device ->
                 sharedViewModel.getFlow(device.id)
             }

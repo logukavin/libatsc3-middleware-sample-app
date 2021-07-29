@@ -15,7 +15,7 @@ import kotlinx.android.synthetic.main.activity_scoreboard.*
 class ScoreboardPagerActivity : FragmentActivity() {
     private lateinit var pagerAdapter: PagerAdapter
     private val sharedViewModel: SharedViewModel by viewModels()
-    var telemetryManager: TelemetryManager? = null
+    private var telemetryManager: TelemetryManager? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -28,8 +28,8 @@ class ScoreboardPagerActivity : FragmentActivity() {
                         createTelemetryManager(deviceId)
                     }
                 }
-            }else {
-                LOG.e(ScoreboardFragment.TAG, "Can't create Telemetry because Firebase ID not received.", task.exception)
+            } else {
+                LOG.e(TAG, "Can't create Telemetry because Firebase ID not received.", task.exception)
             }
         }
 
@@ -85,5 +85,9 @@ class ScoreboardPagerActivity : FragmentActivity() {
             }
             return ScoreboardFragment()
         }
+    }
+
+    companion object{
+        private val TAG = ScoreboardPagerActivity::class.java.simpleName
     }
 }
