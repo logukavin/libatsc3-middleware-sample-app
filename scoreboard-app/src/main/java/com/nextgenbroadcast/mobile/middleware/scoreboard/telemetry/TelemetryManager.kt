@@ -29,7 +29,7 @@ import kotlin.concurrent.scheduleAtFixedRate
 class TelemetryManager(
     private val context: Context,
     private val serialNum: String,
-    private val onDeviceListUpdated: (deviceIds: List<String>) -> Unit
+    private val onDeviceListUpdated: (devices: List<TelemetryDevice>) -> Unit
 ) {
     private val nsdManager by lazy {
         context.getSystemService(Context.NSD_SERVICE) as NsdManager
@@ -64,7 +64,12 @@ class TelemetryManager(
                 keyPassword
             ) ?: throw IOException("Failed to read certificate from resources")
         }.apply {
-            globalDeviceObserver = AWSTelemetryObserver(AWSIOT_EVENT_TOPIC_FORMAT, this, AWSIOT_CLIENT_ID_ANY, AWSIOT_TOPIC_PING).also {
+            globalDeviceObserver = AWSTelemetryObserver(
+                AWSIOT_EVENT_TOPIC_FORMAT,
+                this,
+                AWSIOT_CLIENT_ID_ANY,
+                AWSIOT_TOPIC_PING
+            ).also {
                 telemetryClient.addObserver(it)
             }
         }
@@ -135,6 +140,12 @@ class TelemetryManager(
         }
     }
 
+    fun getFlow(deviceId: String): Flow<ClientTelemetryEvent>? {
+        return deviceObservers[deviceId]?.let { observer ->
+            telemetryClient.getFlow(observer)
+        }
+    }
+
     fun connectDevice(device: TelemetryDevice): Boolean {
         val observer = when {
             device.availableOnNSD -> WebTelemetryObserver(device.host, device.port, listOf(AWSIOT_TOPIC_PHY))
@@ -149,8 +160,14 @@ class TelemetryManager(
         return true
     }
 
-    fun disconnectDevice(device: TelemetryDevice) {
-        deviceObservers.remove(device.id)?.let { observer ->
+    fun connectDevice(deviceId: String) {
+        getDeviceById(deviceId)?.let { device ->
+            connectDevice(device)
+        }
+    }
+
+    fun disconnectDevice(deviceId: String) {
+        deviceObservers.remove(deviceId)?.let { observer ->
             telemetryClient.removeObserver(observer)
         }
     }
@@ -194,7 +211,7 @@ class TelemetryManager(
     }
 
     private fun notifyDevicesChanged() {
-        onDeviceListUpdated(devices.filterValues { !it.isLost }.keys.toList())
+        onDeviceListUpdated(devices.filterValues { !it.isLost }.values.toList())
     }
 
     private fun encryptedSharedPreferences(context: Context, fileName: String): SharedPreferences {
