@@ -2,19 +2,26 @@ package com.nextgenbroadcast.mobile.middleware.scoreboard
 
 import android.content.Context
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.*
+import android.widget.CheckBox
+import android.widget.CompoundButton
+import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.android.synthetic.main.device_id_item_view.view.*
 import kotlinx.android.synthetic.main.fragment_settings.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
 
 class ScoreboardSettingsFragment : Fragment() {
     private val sharedViewModel by activityViewModels<SharedViewModel>()
-
     private lateinit var deviceIdsAdapter: DeviceIdsAdapter
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
@@ -31,30 +38,51 @@ class ScoreboardSettingsFragment : Fragment() {
 
             override fun remoteDeviceChart(deviceId: String) {
                 sharedViewModel.removeDeviceChart(deviceId)
+
             }
-        })
+        }, sharedViewModel.deviceSelectionEvent)
+    }
+
+    private fun clearAllCheckboxSelection() {
+        if (select_all_checkbox.isChecked) {
+            select_all_checkbox.setOnCheckedChangeListener(null)
+            select_all_checkbox.isChecked = false
+            select_all_checkbox.setOnCheckedChangeListener(selectAllListener())
+        }
+    }
+
+    private fun selectAllListener(): CompoundButton.OnCheckedChangeListener {
+        return CompoundButton.OnCheckedChangeListener { _, isChecked -> deviceIdsAdapter.selectAll(isChecked) }
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         device_ids_recycler_iew.adapter = deviceIdsAdapter
 
         sharedViewModel.deviceIdList.observe(viewLifecycleOwner) { list ->
+            clearAllCheckboxSelection()
             deviceIdsAdapter.setData(list)
         }
 
-        select_all_checkbox.setOnCheckedChangeListener { _, isChecked ->
-            deviceIdsAdapter.selectAll(isChecked)
-        }
+        select_all_checkbox.setOnCheckedChangeListener(selectAllListener())
     }
 
     class DeviceIdsAdapter(
         private val inflater: LayoutInflater,
-        private val deviceListener: DeviceSelectListener
+        private val deviceListener: DeviceSelectListener,
+        private val selectedChartId: MutableStateFlow<String?>
     ) : RecyclerView.Adapter<DeviceIdsAdapter.DeviceIdViewHolder>() {
 
         private val deviceIdList = mutableListOf<String>()
         private val selectAllPayload = Any()
         private val unselectAllPayload = Any()
+
+        init {
+            CoroutineScope(Dispatchers.Main).launch {
+                selectedChartId.collect {
+                    notifyItemRangeChanged(0, itemCount, Any())
+                }
+            }
+        }
 
         fun setData(deviceIdsList: List<String>) {
             deviceIdList.clear()
@@ -72,6 +100,7 @@ class ScoreboardSettingsFragment : Fragment() {
             val deviceId = deviceIdList.getOrNull(position) ?: return
             with(holder) {
                 deviceName.text = deviceId
+
                 deviceCheckBox.setOnCheckedChangeListener { _, isChecked ->
                     if (isChecked) {
                         deviceListener.addDeviceChart(deviceId)
@@ -79,6 +108,11 @@ class ScoreboardSettingsFragment : Fragment() {
                         deviceListener.remoteDeviceChart(deviceId)
                     }
                 }
+
+                if (deviceId == selectedChartId.value) {
+                    deviceCheckBox.isChecked = true
+                }
+
             }
         }
 
