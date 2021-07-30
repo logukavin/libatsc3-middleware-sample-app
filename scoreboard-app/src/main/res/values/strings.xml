@@ -5,4 +5,7 @@
     <string name="chart_remove_btn_title">Remove</string>
     <string name="chart_device_lost_label">LOST</string>
     <string name="chart_mode_switch_title">Show in pager mode</string>
+    <string name="scoreboard_tab_title">Scoreboard</string>
+    <string name="settings_tab_title">Settings</string>
+    <string name="chart_device_name">Device name</string>
 </resources>
