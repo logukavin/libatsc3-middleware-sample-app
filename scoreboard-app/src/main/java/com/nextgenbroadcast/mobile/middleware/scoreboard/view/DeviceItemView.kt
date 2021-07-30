@@ -14,8 +14,7 @@ class DeviceItemView @JvmOverloads constructor(
     lateinit var title: TextView
     lateinit var lostLabel: TextView
     lateinit var phyChart: PhyChart
-
-    var isDeviceSelected = false
+    var isChartSelected = false
 
     override fun onFinishInflate() {
         super.onFinishInflate()
