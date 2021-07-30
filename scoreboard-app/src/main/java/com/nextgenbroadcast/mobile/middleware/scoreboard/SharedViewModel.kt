@@ -1,45 +1,60 @@
 package com.nextgenbroadcast.mobile.middleware.scoreboard
 
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.*
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.entity.ClientTelemetryEvent
 import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.TelemetryDevice
 import kotlinx.coroutines.flow.Flow
 
 class SharedViewModel : ViewModel() {
+    private val _deviceList: MutableLiveData<List<TelemetryDevice>> = MutableLiveData(emptyList())
+    private val _chartDevices = MutableLiveData<List<String>>(emptyList())
+    private val _deviceFlowMap = MutableLiveData<Map<String, Flow<ClientTelemetryEvent>>>(emptyMap())
 
-    private var _deviceIdList: MutableLiveData<List<String>> = MutableLiveData(emptyList())
-    var deviceIdList: LiveData<List<String>> = _deviceIdList
+    val devicesToAdd = _chartDevices.mapWith(_deviceFlowMap) { (devices, deviceToFlow) ->
+        devices?.subtract(deviceToFlow?.keys ?: emptyList())
+    }.distinctUntilChanged()
 
-    private var _connectedDeviceList: MutableLiveData<List<TelemetryDevice>> = MutableLiveData()
-    var connectedDeviceList: LiveData<List<TelemetryDevice>> = _connectedDeviceList
+    val devicesToRemove = _chartDevices.mapWith(_deviceFlowMap) { (devices, deviceFlows) ->
+        deviceFlows?.keys?.subtract(devices ?: emptyList())
+    }.distinctUntilChanged()
 
-    private var _addDeviceToChartEvent: MutableLiveData<String> = MutableLiveData()
-    var addDeviceToChartEvent: LiveData<String> = _addDeviceToChartEvent
-
-    private var _removeDeviceToChartEvent: MutableLiveData<String> = MutableLiveData()
-    var removeDeviceToChartEvent: LiveData<String> = _removeDeviceToChartEvent
-
-    var deviceFlowMap = mutableMapOf<String, Flow<ClientTelemetryEvent>?>()
-
-    fun addDevicesIdList(deviceIds: List<String>) {
-        _deviceIdList.value = deviceIds
+    val deviceIdList: LiveData<List<String>> = _deviceList.map { list ->
+        list.map { device -> device.id }
     }
 
-    fun addDeviceToChartList(deviceId: String) {
-        _addDeviceToChartEvent.value = deviceId
+    val chartDevices = _chartDevices.mapWith(_deviceList) { (chartList, deviceList) ->
+        deviceList?.filter { chartList?.contains(it.id) ?: false }
     }
 
-    fun removeDeviceFromChartList(deviceId: String) {
-        _removeDeviceToChartEvent.value = deviceId
+    fun setDevicesList(deviceIds: List<TelemetryDevice>) {
+        _deviceList.value = deviceIds
     }
 
-    fun updateConnectedDevices(deviceList: List<TelemetryDevice>) {
-        _connectedDeviceList.value = deviceList
+    fun addDeviceChart(deviceId: String) {
+        val list = _chartDevices.value?.toMutableList() ?: mutableListOf()
+        list.add(deviceId)
+        _chartDevices.value = list
     }
 
-    fun getFlow(deviceId: String): Flow<ClientTelemetryEvent>? {
-        return deviceFlowMap[deviceId]
+    fun removeDeviceChart(deviceId: String) {
+        val list = _chartDevices.value?.toMutableList() ?: return
+        list.remove(deviceId)
+        _chartDevices.value = list
+    }
+
+    fun addFlow(deviceId: String, flow: Flow<ClientTelemetryEvent>) {
+        val map = _deviceFlowMap.value?.toMutableMap() ?: mutableMapOf()
+        map[deviceId] = flow
+        _deviceFlowMap.postValue(map)
+    }
+
+    fun removeFlow(deviceId: String) {
+        val map = _deviceFlowMap.value?.toMutableMap() ?: return
+        map.remove(deviceId)
+        _deviceFlowMap.postValue(map)
+    }
+
+    fun getDeviceFlow(deviceId: String): Flow<ClientTelemetryEvent>? {
+        return _deviceFlowMap.value?.get(deviceId)
     }
 }
