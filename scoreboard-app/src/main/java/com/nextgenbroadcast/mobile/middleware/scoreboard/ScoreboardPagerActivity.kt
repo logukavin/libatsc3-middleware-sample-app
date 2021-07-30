@@ -13,12 +13,15 @@ import com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry.TelemetryMana
 import kotlinx.android.synthetic.main.activity_scoreboard.*
 
 class ScoreboardPagerActivity : FragmentActivity() {
-    private lateinit var pagerAdapter: PagerAdapter
     private val sharedViewModel: SharedViewModel by viewModels()
+
+    private lateinit var pagerAdapter: PagerAdapter
+
     private var telemetryManager: TelemetryManager? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         setContentView(R.layout.activity_scoreboard)
 
         FirebaseInstallations.getInstance().id.addOnCompleteListener { task ->
@@ -34,56 +37,57 @@ class ScoreboardPagerActivity : FragmentActivity() {
         }
 
         pagerAdapter = PagerAdapter(this)
-        viewPager.offscreenPageLimit = 2
-        val tabLayout = findViewById<TabLayout>(R.id.tab_layout)
+        viewPager.offscreenPageLimit = 1
         viewPager.adapter = pagerAdapter
 
+        val tabLayout = findViewById<TabLayout>(R.id.tab_layout)
         TabLayoutMediator(tabLayout, viewPager) { tab, position ->
             tab.text = getTabName(position)
         }.attach()
 
-        sharedViewModel.addDeviceToChartEvent.observe(this) { deviceId ->
-            telemetryManager?.connectDevice(deviceId)
-            sharedViewModel.deviceFlowMap[deviceId] = telemetryManager?.getFlow(deviceId)
-            updateConnectedDevices()
+        sharedViewModel.devicesToAdd.observe(this) { devices ->
+            val telemetry = telemetryManager ?: return@observe
+            devices?.forEach { deviceId ->
+                telemetry.connectDevice(deviceId)
+                telemetry.getFlow(deviceId)?.let { flow ->
+                    sharedViewModel.addFlow(deviceId, flow)
+                }
+            }
         }
 
-        sharedViewModel.removeDeviceToChartEvent.observe(this) { deviceId ->
-            telemetryManager?.disconnectDevice(deviceId)
-            sharedViewModel.deviceFlowMap.remove(deviceId)
-            updateConnectedDevices()
+        sharedViewModel.devicesToRemove.observe(this) { devices ->
+            val telemetry = telemetryManager ?: return@observe
+            devices?.forEach { deviceId ->
+                telemetry.disconnectDevice(deviceId)
+                sharedViewModel.removeFlow(deviceId)
+            }
         }
-
-    }
-
-    private fun updateConnectedDevices() {
-        telemetryManager?.getConnectedDevices()?.let { sharedViewModel.updateConnectedDevices(it) }
     }
 
     private fun createTelemetryManager(serialNum: String) {
-        telemetryManager = TelemetryManager(this, serialNum) { deviceIds ->
-            sharedViewModel.addDevicesIdList(deviceIds)
+        telemetryManager = TelemetryManager(this, serialNum) { devices ->
+            sharedViewModel.setDevicesList(devices)
         }.also {
             it.start()
         }
-
     }
 
     private fun getTabName(position: Int): CharSequence {
-        return if (position == 0) getString(R.string.settings_tab_title) else getString(R.string.scoreboard_tab_title)
+        return getString(if (position == 0) R.string.settings_tab_title else R.string.scoreboard_tab_title)
     }
 
-    class PagerAdapter(fragmentActivity: FragmentActivity) :
-        FragmentStateAdapter(fragmentActivity) {
+    class PagerAdapter(
+        activity: FragmentActivity
+    ) : FragmentStateAdapter(activity) {
 
         override fun getItemCount(): Int = 2
 
         override fun createFragment(position: Int): Fragment {
-            when (position) {
-                0 -> return ScoreboardSettingsFragment()
-                1 -> return ScoreboardFragment()
+            return when (position) {
+                0 -> ScoreboardSettingsFragment()
+                1 -> ScoreboardFragment()
+                else -> throw IllegalArgumentException("Wrong Fragment index: $position")
             }
-            return ScoreboardFragment()
         }
     }
 

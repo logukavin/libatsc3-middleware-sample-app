@@ -5,19 +5,31 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.*
-import com.nextgenbroadcast.mobile.middleware.dev.telemetry.entity.ClientTelemetryEvent
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
+import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.TelemetryDevice
 import com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry.DatagramSocketWrapper
 import com.nextgenbroadcast.mobile.middleware.scoreboard.view.DeviceItemView
 import kotlinx.android.synthetic.main.fragment_scoreboard.*
-import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.*
 
 class ScoreboardFragment : Fragment() {
-    private lateinit var deviceAdapter: DeviceListAdapter
+    private val gson = Gson()
+    private val phyType = object : TypeToken<PhyPayload>() {}.type
+
     private val sharedViewModel by activityViewModels<SharedViewModel>()
+
+    private val socket: DatagramSocketWrapper by lazy {
+        DatagramSocketWrapper(requireContext().applicationContext)
+    }
+
+    private lateinit var deviceAdapter: DeviceListAdapter
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         return inflater.inflate(R.layout.fragment_scoreboard, container, false)
@@ -26,10 +38,24 @@ class ScoreboardFragment : Fragment() {
     override fun onAttach(context: Context) {
         super.onAttach(context)
 
-        DatagramSocketWrapper(context.applicationContext).let { socket ->
-            deviceAdapter = DeviceListAdapter(layoutInflater, socket) { device ->
-                sharedViewModel.getFlow(device.id)
-            }
+        deviceAdapter = DeviceListAdapter(layoutInflater) { device ->
+            val deviceId = device.id
+            sharedViewModel.getDeviceFlow(deviceId)
+                ?.shareIn(lifecycleScope, SharingStarted.Lazily)
+                ?.mapNotNull { event ->
+                    try {
+                        val payload = gson.fromJson<PhyPayload>(event.payload, phyType)
+                        val payloadValue = payload.snr1000.toDouble() / 1000
+                        val timestamp = payload.timeStamp
+                        if (deviceAdapter.selectedDeviceId == deviceId) {
+                            socket.sendUdpMessage("${deviceId},$timestamp,$payloadValue")
+                        }
+                        Pair(timestamp, payloadValue)
+                    } catch (e: Exception) {
+                        LOG.w(TAG, "Can't parse telemetry event payload", e)
+                        null
+                    }
+                }
         }
     }
 
@@ -44,18 +70,18 @@ class ScoreboardFragment : Fragment() {
             chart_list.layoutManager = LinearLayoutManager(context, orientation, false)
         }
 
-        sharedViewModel.connectedDeviceList.observe(viewLifecycleOwner) { connectedDeviceList ->
-            deviceAdapter.submitList(connectedDeviceList)
+        sharedViewModel.chartDevices.observe(viewLifecycleOwner) { devices ->
+            deviceAdapter.submitList(devices ?: emptyList())
         }
     }
 
     class DeviceListAdapter(
         private val inflater: LayoutInflater,
-        private val socket: DatagramSocketWrapper,
-        private val getFlowForDevice: (TelemetryDevice) -> Flow<ClientTelemetryEvent>?
+        private val getFlowForDevice: (TelemetryDevice) -> Flow<Pair<Long, Double>>?
     ) : ListAdapter<TelemetryDevice, DeviceListAdapter.Holder>(DIFF_CALLBACK) {
 
-        private var selectedDeviceId: String? = null
+        var selectedDeviceId: String? = null
+            private set
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): Holder {
             val view = inflater.inflate(R.layout.chart_item_view, parent, false) as DeviceItemView
@@ -74,11 +100,13 @@ class ScoreboardFragment : Fragment() {
             fun bind(device: TelemetryDevice) {
                 with(deviceView) {
                     currentDevice = device
-                    observe(getFlowForDevice(device), socket)
+                    observe(getFlowForDevice(device))
                     isDeviceSelected = selectedDeviceId.equals(device.id)
-                    deviceItemView.setBackgroundColor(context.getColor(if (isDeviceSelected) R.color.yellow_device_item_bg else R.color.white))
+                    setBackgroundColor(
+                        context.getColor(if (isDeviceSelected) R.color.yellow_device_item_bg else R.color.white)
+                    )
                     title.text = device.id
-                    lostLabel.visibility = if (device.isLost) View.VISIBLE else View.GONE
+                    lostLabel.isVisible = device.isLost
 
                     deviceView.setOnClickListener {
                         selectedDeviceId = if (selectedDeviceId != currentDevice?.id) {
@@ -88,7 +116,6 @@ class ScoreboardFragment : Fragment() {
                         }
                         notifyItemRangeChanged(0, itemCount, Any())
                     }
-
                 }
             }
         }
@@ -105,6 +132,11 @@ class ScoreboardFragment : Fragment() {
             }
         }
     }
+
+    data class PhyPayload(
+        val snr1000: Int,
+        val timeStamp: Long
+    )
 
     companion object {
         val TAG: String = ScoreboardFragment::class.java.simpleName
