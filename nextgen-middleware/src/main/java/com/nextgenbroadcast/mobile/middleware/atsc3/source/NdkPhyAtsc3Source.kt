@@ -14,8 +14,6 @@ class NdkPhyAtsc3Source(
         try {
             if (phy.init() == 0) {
                 if (phy.open(fd, DEVICE_TYPE_AUTO, devicePath) == 0) {
-                    phy.startPhyOpenTrace()
-
                     if (freqKhz > 0) {
                         phy.tune(freqKhz, 0)
                     }
@@ -28,13 +26,6 @@ class NdkPhyAtsc3Source(
         }
 
         return null
-    }
-
-    override fun close() {
-        super.close()
-
-        phy.stopPhyOpenTrace()
-        phy.stopPhyTunedTrace()
     }
 
     override fun toString(): String {
