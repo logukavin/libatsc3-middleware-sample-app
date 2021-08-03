@@ -12,7 +12,7 @@ class SharedViewModel : ViewModel() {
     private val _deviceFlowMap =
         MutableLiveData<Map<String, Flow<ClientTelemetryEvent>>>(emptyMap())
 
-    val deviceSelectionEvent: MutableStateFlow<String?> = MutableStateFlow(null)
+    val selectedDeviceId: MutableStateFlow<String?> = MutableStateFlow(null)
 
     val devicesToAdd = _chartDevices.mapWith(_deviceFlowMap) { (devices, deviceToFlow) ->
         devices?.subtract(deviceToFlow?.keys ?: emptyList())
@@ -30,8 +30,8 @@ class SharedViewModel : ViewModel() {
         deviceList?.filter { chartList?.contains(it.id) ?: false }
     }
 
-    fun setDeviceSelectionEvent(selectionEvent: String?) {
-        deviceSelectionEvent.value = selectionEvent
+    fun setDeviceSelection(deviceId: String?) {
+        selectedDeviceId.value = deviceId
     }
 
     fun setDevicesList(deviceIds: List<TelemetryDevice>) {
@@ -52,8 +52,8 @@ class SharedViewModel : ViewModel() {
     }
 
     private fun synchronizeChartSelection(deviceId: String) {
-        if (deviceSelectionEvent.value == deviceId) {
-            deviceSelectionEvent.value = null
+        if (selectedDeviceId.value == deviceId) {
+            selectedDeviceId.value = null
         }
     }
 

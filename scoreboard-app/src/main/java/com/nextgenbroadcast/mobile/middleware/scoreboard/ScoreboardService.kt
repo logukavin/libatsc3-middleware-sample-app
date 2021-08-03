@@ -7,29 +7,26 @@ import android.graphics.Color
 import android.os.Binder
 import android.os.IBinder
 import android.util.Log
-import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import com.nextgenbroadcast.mobile.middleware.scoreboard.ScoreboardPagerActivity.Companion.SELECTED_DEVICE_ID
 import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.TelemetryDevice
 import com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry.DatagramSocketWrapper
 import com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry.TelemetryManager
 import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.*
 
-class ForegroundService : IDeviceSelectionListener, Service() {
-    private var selectedDeviceId: String? = null
-    private var currentDeviceIds: List<TelemetryDevice>? = null
-    private var currentDeviceSelection: String? = null
-    private var job: Job? = null
+class ScoreboardService : IDeviceSelectionListener, Service() {
     private val gson = Gson()
     private val phyType = object : TypeToken<ScoreboardFragment.PhyPayload>() {}.type
-    private lateinit var telemetryManager: TelemetryManager
-
-    private lateinit var binder: ForegroundBinding
     private val socket: DatagramSocketWrapper by lazy {
         DatagramSocketWrapper(applicationContext)
     }
+
+    private var currentDeviceIds: List<TelemetryDevice>? = null
+    private var currentDeviceSelection: String? = null
+    private var job: Job? = null
+    private lateinit var binder: ScoreboardBinding
+    private lateinit var telemetryManager: TelemetryManager
 
     override fun onCreate() {
         super.onCreate()
@@ -50,10 +47,8 @@ class ForegroundService : IDeviceSelectionListener, Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         currentDeviceIds?.let { deviceIds ->
-            val broadcastIntent = Intent(ScoreboardPagerActivity.ACTION_DEVICE_IDS)
-            broadcastIntent.putExtra(ScoreboardPagerActivity.DEVICE_IDS, deviceIds.toTypedArray())
-            broadcastIntent.putExtra(SELECTED_DEVICE_ID, selectedDeviceId)
-            LocalBroadcastManager.getInstance(this).sendBroadcast(broadcastIntent)
+            binder.updateDeviceIds(deviceIds)
+            binder.updateSelectedDeviceId(currentDeviceSelection)
         }
 
         return super.onStartCommand(intent, flags, startId)
@@ -68,12 +63,12 @@ class ForegroundService : IDeviceSelectionListener, Service() {
         service.createNotificationChannel(channel)
     }
 
-    override fun deviceSelectionEvent(deviceSelection: String?) {
-        currentDeviceSelection = deviceSelection
+    override fun selectDevice(deviceId: String?) {
+        currentDeviceSelection = deviceId
         job?.cancel("Device connection changed", null)
-        selectedDeviceId = null
-        deviceSelection?.let { id ->
-            selectedDeviceId = id
+
+        deviceId?.let { id ->
+
             job = CoroutineScope(Dispatchers.IO).launch {
                 telemetryManager.getFlow(id)?.collect { event ->
                     try {
@@ -89,36 +84,47 @@ class ForegroundService : IDeviceSelectionListener, Service() {
         }
     }
 
+
     override fun onBind(intent: Intent): IBinder {
         val deviceId = intent.extras?.getString(DEVICE_ID)
 
-        if (this::binder.isInitialized) {
-            return binder
-        } else {
-            deviceId?.let { id ->
-                telemetryManager = TelemetryManager(this, id) { deviceIds ->
-                    currentDeviceIds = deviceIds
-                    val broadcastIntent = Intent(ScoreboardPagerActivity.ACTION_DEVICE_IDS)
-                    broadcastIntent.putExtra(ScoreboardPagerActivity.DEVICE_IDS, deviceIds.toTypedArray())
-                    LocalBroadcastManager.getInstance(this).sendBroadcast(broadcastIntent)
-                }.also { telemetryManager ->
-                    binder = ForegroundBinding(telemetryManager, this, currentDeviceIds)
-                    telemetryManager.start()
-                }
+        deviceId?.let { id ->
+            telemetryManager = TelemetryManager(this, id) { deviceIds ->
+                currentDeviceIds = deviceIds
+                binder.updateDeviceIds(deviceIds)
+            }.also { telemetryManager ->
+                binder = ScoreboardBinding(telemetryManager, this, currentDeviceIds)
+                telemetryManager.start()
             }
-            return binder
         }
+
+        return binder
     }
 
 
-    class ForegroundBinding(
+    class ScoreboardBinding(
         val telemetryManager: TelemetryManager?,
-        private val deviceSelectListener: IDeviceSelectionListener,
+        val deviceSelectListener: IDeviceSelectionListener,
         val currentDeviceIds: List<TelemetryDevice>?
     ) : Binder() {
+        private val _deviceIds: MutableSharedFlow<List<TelemetryDevice>> = MutableSharedFlow()
+        val deviceIds: SharedFlow<List<TelemetryDevice>> = _deviceIds.asSharedFlow()
 
-        fun changeDeviceSelection(deviceSelection: String?) {
-            deviceSelectListener.deviceSelectionEvent(deviceSelection)
+        private val _selectedDeviceFlow: MutableSharedFlow<String?> = MutableSharedFlow()
+        val selectedDeviceFlow: SharedFlow<String?> = _selectedDeviceFlow.asSharedFlow()
+
+        val coroutineScope = CoroutineScope(Dispatchers.Main)
+
+        fun updateDeviceIds(deviceIdsList: List<TelemetryDevice>) {
+            coroutineScope.launch {
+                _deviceIds.emit(deviceIdsList)
+            }
+        }
+
+        fun updateSelectedDeviceId(selectedDeviceId: String?) {
+            coroutineScope.launch {
+                _selectedDeviceFlow.emit(selectedDeviceId)
+            }
         }
     }
 
@@ -132,7 +138,7 @@ class ForegroundService : IDeviceSelectionListener, Service() {
 }
 
 interface IDeviceSelectionListener {
-    fun deviceSelectionEvent(deviceSelection: String?)
+    fun selectDevice(deviceId: String?)
 }
 
 
