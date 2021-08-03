@@ -2,7 +2,6 @@ package com.nextgenbroadcast.mobile.middleware.scoreboard
 
 import android.content.Context
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -11,12 +10,10 @@ import android.widget.CompoundButton
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.android.synthetic.main.device_id_item_view.view.*
 import kotlinx.android.synthetic.main.fragment_settings.*
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
@@ -38,9 +35,15 @@ class ScoreboardSettingsFragment : Fragment() {
 
             override fun remoteDeviceChart(deviceId: String) {
                 sharedViewModel.removeDeviceChart(deviceId)
-
             }
-        }, sharedViewModel.deviceSelectionEvent)
+        })
+
+        lifecycleScope.launch {
+            sharedViewModel.selectedDeviceId.collect { deviceId ->
+                deviceIdsAdapter.changeSelection(deviceId)
+            }
+        }
+
     }
 
     private fun clearAllCheckboxSelection() {
@@ -68,21 +71,12 @@ class ScoreboardSettingsFragment : Fragment() {
 
     class DeviceIdsAdapter(
         private val inflater: LayoutInflater,
-        private val deviceListener: DeviceSelectListener,
-        private val selectedChartId: MutableStateFlow<String?>
+        private val deviceListener: DeviceSelectListener
     ) : RecyclerView.Adapter<DeviceIdsAdapter.DeviceIdViewHolder>() {
-
         private val deviceIdList = mutableListOf<String>()
         private val selectAllPayload = Any()
         private val unselectAllPayload = Any()
-
-        init {
-            CoroutineScope(Dispatchers.Main).launch {
-                selectedChartId.collect {
-                    notifyItemRangeChanged(0, itemCount, Any())
-                }
-            }
-        }
+        private var selectedChartId: String? = null
 
         fun setData(deviceIdsList: List<String>) {
             deviceIdList.clear()
@@ -109,7 +103,7 @@ class ScoreboardSettingsFragment : Fragment() {
                     }
                 }
 
-                if (deviceId == selectedChartId.value) {
+                if (deviceId == selectedChartId) {
                     deviceCheckBox.isChecked = true
                 }
 
@@ -132,6 +126,11 @@ class ScoreboardSettingsFragment : Fragment() {
             notifyItemRangeChanged(0, itemCount, if (isSelected) selectAllPayload else unselectAllPayload)
         }
 
+        fun changeSelection(deviceId: String?) {
+            selectedChartId = deviceId
+            notifyItemRangeChanged(0, itemCount, Any())
+        }
+
         class DeviceIdViewHolder(
             itemView: View
         ) : RecyclerView.ViewHolder(itemView) {
@@ -144,4 +143,5 @@ class ScoreboardSettingsFragment : Fragment() {
         fun addDeviceChart(deviceId: String)
         fun remoteDeviceChart(deviceId: String)
     }
+
 }

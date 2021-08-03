@@ -2,7 +2,6 @@ package com.nextgenbroadcast.mobile.middleware.scoreboard
 
 import android.content.Context
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -17,16 +16,19 @@ import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.TelemetryDevice
 import com.nextgenbroadcast.mobile.middleware.scoreboard.view.DeviceItemView
 import kotlinx.android.synthetic.main.fragment_scoreboard.*
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 class ScoreboardFragment : Fragment() {
     private val gson = Gson()
     private val phyType = object : TypeToken<PhyPayload>() {}.type
-
     private val sharedViewModel by activityViewModels<SharedViewModel>()
+    private val selectChartListener = object : ISelectChartListener {
+        override fun selectChart(chartId: String?) {
+            sharedViewModel.selectedDeviceId.value = chartId
+        }
+    }
+
     private lateinit var deviceAdapter: DeviceListAdapter
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
@@ -37,7 +39,7 @@ class ScoreboardFragment : Fragment() {
         super.onAttach(context)
 
         deviceAdapter =
-            DeviceListAdapter(layoutInflater, sharedViewModel.deviceSelectionEvent) { device ->
+            DeviceListAdapter(layoutInflater, selectChartListener) { device ->
                 val deviceId = device.id
                 sharedViewModel.getDeviceFlow(deviceId)
                     ?.shareIn(lifecycleScope, SharingStarted.Lazily)
@@ -53,7 +55,14 @@ class ScoreboardFragment : Fragment() {
                         }
                     }
             }
+
+        lifecycleScope.launch {
+            sharedViewModel.selectedDeviceId.collect { deviceId ->
+                deviceAdapter.updateChartSelection(deviceId)
+            }
+        }
     }
+
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         chart_list.layoutManager = LinearLayoutManager(context)
@@ -73,16 +82,15 @@ class ScoreboardFragment : Fragment() {
 
     class DeviceListAdapter(
         private val inflater: LayoutInflater,
-        private var selectedChartId: MutableStateFlow<String?>,
+        private val selectChartListener: ISelectChartListener,
         private val getFlowForDevice: (TelemetryDevice) -> Flow<Pair<Long, Double>>?
     ) : ListAdapter<TelemetryDevice, DeviceListAdapter.Holder>(DIFF_CALLBACK) {
 
-        init {
-            CoroutineScope(Dispatchers.Main).launch {
-                selectedChartId.collect {
-                    notifyItemRangeChanged(0, itemCount, Any())
-                }
-            }
+        private var selectedChartId: String? = null
+
+        fun updateChartSelection(chartId: String?) {
+            selectedChartId = chartId
+            notifyItemRangeChanged(0, itemCount, Any())
         }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): Holder {
@@ -101,7 +109,7 @@ class ScoreboardFragment : Fragment() {
             fun bind(device: TelemetryDevice) {
                 with(deviceView) {
                     observe(getFlowForDevice(device))
-                    isChartSelected = selectedChartId.value.equals(device.id)
+                    isChartSelected = selectedChartId.equals(device.id)
                     setBackgroundColor(
                         context.getColor(if (isChartSelected) R.color.yellow_device_item_bg else R.color.white)
                     )
@@ -109,11 +117,12 @@ class ScoreboardFragment : Fragment() {
                     lostLabel.isVisible = device.isLost
 
                     deviceView.setOnClickListener {
-                        selectedChartId.value = if (selectedChartId.value != device.id) {
-                            device.id
-                        } else {
-                            null
+                        val selectedChartId = when (selectedChartId == device.id) {
+                            true -> null
+                            else -> device.id
                         }
+
+                        selectChartListener.selectChart(selectedChartId)
                     }
 
                 }
@@ -142,4 +151,8 @@ class ScoreboardFragment : Fragment() {
         val TAG: String = ScoreboardFragment::class.java.simpleName
     }
 
+}
+
+interface ISelectChartListener {
+    fun selectChart(chartId: String?)
 }
