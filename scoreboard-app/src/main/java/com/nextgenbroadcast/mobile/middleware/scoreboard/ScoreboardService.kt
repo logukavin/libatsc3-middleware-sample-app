@@ -7,33 +7,50 @@ import android.graphics.Color
 import android.os.Binder
 import android.os.IBinder
 import android.util.Log
+import com.google.firebase.installations.FirebaseInstallations
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import com.nextgenbroadcast.mobile.core.LOG
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.entity.ClientTelemetryEvent
 import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.TelemetryDevice
 import com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry.DatagramSocketWrapper
 import com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry.TelemetryManager
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 
-class ScoreboardService : IDeviceSelectionListener, Service() {
+class ScoreboardService : Service() {
     private val gson = Gson()
     private val phyType = object : TypeToken<ScoreboardFragment.PhyPayload>() {}.type
+    private val deviceIds = MutableStateFlow<List<TelemetryDevice>>(emptyList())
+    private val selectedDeviceId = MutableStateFlow<String?>(null)
     private val socket: DatagramSocketWrapper by lazy {
         DatagramSocketWrapper(applicationContext)
     }
 
-    private var currentDeviceIds: List<TelemetryDevice>? = null
-    private var currentDeviceSelection: String? = null
-    private var job: Job? = null
-    private lateinit var binder: ScoreboardBinding
     private lateinit var telemetryManager: TelemetryManager
+
+    private var socketJob: Job? = null
 
     override fun onCreate() {
         super.onCreate()
-        val pendingIntent: PendingIntent =
-            Intent(this, ScoreboardPagerActivity::class.java).let { notificationIntent ->
-                PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE)
+
+        FirebaseInstallations.getInstance().id.addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                    task.result?.let { deviceId ->
+                        telemetryManager = TelemetryManager(applicationContext, deviceId) { list ->
+                            deviceIds.value = list
+                        }.also {
+                            it.start()
+                        }
+                    }
+            } else {
+                LOG.e(TAG, "Can't create Telemetry because Firebase ID not received.", task.exception)
             }
+        }
+
+        val pendingIntent = Intent(this, ScoreboardPagerActivity::class.java).let { notificationIntent ->
+            PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE)
+        }
 
         createNotificationChannel()
         val notification: Notification = Notification.Builder(this, CHANNEL_ID)
@@ -45,16 +62,8 @@ class ScoreboardService : IDeviceSelectionListener, Service() {
         startForeground(NOTIFICATION_ID, notification)
     }
 
-    override fun onRebind(intent: Intent?) {
-        super.onRebind(intent)
-        currentDeviceIds?.let { deviceIds ->
-            binder.updateDeviceIds(deviceIds)
-            binder.updateSelectedDeviceId(currentDeviceSelection)
-        }
-    }
-
-    override fun onUnbind(intent: Intent?): Boolean {
-        return true
+    override fun onBind(intent: Intent): IBinder {
+        return ScoreboardBinding()
     }
 
     private fun createNotificationChannel() {
@@ -66,18 +75,16 @@ class ScoreboardService : IDeviceSelectionListener, Service() {
         service.createNotificationChannel(channel)
     }
 
-    override fun selectDevice(deviceId: String?) {
-        currentDeviceSelection = deviceId
-        job?.cancel("Device connection changed", null)
+    private fun setSelectedDeviceId(deviceId: String?) {
+        selectedDeviceId.value = deviceId
+        socketJob?.cancel("Device connection changed", null)
 
         deviceId?.let { id ->
-
-            job = CoroutineScope(Dispatchers.IO).launch {
+            socketJob = CoroutineScope(Dispatchers.IO).launch {
                 telemetryManager.getFlow(id)?.collect { event ->
                     try {
-                        val payload =
-                            gson.fromJson<ScoreboardFragment.PhyPayload>(event.payload, phyType)
-                        val payloadValue = payload.snr1000.toDouble() / 1000
+                        val payload = gson.fromJson<ScoreboardFragment.PhyPayload>(event.payload, phyType)
+                        val payloadValue = payload.snr1000
                         socket.sendUdpMessage("${id},${payload.timeStamp},$payloadValue")
                     } catch (e: Exception) {
                         Log.w(ScoreboardFragment.TAG, "Can't parse telemetry event payload", e)
@@ -87,61 +94,29 @@ class ScoreboardService : IDeviceSelectionListener, Service() {
         }
     }
 
+    inner class ScoreboardBinding : Binder() {
+        val deviceIdList = deviceIds.asStateFlow()
+        val selectedDeviceId = this@ScoreboardService.selectedDeviceId.asStateFlow()
 
-    override fun onBind(intent: Intent): IBinder {
-        val deviceId = intent.extras?.getString(DEVICE_ID)
-
-        deviceId?.let { id ->
-            telemetryManager = TelemetryManager(this, id) { deviceIds ->
-                currentDeviceIds = deviceIds
-                binder.updateDeviceIds(deviceIds)
-            }.also { telemetryManager ->
-                binder = ScoreboardBinding(telemetryManager, this, currentDeviceIds)
-                telemetryManager.start()
-            }
+        fun connectDevice(deviceId: String): Flow<ClientTelemetryEvent>? {
+            telemetryManager.connectDevice(deviceId)
+            return telemetryManager.getFlow(deviceId)
         }
 
-        return binder
-    }
-
-
-    class ScoreboardBinding(
-        val telemetryManager: TelemetryManager?,
-        val deviceSelectListener: IDeviceSelectionListener,
-        val currentDeviceIds: List<TelemetryDevice>?
-    ) : Binder() {
-        private val _deviceIds: MutableStateFlow<List<TelemetryDevice>> = MutableStateFlow(emptyList())
-        val deviceIds: StateFlow<List<TelemetryDevice>> = _deviceIds.asStateFlow()
-
-        private val _selectedDeviceFlow: MutableSharedFlow<String?> = MutableSharedFlow()
-        val selectedDeviceFlow: SharedFlow<String?> = _selectedDeviceFlow.asSharedFlow()
-
-        private val coroutineScope = CoroutineScope(Dispatchers.Main)
-
-        fun updateDeviceIds(deviceIdsList: List<TelemetryDevice>) {
-            coroutineScope.launch {
-                _deviceIds.emit(deviceIdsList)
-            }
+        fun disconnectDevice(deviceId: String) {
+            telemetryManager.disconnectDevice(deviceId)
         }
 
-        fun updateSelectedDeviceId(selectedDeviceId: String?) {
-            coroutineScope.launch {
-                _selectedDeviceFlow.emit(selectedDeviceId)
-            }
+        fun selectDevice(deviceId: String?) {
+            setSelectedDeviceId(deviceId)
         }
     }
 
     companion object {
-        const val DEVICE_ID = "device_id"
+        val TAG: String = ScoreboardService::class.java.simpleName
+
         private const val CHANNEL_ID: String = "foreground_phy"
         private const val CHANNEL_NAME: String = "foreground_phy_name"
         private const val NOTIFICATION_ID = 34569
     }
-
 }
-
-interface IDeviceSelectionListener {
-    fun selectDevice(deviceId: String?)
-}
-
-
