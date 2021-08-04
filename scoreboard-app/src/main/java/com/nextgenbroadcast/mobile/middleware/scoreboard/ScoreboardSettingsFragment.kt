@@ -19,6 +19,7 @@ import kotlinx.coroutines.launch
 
 class ScoreboardSettingsFragment : Fragment() {
     private val sharedViewModel by activityViewModels<SharedViewModel>()
+
     private lateinit var deviceIdsAdapter: DeviceIdsAdapter
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
@@ -39,7 +40,7 @@ class ScoreboardSettingsFragment : Fragment() {
         })
 
         lifecycleScope.launch {
-            sharedViewModel.selectedDeviceId.collect { deviceId ->
+            sharedViewModel.selectedDeviceId.observe(this@ScoreboardSettingsFragment) { deviceId ->
                 deviceIdsAdapter.changeSelection(deviceId)
             }
         }
