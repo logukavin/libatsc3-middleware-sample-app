@@ -24,7 +24,6 @@ class DatagramSocketWrapper(
     }
 
     fun sendUdpMessage(message: String) {
-        Log.d("!!!", message)
         val buf = message.toByteArray()
         val packet = DatagramPacket(buf, buf.size, address, SOCKET_PORT)
         scope.launch {
