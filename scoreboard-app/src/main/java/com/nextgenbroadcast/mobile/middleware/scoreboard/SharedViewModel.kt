@@ -12,7 +12,7 @@ class SharedViewModel : ViewModel() {
     private val _deviceFlowMap =
         MutableLiveData<Map<String, Flow<ClientTelemetryEvent>>>(emptyMap())
 
-    val selectedDeviceId: MutableStateFlow<String?> = MutableStateFlow(null)
+    val selectedDeviceId: MutableLiveData<String?> = MutableLiveData()
 
     val devicesToAdd = _chartDevices.mapWith(_deviceFlowMap) { (devices, deviceToFlow) ->
         devices?.subtract(deviceToFlow?.keys ?: emptyList())

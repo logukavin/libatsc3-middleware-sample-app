@@ -21,13 +21,14 @@ import kotlinx.coroutines.flow.collect
 class ScoreboardPagerActivity : FragmentActivity(), ServiceConnection {
     private val sharedViewModel: SharedViewModel by viewModels()
     private var binder: ScoreboardService.ScoreboardBinding? = null
-    private var scoreboardServiceIntent: Intent? = null
     private var deviceId: String? = null
-    private var telemetryManager:TelemetryManager? = null
+    private var telemetryManager: TelemetryManager? = null
     private lateinit var pagerAdapter: PagerAdapter
+    private var scoreboardJob: Job? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         setContentView(R.layout.activity_scoreboard)
 
         FirebaseInstallations.getInstance().id.addOnCompleteListener { task ->
@@ -35,15 +36,14 @@ class ScoreboardPagerActivity : FragmentActivity(), ServiceConnection {
                 if (!isFinishing) {
                     task.result?.let { deviceId ->
                         this.deviceId = deviceId
-                        scoreboardServiceIntent =
-                            Intent(this, ScoreboardService::class.java).also { intent ->
-                                deviceId.let { deviceId ->
-                                    intent.putExtra(ScoreboardService.DEVICE_ID, deviceId)
-                                }
-
-                                startService(intent)
-                                bindService(intent, this, Context.BIND_AUTO_CREATE)
+                        Intent(this, ScoreboardService::class.java).also { intent ->
+                            deviceId.let { deviceId ->
+                                intent.putExtra(ScoreboardService.DEVICE_ID, deviceId)
                             }
+
+                            startService(intent)
+                            bindService(intent, this, Context.BIND_AUTO_CREATE)
+                        }
                     }
                 }
             } else {
@@ -79,7 +79,7 @@ class ScoreboardPagerActivity : FragmentActivity(), ServiceConnection {
         }
 
         lifecycleScope.launch {
-            sharedViewModel.selectedDeviceId.collect { deviceId ->
+            sharedViewModel.selectedDeviceId.observe(this@ScoreboardPagerActivity) { deviceId ->
                 binder?.deviceSelectListener?.selectDevice(deviceId)
             }
         }
@@ -89,6 +89,7 @@ class ScoreboardPagerActivity : FragmentActivity(), ServiceConnection {
     override fun onStop() {
         super.onStop()
         unbindService(this)
+        scoreboardJob?.cancel("activity onStop()")
     }
 
     private fun getTabName(position: Int): CharSequence {
@@ -121,21 +122,24 @@ class ScoreboardPagerActivity : FragmentActivity(), ServiceConnection {
                         sharedViewModel.setDevicesList(it)
                     }
 
-                    coroutineScope.launch {
-                        deviceIds.collect { deviceList ->
-                            sharedViewModel.setDevicesList(deviceList)
+                    scoreboardJob = lifecycleScope.launch {
+                        launch {
+                            deviceIds.collect { deviceList ->
+                                sharedViewModel.setDevicesList(deviceList)
+                            }
+                        }
+
+                        launch {
+                            selectedDeviceFlow.collect { selectedDevice ->
+                                sharedViewModel.setDeviceSelection(selectedDevice)
+                            }
                         }
 
                     }
 
-                    coroutineScope.launch {
-                        selectedDeviceFlow.collect { selectedDevice ->
-                            sharedViewModel.setDeviceSelection(selectedDevice)
-                        }
-                    }
+
                 }
             }
-
         }
 
     }

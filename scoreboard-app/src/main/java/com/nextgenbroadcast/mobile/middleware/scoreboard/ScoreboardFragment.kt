@@ -57,7 +57,7 @@ class ScoreboardFragment : Fragment() {
             }
 
         lifecycleScope.launch {
-            sharedViewModel.selectedDeviceId.collect { deviceId ->
+            sharedViewModel.selectedDeviceId.observe(this@ScoreboardFragment) { deviceId ->
                 deviceAdapter.updateChartSelection(deviceId)
             }
         }
@@ -117,11 +117,7 @@ class ScoreboardFragment : Fragment() {
                     lostLabel.isVisible = device.isLost
 
                     deviceView.setOnClickListener {
-                        val selectedChartId = when (selectedChartId == device.id) {
-                            true -> null
-                            else -> device.id
-                        }
-
+                        val selectedChartId = if (selectedChartId == device.id) null else device.id
                         selectChartListener.selectChart(selectedChartId)
                     }
 

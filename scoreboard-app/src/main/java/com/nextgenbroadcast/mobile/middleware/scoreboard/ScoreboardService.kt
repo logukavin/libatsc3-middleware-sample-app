@@ -45,13 +45,16 @@ class ScoreboardService : IDeviceSelectionListener, Service() {
         startForeground(NOTIFICATION_ID, notification)
     }
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+    override fun onRebind(intent: Intent?) {
+        super.onRebind(intent)
         currentDeviceIds?.let { deviceIds ->
             binder.updateDeviceIds(deviceIds)
             binder.updateSelectedDeviceId(currentDeviceSelection)
         }
+    }
 
-        return super.onStartCommand(intent, flags, startId)
+    override fun onUnbind(intent: Intent?): Boolean {
+        return true
     }
 
     private fun createNotificationChannel() {
@@ -113,7 +116,7 @@ class ScoreboardService : IDeviceSelectionListener, Service() {
         private val _selectedDeviceFlow: MutableSharedFlow<String?> = MutableSharedFlow()
         val selectedDeviceFlow: SharedFlow<String?> = _selectedDeviceFlow.asSharedFlow()
 
-        val coroutineScope = CoroutineScope(Dispatchers.Main)
+        private val coroutineScope = CoroutineScope(Dispatchers.Main)
 
         fun updateDeviceIds(deviceIdsList: List<TelemetryDevice>) {
             coroutineScope.launch {
