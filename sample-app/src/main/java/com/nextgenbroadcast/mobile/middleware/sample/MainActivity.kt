@@ -101,6 +101,14 @@ class MainActivity : BaseActivity() {
                         MainFragment.TAG
                 )
                 .commit()
+
+        tryOpenPcapFile(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+
+        tryOpenPcapFile(intent)
     }
 
     override fun onStart() {
@@ -405,6 +413,14 @@ class MainActivity : BaseActivity() {
 
         if (!started) {
             Toast.makeText(this@MainActivity, getString(R.string.message_service_apk_not_found, appPackage), Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun tryOpenPcapFile(intent: Intent) {
+        if (intent.action == Intent.ACTION_VIEW) {
+            intent.data?.let { uri ->
+                ReceiverContentResolver.openRoute(applicationContext, uri)
+            }
         }
     }
 
