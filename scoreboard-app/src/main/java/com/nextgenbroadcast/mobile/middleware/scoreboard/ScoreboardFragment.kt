@@ -22,6 +22,7 @@ import kotlinx.coroutines.launch
 class ScoreboardFragment : Fragment() {
     private val gson = Gson()
     private val phyType = object : TypeToken<PhyPayload>() {}.type
+
     private val sharedViewModel by activityViewModels<SharedViewModel>()
     private val selectChartListener = object : ISelectChartListener {
         override fun selectChart(chartId: String?) {
