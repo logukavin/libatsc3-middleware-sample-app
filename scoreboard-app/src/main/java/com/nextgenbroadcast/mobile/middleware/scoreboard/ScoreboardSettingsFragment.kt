@@ -10,12 +10,9 @@ import android.widget.CompoundButton
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
-import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.android.synthetic.main.device_id_item_view.view.*
 import kotlinx.android.synthetic.main.fragment_settings.*
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.launch
 
 class ScoreboardSettingsFragment : Fragment() {
     private val sharedViewModel by activityViewModels<SharedViewModel>()
@@ -42,8 +39,6 @@ class ScoreboardSettingsFragment : Fragment() {
         sharedViewModel.selectedDeviceId.observe(this@ScoreboardSettingsFragment) { deviceId ->
             deviceIdsAdapter.changeSelection(deviceId)
         }
-
-
     }
 
     private fun clearAllCheckboxSelection() {
@@ -55,7 +50,9 @@ class ScoreboardSettingsFragment : Fragment() {
     }
 
     private fun selectAllListener(): CompoundButton.OnCheckedChangeListener {
-        return CompoundButton.OnCheckedChangeListener { _, isChecked -> deviceIdsAdapter.selectAll(isChecked) }
+        return CompoundButton.OnCheckedChangeListener { _, isChecked ->
+            deviceIdsAdapter.selectAll(isChecked)
+        }
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -73,9 +70,11 @@ class ScoreboardSettingsFragment : Fragment() {
         private val inflater: LayoutInflater,
         private val deviceListener: DeviceSelectListener
     ) : RecyclerView.Adapter<DeviceIdsAdapter.DeviceIdViewHolder>() {
+
         private val deviceIdList = mutableListOf<String>()
         private val selectAllPayload = Any()
         private val unselectAllPayload = Any()
+
         private var selectedChartId: String? = null
 
         fun setData(deviceIdsList: List<String>) {

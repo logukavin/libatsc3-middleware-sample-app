@@ -17,18 +17,11 @@ import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.TelemetryDevic
 import com.nextgenbroadcast.mobile.middleware.scoreboard.view.DeviceItemView
 import kotlinx.android.synthetic.main.fragment_scoreboard.*
 import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.launch
 
 class ScoreboardFragment : Fragment() {
     private val gson = Gson()
     private val phyType = object : TypeToken<PhyPayload>() {}.type
-
     private val sharedViewModel by activityViewModels<SharedViewModel>()
-    private val selectChartListener = object : ISelectChartListener {
-        override fun selectChart(chartId: String?) {
-            sharedViewModel.selectedDeviceId.value = chartId
-        }
-    }
 
     private lateinit var deviceAdapter: DeviceListAdapter
 
@@ -39,30 +32,27 @@ class ScoreboardFragment : Fragment() {
     override fun onAttach(context: Context) {
         super.onAttach(context)
 
-        deviceAdapter =
-            DeviceListAdapter(layoutInflater, selectChartListener) { device ->
-                val deviceId = device.id
-                sharedViewModel.getDeviceFlow(deviceId)
-                    ?.shareIn(lifecycleScope, SharingStarted.Lazily)
-                    ?.mapNotNull { event ->
-                        try {
-                            val payload = gson.fromJson<PhyPayload>(event.payload, phyType)
-                            val payloadValue = payload.snr1000.toDouble() / 1000
-                            val timestamp = payload.timeStamp
-                            Pair(timestamp, payloadValue)
-                        } catch (e: Exception) {
-                            LOG.w(TAG, "Can't parse telemetry event payload", e)
-                            null
-                        }
+        deviceAdapter = DeviceListAdapter(layoutInflater, selectChartListener) { device ->
+            val deviceId = device.id
+            sharedViewModel.getDeviceFlow(deviceId)
+                ?.shareIn(lifecycleScope, SharingStarted.Lazily)
+                ?.mapNotNull { event ->
+                    try {
+                        val payload = gson.fromJson<PhyPayload>(event.payload, phyType)
+                        val payloadValue = payload.snr1000.toDouble() / 1000
+                        val timestamp = payload.timeStamp
+                        Pair(timestamp, payloadValue)
+                    } catch (e: Exception) {
+                        LOG.w(TAG, "Can't parse telemetry event payload", e)
+                        null
                     }
-            }
+                }
+        }
 
-            sharedViewModel.selectedDeviceId.observe(this@ScoreboardFragment) { deviceId ->
-                deviceAdapter.updateChartSelection(deviceId)
-            }
-
+        sharedViewModel.selectedDeviceId.observe(this@ScoreboardFragment) { deviceId ->
+            deviceAdapter.updateChartSelection(deviceId)
+        }
     }
-
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         chart_list.layoutManager = LinearLayoutManager(context)
@@ -77,6 +67,12 @@ class ScoreboardFragment : Fragment() {
 
         sharedViewModel.chartDevices.observe(viewLifecycleOwner) { devices ->
             deviceAdapter.submitList(devices ?: emptyList())
+        }
+    }
+
+    private val selectChartListener = object : ISelectChartListener {
+        override fun selectChart(chartId: String?) {
+            sharedViewModel.selectedDeviceId.value = chartId
         }
     }
 
@@ -138,6 +134,10 @@ class ScoreboardFragment : Fragment() {
         }
     }
 
+    interface ISelectChartListener {
+        fun selectChart(chartId: String?)
+    }
+
     data class PhyPayload(
         val snr1000: Int,
         val timeStamp: Long
@@ -146,9 +146,4 @@ class ScoreboardFragment : Fragment() {
     companion object {
         val TAG: String = ScoreboardFragment::class.java.simpleName
     }
-
-}
-
-interface ISelectChartListener {
-    fun selectChart(chartId: String?)
 }

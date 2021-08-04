@@ -4,15 +4,11 @@ import androidx.lifecycle.*
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.entity.ClientTelemetryEvent
 import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.TelemetryDevice
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 
 class SharedViewModel : ViewModel() {
     private val _deviceList: MutableLiveData<List<TelemetryDevice>> = MutableLiveData(emptyList())
     private val _chartDevices = MutableLiveData<List<String>>(emptyList())
-    private val _deviceFlowMap =
-        MutableLiveData<Map<String, Flow<ClientTelemetryEvent>>>(emptyMap())
-
-    val selectedDeviceId: MutableLiveData<String?> = MutableLiveData()
+    private val _deviceFlowMap = MutableLiveData<Map<String, Flow<ClientTelemetryEvent>>>(emptyMap())
 
     val devicesToAdd = _chartDevices.mapWith(_deviceFlowMap) { (devices, deviceToFlow) ->
         devices?.subtract(deviceToFlow?.keys ?: emptyList())
@@ -29,6 +25,8 @@ class SharedViewModel : ViewModel() {
     val chartDevices = _chartDevices.mapWith(_deviceList) { (chartList, deviceList) ->
         deviceList?.filter { chartList?.contains(it.id) ?: false }
     }
+
+    val selectedDeviceId: MutableLiveData<String?> = MutableLiveData()
 
     fun setDeviceSelection(deviceId: String?) {
         selectedDeviceId.value = deviceId

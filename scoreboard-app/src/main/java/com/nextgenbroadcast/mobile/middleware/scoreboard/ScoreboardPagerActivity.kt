@@ -11,42 +11,22 @@ import androidx.lifecycle.lifecycleScope
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
-import com.google.firebase.installations.FirebaseInstallations
-import com.nextgenbroadcast.mobile.core.LOG
-import com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry.TelemetryManager
 import kotlinx.android.synthetic.main.activity_scoreboard.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collect
 
 class ScoreboardPagerActivity : FragmentActivity(), ServiceConnection {
     private val sharedViewModel: SharedViewModel by viewModels()
-    private var scoreboardBinding: ScoreboardService.ScoreboardBinding? = null
-    private var deviceId: String? = null
-    private var telemetryManager: TelemetryManager? = null
+
     private lateinit var pagerAdapter: PagerAdapter
-    private var scoreboardJob: Job? = null
+
+    private var serviceBinder: ScoreboardService.ScoreboardBinding? = null
+    private var connectionJob: Job? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         setContentView(R.layout.activity_scoreboard)
-
-        FirebaseInstallations.getInstance().id.addOnCompleteListener { task ->
-            if (task.isSuccessful) {
-                if (!isFinishing) {
-                    task.result?.let { deviceId ->
-                        this.deviceId = deviceId
-                        Intent(this, ScoreboardService::class.java).also { intent ->
-                            intent.putExtra(ScoreboardService.DEVICE_ID, deviceId)
-                            startService(intent)
-                            bindService(intent, this, Context.BIND_AUTO_CREATE)
-                        }
-                    }
-                }
-            } else {
-                LOG.e(TAG, "Can't create Telemetry because Firebase ID not received.", task.exception)
-            }
-        }
 
         pagerAdapter = PagerAdapter(this)
         viewPager.offscreenPageLimit = 1
@@ -58,34 +38,78 @@ class ScoreboardPagerActivity : FragmentActivity(), ServiceConnection {
         }.attach()
 
         sharedViewModel.devicesToAdd.observe(this) { devices ->
-            val telemetry = telemetryManager ?: return@observe
+            val binder = serviceBinder ?: return@observe
             devices?.forEach { deviceId ->
-                telemetry.connectDevice(deviceId)
-                telemetry.getFlow(deviceId)?.let { flow ->
+                binder.connectDevice(deviceId)?.let { flow ->
                     sharedViewModel.addFlow(deviceId, flow)
                 }
             }
         }
 
         sharedViewModel.devicesToRemove.observe(this) { devices ->
-            val telemetry = telemetryManager ?: return@observe
+            val binder = serviceBinder ?: return@observe
             devices?.forEach { deviceId ->
-                telemetry.disconnectDevice(deviceId)
+                binder.disconnectDevice(deviceId)
                 sharedViewModel.removeFlow(deviceId)
             }
         }
 
         sharedViewModel.selectedDeviceId.observe(this@ScoreboardPagerActivity) { deviceId ->
-            scoreboardBinding?.deviceSelectListener?.selectDevice(deviceId)
+            serviceBinder?.selectDevice(deviceId)
         }
 
 
+        bindService()
     }
 
     override fun onStop() {
         super.onStop()
+
+        unbindService()
+    }
+
+    @InternalCoroutinesApi
+    override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+        val binder = (service as? ScoreboardService.ScoreboardBinding).also {
+            serviceBinder = it
+        } ?: return
+
+        with(binder) {
+            sharedViewModel.setDevicesList(deviceIdList.value)
+
+            connectionJob = lifecycleScope.launch {
+                launch {
+                    deviceIdList.collect { deviceList ->
+                        sharedViewModel.setDevicesList(deviceList)
+                    }
+                }
+
+                launch {
+                    selectedDeviceId.collect { selectedDevice ->
+                        sharedViewModel.setDeviceSelection(selectedDevice)
+                    }
+                }
+            }
+        }
+    }
+
+    override fun onServiceDisconnected(name: ComponentName?) {
+        Log.d(TAG, "onServiceDisconnected, $name")
+        connectionJob?.cancel("onServiceDisconnected()")
+        serviceBinder = null
+    }
+
+    private fun bindService() {
+        Intent(this, ScoreboardService::class.java).run {
+            startForegroundService(this)
+            bindService(this, this@ScoreboardPagerActivity, BIND_AUTO_CREATE)
+        }
+    }
+
+    private fun unbindService() {
+        connectionJob?.cancel("activity onStop()")
         unbindService(this)
-        scoreboardJob?.cancel("activity onStop()")
+        serviceBinder = null
     }
 
     private fun getTabName(position: Int): CharSequence {
@@ -105,44 +129,6 @@ class ScoreboardPagerActivity : FragmentActivity(), ServiceConnection {
                 else -> throw IllegalArgumentException("Wrong Fragment index: $position")
             }
         }
-    }
-
-    @InternalCoroutinesApi
-    override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
-        if (service is ScoreboardService.ScoreboardBinding) {
-                scoreboardBinding = service
-                with(service) {
-                    this@ScoreboardPagerActivity.telemetryManager = telemetryManager
-                    currentDeviceIds?.let {
-                        sharedViewModel.setDevicesList(it)
-                    }
-
-                    scoreboardJob = lifecycleScope.launch {
-                        launch {
-                            deviceIds.collect { deviceList ->
-                                sharedViewModel.setDevicesList(deviceList)
-                            }
-                        }
-
-                        launch {
-                            selectedDeviceFlow.collect { selectedDevice ->
-                                sharedViewModel.setDeviceSelection(selectedDevice)
-                            }
-                        }
-
-                    }
-
-
-                }
-
-        }
-
-    }
-
-    override fun onServiceDisconnected(name: ComponentName?) {
-        Log.d(TAG, "onServiceDisconnected, $name")
-        scoreboardBinding = null
-        scoreboardJob?.cancel("onServiceDisconnected()")
     }
 
     companion object {
