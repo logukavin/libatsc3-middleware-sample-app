@@ -66,6 +66,9 @@ dependencies {
 
     // Chart
     api 'com.jjoe64:graphview:4.2.2'
+
+    // Vuzix telemetry writer
+    api 'com.vuzix:connectivity-sdk:1.1'
 }
 
 apply from: '../publish.gradle'
