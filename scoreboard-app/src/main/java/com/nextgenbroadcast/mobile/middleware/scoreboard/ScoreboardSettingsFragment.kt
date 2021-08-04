@@ -39,11 +39,10 @@ class ScoreboardSettingsFragment : Fragment() {
             }
         })
 
-        lifecycleScope.launch {
-            sharedViewModel.selectedDeviceId.observe(this@ScoreboardSettingsFragment) { deviceId ->
-                deviceIdsAdapter.changeSelection(deviceId)
-            }
+        sharedViewModel.selectedDeviceId.observe(this@ScoreboardSettingsFragment) { deviceId ->
+            deviceIdsAdapter.changeSelection(deviceId)
         }
+
 
     }
 

@@ -57,11 +57,10 @@ class ScoreboardFragment : Fragment() {
                     }
             }
 
-        lifecycleScope.launch {
             sharedViewModel.selectedDeviceId.observe(this@ScoreboardFragment) { deviceId ->
                 deviceAdapter.updateChartSelection(deviceId)
             }
-        }
+
     }
 
 
