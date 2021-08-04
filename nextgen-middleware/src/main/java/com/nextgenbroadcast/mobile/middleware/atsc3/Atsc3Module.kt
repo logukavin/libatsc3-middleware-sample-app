@@ -428,15 +428,14 @@ internal class Atsc3Module(
 
     override suspend fun close() {
         withContext(stateScope.coroutineContext) {
-            val src = source
-            if (src !is PhyAtsc3Source || src.isConnectable) {
-                src?.stop() // call to stopRoute is not a mistake. We use it to close previously opened file
-                src?.close()
-                source = null
-
-                defaultConfiguration = null
-                setSourceConfig(-1)
+            source?.let { src ->
+                src.stop() // call to stopRoute is not a mistake. We use it to close previously opened file
+                src.close()
             }
+            source = null
+
+            defaultConfiguration = null
+            setSourceConfig(-1)
 
             lastTunedFreqList = emptyList()
             reset()
