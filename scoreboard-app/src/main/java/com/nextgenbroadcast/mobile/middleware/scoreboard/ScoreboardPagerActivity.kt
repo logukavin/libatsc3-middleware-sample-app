@@ -20,7 +20,7 @@ import kotlinx.coroutines.flow.collect
 
 class ScoreboardPagerActivity : FragmentActivity(), ServiceConnection {
     private val sharedViewModel: SharedViewModel by viewModels()
-    private var binder: ScoreboardService.ScoreboardBinding? = null
+    private var scoreboardBinding: ScoreboardService.ScoreboardBinding? = null
     private var deviceId: String? = null
     private var telemetryManager: TelemetryManager? = null
     private lateinit var pagerAdapter: PagerAdapter
@@ -76,7 +76,7 @@ class ScoreboardPagerActivity : FragmentActivity(), ServiceConnection {
         }
 
         sharedViewModel.selectedDeviceId.observe(this@ScoreboardPagerActivity) { deviceId ->
-            binder?.deviceSelectListener?.selectDevice(deviceId)
+            scoreboardBinding?.deviceSelectListener?.selectDevice(deviceId)
         }
 
 
@@ -109,9 +109,9 @@ class ScoreboardPagerActivity : FragmentActivity(), ServiceConnection {
 
     @InternalCoroutinesApi
     override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
-        if (binder is ScoreboardService.ScoreboardBinding) {
-            binder?.let { binder ->
-                with(binder) {
+        if (service is ScoreboardService.ScoreboardBinding) {
+                scoreboardBinding = service
+                with(service) {
                     this@ScoreboardPagerActivity.telemetryManager = telemetryManager
                     currentDeviceIds?.let {
                         sharedViewModel.setDevicesList(it)
@@ -134,14 +134,14 @@ class ScoreboardPagerActivity : FragmentActivity(), ServiceConnection {
 
 
                 }
-            }
+
         }
 
     }
 
     override fun onServiceDisconnected(name: ComponentName?) {
         Log.d(TAG, "onServiceDisconnected, $name")
-        binder = null
+        scoreboardBinding = null
         scoreboardJob?.cancel("onServiceDisconnected()")
     }
 
