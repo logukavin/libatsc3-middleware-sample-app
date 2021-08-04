@@ -37,10 +37,7 @@ class ScoreboardPagerActivity : FragmentActivity(), ServiceConnection {
                     task.result?.let { deviceId ->
                         this.deviceId = deviceId
                         Intent(this, ScoreboardService::class.java).also { intent ->
-                            deviceId.let { deviceId ->
-                                intent.putExtra(ScoreboardService.DEVICE_ID, deviceId)
-                            }
-
+                            intent.putExtra(ScoreboardService.DEVICE_ID, deviceId)
                             startService(intent)
                             bindService(intent, this, Context.BIND_AUTO_CREATE)
                         }
@@ -78,11 +75,10 @@ class ScoreboardPagerActivity : FragmentActivity(), ServiceConnection {
             }
         }
 
-        lifecycleScope.launch {
-            sharedViewModel.selectedDeviceId.observe(this@ScoreboardPagerActivity) { deviceId ->
-                binder?.deviceSelectListener?.selectDevice(deviceId)
-            }
+        sharedViewModel.selectedDeviceId.observe(this@ScoreboardPagerActivity) { deviceId ->
+            binder?.deviceSelectListener?.selectDevice(deviceId)
         }
+
 
     }
 
@@ -113,7 +109,6 @@ class ScoreboardPagerActivity : FragmentActivity(), ServiceConnection {
 
     @InternalCoroutinesApi
     override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
-        binder = service as ScoreboardService.ScoreboardBinding
         if (binder is ScoreboardService.ScoreboardBinding) {
             binder?.let { binder ->
                 with(binder) {
@@ -147,6 +142,7 @@ class ScoreboardPagerActivity : FragmentActivity(), ServiceConnection {
     override fun onServiceDisconnected(name: ComponentName?) {
         Log.d(TAG, "onServiceDisconnected, $name")
         binder = null
+        scoreboardJob?.cancel("onServiceDisconnected()")
     }
 
     companion object {

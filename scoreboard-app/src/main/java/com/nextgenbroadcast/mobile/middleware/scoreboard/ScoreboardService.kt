@@ -110,8 +110,8 @@ class ScoreboardService : IDeviceSelectionListener, Service() {
         val deviceSelectListener: IDeviceSelectionListener,
         val currentDeviceIds: List<TelemetryDevice>?
     ) : Binder() {
-        private val _deviceIds: MutableSharedFlow<List<TelemetryDevice>> = MutableSharedFlow()
-        val deviceIds: SharedFlow<List<TelemetryDevice>> = _deviceIds.asSharedFlow()
+        private val _deviceIds: MutableStateFlow<List<TelemetryDevice>> = MutableStateFlow(emptyList())
+        val deviceIds: StateFlow<List<TelemetryDevice>> = _deviceIds.asStateFlow()
 
         private val _selectedDeviceFlow: MutableSharedFlow<String?> = MutableSharedFlow()
         val selectedDeviceFlow: SharedFlow<String?> = _selectedDeviceFlow.asSharedFlow()
