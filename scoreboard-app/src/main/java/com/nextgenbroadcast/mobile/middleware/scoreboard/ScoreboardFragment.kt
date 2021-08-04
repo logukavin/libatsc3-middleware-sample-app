@@ -45,12 +45,12 @@ class ScoreboardFragment : Fragment() {
                 ?.mapNotNull { event ->
                     try {
                         val payload = gson.fromJson<PhyPayload>(event.payload, phyType)
-                        val payloadValue = payload.snr1000.toDouble() / 1000
+                        val payloadValue = payload.snr1000
                         val timestamp = payload.timeStamp
                         if (deviceAdapter.selectedDeviceId == deviceId) {
                             socket.sendUdpMessage("${deviceId},$timestamp,$payloadValue")
                         }
-                        Pair(timestamp, payloadValue)
+                        Pair(timestamp, payloadValue.toDouble() / 1000)
                     } catch (e: Exception) {
                         LOG.w(TAG, "Can't parse telemetry event payload", e)
                         null
