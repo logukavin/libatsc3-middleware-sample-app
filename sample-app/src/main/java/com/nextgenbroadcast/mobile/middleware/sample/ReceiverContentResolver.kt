@@ -391,5 +391,13 @@ class ReceiverContentResolver(
                 } else null
             }
         }
+
+        fun openRoute(context: Context, uri: Uri) {
+            context.contentResolver.insert(
+                getUriForPath(context, CONTENT_RECEIVER_ROUTE),
+                ContentValues().apply {
+                    put(COLUMN_ROUTE_PATH, uri.toString())
+                })
+        }
     }
 }
