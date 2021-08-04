@@ -46,7 +46,7 @@ class RfPhyTelemetryReader(
     }
 }
 
-private data class RfPhyData(
+internal data class RfPhyData(
         val tuner_lock: Boolean,
         val demod_lock: Boolean,
         val plp_lock_any: Boolean,

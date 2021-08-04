@@ -40,6 +40,7 @@ import com.nextgenbroadcast.mobile.middleware.dev.telemetry.task.PongTelemetryTa
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.task.WiFiInfoTelemetryTask
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.writer.AWSIoTelemetryWriter
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.writer.FileTelemetryWriter
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.writer.VuzixPhyTelemetryWriter
 import com.nextgenbroadcast.mobile.middleware.telemetry.control.WebTelemetryControl
 import com.nextgenbroadcast.mobile.middleware.telemetry.writer.WebTelemetryWriter
 import kotlinx.coroutines.CoroutineScope
@@ -155,6 +156,11 @@ internal class TelemetryHolder(
         }
 
         val deviceId = receiver.settings.deviceId
+
+        telemetryBroker?.addWriter(
+            VuzixPhyTelemetryWriter(context, deviceId)
+        )
+
         registerAWSIoThing(deviceId)
         registerNsdService(deviceId)
     }
