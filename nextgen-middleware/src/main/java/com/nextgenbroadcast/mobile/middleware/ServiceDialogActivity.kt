@@ -5,9 +5,6 @@ import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
-import com.nextgenbroadcast.mobile.core.FileUtils
-import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.middleware.service.Atsc3ForegroundService
 import kotlinx.android.synthetic.main.activity_dialog.*
 
@@ -68,16 +65,16 @@ internal class ServiceDialogActivity : AppCompatActivity() {
         finish()
     }
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        if (requestCode == FILE_REQUEST_CODE && data != null) {
-            val path = data.getStringExtra("FILE") ?: data.data?.let { FileUtils.getPath(applicationContext, it) }
-            path?.let { Atsc3ForegroundService.openRoute(this, it) }
+    override fun onActivityResult(requestCode: Int, resultCode: Int, intent: Intent?) {
+        super.onActivityResult(requestCode, resultCode, intent)
+
+        if (requestCode == FILE_REQUEST_CODE) {
+            intent?.data?.let { uri ->
+                Atsc3ForegroundService.openRoute(this, uri.toString())
+            }
 
             finish()
-            return
         }
-
-        super.onActivityResult(requestCode, resultCode, data)
     }
 
     companion object {
