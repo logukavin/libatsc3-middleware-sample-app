@@ -11,8 +11,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.io.*
 import java.security.*
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
+import kotlin.coroutines.coroutineContext
 
 class AWSIoThing(
     templateName: String,
@@ -25,6 +24,7 @@ class AWSIoThing(
 ) {
     private val gson = Gson()
     private val clientLock = Mutex()
+    private val workScope = CoroutineScope(Dispatchers.IO)
 
     private val AWSIOT_REQUEST_CREATE_KEYS_AND_CERTIFICATE = "\$aws/certificates/create/$AWSIOT_PAYLOAD_FORMAT"
     private val AWSIOT_REQUEST_REGISTER_THING = "\$aws/provisioning-templates/$templateName/provision/$AWSIOT_PAYLOAD_FORMAT"
@@ -48,7 +48,7 @@ class AWSIoThing(
         val closed = isClosed
         if (closed) return
 
-        val client = requireClient()
+        val client = requireClient() ?: return
         try {
             if (client.connectionStatus != AWSIotConnectionStatus.DISCONNECTED) {
                 client.publish(
@@ -68,7 +68,7 @@ class AWSIoThing(
         val closed = isClosed
         if (closed) return
 
-        val client = requireClient()
+        val client = requireClient() ?: return
         val controlTopic = topic.replace(AWSIOT_FORMAT_SERIAL, clientId)
 
         try {
@@ -95,6 +95,17 @@ class AWSIoThing(
                 disconnect(client)
             }
         }
+
+        try {
+            workScope.cancel()
+        } catch (e: Exception) {
+            LOG.d(TAG, "Failed to cancel work scope")
+        }
+    }
+
+    @Throws(AWSIotException::class, AWSIotTimeoutException::class)
+    private fun connect(client: AWSIotMqttClient) {
+        client.connect(AWSIOT_MAX_CONNECTION_TIME_MS)
     }
 
     private fun disconnect(client: AWSIotMqttClient) {
@@ -105,19 +116,23 @@ class AWSIoThing(
         }
     }
 
-    private suspend fun requireClient(): AWSIotMqttClient {
+    private suspend fun requireClient(): AWSIotMqttClient? {
         val client = thingAwsIotClient
         return client ?: clientLock.withLock {
+            if (isClosed || !coroutineContext.isActive) {
+                return null
+            }
+
             var localClient = thingAwsIotClient
             if (localClient == null) {
-                connect().join()
+                initClient().join()
                 localClient = thingAwsIotClient
             }
-            localClient ?: throw NullPointerException("AWS IoT client is NULL")
+            localClient
         }
     }
 
-    private fun connect(): Job {
+    private fun initClient(): Job {
         val provisionedCertificateId = preferences.getString(PREF_CERTIFICATE_ID, null)
         return if (provisionedCertificateId == null) {
             val keyPassword = CertificateUtils.generatePassword()
@@ -128,7 +143,7 @@ class AWSIoThing(
                 throw AwsIotRuntimeException(e)
             }
 
-            GlobalScope.launch {
+            workScope.launch {
                 try {
                     val certResponse = requestCertificateAndRegister(keyStore, keyPassword)
                             ?: return@launch
@@ -155,7 +170,7 @@ class AWSIoThing(
             val provisionedCertificatePEM = preferences.getString(PREF_CERTIFICATE_PEM, null)
             val provisionedCertificatePrivateKey = preferences.getString(PREF_CERTIFICATE_KEY, null)
 
-            GlobalScope.launch {
+            workScope.launch {
                 try {
                     val certificateStream = provisionedCertificatePEM?.byteInputStream()
                     val privateKeyStream = provisionedCertificatePrivateKey?.byteInputStream()
@@ -172,9 +187,12 @@ class AWSIoThing(
     private suspend fun connectAWSIoT(certificateStream: InputStream, privateKeyStream: InputStream) {
         val keyPassword = CertificateUtils.generatePassword()
         CertificateUtils.createKeyStore(certificateStream, privateKeyStream, keyPassword)?.let { keyStore ->
-            thingAwsIotClient = createAWSIoTClient(keyStore, keyPassword) {
+            val client = createAWSIoTClient(keyStore, keyPassword) {
                 close()
             }
+            thingAwsIotClient = client
+            connect(client)
+
             LOG.i(TAG, "AWS IoT Client connected!")
         }
     }
@@ -184,6 +202,8 @@ class AWSIoThing(
         try {
             val client = createAWSIoTClient(keyStore, keyPassword)
             try {
+                connect(client)
+
                 return supervisorScope {
                     /*
                         request Certificate
@@ -260,7 +280,6 @@ class AWSIoThing(
         return null
     }
 
-    //client.maxOfflineQueueSize(AWSIOT_MAX_OFFLINE_QUEUE_SIZE)
     private suspend fun createAWSIoTClient(keyStore: KeyStore, keyPassword: String, onClose: suspend () -> Unit = {}): AWSIotMqttClient {
         return object : AWSIotMqttClient(customerUrl, clientId, keyStore, keyPassword) {
             override fun onConnectionClosed() {
@@ -291,16 +310,6 @@ class AWSIoThing(
 
             keepAliveInterval = AWSIOT_KEEPALIVE_INTERVAL_MS
             numOfClientThreads = AWSIOT_NUM_CLIENT_THREADS
-        }.also { client ->
-            suspendCancellableCoroutine<Any> { cont ->
-                try {
-                    client.connect()
-                    cont.resume(Any())
-                } catch (e: AWSIotException) {
-                    LOG.e(TAG, "AWS IoT connection error", e)
-                    cont.resumeWithException(e)
-                }
-            }
         }
     }
 
@@ -320,5 +329,7 @@ class AWSIoThing(
 
         private const val AWSIOT_KEEPALIVE_INTERVAL_MS = 30000
         private const val AWSIOT_NUM_CLIENT_THREADS = 5
+
+        private const val AWSIOT_MAX_CONNECTION_TIME_MS = 30_000L
     }
 }
