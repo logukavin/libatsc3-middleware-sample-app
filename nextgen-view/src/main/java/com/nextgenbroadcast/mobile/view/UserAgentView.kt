@@ -24,6 +24,7 @@ import java.io.ByteArrayInputStream
 import java.security.cert.Certificate
 import java.security.cert.CertificateException
 import java.security.cert.CertificateFactory
+import kotlin.math.max
 
 class UserAgentView @JvmOverloads constructor(
         context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
@@ -107,8 +108,8 @@ class UserAgentView @JvmOverloads constructor(
     }
 
     private fun getCaptureCanvas(): Canvas {
-        val captureWidth = width / 2
-        val captureHeight = height
+        val captureWidth = max(width / 2, 1)
+        val captureHeight = max(height, 1)
 
         val layerBmp = layerBitmap?.let { bmp ->
             if (bmp.width != captureWidth || bmp.height != captureHeight) {
