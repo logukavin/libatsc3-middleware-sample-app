@@ -58,7 +58,6 @@ class ScoreboardPagerActivity : FragmentActivity(), ServiceConnection {
             serviceBinder?.selectDevice(deviceId)
         }
 
-
         bindService()
     }
 
@@ -97,12 +96,13 @@ class ScoreboardPagerActivity : FragmentActivity(), ServiceConnection {
         Log.d(TAG, "onServiceDisconnected, $name")
         connectionJob?.cancel("onServiceDisconnected()")
         serviceBinder = null
+        sharedViewModel.selectedDeviceId.value = null
     }
 
     private fun bindService() {
         Intent(this, ScoreboardService::class.java).run {
             startForegroundService(this)
-            bindService(this, this@ScoreboardPagerActivity, BIND_AUTO_CREATE)
+            bindService(this, this@ScoreboardPagerActivity, BIND_IMPORTANT)
         }
     }
 
