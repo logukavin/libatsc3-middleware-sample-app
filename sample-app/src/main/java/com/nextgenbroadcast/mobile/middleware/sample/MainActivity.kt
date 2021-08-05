@@ -102,7 +102,10 @@ class MainActivity : BaseActivity() {
                 )
                 .commit()
 
-        tryOpenPcapFile(intent)
+        // ignore if activity was restored
+        if (savedInstanceState == null) {
+            tryOpenPcapFile(intent)
+        }
     }
 
     override fun onNewIntent(intent: Intent) {
