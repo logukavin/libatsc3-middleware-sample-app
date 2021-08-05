@@ -7,6 +7,8 @@ import android.graphics.Color
 import android.os.Binder
 import android.os.IBinder
 import android.util.Log
+import android.widget.RemoteViews
+import androidx.core.app.NotificationCompat
 import com.google.firebase.installations.FirebaseInstallations
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
@@ -52,11 +54,24 @@ class ScoreboardService : Service() {
             PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE)
         }
 
+        val deleteIntent = Intent(this, ScoreboardService::class.java).let { deleteIntent ->
+            deleteIntent.action = ACTION_STOP
+            PendingIntent.getService(this, 0, deleteIntent, PendingIntent.FLAG_IMMUTABLE)
+        }
+
         createNotificationChannel()
-        val notification: Notification = Notification.Builder(this, CHANNEL_ID)
+
+        val customNotificationView = RemoteViews(packageName, R.layout.scoreboard_notification_view).also { remoteView ->
+            remoteView.setOnClickPendingIntent(R.id.notification_stop_service_button, deleteIntent)
+        }
+
+        val notification: Notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(getText(R.string.app_name))
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.drawable.notifiaction_icon)
+            .setColor(getColor(R.color.notification_title))
             .setContentIntent(pendingIntent)
+            .setCustomContentView(customNotificationView)
+            .setStyle(NotificationCompat.DecoratedCustomViewStyle())
             .build()
 
         startForeground(NOTIFICATION_ID, notification)
@@ -94,6 +109,16 @@ class ScoreboardService : Service() {
         }
     }
 
+    override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
+        if (intent.action.equals(ACTION_STOP)) {
+            socketJob?.cancel("Stop service")
+            stopSelf()
+            android.os.Process.killProcess(android.os.Process.myPid())
+        }
+
+        return START_NOT_STICKY
+    }
+
     inner class ScoreboardBinding : Binder() {
         val deviceIdList = deviceIds.asStateFlow()
         val selectedDeviceId = this@ScoreboardService.selectedDeviceId.asStateFlow()
@@ -118,5 +143,6 @@ class ScoreboardService : Service() {
         private const val CHANNEL_ID: String = "foreground_phy"
         private const val CHANNEL_NAME: String = "foreground_phy_name"
         private const val NOTIFICATION_ID = 34569
+        private const val ACTION_STOP = "action_stop"
     }
 }
