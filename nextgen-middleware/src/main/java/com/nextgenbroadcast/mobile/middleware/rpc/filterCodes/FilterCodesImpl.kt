@@ -1,24 +1,15 @@
 package com.nextgenbroadcast.mobile.middleware.rpc.filterCodes
 
 import com.nextgenbroadcast.mobile.middleware.rpc.RpcResponse
-import com.nextgenbroadcast.mobile.middleware.rpc.filterCodes.model.Filters
-import com.nextgenbroadcast.mobile.middleware.rpc.filterCodes.model.GetFilterCodes
-import java.util.*
+import com.nextgenbroadcast.mobile.middleware.rpc.filterCodes.model.FilterCodes
 
 class FilterCodesImpl : IFilterCodes {
-    override fun getFilterCodes(): GetFilterCodes {
-        val filters = Filters().apply {
-            expires = " 10"
-            filterCode = 10
-        }
-        val filtersList = ArrayList<Filters?>()
-        filtersList.add(filters)
-        val getFilterCodes = GetFilterCodes()
-        getFilterCodes.filters = filtersList
-        return getFilterCodes
+    override fun getFilterCodes(): FilterCodes {
+        val filters = FilterCodes.Filter(10, " 10")
+        return FilterCodes(listOf(filters))
     }
 
-    override fun setFilterCodes(): RpcResponse {
+    override fun setFilterCodes(filters: List<FilterCodes.Filter>): RpcResponse {
         return RpcResponse()
     }
 }

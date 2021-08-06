@@ -11,8 +11,8 @@ class ReceiverQueryApiImpl(
         return RatingLevelRpcResponse()
     }
 
-    override fun queryClosedCaptionsStatus(): CCRpcResponse {
-        return CCRpcResponse()
+    override fun queryClosedCaptionsStatus(): CaptionsRpcResponse {
+        return CaptionsRpcResponse()
     }
 
     override fun queryServiceID(): ServiceRpcResponse {
@@ -47,8 +47,8 @@ class ReceiverQueryApiImpl(
         return BaseURIRpcResponse()
     }
 
-    override fun queryAlertingSignaling(alertingTypes: List<String>): AlertingRpcResponse {
-        return AlertingRpcResponse(gateway.getAlertChangingData(alertingTypes))
+    override fun queryAlertingSignaling(alertingTypes: List<String>): AlertingSignalingRpcResponse {
+        return AlertingSignalingRpcResponse(gateway.getAlertChangingData(alertingTypes))
     }
 
     override fun queryServiceGuideURLs(service: String?): ServiceGuideUrlsRpcResponse {
