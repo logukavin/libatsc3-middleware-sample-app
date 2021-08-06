@@ -8,6 +8,7 @@ import android.view.ViewGroup
 import android.widget.CheckBox
 import android.widget.CompoundButton
 import android.widget.TextView
+import androidx.core.view.postDelayed
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.RecyclerView
@@ -35,10 +36,30 @@ class ScoreboardSettingsFragment : Fragment() {
                 sharedViewModel.removeDeviceChart(deviceId)
             }
         })
+    }
 
-        sharedViewModel.selectedDeviceId.observe(this@ScoreboardSettingsFragment) { deviceId ->
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        device_ids_recycler_iew.adapter = deviceIdsAdapter
+
+        sharedViewModel.deviceIdList.observe(viewLifecycleOwner) { devices ->
+            clearAllCheckboxSelection()
+            deviceIdsAdapter.setData(devices)
+        }
+
+        sharedViewModel.selectedDeviceId.observe(viewLifecycleOwner) { deviceId ->
             deviceIdsAdapter.changeSelection(deviceId)
         }
+
+        sharedViewModel.chartDevices.observe(viewLifecycleOwner) { list ->
+            list?.let {
+                // delay gives the adapter time to process new items
+                device_ids_recycler_iew.postDelayed(50) {
+                    deviceIdsAdapter.selectDevices(list.map { it.id })
+                }
+            }
+        }
+
+        select_all_checkbox.setOnCheckedChangeListener(selectAllListener())
     }
 
     private fun clearAllCheckboxSelection() {
@@ -53,17 +74,6 @@ class ScoreboardSettingsFragment : Fragment() {
         return CompoundButton.OnCheckedChangeListener { _, isChecked ->
             deviceIdsAdapter.selectAll(isChecked)
         }
-    }
-
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        device_ids_recycler_iew.adapter = deviceIdsAdapter
-
-        sharedViewModel.deviceIdList.observe(viewLifecycleOwner) { list ->
-            clearAllCheckboxSelection()
-            deviceIdsAdapter.setData(list)
-        }
-
-        select_all_checkbox.setOnCheckedChangeListener(selectAllListener())
     }
 
     class DeviceIdsAdapter(
@@ -92,6 +102,8 @@ class ScoreboardSettingsFragment : Fragment() {
         override fun onBindViewHolder(holder: DeviceIdViewHolder, position: Int) {
             val deviceId = deviceIdList.getOrNull(position) ?: return
             with(holder) {
+                this.deviceId = deviceId
+
                 deviceName.text = deviceId
 
                 deviceCheckBox.setOnCheckedChangeListener { _, isChecked ->
@@ -105,7 +117,6 @@ class ScoreboardSettingsFragment : Fragment() {
                 if (deviceId == selectedChartId) {
                     deviceCheckBox.isChecked = true
                 }
-
             }
         }
 
@@ -116,6 +127,10 @@ class ScoreboardSettingsFragment : Fragment() {
                 holder.deviceCheckBox.isChecked = true
             } else if (payloads.contains(unselectAllPayload)) {
                 holder.deviceCheckBox.isChecked = false
+            } else {
+                (payloads.firstOrNull() as? DeviceListPayload)?.let {
+                    holder.deviceCheckBox.isChecked = it.deviceIds.contains(holder.deviceId)
+                }
             }
         }
 
@@ -123,6 +138,10 @@ class ScoreboardSettingsFragment : Fragment() {
 
         fun selectAll(isSelected: Boolean) {
             notifyItemRangeChanged(0, itemCount, if (isSelected) selectAllPayload else unselectAllPayload)
+        }
+
+        fun selectDevices(deviceIds: List<String>) {
+            notifyItemRangeChanged(0, itemCount, DeviceListPayload(deviceIds))
         }
 
         fun changeSelection(deviceId: String?) {
@@ -133,9 +152,14 @@ class ScoreboardSettingsFragment : Fragment() {
         class DeviceIdViewHolder(
             itemView: View
         ) : RecyclerView.ViewHolder(itemView) {
+            var deviceId: String? = null
             val deviceName: TextView = itemView.device_id_text_view
             val deviceCheckBox: CheckBox = itemView.device_id_chech_box
         }
+
+        data class DeviceListPayload(
+            val deviceIds: List<String>
+        )
     }
 
     interface DeviceSelectListener {

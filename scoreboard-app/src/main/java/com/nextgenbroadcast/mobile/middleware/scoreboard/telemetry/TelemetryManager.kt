@@ -140,12 +140,6 @@ class TelemetryManager(
         }
     }
 
-    fun getFlow(deviceId: String): Flow<ClientTelemetryEvent>? {
-        return deviceObservers[deviceId]?.let { observer ->
-            telemetryClient.getFlow(observer)
-        }
-    }
-
     fun connectDevice(device: TelemetryDevice): Boolean {
         val observer = when {
             device.availableOnNSD -> WebTelemetryObserver(device.host, device.port, listOf(AWSIOT_TOPIC_PHY))
@@ -160,14 +154,8 @@ class TelemetryManager(
         return true
     }
 
-    fun connectDevice(deviceId: String) {
-        getDeviceById(deviceId)?.let { device ->
-            connectDevice(device)
-        }
-    }
-
-    fun disconnectDevice(deviceId: String) {
-        deviceObservers.remove(deviceId)?.let { observer ->
+    fun disconnectDevice(device: TelemetryDevice) {
+        deviceObservers.remove(device.id)?.let { observer ->
             telemetryClient.removeObserver(observer)
         }
     }
