@@ -2,24 +2,24 @@ package com.nextgenbroadcast.mobile.middleware.rpc.subscribeUnsubscribe
 
 import com.nextgenbroadcast.mobile.middleware.gateway.rpc.IRPCGateway
 import com.nextgenbroadcast.mobile.middleware.rpc.notification.NotificationType
-import com.nextgenbroadcast.mobile.middleware.rpc.subscribeUnsubscribe.model.Subscribe
+import com.nextgenbroadcast.mobile.middleware.rpc.subscribeUnsubscribe.model.SubscribeRpcResponse
 
 class SubscribeUnsubscribeImpl(
         private val gateway: IRPCGateway
 ) : ISubscribeUnsubscribe {
 
-    override fun integratedSubscribe(msgType: List<String>): Subscribe {
+    override fun integratedSubscribe(msgType: List<String>): SubscribeRpcResponse {
         val notifications = convertMsgTypeToNotifications(msgType)
         val subscribedNotifications = gateway.subscribeNotifications(notifications)
 
-        return Subscribe(subscribedNotifications.map { it.value })
+        return SubscribeRpcResponse(subscribedNotifications.map { it.value })
     }
 
-    override fun integratedUnsubscribe(msgType: List<String>): Subscribe {
+    override fun integratedUnsubscribe(msgType: List<String>): SubscribeRpcResponse {
         val notifications = convertMsgTypeToNotifications(msgType)
         val unsubscribedNotifications = gateway.unsubscribeNotifications(notifications)
 
-        return Subscribe(unsubscribedNotifications.map { it.value })
+        return SubscribeRpcResponse(unsubscribedNotifications.map { it.value })
     }
 
     private fun convertMsgTypeToNotifications(msgType: List<String>): Set<NotificationType> {

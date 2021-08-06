@@ -13,7 +13,7 @@ import com.nextgenbroadcast.mobile.middleware.repository.IRepository
 import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
 import com.nextgenbroadcast.mobile.middleware.rpc.notification.NotificationType
 import com.nextgenbroadcast.mobile.middleware.rpc.notification.RPCNotificationHelper
-import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.AlertingRpcResponse
+import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.AlertingSignalingRpcResponse
 import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.ServiceGuideUrlsRpcResponse
 import com.nextgenbroadcast.mobile.middleware.server.ServerUtils
 import com.nextgenbroadcast.mobile.middleware.server.ws.MiddlewareWebSocket
@@ -207,7 +207,7 @@ internal class RPCGatewayImpl(
         } ?: false
     }
 
-    override fun getAlertChangingData(alertingTypes: List<String>): List<AlertingRpcResponse.Alert> {
+    override fun getAlertChangingData(alertingTypes: List<String>): List<AlertingSignalingRpcResponse.Alert> {
         val rpcAlertList = repository.alertsForNotify.value.mapToRpcAlertList()
         return if (alertingTypes.isEmpty()) {
             rpcAlertList
@@ -286,7 +286,7 @@ internal class RPCGatewayImpl(
         }
     }
 
-    private fun onAlertingChanged(alertList: List<AlertingRpcResponse.Alert>) {
+    private fun onAlertingChanged(alertList: List<AlertingSignalingRpcResponse.Alert>) {
         if (subscribedNotifications.contains(NotificationType.ALERT_CHANGE)) {
             rpcNotifier.notifyAlertingChange(alertList)
         }
@@ -327,7 +327,7 @@ internal class RPCGatewayImpl(
 
     private fun List<AeaTable>.mapToRpcAlertList() =
             map {
-                AlertingRpcResponse.Alert(AlertingRpcResponse.Alert.AEAT,
+                AlertingSignalingRpcResponse.Alert(AlertingSignalingRpcResponse.Alert.AEAT,
                         joinToString(separator = "", prefix = "<AEAT>", postfix = "</AEAT>") { it.xml })
             }
 
