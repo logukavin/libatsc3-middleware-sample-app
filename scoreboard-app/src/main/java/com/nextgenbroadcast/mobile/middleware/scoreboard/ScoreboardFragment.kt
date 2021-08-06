@@ -48,10 +48,6 @@ class ScoreboardFragment : Fragment() {
                     }
                 }
         }
-
-        sharedViewModel.selectedDeviceId.observe(this@ScoreboardFragment) { deviceId ->
-            deviceAdapter.updateChartSelection(deviceId)
-        }
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -65,8 +61,12 @@ class ScoreboardFragment : Fragment() {
             chart_list.layoutManager = LinearLayoutManager(context, orientation, false)
         }
 
-        sharedViewModel.chartDevices.observe(viewLifecycleOwner) { devices ->
+        sharedViewModel.chartDevicesWithFlow.observe(viewLifecycleOwner) { devices ->
             deviceAdapter.submitList(devices ?: emptyList())
+        }
+
+        sharedViewModel.selectedDeviceId.observe(viewLifecycleOwner) { deviceId ->
+            deviceAdapter.updateChartSelection(deviceId)
         }
     }
 
@@ -116,7 +116,6 @@ class ScoreboardFragment : Fragment() {
                         val selectedChartId = if (selectedChartId == device.id) null else device.id
                         selectChartListener.selectChart(selectedChartId)
                     }
-
                 }
             }
         }

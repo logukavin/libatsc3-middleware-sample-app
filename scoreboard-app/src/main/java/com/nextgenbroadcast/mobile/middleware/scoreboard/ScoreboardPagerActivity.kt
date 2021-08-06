@@ -57,6 +57,10 @@ class ScoreboardPagerActivity : FragmentActivity(), ServiceConnection {
         sharedViewModel.selectedDeviceId.observe(this@ScoreboardPagerActivity) { deviceId ->
             serviceBinder?.selectDevice(deviceId)
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
 
         bindService()
     }
@@ -75,6 +79,10 @@ class ScoreboardPagerActivity : FragmentActivity(), ServiceConnection {
 
         with(binder) {
             sharedViewModel.setDevicesList(deviceIdList.value)
+
+            binder.getConnectedDevices().forEach { deviceId ->
+                sharedViewModel.addDeviceChart(deviceId)
+            }
 
             connectionJob = lifecycleScope.launch {
                 launch {

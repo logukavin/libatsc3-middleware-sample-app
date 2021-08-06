@@ -24,7 +24,11 @@ class SharedViewModel : ViewModel() {
 
     val chartDevices = _chartDevices.mapWith(_deviceList) { (chartList, deviceList) ->
         deviceList?.filter { chartList?.contains(it.id) ?: false }
-    }
+    }.distinctUntilChanged()
+
+    val chartDevicesWithFlow = chartDevices.mapWith(_deviceFlowMap) { (chartList, flowMap) ->
+        chartList?.filter { flowMap?.containsKey(it.id) ?: false }
+    }.distinctUntilChanged()
 
     val selectedDeviceId: MutableLiveData<String?> = MutableLiveData()
 
@@ -38,8 +42,10 @@ class SharedViewModel : ViewModel() {
 
     fun addDeviceChart(deviceId: String) {
         val list = _chartDevices.value?.toMutableList() ?: mutableListOf()
-        list.add(deviceId)
-        _chartDevices.value = list
+        if (!list.contains(deviceId)) {
+            list.add(deviceId)
+            _chartDevices.value = list
+        }
     }
 
     fun removeDeviceChart(deviceId: String) {

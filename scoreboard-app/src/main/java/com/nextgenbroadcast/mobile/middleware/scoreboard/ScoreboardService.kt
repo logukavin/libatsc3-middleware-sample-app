@@ -77,8 +77,26 @@ class ScoreboardService : Service() {
         startForeground(NOTIFICATION_ID, notification)
     }
 
+    override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
+        if (intent.action == ACTION_STOP) {
+            stopSelf()
+        }
+
+        return START_NOT_STICKY
+    }
+
     override fun onBind(intent: Intent): IBinder {
         return ScoreboardBinding()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+
+        socketJob?.cancel("Stop service")
+
+        if (this::telemetryManager.isInitialized) {
+            telemetryManager.stop()
+        }
     }
 
     private fun createNotificationChannel() {
@@ -94,28 +112,21 @@ class ScoreboardService : Service() {
         selectedDeviceId.value = deviceId
         socketJob?.cancel("Device connection changed", null)
 
-        deviceId?.let { id ->
-            socketJob = CoroutineScope(Dispatchers.IO).launch {
-                telemetryManager.getFlow(id)?.collect { event ->
-                    try {
-                        val payload = gson.fromJson<ScoreboardFragment.PhyPayload>(event.payload, phyType)
-                        val payloadValue = payload.snr1000
-                        socket.sendUdpMessage("${id},${payload.timeStamp},$payloadValue")
-                    } catch (e: Exception) {
-                        Log.w(ScoreboardFragment.TAG, "Can't parse telemetry event payload", e)
+        deviceId?.let {
+            telemetryManager.getDeviceById(deviceId)?.let { device ->
+                socketJob = CoroutineScope(Dispatchers.IO).launch {
+                    telemetryManager.getFlow(device)?.collect { event ->
+                        try {
+                            val payload = gson.fromJson<ScoreboardFragment.PhyPayload>(event.payload, phyType)
+                            val payloadValue = payload.snr1000
+                            socket.sendUdpMessage("${deviceId},${payload.timeStamp},$payloadValue")
+                        } catch (e: Exception) {
+                            Log.w(ScoreboardFragment.TAG, "Can't parse telemetry event payload", e)
+                        }
                     }
                 }
             }
         }
-    }
-
-    override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
-        if (intent.action.equals(ACTION_STOP)) {
-            socketJob?.cancel("Stop service")
-            stopSelf()
-        }
-
-        return START_NOT_STICKY
     }
 
     inner class ScoreboardBinding : Binder() {
@@ -123,16 +134,26 @@ class ScoreboardService : Service() {
         val selectedDeviceId = this@ScoreboardService.selectedDeviceId.asStateFlow()
 
         fun connectDevice(deviceId: String): Flow<ClientTelemetryEvent>? {
-            telemetryManager.connectDevice(deviceId)
-            return telemetryManager.getFlow(deviceId)
+            return telemetryManager.getDeviceById(deviceId)?.let { device ->
+                telemetryManager.getFlow(device) ?: let {
+                    telemetryManager.connectDevice(device)
+                    telemetryManager.getFlow(device)
+                }
+            }
         }
 
         fun disconnectDevice(deviceId: String) {
-            telemetryManager.disconnectDevice(deviceId)
+            telemetryManager.getDeviceById(deviceId)?.let { device ->
+                telemetryManager.disconnectDevice(device)
+            }
         }
 
         fun selectDevice(deviceId: String?) {
             setSelectedDeviceId(deviceId)
+        }
+
+        fun getConnectedDevices(): List<String> {
+            return telemetryManager.getConnectedDevices().map { it.id }
         }
     }
 
@@ -142,6 +163,6 @@ class ScoreboardService : Service() {
         private const val CHANNEL_ID: String = "foreground_phy"
         private const val CHANNEL_NAME: String = "foreground_phy_name"
         private const val NOTIFICATION_ID = 34569
-        private const val ACTION_STOP = "${BuildConfig.ScoreboardPackageName}.action_stop"
+        private const val ACTION_STOP = "${BuildConfig.APPLICATION_ID}.action_stop"
     }
 }
