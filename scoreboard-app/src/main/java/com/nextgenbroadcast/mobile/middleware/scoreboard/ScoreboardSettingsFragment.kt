@@ -42,7 +42,6 @@ class ScoreboardSettingsFragment : Fragment() {
         device_ids_recycler_iew.adapter = deviceIdsAdapter
 
         sharedViewModel.deviceIdList.observe(viewLifecycleOwner) { devices ->
-            clearAllCheckboxSelection()
             deviceIdsAdapter.setData(devices)
         }
 
@@ -50,24 +49,7 @@ class ScoreboardSettingsFragment : Fragment() {
             deviceIdsAdapter.changeSelection(deviceId)
         }
 
-        sharedViewModel.chartDevices.observe(viewLifecycleOwner) { list ->
-            list?.let {
-                // delay gives the adapter time to process new items
-                device_ids_recycler_iew.postDelayed(50) {
-                    deviceIdsAdapter.selectDevices(list.map { it.id })
-                }
-            }
-        }
-
         select_all_checkbox.setOnCheckedChangeListener(selectAllListener())
-    }
-
-    private fun clearAllCheckboxSelection() {
-        if (select_all_checkbox.isChecked) {
-            select_all_checkbox.setOnCheckedChangeListener(null)
-            select_all_checkbox.isChecked = false
-            select_all_checkbox.setOnCheckedChangeListener(selectAllListener())
-        }
     }
 
     private fun selectAllListener(): CompoundButton.OnCheckedChangeListener {
@@ -81,13 +63,13 @@ class ScoreboardSettingsFragment : Fragment() {
         private val deviceListener: DeviceSelectListener
     ) : RecyclerView.Adapter<DeviceIdsAdapter.DeviceIdViewHolder>() {
 
-        private val deviceIdList = mutableListOf<String>()
+        private val deviceIdList = mutableListOf<Pair<String, Boolean>>()
         private val selectAllPayload = Any()
         private val unselectAllPayload = Any()
 
         private var selectedChartId: String? = null
 
-        fun setData(deviceIdsList: List<String>) {
+        fun setData(deviceIdsList: List<Pair<String, Boolean>>) {
             deviceIdList.clear()
             deviceIdList.addAll(deviceIdsList)
             notifyDataSetChanged()
@@ -100,7 +82,7 @@ class ScoreboardSettingsFragment : Fragment() {
         }
 
         override fun onBindViewHolder(holder: DeviceIdViewHolder, position: Int) {
-            val deviceId = deviceIdList.getOrNull(position) ?: return
+            val (deviceId, checked) = deviceIdList.getOrNull(position) ?: return
             with(holder) {
                 this.deviceId = deviceId
 
@@ -117,9 +99,7 @@ class ScoreboardSettingsFragment : Fragment() {
                     }
                 }
 
-                if (deviceId == selectedChartId) {
-                    deviceCheckBox.isChecked = true
-                }
+                deviceCheckBox.isChecked = checked
             }
         }
 
