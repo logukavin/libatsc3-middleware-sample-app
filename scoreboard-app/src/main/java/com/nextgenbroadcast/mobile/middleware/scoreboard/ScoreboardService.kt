@@ -28,9 +28,19 @@ class ScoreboardService : Service() {
     private val socket: DatagramSocketWrapper by lazy {
         DatagramSocketWrapper(applicationContext)
     }
+    private val notificationManager by lazy {
+        getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+    }
+    private val broadcastText by lazy {
+        resources.getString(R.string.notification_broadcasting)
+    }
+    private val noneText by lazy {
+        resources.getString(R.string.notification_none)
+    }
 
     private lateinit var telemetryManager: TelemetryManager
-
+    private lateinit var notification: Notification
+    private var customNotificationView: RemoteViews? = null
     private var socketJob: Job? = null
 
     override fun onCreate() {
@@ -61,11 +71,12 @@ class ScoreboardService : Service() {
 
         createNotificationChannel()
 
-        val customNotificationView = RemoteViews(packageName, R.layout.scoreboard_notification_view).apply {
-            setOnClickPendingIntent(R.id.notification_stop_service_button, deleteIntent)
-        }
+        customNotificationView = RemoteViews(packageName, R.layout.scoreboard_notification_view).apply {
+                setOnClickPendingIntent(R.id.notification_stop_service_button, deleteIntent)
+                setTextViewText(R.id.notification_text, getNotificationDescription())
+            }
 
-        val notification: Notification = NotificationCompat.Builder(this, CHANNEL_ID)
+        notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(getText(R.string.app_name))
             .setSmallIcon(R.drawable.notifiaction_icon)
             .setColor(getColor(R.color.green))
@@ -76,6 +87,9 @@ class ScoreboardService : Service() {
 
         startForeground(NOTIFICATION_ID, notification)
     }
+
+    private fun getNotificationDescription() =
+        "$broadcastText ${selectedDeviceId.value ?: noneText}"
 
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
         if (intent.action == ACTION_STOP) {
@@ -104,11 +118,13 @@ class ScoreboardService : Service() {
             CHANNEL_NAME, NotificationManager.IMPORTANCE_NONE)
         channel.lightColor = Color.BLUE
         channel.lockscreenVisibility = Notification.VISIBILITY_PRIVATE
-        val service = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        service.createNotificationChannel(channel)
+        notificationManager.createNotificationChannel(channel)
     }
 
     private fun setSelectedDeviceId(deviceId: String?) {
+        customNotificationView?.setTextViewText(R.id.notification_text, getNotificationDescription())
+        notificationManager.notify(NOTIFICATION_ID, notification)
+
         selectedDeviceId.value = deviceId
         socketJob?.cancel("Device connection changed", null)
 
