@@ -97,6 +97,7 @@ class ScoreboardPagerActivity : FragmentActivity(), ServiceConnection {
         connectionJob?.cancel("onServiceDisconnected()")
         serviceBinder = null
         sharedViewModel.selectedDeviceId.value = null
+        finish()
     }
 
     private fun bindService() {

@@ -29,6 +29,7 @@ android {
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
         buildConfigField("String", "AWSIoTCustomerUrl", "\"a2mpoqnjkscij4-ats.iot.us-east-1.amazonaws.com\"")
+        buildConfigField("String", "ScoreboardPackageName", "\"com.nextgenbroadcast.mobile.middleware.scoreboard\"")
     }
 
     buildTypes {

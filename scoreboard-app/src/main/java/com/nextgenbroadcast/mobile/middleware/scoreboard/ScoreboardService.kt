@@ -61,14 +61,14 @@ class ScoreboardService : Service() {
 
         createNotificationChannel()
 
-        val customNotificationView = RemoteViews(packageName, R.layout.scoreboard_notification_view).also { remoteView ->
-            remoteView.setOnClickPendingIntent(R.id.notification_stop_service_button, deleteIntent)
+        val customNotificationView = RemoteViews(packageName, R.layout.scoreboard_notification_view).apply {
+            setOnClickPendingIntent(R.id.notification_stop_service_button, deleteIntent)
         }
 
         val notification: Notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(getText(R.string.app_name))
             .setSmallIcon(R.drawable.notifiaction_icon)
-            .setColor(getColor(R.color.notification_title))
+            .setColor(getColor(R.color.green))
             .setContentIntent(pendingIntent)
             .setCustomContentView(customNotificationView)
             .setStyle(NotificationCompat.DecoratedCustomViewStyle())
@@ -113,7 +113,6 @@ class ScoreboardService : Service() {
         if (intent.action.equals(ACTION_STOP)) {
             socketJob?.cancel("Stop service")
             stopSelf()
-            android.os.Process.killProcess(android.os.Process.myPid())
         }
 
         return START_NOT_STICKY
@@ -143,6 +142,6 @@ class ScoreboardService : Service() {
         private const val CHANNEL_ID: String = "foreground_phy"
         private const val CHANNEL_NAME: String = "foreground_phy_name"
         private const val NOTIFICATION_ID = 34569
-        private const val ACTION_STOP = "action_stop"
+        private const val ACTION_STOP = "${BuildConfig.ScoreboardPackageName}.action_stop"
     }
 }
