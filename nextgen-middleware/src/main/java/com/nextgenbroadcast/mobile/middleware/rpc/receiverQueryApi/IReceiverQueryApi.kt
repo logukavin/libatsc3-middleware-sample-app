@@ -11,7 +11,7 @@ interface IReceiverQueryApi {
     fun queryContentAdvisoryRating(): RatingLevelRpcResponse
 
     @JsonRpcMethod("org.atsc.query.cc")
-    fun queryClosedCaptionsStatus(): CCRpcResponse
+    fun queryClosedCaptionsStatus(): CaptionsRpcResponse
 
     @JsonRpcMethod("org.atsc.query.service")
     fun queryServiceID(): ServiceRpcResponse
@@ -32,7 +32,7 @@ interface IReceiverQueryApi {
     fun queryReceiverWebServerURI(): BaseURIRpcResponse
 
     @JsonRpcMethod("org.atsc.query.alerting")
-    fun queryAlertingSignaling(@JsonRpcParam("alertingTypes") alertingTypes: List<String>): AlertingRpcResponse
+    fun queryAlertingSignaling(@JsonRpcParam("alertingTypes") alertingTypes: List<String>): AlertingSignalingRpcResponse
 
     @JsonRpcMethod("org.atsc.query.serviceGuideUrls")
     fun queryServiceGuideURLs(@JsonRpcParam("service", nullable = true) service: String?): ServiceGuideUrlsRpcResponse

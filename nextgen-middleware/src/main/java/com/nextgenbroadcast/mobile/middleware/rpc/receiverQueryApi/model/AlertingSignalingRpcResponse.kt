@@ -2,7 +2,7 @@ package com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model
 
 import com.nextgenbroadcast.mobile.middleware.rpc.RpcResponse
 
-data class AlertingRpcResponse(
+data class AlertingSignalingRpcResponse(
         var alertList: List<Alert>? = null
 ) : RpcResponse() {
 
