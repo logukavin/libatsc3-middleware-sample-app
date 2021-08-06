@@ -107,10 +107,13 @@ class ScoreboardSettingsFragment : Fragment() {
                 deviceName.text = deviceId
 
                 deviceCheckBox.setOnCheckedChangeListener { _, isChecked ->
-                    if (isChecked) {
-                        deviceListener.addDeviceChart(deviceId)
-                    } else {
-                        deviceListener.remoteDeviceChart(deviceId)
+                    // we can't change list in bind because it will lead to IllegalStateException
+                    deviceCheckBox.post {
+                        if (isChecked) {
+                            deviceListener.addDeviceChart(deviceId)
+                        } else {
+                            deviceListener.remoteDeviceChart(deviceId)
+                        }
                     }
                 }
 
