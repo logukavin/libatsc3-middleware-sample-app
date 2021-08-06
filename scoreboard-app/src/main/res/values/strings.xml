@@ -9,4 +9,6 @@
     <string name="settings_tab_title">Settings</string>
     <string name="chart_device_name">Device name</string>
     <string name="notification_action_close">Close Scoreboard</string>
+    <string name="notification_broadcasting">"Broadcasting:"</string>
+    <string name="notification_none">NONE</string>
 </resources>

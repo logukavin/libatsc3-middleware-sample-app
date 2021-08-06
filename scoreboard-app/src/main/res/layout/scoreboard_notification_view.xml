@@ -5,6 +5,13 @@
     android:orientation="vertical">
 
     <TextView
+        android:id="@+id/notification_text"
+        style="Custom Notification Text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@color/black"/>
+
+    <TextView
         android:id="@+id/notification_stop_service_button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
