@@ -18,9 +18,9 @@ class SharedViewModel : ViewModel() {
         deviceFlows?.keys?.subtract(devices ?: emptyList())
     }.distinctUntilChanged()
 
-    val deviceIdList: LiveData<List<String>> = _deviceList.map { list ->
-        list.map { device -> device.id }
-    }
+    val deviceIdList: LiveData<List<Pair<String, Boolean>>> = _deviceList.mapWith(_deviceFlowMap) { (list, flowMap) ->
+        list?.map { device -> Pair(device.id, flowMap?.containsKey(device.id) ?: false) } ?: emptyList()
+    }.distinctUntilChanged()
 
     val chartDevices = _chartDevices.mapWith(_deviceList) { (chartList, deviceList) ->
         deviceList?.filter { chartList?.contains(it.id) ?: false }
