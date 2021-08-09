@@ -25,18 +25,17 @@ class ScoreboardService : Service() {
     private val phyType = object : TypeToken<ScoreboardFragment.PhyPayload>() {}.type
     private val deviceIds = MutableStateFlow<List<TelemetryDevice>>(emptyList())
     private val selectedDeviceId = MutableStateFlow<String?>(null)
+
     private val socket: DatagramSocketWrapper by lazy {
         DatagramSocketWrapper(applicationContext)
     }
     private val notificationManager by lazy {
         getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
     }
-    private val broadcastText by lazy {
-        resources.getString(R.string.notification_broadcasting)
-    }
 
     private lateinit var telemetryManager: TelemetryManager
     private lateinit var notification: Notification
+
     private var customNotificationView: RemoteViews? = null
     private var socketJob: Job? = null
 
@@ -85,8 +84,11 @@ class ScoreboardService : Service() {
         startForeground(NOTIFICATION_ID, notification)
     }
 
-    private fun getNotificationDescription() =
-        "$broadcastText ${selectedDeviceId.value ?:  resources.getString(R.string.notification_none)}"
+    private fun getNotificationDescription(): String {
+        val broadcastText = resources.getString(R.string.notification_broadcasting)
+        val deviceId = selectedDeviceId.value ?: resources.getString(R.string.notification_none)
+        return "$broadcastText $deviceId"
+    }
 
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
         if (intent.action == ACTION_STOP) {

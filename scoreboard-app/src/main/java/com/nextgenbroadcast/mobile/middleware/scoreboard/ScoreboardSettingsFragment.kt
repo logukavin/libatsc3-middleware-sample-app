@@ -39,6 +39,10 @@ class ScoreboardSettingsFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         device_ids_recycler_iew.adapter = deviceIdsAdapter
 
+        select_all_checkbox.setOnClickListener {
+            sharedViewModel.selectAll(select_all_checkbox.isChecked)
+        }
+
         sharedViewModel.deviceIdList.observe(viewLifecycleOwner) { devices ->
             deviceIdsAdapter.setData(devices)
         }
@@ -47,40 +51,9 @@ class ScoreboardSettingsFragment : Fragment() {
             deviceIdsAdapter.changeSelection(deviceId)
         }
 
-        select_all_checkbox.setOnClickListener(selectAllListener())
-
-        sharedViewModel.selectAllState.observe(viewLifecycleOwner) { (isSelected, isAllSelected) ->
-            if (isSelected) {
-                select_all_checkbox.isChecked = true
-
-                if (isAllSelected) {
-                    select_all_checkbox.alpha = 1F
-                } else {
-                    select_all_checkbox.alpha = 0.3F
-                }
-
-            } else {
-                select_all_checkbox.isChecked = false
-                select_all_checkbox.alpha = 1F
-            }
-        }
-    }
-
-    private fun selectAllListener(): View.OnClickListener? {
-        return View.OnClickListener { view ->
-            if (view is CheckBox) {
-                sharedViewModel.selectAllState.value?.first?.let { isSelectionExist ->
-                    if (isSelectionExist) {
-                        sharedViewModel.selectAll(false)
-                        select_all_checkbox.isSelected = false
-                    } else {
-                        sharedViewModel.selectAll(true)
-                        select_all_checkbox.isSelected = true
-                    }
-                }
-
-
-            }
+        sharedViewModel.selectionState.observe(viewLifecycleOwner) { (isAnySelected, isAllSelected) ->
+            select_all_checkbox.isChecked = isAnySelected
+            select_all_checkbox.alpha = if (isAllSelected || !isAnySelected) 1F else 0.3F
         }
     }
 
@@ -88,8 +61,8 @@ class ScoreboardSettingsFragment : Fragment() {
         private val inflater: LayoutInflater,
         private val deviceListener: DeviceSelectListener
     ) : RecyclerView.Adapter<DeviceIdsAdapter.DeviceIdViewHolder>() {
-
         private val deviceIdList = mutableListOf<Pair<String, Boolean>>()
+
         private var selectedChartId: String? = null
 
         fun setData(deviceIdsList: List<Pair<String, Boolean>>) {
