@@ -52,8 +52,11 @@ class ScoreboardSettingsFragment : Fragment() {
         }
 
         sharedViewModel.selectionState.observe(viewLifecycleOwner) { (isAnySelected, isAllSelected) ->
-            select_all_checkbox.isChecked = isAnySelected
-            select_all_checkbox.alpha = if (isAllSelected || !isAnySelected) 1F else 0.3F
+            with(select_all_checkbox) {
+                isChecked = isAnySelected
+                jumpDrawablesToCurrentState()
+                alpha = if (isAllSelected || !isAnySelected) 1F else 0.3F
+            }
         }
     }
 
