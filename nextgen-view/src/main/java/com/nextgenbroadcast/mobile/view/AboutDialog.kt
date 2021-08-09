@@ -7,9 +7,9 @@ import android.text.Html
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.TextView
 import androidx.annotation.StringRes
 import androidx.fragment.app.DialogFragment
-import kotlinx.android.synthetic.main.dialog_about.view.*
 
 class AboutDialog(
     private val sdkVersion: String?,
@@ -26,10 +26,12 @@ class AboutDialog(
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val view = inflater.inflate(R.layout.dialog_about, container, false)
-        view.but_ok_about.setOnClickListener {
+
+        view.findViewById<View>(R.id.but_ok_about).setOnClickListener {
             dismiss()
         }
-        view.tv_about_content.text = getInfo()
+
+        view.findViewById<TextView>(R.id.tv_about_content).text = getInfo()
         return view
     }
 

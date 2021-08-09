@@ -1,16 +1,13 @@
 plugins {
     id 'com.android.application'
-    id 'com.github.triplet.play' version '3.4.0'
+    id 'kotlin-android'
+    id 'kotlin-android-extensions'
+    id 'kotlin-kapt'
+    id 'com.google.gms.google-services'
+    id 'com.google.firebase.crashlytics'
+    id 'com.google.firebase.firebase-perf'
+    id 'com.github.triplet.play' version '3.5.0'
 }
-
-apply plugin: 'com.android.application'
-apply plugin: 'kotlin-android'
-apply plugin: 'kotlin-android-extensions'
-apply plugin: 'kotlin-kapt'
-apply plugin: 'com.google.gms.google-services'
-apply plugin: 'com.google.firebase.crashlytics'
-apply plugin: 'com.google.firebase.firebase-perf'
-apply plugin: 'com.github.triplet.play'
 
 def appVersionCode = project.hasProperty('versionCode') ? versionCode.toInteger() : 1
 def appVersion = "1.0.9"
