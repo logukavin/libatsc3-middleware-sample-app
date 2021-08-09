@@ -6,9 +6,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.CheckBox
-import android.widget.CompoundButton
 import android.widget.TextView
-import androidx.core.view.postDelayed
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.RecyclerView
@@ -49,12 +47,40 @@ class ScoreboardSettingsFragment : Fragment() {
             deviceIdsAdapter.changeSelection(deviceId)
         }
 
-        select_all_checkbox.setOnCheckedChangeListener(selectAllListener())
+        select_all_checkbox.setOnClickListener(selectAllListener())
+
+        sharedViewModel.selectAllState.observe(viewLifecycleOwner) { (isSelected, isAllSelected) ->
+            if (isSelected) {
+                select_all_checkbox.isChecked = true
+
+                if (isAllSelected) {
+                    select_all_checkbox.alpha = 1F
+                } else {
+                    select_all_checkbox.alpha = 0.3F
+                }
+
+            } else {
+                select_all_checkbox.isChecked = false
+                select_all_checkbox.alpha = 1F
+            }
+        }
     }
 
-    private fun selectAllListener(): CompoundButton.OnCheckedChangeListener {
-        return CompoundButton.OnCheckedChangeListener { _, isChecked ->
-            deviceIdsAdapter.selectAll(isChecked)
+    private fun selectAllListener(): View.OnClickListener? {
+        return View.OnClickListener { view ->
+            if (view is CheckBox) {
+                sharedViewModel.selectAllState.value?.first?.let { isSelectionExist ->
+                    if (isSelectionExist) {
+                        sharedViewModel.selectAll(false)
+                        select_all_checkbox.isSelected = false
+                    } else {
+                        sharedViewModel.selectAll(true)
+                        select_all_checkbox.isSelected = true
+                    }
+                }
+
+
+            }
         }
     }
 
@@ -64,9 +90,6 @@ class ScoreboardSettingsFragment : Fragment() {
     ) : RecyclerView.Adapter<DeviceIdsAdapter.DeviceIdViewHolder>() {
 
         private val deviceIdList = mutableListOf<Pair<String, Boolean>>()
-        private val selectAllPayload = Any()
-        private val unselectAllPayload = Any()
-
         private var selectedChartId: String? = null
 
         fun setData(deviceIdsList: List<Pair<String, Boolean>>) {
@@ -103,29 +126,7 @@ class ScoreboardSettingsFragment : Fragment() {
             }
         }
 
-        override fun onBindViewHolder(holder: DeviceIdViewHolder, position: Int, payloads: MutableList<Any>) {
-            super.onBindViewHolder(holder, position, payloads)
-
-            if (payloads.contains(selectAllPayload)) {
-                holder.deviceCheckBox.isChecked = true
-            } else if (payloads.contains(unselectAllPayload)) {
-                holder.deviceCheckBox.isChecked = false
-            } else {
-                (payloads.firstOrNull() as? DeviceListPayload)?.let {
-                    holder.deviceCheckBox.isChecked = it.deviceIds.contains(holder.deviceId)
-                }
-            }
-        }
-
         override fun getItemCount() = deviceIdList.size
-
-        fun selectAll(isSelected: Boolean) {
-            notifyItemRangeChanged(0, itemCount, if (isSelected) selectAllPayload else unselectAllPayload)
-        }
-
-        fun selectDevices(deviceIds: List<String>) {
-            notifyItemRangeChanged(0, itemCount, DeviceListPayload(deviceIds))
-        }
 
         fun changeSelection(deviceId: String?) {
             selectedChartId = deviceId
@@ -140,9 +141,6 @@ class ScoreboardSettingsFragment : Fragment() {
             val deviceCheckBox: CheckBox = itemView.device_id_chech_box
         }
 
-        data class DeviceListPayload(
-            val deviceIds: List<String>
-        )
     }
 
     interface DeviceSelectListener {

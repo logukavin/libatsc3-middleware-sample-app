@@ -8,7 +8,8 @@ import kotlinx.coroutines.flow.Flow
 class SharedViewModel : ViewModel() {
     private val _deviceList: MutableLiveData<List<TelemetryDevice>> = MutableLiveData(emptyList())
     private val _chartDevices = MutableLiveData<List<String>>(emptyList())
-    private val _deviceFlowMap = MutableLiveData<Map<String, Flow<ClientTelemetryEvent>>>(emptyMap())
+    private val _deviceFlowMap =
+        MutableLiveData<Map<String, Flow<ClientTelemetryEvent>>>(emptyMap())
 
     val devicesToAdd = _chartDevices.mapWith(_deviceFlowMap) { (devices, deviceToFlow) ->
         devices?.subtract(deviceToFlow?.keys ?: emptyList())
@@ -31,6 +32,12 @@ class SharedViewModel : ViewModel() {
     }.distinctUntilChanged()
 
     val selectedDeviceId: MutableLiveData<String?> = MutableLiveData()
+
+    val selectAllState: LiveData<Pair<Boolean, Boolean>> =
+        deviceIdList.map { deviceList ->
+            val selectionValue = deviceList.filter { it.second }.size
+            Pair(selectionValue > 0, selectionValue == deviceIdList.value?.size)
+        }.distinctUntilChanged()
 
     fun setDeviceSelection(deviceId: String?) {
         selectedDeviceId.value = deviceId
@@ -75,6 +82,16 @@ class SharedViewModel : ViewModel() {
 
     fun getDeviceFlow(deviceId: String): Flow<ClientTelemetryEvent>? {
         return _deviceFlowMap.value?.get(deviceId)
+    }
+
+    fun selectAll(isChecked: Boolean) {
+        deviceIdList.value?.forEach { (id) ->
+            if (isChecked) {
+                addDeviceChart(id)
+            } else {
+                removeDeviceChart(id)
+            }
+        }
     }
 
 }
