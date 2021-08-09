@@ -7,7 +7,7 @@ class StandaloneAtsc3Service : Atsc3ForegroundService() {
 
     override fun createServiceBinder(receiver: Atsc3ReceiverCore): IBinder? = null
 
-    companion object {
+    companion object Initializer {
         init {
             clazz = StandaloneAtsc3Service::class.java
         }
