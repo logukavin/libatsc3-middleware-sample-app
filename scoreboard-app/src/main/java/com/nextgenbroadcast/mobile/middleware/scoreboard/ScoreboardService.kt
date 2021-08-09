@@ -34,9 +34,6 @@ class ScoreboardService : Service() {
     private val broadcastText by lazy {
         resources.getString(R.string.notification_broadcasting)
     }
-    private val noneText by lazy {
-        resources.getString(R.string.notification_none)
-    }
 
     private lateinit var telemetryManager: TelemetryManager
     private lateinit var notification: Notification
@@ -89,7 +86,7 @@ class ScoreboardService : Service() {
     }
 
     private fun getNotificationDescription() =
-        "$broadcastText ${selectedDeviceId.value ?: noneText}"
+        "$broadcastText ${selectedDeviceId.value ?:  resources.getString(R.string.notification_none)}"
 
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
         if (intent.action == ACTION_STOP) {
