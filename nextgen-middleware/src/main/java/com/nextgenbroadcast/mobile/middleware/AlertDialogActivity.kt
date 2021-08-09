@@ -5,11 +5,12 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.text.method.ScrollingMovementMethod
+import android.view.View
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.NotificationManagerCompat
 import com.nextgenbroadcast.mobile.core.DateUtils
 import com.nextgenbroadcast.mobile.middleware.notification.AlertNotificationHelper
-import kotlinx.android.synthetic.main.activity_dialog_alert.*
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -24,6 +25,10 @@ class AlertDialogActivity : AppCompatActivity() {
 
         setContentView(R.layout.activity_dialog_alert)
         setFinishOnTouchOutside(false)
+
+        val textViewAlertMessage = findViewById<TextView>(R.id.textViewAlertMessage)
+        val textViewAlertTime = findViewById<TextView>(R.id.textViewAlertTime)
+        val buttonOkDialogAlert = findViewById<View>(R.id.buttonOkDialogAlert)
 
         title = resources.getString(R.string.warning)
         textViewAlertMessage.movementMethod = ScrollingMovementMethod()
@@ -50,9 +55,10 @@ class AlertDialogActivity : AppCompatActivity() {
         super.onNewIntent(intent)
 
         intent?.let {
+            val textViewAlertMessage = findViewById<TextView>(R.id.textViewAlertMessage)
             // Check it's the same Alert message
             if (alertId == intent.getStringExtra(AlertNotificationHelper.ALERT_NOTIFICATION_TAG)) {
-                // Just update the mnessage if provided or close otherwise
+                // Just update the message if provided or close otherwise
                 intent.getStringExtra(ALERT_MESSAGE)?.let { message ->
                     textViewAlertMessage.text = message
                 } ?: finish()

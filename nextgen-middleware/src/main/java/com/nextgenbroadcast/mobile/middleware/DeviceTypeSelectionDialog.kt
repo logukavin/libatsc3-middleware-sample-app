@@ -5,12 +5,12 @@ import android.content.Intent
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import android.os.Bundle
+import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import com.nextgenbroadcast.mobile.core.FileUtils
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.Atsc3Source
 import com.nextgenbroadcast.mobile.middleware.phy.Atsc3DeviceReceiver
 import com.nextgenbroadcast.mobile.middleware.service.Atsc3ForegroundService
-import kotlinx.android.synthetic.main.activity_device_type_selection.*
 
 class DeviceTypeSelectionDialog : AppCompatActivity() {
 
@@ -49,12 +49,12 @@ class DeviceTypeSelectionDialog : AppCompatActivity() {
 
         title = getString(R.string.device_type_selection_title)
 
-        kailash_type_btn.setOnClickListener {
+        findViewById<View>(R.id.kailash_type_btn).setOnClickListener {
             Atsc3ForegroundService.startForDevice(this, device, Atsc3Source.DEVICE_TYPE_KAILASH)
             finish()
         }
 
-        yoga_type_btn.setOnClickListener {
+        findViewById<View>(R.id.yoga_type_btn).setOnClickListener {
             Atsc3ForegroundService.startForDevice(this, device, Atsc3Source.DEVICE_TYPE_YOGA)
             finish()
         }

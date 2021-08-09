@@ -4,6 +4,7 @@ import android.content.*
 import android.database.Cursor
 import android.database.MatrixCursor
 import android.net.Uri
+import android.os.Build
 import com.nextgenbroadcast.mobile.core.model.*
 import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverCore
 import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverStandalone
@@ -32,7 +33,13 @@ class ReceiverContentProvider : ContentProvider() {
     private lateinit var rmpState: StateFlow<PlaybackState>
 
     private val sslContext: IUserAgentSSLContext by lazy {
-        UserAgentSSLContext.newInstance(requireContext())
+        UserAgentSSLContext.newInstance(
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                requireContext()
+            } else {
+                context ?: throw IllegalStateException("Provider $this not attached to a context.")
+            }
+        )
     }
 
     override fun onCreate(): Boolean {
@@ -340,10 +347,6 @@ class ReceiverContentProvider : ContentProvider() {
         }
 
         return 0
-    }
-
-    private fun requireContext(): Context {
-        return context ?: throw IllegalStateException("Provider $this not attached to a context.")
     }
 
     companion object {

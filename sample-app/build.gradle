@@ -1,16 +1,13 @@
 plugins {
     id 'com.android.application'
-    id 'com.github.triplet.play' version '3.4.0'
+    id 'kotlin-android'
+    id 'kotlin-android-extensions'
+    id 'kotlin-kapt'
+    id 'com.google.gms.google-services'
+    id 'com.google.firebase.crashlytics'
+    id 'com.google.firebase.firebase-perf'
+    id 'com.github.triplet.play' version '3.5.0'
 }
-
-apply plugin: 'com.android.application'
-apply plugin: 'kotlin-android'
-apply plugin: 'kotlin-android-extensions'
-apply plugin: 'kotlin-kapt'
-apply plugin: 'com.google.gms.google-services'
-apply plugin: 'com.google.firebase.crashlytics'
-apply plugin: 'com.google.firebase.firebase-perf'
-apply plugin: 'com.github.triplet.play'
 
 def appVersionCode = project.hasProperty('versionCode') ? versionCode.toInteger() : 1
 def appVersion = "1.0.9"
@@ -181,11 +178,11 @@ dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:$coroutinesVersion"
 
-    implementation 'androidx.appcompat:appcompat:1.2.0'
-    implementation 'androidx.constraintlayout:constraintlayout:2.0.4'
+    implementation 'androidx.appcompat:appcompat:1.3.1'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.0'
 
-    implementation 'androidx.activity:activity-ktx:1.2.1'
-    implementation 'androidx.fragment:fragment-ktx:1.3.1'
+    implementation 'androidx.activity:activity-ktx:1.3.1'
+    implementation 'androidx.fragment:fragment-ktx:1.3.6'
 
     implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:$lifecycleVersion"
     implementation "androidx.lifecycle:lifecycle-livedata-ktx:$lifecycleVersion"
@@ -193,7 +190,7 @@ dependencies {
     implementation "androidx.lifecycle:lifecycle-service:$lifecycleVersion"
 
     implementation "androidx.coordinatorlayout:coordinatorlayout:1.1.0"
-    implementation 'com.google.android.material:material:1.3.0'
+    implementation 'com.google.android.material:material:1.4.0'
 
     standaloneImplementation "androidx.startup:startup-runtime:$startupRuntime"
     standaloneImplementation "androidx.work:work-multiprocess:2.5.0"
@@ -213,18 +210,18 @@ dependencies {
     }
 
     implementation 'com.google.android.gms:play-services-basement:17.6.0'
-    implementation 'com.google.firebase:firebase-analytics-ktx:18.0.2'
-    implementation 'com.google.firebase:firebase-crashlytics-ktx:17.4.0'
+    implementation 'com.google.firebase:firebase-analytics-ktx:19.0.0'
+    implementation 'com.google.firebase:firebase-crashlytics-ktx:18.2.1'
     //jjustman-2021-01-14 - adding firebase performance
-    implementation 'com.google.firebase:firebase-perf:19.1.1'
+    implementation 'com.google.firebase:firebase-perf-ktx:20.0.2'
 
     implementation 'com.google.android.play:core-ktx:1.8.1'
 
     implementation 'org.slf4j:slf4j-nop:1.7.25'
 
-    implementation "androidx.media:media:1.2.1"
+    implementation "androidx.media:media:1.4.1"
 
-    implementation 'com.bugfender.sdk:android:3.+'
+    implementation 'com.bugfender.sdk:android:3.0.9'
 
     implementation "org.eclipse.jetty:jetty-client:9.4.38.v20210224"
     implementation "com.squareup.okio:okio:2.8.0"

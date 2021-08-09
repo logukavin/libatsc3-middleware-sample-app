@@ -23,7 +23,6 @@ import com.google.android.exoplayer2.trackselection.TrackSelectionArray
 import com.google.android.exoplayer2.ui.DefaultTrackNameProvider
 import com.google.android.exoplayer2.ui.TrackNameProvider
 import com.google.android.exoplayer2.util.Assertions
-import kotlinx.android.synthetic.main.track_selection_dialog.*
 
 class TrackSelectionDialog : DialogFragment() {
     private var titleStr = ""
@@ -76,6 +75,7 @@ class TrackSelectionDialog : DialogFragment() {
     private fun showTrackSelections() {
         val trackInfo = mappedTrackInfo ?: return
         val layoutInflater = LayoutInflater.from(context)
+        val llTrackSelectionContainer = requireView().findViewById<ViewGroup>(R.id.llTrackSelectionContainer)
 
         for (i in 0 until trackInfo.rendererCount) {
             if (showTracksForRenderer(trackInfo, i)) {
