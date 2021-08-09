@@ -3,10 +3,10 @@ package com.nextgenbroadcast.mobile.middleware
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.os.Bundle
+import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.nextgenbroadcast.mobile.middleware.service.Atsc3ForegroundService
-import kotlinx.android.synthetic.main.activity_dialog.*
 
 internal class ServiceDialogActivity : AppCompatActivity() {
 
@@ -19,15 +19,15 @@ internal class ServiceDialogActivity : AppCompatActivity() {
 
         title = getString(R.string.service_action_menu_title)
 
-        select_pcap.setOnClickListener {
+        findViewById<View>(R.id.select_pcap).setOnClickListener {
             openFileChooser()
         }
 
-        disconnect_service.setOnClickListener {
+        findViewById<View>(R.id.disconnect_service).setOnClickListener {
             disconnectService()
         }
 
-        watch_tv.setOnClickListener {
+        findViewById<View>(R.id.watch_tv).setOnClickListener {
             watchTV()
         }
     }

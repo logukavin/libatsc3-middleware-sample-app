@@ -62,7 +62,7 @@ class LocationRequester(
                     Log.d(TAG, "getLastLocation() - locationManager.getBestProvider returned providers: $provider")
 
                     val locationListener = object : LocationListener {
-                        override fun onLocationChanged(location: Location?) {
+                        override fun onLocationChanged(location: Location) {
                             locationManager.removeUpdates(this)
                             cont.resume(location)
                         }
@@ -71,11 +71,11 @@ class LocationRequester(
                             // do nothing
                         }
 
-                        override fun onProviderEnabled(provider: String?) {
+                        override fun onProviderEnabled(provider: String) {
                             // do nothing
                         }
 
-                        override fun onProviderDisabled(provider: String?) {
+                        override fun onProviderDisabled(provider: String) {
                             locationManager.removeUpdates(this)
                             cont.resume(null)
                         }
@@ -98,7 +98,7 @@ class LocationRequester(
     override fun observeLocation(minUpdateTime: Long, minDistance: Float): Flow<Location?> {
         return callbackFlow<Location?> {
             val locationListener = object : LocationListener {
-                override fun onLocationChanged(location: Location?) {
+                override fun onLocationChanged(location: Location) {
                     sendBlocking(location)
                 }
 
@@ -106,11 +106,11 @@ class LocationRequester(
                     // do nothing
                 }
 
-                override fun onProviderEnabled(provider: String?) {
+                override fun onProviderEnabled(provider: String) {
                     // do nothing
                 }
 
-                override fun onProviderDisabled(provider: String?) {
+                override fun onProviderDisabled(provider: String) {
                     cancel()
                 }
             }

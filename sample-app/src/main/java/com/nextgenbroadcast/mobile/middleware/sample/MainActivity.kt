@@ -357,7 +357,7 @@ class MainActivity : BaseActivity() {
 
     private fun checkForAppUpdates() {
         // Creates instance of the manager, returns an intent object that you use to check for an update.
-        val appUpdateInfoTask: Task<AppUpdateInfo> = appUpdateManager.appUpdateInfo as Task<AppUpdateInfo>
+        val appUpdateInfoTask: Task<AppUpdateInfo> = appUpdateManager.appUpdateInfo
 
         // Checks that the platform will allow the specified type of update. // For a flexible update, use AppUpdateType.FLEXIBLE
         appUpdateInfoTask.addOnSuccessListener { appUpdateInfo ->
