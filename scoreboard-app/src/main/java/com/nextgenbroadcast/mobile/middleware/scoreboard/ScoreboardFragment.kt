@@ -13,9 +13,9 @@ import androidx.recyclerview.widget.*
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.nextgenbroadcast.mobile.core.LOG
+import com.nextgenbroadcast.mobile.middleware.scoreboard.databinding.FragmentScoreboardBinding
 import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.TelemetryDevice
 import com.nextgenbroadcast.mobile.middleware.scoreboard.view.DeviceItemView
-import kotlinx.android.synthetic.main.fragment_scoreboard.*
 import kotlinx.coroutines.flow.*
 
 class ScoreboardFragment : Fragment() {
@@ -24,9 +24,11 @@ class ScoreboardFragment : Fragment() {
     private val sharedViewModel by activityViewModels<SharedViewModel>()
 
     private lateinit var deviceAdapter: DeviceListAdapter
+    private lateinit var binding: FragmentScoreboardBinding
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-        return inflater.inflate(R.layout.fragment_scoreboard, container, false)
+        binding = FragmentScoreboardBinding.inflate(inflater, container, false)
+        return binding.root
     }
 
     override fun onAttach(context: Context) {
@@ -51,14 +53,14 @@ class ScoreboardFragment : Fragment() {
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        chart_list.layoutManager = LinearLayoutManager(context)
-        chart_list.adapter = deviceAdapter
-        chart_list.addItemDecoration(DividerItemDecoration(context, DividerItemDecoration.VERTICAL))
-        PagerSnapHelper().attachToRecyclerView(chart_list)
+        binding.chartList.layoutManager = LinearLayoutManager(context)
+        binding.chartList.adapter = deviceAdapter
+        binding.chartList.addItemDecoration(DividerItemDecoration(context, DividerItemDecoration.VERTICAL))
+        PagerSnapHelper().attachToRecyclerView(binding.chartList)
 
-        pager_mode_switch.setOnCheckedChangeListener { _, isChecked ->
+       binding.pagerModeSwitch.setOnCheckedChangeListener { _, isChecked ->
             val orientation = if (isChecked) RecyclerView.HORIZONTAL else RecyclerView.VERTICAL
-            chart_list.layoutManager = LinearLayoutManager(context, orientation, false)
+           binding.chartList.layoutManager = LinearLayoutManager(context, orientation, false)
         }
 
         sharedViewModel.chartDevicesWithFlow.observe(viewLifecycleOwner) { devices ->
