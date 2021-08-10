@@ -1,5 +1,7 @@
 package com.nextgenbroadcast.mobile.middleware.service
 
+import android.content.Context
+import android.hardware.usb.UsbDevice
 import android.os.Binder
 import android.os.IBinder
 import com.nextgenbroadcast.mobile.core.asReadOnly
@@ -39,10 +41,22 @@ class EmbeddedAtsc3Service : Atsc3ForegroundService() {
             }
         } else null
 
-    companion object {
+    companion object Initializer {
         const val SERVICE_INTERFACE = Atsc3ForegroundService.SERVICE_INTERFACE
 
-        fun init() {
+        fun openRoute(context: Context, device: UsbDevice, deviceType: Int, forceOpen: Boolean = true) {
+            startForDevice(context, device, deviceType, forceOpen)
+        }
+
+        fun openRoute(context: Context, filePath: String, forceOpen: Boolean = true) {
+            openRoute(context, filePath, forceOpen)
+        }
+
+        fun closeRoute(context: Context) {
+            closeRoute(context)
+        }
+
+        init {
             clazz = EmbeddedAtsc3Service::class.java
         }
     }

@@ -497,7 +497,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
             }
         }
 
-        fun startForDevice(context: Context, device: UsbDevice, deviceType: Int, forceOpen: Boolean = true) {
+        internal fun startForDevice(context: Context, device: UsbDevice, deviceType: Int, forceOpen: Boolean = true) {
             newIntent(context, ACTION_DEVICE_ATTACHED).let { serviceIntent ->
                 serviceIntent.putExtra(EXTRA_DEVICE, device)
                 serviceIntent.putExtra(EXTRA_DEVICE_TYPE, deviceType)
@@ -506,14 +506,14 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
             }
         }
 
-        fun stopForDevice(context: Context, device: UsbDevice) {
+        internal fun stopForDevice(context: Context, device: UsbDevice) {
             newIntent(context, ACTION_DEVICE_DETACHED).let { serviceIntent ->
                 serviceIntent.putExtra(EXTRA_DEVICE, device)
                 ContextCompat.startForegroundService(context, serviceIntent)
             }
         }
 
-        fun openRoute(context: Context, filePath: String, forceOpen: Boolean = true) {
+        internal fun openRoute(context: Context, filePath: String, forceOpen: Boolean = true) {
             newIntent(context, ACTION_OPEN_ROUTE).let { serviceIntent ->
                 serviceIntent.putExtra(EXTRA_ROUTE_PATH, filePath)
                 serviceIntent.putExtra(EXTRA_FORCE_OPEN, forceOpen)
@@ -521,7 +521,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
             }
         }
 
-        fun closeRoute(context: Context) {
+        internal fun closeRoute(context: Context) {
             ContextCompat.startForegroundService(context, newIntent(context, ACTION_CLOSE_ROUTE))
         }
 

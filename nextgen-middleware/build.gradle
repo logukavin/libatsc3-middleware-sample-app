@@ -90,6 +90,17 @@ android {
         unitTests.includeAndroidResources = true
         unitTests.returnDefaultValues = true
     }
+
+    flavorDimensions "service_type"
+    productFlavors {
+        embedded {
+            dimension "service_type"
+        }
+
+        standalone {
+            dimension "service_type"
+        }
+    }
 }
 
 def isTasksContainsTest() {
@@ -174,9 +185,7 @@ dependencies {
 
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:$coroutinesVersion"
 
-    implementation("androidx.startup:startup-runtime:$startupRuntime") {
-        transitive = true
-    }
+    implementation "androidx.startup:startup-runtime:$startupRuntime"
 
     implementation "com.squareup.okhttp3:okhttp:4.9.0"
     implementation "com.squareup.okio:okio:2.8.0"
@@ -206,4 +215,24 @@ dependencies {
     testImplementation "android.arch.core:core-testing:1.1.1"
 }
 
-apply from: '../publish.gradle'
+//apply from: '../publish.gradle'
+apply from: '../publish-dependencies.gradle'
+
+afterEvaluate {
+    publishing {
+        publications {
+            embeddedRelease(MavenPublication) {
+                groupId = 'com.nextgenbroadcast.mobile'
+                version = project.hasProperty('artifactVersion') ? artifactVersion : null
+                artifactId = project.name
+                from components.embeddedRelease
+            }
+            standaloneRelease(MavenPublication) {
+                groupId = 'com.nextgenbroadcast.mobile'
+                version = project.hasProperty('artifactVersion') ? artifactVersion : null
+                artifactId = project.name
+                from components.standaloneRelease
+            }
+        }
+    }
+}
