@@ -11,13 +11,7 @@
             </intent-filter>
         </activity>
 
-        <service
-            android:name="com.nextgenbroadcast.mobile.middleware.service.EmbeddedAtsc3Service"
-            android:exported="false">
-
-            <intent-filter>
-                <action android:name="android.media.browse.MediaBrowserService" />
-            </intent-filter>
+        <service android:name="com.nextgenbroadcast.mobile.middleware.service.EmbeddedAtsc3Service">
 
             <meta-data
                 android:name="com.nextgenbroadcast.mobile.middleware.location.FrequencyLocator"
