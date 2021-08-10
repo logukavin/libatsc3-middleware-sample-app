@@ -10,12 +10,14 @@ import com.nextgenbroadcast.mobile.middleware.service.Atsc3ForegroundService
 
 internal class ServiceDialogActivity : AppCompatActivity() {
 
-    private val getContent = registerForActivityResult(ActivityResultContracts.GetContent()) {
-        intent?.data?.let { uri ->
-            Atsc3ForegroundService.openRoute(this, uri.toString())
+    private val getContent =
+        registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+            uri?.let {
+                Atsc3ForegroundService.openRoute(this, it.toString())
+            }
+
             finish()
         }
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
