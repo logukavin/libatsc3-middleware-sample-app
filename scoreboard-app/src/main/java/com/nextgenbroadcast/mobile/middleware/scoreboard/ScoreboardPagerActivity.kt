@@ -11,7 +11,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
-import kotlinx.android.synthetic.main.activity_scoreboard.*
+import com.nextgenbroadcast.mobile.middleware.scoreboard.databinding.ActivityScoreboardBinding
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collect
 
@@ -25,15 +25,15 @@ class ScoreboardPagerActivity : FragmentActivity(), ServiceConnection {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        setContentView(R.layout.activity_scoreboard)
+        val binding = ActivityScoreboardBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
         pagerAdapter = PagerAdapter(this)
-        viewPager.offscreenPageLimit = 1
-        viewPager.adapter = pagerAdapter
+        binding.viewPager.offscreenPageLimit = 1
+        binding.viewPager.adapter = pagerAdapter
 
         val tabLayout = findViewById<TabLayout>(R.id.tab_layout)
-        TabLayoutMediator(tabLayout, viewPager) { tab, position ->
+        TabLayoutMediator(tabLayout,  binding.viewPager) { tab, position ->
             tab.text = getTabName(position)
         }.attach()
 
