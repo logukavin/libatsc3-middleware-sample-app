@@ -35,7 +35,6 @@ import com.nextgenbroadcast.mobile.middleware.dev.telemetry.TelemetryClient
 import com.nextgenbroadcast.mobile.view.AboutDialog
 import com.nextgenbroadcast.mobile.view.TrackSelectionDialog
 import com.nextgenbroadcast.mobile.view.UserAgentView
-import kotlinx.android.synthetic.main.fragment_main.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
@@ -48,6 +47,7 @@ class MainFragment : Fragment() {
     private lateinit var sourceAdapter: ArrayAdapter<String>
     private lateinit var receiverContentResolver: ReceiverContentResolver
     private lateinit var telemetryClient: TelemetryClient
+    private lateinit var binding:FragmentMainBinding
 
     private var servicesList: List<AVService>? = null
     private var currentAppData: AppData? = null
@@ -58,11 +58,11 @@ class MainFragment : Fragment() {
     private val swipeGestureDetector: GestureDetector by lazy {
         GestureDetector(requireContext(), object : SwipeGestureDetector() {
             override fun onClose() {
-                user_agent_web_view.actionExit()
+                binding.userAgentWebView.actionExit()
             }
 
             override fun onOpen() {
-                user_agent_web_view.actionEnter()
+                binding.userAgentWebView.actionEnter()
             }
         })
     }
@@ -78,8 +78,8 @@ class MainFragment : Fragment() {
 
         requireActivity().onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                if (user_agent_web_view.checkContentVisible()) {
-                    user_agent_web_view.actionExit()
+                if (binding.userAgentWebView.checkContentVisible()) {
+                    binding.userAgentWebView.actionExit()
                 } else {
                     if (isEnabled) {
                         isEnabled = false
@@ -113,7 +113,7 @@ class MainFragment : Fragment() {
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-        val binding = DataBindingUtil.inflate<FragmentMainBinding>(inflater, R.layout.fragment_main, container, false).apply {
+         binding = FragmentMainBinding.inflate(inflater, container, false).apply {
             lifecycleOwner = viewLifecycleOwner
             viewModel = viewViewModel
         }
@@ -125,10 +125,10 @@ class MainFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        service_list.adapter = sourceAdapter
+        binding.serviceList.adapter = sourceAdapter
 
-        user_agent_web_view.setOnTouchListener { _, motionEvent -> swipeGestureDetector.onTouchEvent(motionEvent) }
-        user_agent_web_view.setListener(object : UserAgentView.IListener {
+        binding.userAgentWebView.setOnTouchListener { _, motionEvent -> swipeGestureDetector.onTouchEvent(motionEvent) }
+        binding.userAgentWebView.setListener(object : UserAgentView.IListener {
             override fun onOpen() {
                 receiverContentResolver.publishApplicationState(ApplicationState.OPENED)
             }
@@ -141,25 +141,25 @@ class MainFragment : Fragment() {
                 onBALoadingError()
             }
         })
-        user_agent_web_view.captureContentVisibility = true
-        user_agent_web_view.isContentVisible.observe(viewLifecycleOwner) { isBAContentVisible ->
+        binding.userAgentWebView.captureContentVisibility = true
+        binding.userAgentWebView.isContentVisible.observe(viewLifecycleOwner) { isBAContentVisible ->
             if (isBAContentVisible) {
-                bottom_sheet_title.alpha = 0.2f
-                bottom_sheet_title.isClickable = false
-                atsc3_data_log.alpha = 0.2f
+                binding.bottomSheetTitle.alpha = 0.2f
+                binding.bottomSheetTitle.isClickable = false
+                binding.atsc3DataLog.alpha = 0.2f
             } else {
-                bottom_sheet_title.alpha = 1f
-                bottom_sheet_title.isClickable = true
-                atsc3_data_log.alpha = 1f
+                binding.bottomSheetTitle.alpha = 1f
+                binding.bottomSheetTitle.isClickable = true
+                binding.atsc3DataLog.alpha = 1f
             }
         }
 
-        val bottomSheetBehavior = BottomSheetBehavior.from<View>(bottom_sheet).apply {
+        val bottomSheetBehavior = BottomSheetBehavior.from<View>(binding.bottomSheet).apply {
             isHideable = false
             state = BottomSheetBehavior.STATE_COLLAPSED
         }
 
-        service_list.setOnItemClickListener { _, _, position, _ ->
+       binding.serviceList.setOnItemClickListener { _, _, position, _ ->
             bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
 
             servicesList?.getOrNull(position)?.let { service ->
@@ -173,7 +173,7 @@ class MainFragment : Fragment() {
             }
         }
 
-        bottom_sheet_title.setOnClickListener {
+        binding.bottomSheetTitle.setOnClickListener {
             when (bottomSheetBehavior.state) {
                 BottomSheetBehavior.STATE_COLLAPSED -> bottomSheetBehavior.state = BottomSheetBehavior.STATE_EXPANDED
                 BottomSheetBehavior.STATE_EXPANDED -> bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
@@ -183,21 +183,21 @@ class MainFragment : Fragment() {
             }
         }
 
-        cancel_scan_btn.setOnClickListener {
+        binding.cancelScanBtn.setOnClickListener {
             receiverContentResolver.tune(-1 /* cancel tuning */)
         }
 
-        settings_button.setOnClickListener {
-            showPopupSettingsMenu(settings_button)
+        binding.settingsButton.setOnClickListener {
+            showPopupSettingsMenu(binding.settingsButton)
         }
 
-        phy_chart.setOnLongClickListener {
-            phy_chart.takeSnapshotAndShare(requireContext(), "phy_chart", getString(R.string.chart_phy_share_title))
+        binding.phyChart.setOnLongClickListener {
+            binding.phyChart.takeSnapshotAndShare(requireContext(), "binding.phyChart", getString(R.string.chart_phy_share_title))
             true
         }
-        phy_chart.setDataSource(newChartDataSource())
+        binding.phyChart.setDataSource(newChartDataSource())
 
-        receiver_player.setOnPlaybackChangeListener { state, position, rate ->
+        binding.receiverPlayer.setOnPlaybackChangeListener { state, position, rate ->
             receiverContentResolver.publishPlayerState(state, position, rate)
         }
 
@@ -225,7 +225,7 @@ class MainFragment : Fragment() {
         // it's important to reset it allowing BA reload
         currentAppData = null
 
-        receiver_player.stop()
+        binding.receiverPlayer.stop()
         telemetryClient.stop()
     }
 
@@ -286,15 +286,15 @@ class MainFragment : Fragment() {
             )
 
             if (mediaUri != null) {
-                receiver_player.play(mediaUri)
+                binding.receiverPlayer.play(mediaUri)
             } else {
-                receiver_player.stopAndClear()
+                binding.receiverPlayer.stopAndClear()
             }
 
             when (state) {
-                PlaybackState.PAUSED -> receiver_player.pause()
-                PlaybackState.PLAYING -> receiver_player.tryReplay()
-                PlaybackState.IDLE -> receiver_player.stop()
+                PlaybackState.PAUSED -> binding.receiverPlayer.pause()
+                PlaybackState.PLAYING -> binding.receiverPlayer.tryReplay()
+                PlaybackState.IDLE -> binding.receiverPlayer.stop()
             }
         }
     }
@@ -321,12 +321,12 @@ class MainFragment : Fragment() {
         viewViewModel.showPhyChart.observe(viewLifecycleOwner) { phyChartEnabled ->
             if (phyChartEnabled == true) {
                 if (!telemetryClient.isStarted()) {
-                    phy_chart.setDataSource(newChartDataSource())
+                    binding.phyChart.setDataSource(newChartDataSource())
                     telemetryClient.start()
                 }
             } else {
                 if (telemetryClient.isStarted()) {
-                    phy_chart.setDataSource(null)
+                    binding.phyChart.setDataSource(null)
                     telemetryClient.stop()
                 }
             }
@@ -351,7 +351,7 @@ class MainFragment : Fragment() {
     private fun showPopupSettingsMenu(v: View) {
         PopupMenu(context, v).apply {
             inflate(R.menu.settings_menu)
-            if (receiver_player.player == null) {
+            if (binding.receiverPlayer.player == null) {
                 menu.findItem(R.id.menu_select_tracks)?.isEnabled = false
             }
             setOnMenuItemClickListener { item ->
@@ -395,8 +395,8 @@ class MainFragment : Fragment() {
     }
 
     private fun openSelectTracksDialog() {
-        val trackSelection = receiver_player.getTrackSelector()
-        val currentTrackSelection = receiver_player.player.currentTrackSelections
+        val trackSelection = binding.receiverPlayer.getTrackSelector()
+        val currentTrackSelection = binding.receiverPlayer.player.currentTrackSelections
         if (!isShowingTrackSelectionDialog
                 && trackSelection != null
                 && TrackSelectionDialog.willHaveContent(trackSelection)) {
@@ -414,17 +414,17 @@ class MainFragment : Fragment() {
         servicesList = services
 
         if (services.isNotEmpty()) {
-            service_list.adapter = serviceAdapter
+           binding.serviceList.adapter = serviceAdapter
             serviceAdapter.setServices(services)
         } else {
-            service_list.adapter = sourceAdapter
+            binding.serviceList.adapter = sourceAdapter
             setSelectedService(null)
         }
     }
 
     override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean) {
         val visibility = if (isInPictureInPictureMode) {
-            user_agent_web_view.actionExit()
+            binding.userAgentWebView.actionExit()
             setBAAvailability(false)
             View.INVISIBLE
         } else {
@@ -433,8 +433,8 @@ class MainFragment : Fragment() {
             }
             View.VISIBLE
         }
-        atsc3_data_log.visibility = visibility
-        bottom_sheet.visibility = visibility
+        binding.atsc3DataLog.visibility = visibility
+        binding.bottomSheet.visibility = visibility
     }
 
     private fun selectService(service: AVService) {
@@ -442,7 +442,7 @@ class MainFragment : Fragment() {
     }
 
     private fun setSelectedService(serviceName: String?) {
-        bottom_sheet_title.text = serviceName ?: getString(R.string.no_service_available)
+        binding.bottomSheetTitle.text = serviceName ?: getString(R.string.no_service_available)
     }
 
     private fun openSettingsDialog(freqKhz: Int?) {
@@ -459,7 +459,7 @@ class MainFragment : Fragment() {
     }
 
     private fun setBAAvailability(available: Boolean) {
-        user_agent_web_view.visibility = if (available) View.VISIBLE else View.GONE // GONE will prevent BA from sending resize requests when UA is not visible
+        binding.userAgentWebView.visibility = if (available) View.VISIBLE else View.GONE // GONE will prevent BA from sending resize requests when UA is not visible
     }
 
     private fun showFileChooser() {
@@ -484,24 +484,24 @@ class MainFragment : Fragment() {
 
     private fun updateRMPLayout(x: Float, y: Float, scale: Float) {
         ConstraintSet().apply {
-            clone(user_agent_root)
+            clone(binding.userAgentRoot)
             setHorizontalBias(R.id.receiver_player, if (scale == 1f) 0f else x / (1f - scale))
             setVerticalBias(R.id.receiver_player, if (scale == 1f) 0f else y / (1f - scale))
             constrainPercentHeight(R.id.receiver_player, scale)
             constrainPercentWidth(R.id.receiver_player, scale)
-        }.applyTo(user_agent_root)
+        }.applyTo(binding.userAgentRoot)
     }
 
     private fun loadBroadcasterApplication(appData: AppData) {
-        if (user_agent_web_view.serverCertificateHash == null) {
-            user_agent_web_view.serverCertificateHash = receiverContentResolver.queryServerCertificate()
+        if (binding.userAgentWebView.serverCertificateHash == null) {
+            binding.userAgentWebView.serverCertificateHash = receiverContentResolver.queryServerCertificate()
         }
-        user_agent_web_view.loadBAContent(appData.appEntryPage)
+        binding.userAgentWebView.loadBAContent(appData.appEntryPage)
         receiverContentResolver.publishApplicationState(ApplicationState.LOADED)
     }
 
     private fun unloadBroadcasterApplication() {
-        user_agent_web_view.unloadBAContent()
+        binding.userAgentWebView.unloadBAContent()
         receiverContentResolver.publishApplicationState(ApplicationState.UNAVAILABLE)
     }
 

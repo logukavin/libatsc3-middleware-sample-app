@@ -10,16 +10,18 @@ import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.RecyclerView
-import kotlinx.android.synthetic.main.device_id_item_view.view.*
-import kotlinx.android.synthetic.main.fragment_settings.*
+import com.nextgenbroadcast.mobile.middleware.scoreboard.databinding.DeviceIdItemViewBinding
+import com.nextgenbroadcast.mobile.middleware.scoreboard.databinding.FragmentSettingsBinding
 
 class ScoreboardSettingsFragment : Fragment() {
     private val sharedViewModel by activityViewModels<SharedViewModel>()
 
     private lateinit var deviceIdsAdapter: DeviceIdsAdapter
+    private lateinit var binding: FragmentSettingsBinding
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        return inflater.inflate(R.layout.fragment_settings, container, false)
+        binding = FragmentSettingsBinding.inflate(inflater, container, false)
+        return binding.root
     }
 
     override fun onAttach(context: Context) {
@@ -37,10 +39,10 @@ class ScoreboardSettingsFragment : Fragment() {
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        device_ids_recycler_iew.adapter = deviceIdsAdapter
+       binding.deviceIdsRecyclerIew.adapter = deviceIdsAdapter
 
-        select_all_checkbox.setOnClickListener {
-            sharedViewModel.selectAll(select_all_checkbox.isChecked)
+       binding.selectAllCheckbox.setOnClickListener {
+            sharedViewModel.selectAll(binding.selectAllCheckbox.isChecked)
         }
 
         sharedViewModel.deviceIdList.observe(viewLifecycleOwner) { devices ->
@@ -52,7 +54,7 @@ class ScoreboardSettingsFragment : Fragment() {
         }
 
         sharedViewModel.selectionState.observe(viewLifecycleOwner) { (isAnySelected, isAllSelected) ->
-            with(select_all_checkbox) {
+            with(binding.selectAllCheckbox) {
                 isChecked = isAnySelected
                 jumpDrawablesToCurrentState()
                 alpha = if (isAllSelected || !isAnySelected) 1F else 0.3F
@@ -75,8 +77,7 @@ class ScoreboardSettingsFragment : Fragment() {
         }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): DeviceIdViewHolder {
-            return DeviceIdViewHolder(
-                inflater.inflate(R.layout.device_id_item_view, parent, false)
+            return DeviceIdViewHolder(DeviceIdItemViewBinding.inflate(inflater, parent, false)
             )
         }
 
@@ -109,12 +110,10 @@ class ScoreboardSettingsFragment : Fragment() {
             notifyItemRangeChanged(0, itemCount, Any())
         }
 
-        class DeviceIdViewHolder(
-            itemView: View
-        ) : RecyclerView.ViewHolder(itemView) {
+        class DeviceIdViewHolder(private val itemBinding: DeviceIdItemViewBinding) : RecyclerView.ViewHolder(itemBinding.root) {
             var deviceId: String? = null
-            val deviceName: TextView = itemView.device_id_text_view
-            val deviceCheckBox: CheckBox = itemView.device_id_chech_box
+            val deviceName: TextView = itemBinding.deviceIdTextView
+            val deviceCheckBox: CheckBox = itemBinding.deviceIdChechBox
         }
 
     }
