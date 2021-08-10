@@ -58,9 +58,9 @@ class ScoreboardFragment : Fragment() {
         binding.chartList.addItemDecoration(DividerItemDecoration(context, DividerItemDecoration.VERTICAL))
         PagerSnapHelper().attachToRecyclerView(binding.chartList)
 
-       binding.pagerModeSwitch.setOnCheckedChangeListener { _, isChecked ->
+        binding.pagerModeSwitch.setOnCheckedChangeListener { _, isChecked ->
             val orientation = if (isChecked) RecyclerView.HORIZONTAL else RecyclerView.VERTICAL
-           binding.chartList.layoutManager = LinearLayoutManager(context, orientation, false)
+            binding.chartList.layoutManager = LinearLayoutManager(context, orientation, false)
         }
 
         sharedViewModel.chartDevicesWithFlow.observe(viewLifecycleOwner) { devices ->
