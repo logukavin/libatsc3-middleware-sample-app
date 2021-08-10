@@ -5,7 +5,8 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.*
+import android.widget.CheckBox
+import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.RecyclerView
@@ -38,12 +39,24 @@ class ScoreboardSettingsFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         device_ids_recycler_iew.adapter = deviceIdsAdapter
 
-        sharedViewModel.deviceIdList.observe(viewLifecycleOwner) { list ->
-            deviceIdsAdapter.setData(list)
+        select_all_checkbox.setOnClickListener {
+            sharedViewModel.selectAll(select_all_checkbox.isChecked)
         }
 
-        select_all_checkbox.setOnCheckedChangeListener { _, isChecked ->
-            deviceIdsAdapter.selectAll(isChecked)
+        sharedViewModel.deviceIdList.observe(viewLifecycleOwner) { devices ->
+            deviceIdsAdapter.setData(devices)
+        }
+
+        sharedViewModel.selectedDeviceId.observe(viewLifecycleOwner) { deviceId ->
+            deviceIdsAdapter.changeSelection(deviceId)
+        }
+
+        sharedViewModel.selectionState.observe(viewLifecycleOwner) { (isAnySelected, isAllSelected) ->
+            with(select_all_checkbox) {
+                isChecked = isAnySelected
+                jumpDrawablesToCurrentState()
+                alpha = if (isAllSelected || !isAnySelected) 1F else 0.3F
+            }
         }
     }
 
@@ -51,12 +64,11 @@ class ScoreboardSettingsFragment : Fragment() {
         private val inflater: LayoutInflater,
         private val deviceListener: DeviceSelectListener
     ) : RecyclerView.Adapter<DeviceIdsAdapter.DeviceIdViewHolder>() {
+        private val deviceIdList = mutableListOf<Pair<String, Boolean>>()
 
-        private val deviceIdList = mutableListOf<String>()
-        private val selectAllPayload = Any()
-        private val unselectAllPayload = Any()
+        private var selectedChartId: String? = null
 
-        fun setData(deviceIdsList: List<String>) {
+        fun setData(deviceIdsList: List<Pair<String, Boolean>>) {
             deviceIdList.clear()
             deviceIdList.addAll(deviceIdsList)
             notifyDataSetChanged()
@@ -69,45 +81,47 @@ class ScoreboardSettingsFragment : Fragment() {
         }
 
         override fun onBindViewHolder(holder: DeviceIdViewHolder, position: Int) {
-            val deviceId = deviceIdList.getOrNull(position) ?: return
+            val (deviceId, checked) = deviceIdList.getOrNull(position) ?: return
             with(holder) {
+                this.deviceId = deviceId
+
                 deviceName.text = deviceId
+
                 deviceCheckBox.setOnCheckedChangeListener { _, isChecked ->
-                    if (isChecked) {
-                        deviceListener.addDeviceChart(deviceId)
-                    } else {
-                        deviceListener.remoteDeviceChart(deviceId)
+                    // we can't change list in bind because it will lead to IllegalStateException
+                    deviceCheckBox.post {
+                        if (isChecked) {
+                            deviceListener.addDeviceChart(deviceId)
+                        } else {
+                            deviceListener.remoteDeviceChart(deviceId)
+                        }
                     }
                 }
-            }
-        }
 
-        override fun onBindViewHolder(holder: DeviceIdViewHolder, position: Int, payloads: MutableList<Any>) {
-            super.onBindViewHolder(holder, position, payloads)
-
-            if (payloads.contains(selectAllPayload)) {
-                holder.deviceCheckBox.isChecked = true
-            } else if (payloads.contains(unselectAllPayload)) {
-                holder.deviceCheckBox.isChecked = false
+                deviceCheckBox.isChecked = checked
             }
         }
 
         override fun getItemCount() = deviceIdList.size
 
-        fun selectAll(isSelected: Boolean) {
-            notifyItemRangeChanged(0, itemCount, if (isSelected) selectAllPayload else unselectAllPayload)
+        fun changeSelection(deviceId: String?) {
+            selectedChartId = deviceId
+            notifyItemRangeChanged(0, itemCount, Any())
         }
 
         class DeviceIdViewHolder(
             itemView: View
         ) : RecyclerView.ViewHolder(itemView) {
+            var deviceId: String? = null
             val deviceName: TextView = itemView.device_id_text_view
             val deviceCheckBox: CheckBox = itemView.device_id_chech_box
         }
+
     }
 
     interface DeviceSelectListener {
         fun addDeviceChart(deviceId: String)
         fun remoteDeviceChart(deviceId: String)
     }
+
 }

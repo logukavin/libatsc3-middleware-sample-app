@@ -1,40 +1,32 @@
 package com.nextgenbroadcast.mobile.middleware.scoreboard
 
+import android.content.*
 import android.os.Bundle
+import android.os.IBinder
+import android.util.Log
 import androidx.activity.viewModels
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.lifecycleScope
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
-import com.google.firebase.installations.FirebaseInstallations
-import com.nextgenbroadcast.mobile.core.LOG
-import com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry.TelemetryManager
 import kotlinx.android.synthetic.main.activity_scoreboard.*
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.collect
 
-class ScoreboardPagerActivity : FragmentActivity() {
+class ScoreboardPagerActivity : FragmentActivity(), ServiceConnection {
     private val sharedViewModel: SharedViewModel by viewModels()
 
     private lateinit var pagerAdapter: PagerAdapter
 
-    private var telemetryManager: TelemetryManager? = null
+    private var serviceBinder: ScoreboardService.ScoreboardBinding? = null
+    private var connectionJob: Job? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         setContentView(R.layout.activity_scoreboard)
-
-        FirebaseInstallations.getInstance().id.addOnCompleteListener { task ->
-            if (task.isSuccessful) {
-                if (!isFinishing) {
-                    task.result?.let { deviceId ->
-                        createTelemetryManager(deviceId)
-                    }
-                }
-            } else {
-                LOG.e(TAG, "Can't create Telemetry because Firebase ID not received.", task.exception)
-            }
-        }
 
         pagerAdapter = PagerAdapter(this)
         viewPager.offscreenPageLimit = 1
@@ -46,30 +38,87 @@ class ScoreboardPagerActivity : FragmentActivity() {
         }.attach()
 
         sharedViewModel.devicesToAdd.observe(this) { devices ->
-            val telemetry = telemetryManager ?: return@observe
+            val binder = serviceBinder ?: return@observe
             devices?.forEach { deviceId ->
-                telemetry.connectDevice(deviceId)
-                telemetry.getFlow(deviceId)?.let { flow ->
+                binder.connectDevice(deviceId)?.let { flow ->
                     sharedViewModel.addFlow(deviceId, flow)
                 }
             }
         }
 
         sharedViewModel.devicesToRemove.observe(this) { devices ->
-            val telemetry = telemetryManager ?: return@observe
+            val binder = serviceBinder ?: return@observe
             devices?.forEach { deviceId ->
-                telemetry.disconnectDevice(deviceId)
+                binder.disconnectDevice(deviceId)
                 sharedViewModel.removeFlow(deviceId)
+            }
+        }
+
+        sharedViewModel.selectedDeviceId.observe(this@ScoreboardPagerActivity) { deviceId ->
+            serviceBinder?.selectDevice(deviceId)
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+
+        bindService()
+    }
+
+    override fun onStop() {
+        super.onStop()
+
+        unbindService()
+    }
+
+    @InternalCoroutinesApi
+    override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+        val binder = (service as? ScoreboardService.ScoreboardBinding).also {
+            serviceBinder = it
+        } ?: return
+
+        with(binder) {
+            sharedViewModel.setDevicesList(deviceIdList.value)
+
+            binder.getConnectedDevices().forEach { deviceId ->
+                sharedViewModel.addDeviceChart(deviceId)
+            }
+
+            connectionJob = lifecycleScope.launch {
+                launch {
+                    deviceIdList.collect { deviceList ->
+                        sharedViewModel.setDevicesList(deviceList)
+                    }
+                }
+
+                launch {
+                    selectedDeviceId.collect { selectedDevice ->
+                        sharedViewModel.setDeviceSelection(selectedDevice)
+                    }
+                }
             }
         }
     }
 
-    private fun createTelemetryManager(serialNum: String) {
-        telemetryManager = TelemetryManager(this, serialNum) { devices ->
-            sharedViewModel.setDevicesList(devices)
-        }.also {
-            it.start()
+    override fun onServiceDisconnected(name: ComponentName?) {
+        Log.d(TAG, "onServiceDisconnected, $name")
+        connectionJob?.cancel("onServiceDisconnected()")
+        serviceBinder = null
+        sharedViewModel.selectedDeviceId.value = null
+        finish()
+    }
+
+    private fun bindService() {
+        Intent(this, ScoreboardService::class.java).run {
+            startForegroundService(this)
+            bindService(this, this@ScoreboardPagerActivity, BIND_IMPORTANT)
         }
+    }
+
+    private fun unbindService() {
+        connectionJob?.cancel("activity onStop()")
+        unbindService(this)
+        serviceBinder = null
     }
 
     private fun getTabName(position: Int): CharSequence {
@@ -91,7 +140,7 @@ class ScoreboardPagerActivity : FragmentActivity() {
         }
     }
 
-    companion object{
+    companion object {
         private val TAG = ScoreboardPagerActivity::class.java.simpleName
     }
 }
