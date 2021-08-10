@@ -18,12 +18,27 @@ class SharedViewModel : ViewModel() {
         deviceFlows?.keys?.subtract(devices ?: emptyList())
     }.distinctUntilChanged()
 
-    val deviceIdList: LiveData<List<String>> = _deviceList.map { list ->
-        list.map { device -> device.id }
-    }
+    val deviceIdList: LiveData<List<Pair<String, Boolean>>> = _deviceList.mapWith(_deviceFlowMap) { (list, flowMap) ->
+        list?.map { device -> Pair(device.id, flowMap?.containsKey(device.id) ?: false) } ?: emptyList()
+    }.distinctUntilChanged()
 
     val chartDevices = _chartDevices.mapWith(_deviceList) { (chartList, deviceList) ->
         deviceList?.filter { chartList?.contains(it.id) ?: false }
+    }.distinctUntilChanged()
+
+    val chartDevicesWithFlow = chartDevices.mapWith(_deviceFlowMap) { (chartList, flowMap) ->
+        chartList?.filter { flowMap?.containsKey(it.id) ?: false }
+    }.distinctUntilChanged()
+
+    val selectedDeviceId: MutableLiveData<String?> = MutableLiveData()
+
+    val selectionState: LiveData<Pair<Boolean, Boolean>> = deviceIdList.map { deviceList ->
+        val deviceWithFlowCount = deviceList.filter { (_, hasFlow) -> hasFlow }.size
+        Pair(deviceWithFlowCount > 0, deviceWithFlowCount == deviceList.size)
+    }.distinctUntilChanged()
+
+    fun setDeviceSelection(deviceId: String?) {
+        selectedDeviceId.value = deviceId
     }
 
     fun setDevicesList(deviceIds: List<TelemetryDevice>) {
@@ -32,14 +47,23 @@ class SharedViewModel : ViewModel() {
 
     fun addDeviceChart(deviceId: String) {
         val list = _chartDevices.value?.toMutableList() ?: mutableListOf()
-        list.add(deviceId)
-        _chartDevices.value = list
+        if (!list.contains(deviceId)) {
+            list.add(deviceId)
+            _chartDevices.value = list
+        }
     }
 
     fun removeDeviceChart(deviceId: String) {
         val list = _chartDevices.value?.toMutableList() ?: return
         list.remove(deviceId)
         _chartDevices.value = list
+        synchronizeChartSelection(deviceId)
+    }
+
+    private fun synchronizeChartSelection(deviceId: String) {
+        if (selectedDeviceId.value == deviceId) {
+            selectedDeviceId.value = null
+        }
     }
 
     fun addFlow(deviceId: String, flow: Flow<ClientTelemetryEvent>) {
@@ -57,4 +81,15 @@ class SharedViewModel : ViewModel() {
     fun getDeviceFlow(deviceId: String): Flow<ClientTelemetryEvent>? {
         return _deviceFlowMap.value?.get(deviceId)
     }
+
+    fun selectAll(isChecked: Boolean) {
+        deviceIdList.value?.forEach { (id) ->
+            if (isChecked) {
+                addDeviceChart(id)
+            } else {
+                removeDeviceChart(id)
+            }
+        }
+    }
+
 }

@@ -14,7 +14,6 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.TelemetryDevice
-import com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry.DatagramSocketWrapper
 import com.nextgenbroadcast.mobile.middleware.scoreboard.view.DeviceItemView
 import kotlinx.android.synthetic.main.fragment_scoreboard.*
 import kotlinx.coroutines.flow.*
@@ -22,12 +21,7 @@ import kotlinx.coroutines.flow.*
 class ScoreboardFragment : Fragment() {
     private val gson = Gson()
     private val phyType = object : TypeToken<PhyPayload>() {}.type
-
     private val sharedViewModel by activityViewModels<SharedViewModel>()
-
-    private val socket: DatagramSocketWrapper by lazy {
-        DatagramSocketWrapper(requireContext().applicationContext)
-    }
 
     private lateinit var deviceAdapter: DeviceListAdapter
 
@@ -38,19 +32,16 @@ class ScoreboardFragment : Fragment() {
     override fun onAttach(context: Context) {
         super.onAttach(context)
 
-        deviceAdapter = DeviceListAdapter(layoutInflater) { device ->
+        deviceAdapter = DeviceListAdapter(layoutInflater, selectChartListener) { device ->
             val deviceId = device.id
             sharedViewModel.getDeviceFlow(deviceId)
                 ?.shareIn(lifecycleScope, SharingStarted.Lazily)
                 ?.mapNotNull { event ->
                     try {
                         val payload = gson.fromJson<PhyPayload>(event.payload, phyType)
-                        val payloadValue = payload.snr1000
+                        val payloadValue = payload.snr1000.toDouble() / 1000
                         val timestamp = payload.timeStamp
-                        if (deviceAdapter.selectedDeviceId == deviceId) {
-                            socket.sendUdpMessage("${deviceId},$timestamp,$payloadValue")
-                        }
-                        Pair(timestamp, payloadValue.toDouble() / 1000)
+                        Pair(timestamp, payloadValue)
                     } catch (e: Exception) {
                         LOG.w(TAG, "Can't parse telemetry event payload", e)
                         null
@@ -70,18 +61,33 @@ class ScoreboardFragment : Fragment() {
             chart_list.layoutManager = LinearLayoutManager(context, orientation, false)
         }
 
-        sharedViewModel.chartDevices.observe(viewLifecycleOwner) { devices ->
+        sharedViewModel.chartDevicesWithFlow.observe(viewLifecycleOwner) { devices ->
             deviceAdapter.submitList(devices ?: emptyList())
+        }
+
+        sharedViewModel.selectedDeviceId.observe(viewLifecycleOwner) { deviceId ->
+            deviceAdapter.updateChartSelection(deviceId)
+        }
+    }
+
+    private val selectChartListener = object : ISelectChartListener {
+        override fun selectChart(chartId: String?) {
+            sharedViewModel.selectedDeviceId.value = chartId
         }
     }
 
     class DeviceListAdapter(
         private val inflater: LayoutInflater,
+        private val selectChartListener: ISelectChartListener,
         private val getFlowForDevice: (TelemetryDevice) -> Flow<Pair<Long, Double>>?
     ) : ListAdapter<TelemetryDevice, DeviceListAdapter.Holder>(DIFF_CALLBACK) {
 
-        var selectedDeviceId: String? = null
-            private set
+        private var selectedChartId: String? = null
+
+        fun updateChartSelection(chartId: String?) {
+            selectedChartId = chartId
+            notifyItemRangeChanged(0, itemCount, Any())
+        }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): Holder {
             val view = inflater.inflate(R.layout.chart_item_view, parent, false) as DeviceItemView
@@ -95,26 +101,20 @@ class ScoreboardFragment : Fragment() {
         inner class Holder(
             private val deviceView: DeviceItemView
         ) : RecyclerView.ViewHolder(deviceView) {
-            private var currentDevice: TelemetryDevice? = null
 
             fun bind(device: TelemetryDevice) {
                 with(deviceView) {
-                    currentDevice = device
                     observe(getFlowForDevice(device))
-                    isDeviceSelected = selectedDeviceId.equals(device.id)
+                    isChartSelected = selectedChartId.equals(device.id)
                     setBackgroundColor(
-                        context.getColor(if (isDeviceSelected) R.color.yellow_device_item_bg else R.color.white)
+                        context.getColor(if (isChartSelected) R.color.yellow_device_item_bg else R.color.white)
                     )
                     title.text = device.id
                     lostLabel.isVisible = device.isLost
 
                     deviceView.setOnClickListener {
-                        selectedDeviceId = if (selectedDeviceId != currentDevice?.id) {
-                            currentDevice?.id
-                        } else {
-                            null
-                        }
-                        notifyItemRangeChanged(0, itemCount, Any())
+                        val selectedChartId = if (selectedChartId == device.id) null else device.id
+                        selectChartListener.selectChart(selectedChartId)
                     }
                 }
             }
@@ -131,6 +131,10 @@ class ScoreboardFragment : Fragment() {
                 }
             }
         }
+    }
+
+    interface ISelectChartListener {
+        fun selectChart(chartId: String?)
     }
 
     data class PhyPayload(

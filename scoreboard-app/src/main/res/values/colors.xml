@@ -10,4 +10,6 @@
 
     <color name="chart_grid_color">#4CFFFFFF</color>
     <color name="yellow_device_item_bg">#FFFFB7</color>
+
+    <color name="green">#306F30</color>
 </resources>
