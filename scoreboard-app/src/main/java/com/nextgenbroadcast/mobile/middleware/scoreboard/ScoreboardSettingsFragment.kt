@@ -39,9 +39,9 @@ class ScoreboardSettingsFragment : Fragment() {
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-       binding.deviceIdsRecyclerIew.adapter = deviceIdsAdapter
+        binding.deviceIdsRecyclerIew.adapter = deviceIdsAdapter
 
-       binding.selectAllCheckbox.setOnClickListener {
+        binding.selectAllCheckbox.setOnClickListener {
             sharedViewModel.selectAll(binding.selectAllCheckbox.isChecked)
         }
 

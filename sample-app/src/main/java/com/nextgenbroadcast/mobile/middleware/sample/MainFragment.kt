@@ -47,7 +47,7 @@ class MainFragment : Fragment() {
     private lateinit var sourceAdapter: ArrayAdapter<String>
     private lateinit var receiverContentResolver: ReceiverContentResolver
     private lateinit var telemetryClient: TelemetryClient
-    private lateinit var binding:FragmentMainBinding
+    private lateinit var binding: FragmentMainBinding
 
     private var servicesList: List<AVService>? = null
     private var currentAppData: AppData? = null
@@ -113,7 +113,7 @@ class MainFragment : Fragment() {
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-         binding = FragmentMainBinding.inflate(inflater, container, false).apply {
+        binding = FragmentMainBinding.inflate(inflater, container, false).apply {
             lifecycleOwner = viewLifecycleOwner
             viewModel = viewViewModel
         }
@@ -159,7 +159,7 @@ class MainFragment : Fragment() {
             state = BottomSheetBehavior.STATE_COLLAPSED
         }
 
-       binding.serviceList.setOnItemClickListener { _, _, position, _ ->
+        binding.serviceList.setOnItemClickListener { _, _, position, _ ->
             bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
 
             servicesList?.getOrNull(position)?.let { service ->
@@ -192,7 +192,7 @@ class MainFragment : Fragment() {
         }
 
         binding.phyChart.setOnLongClickListener {
-            binding.phyChart.takeSnapshotAndShare(requireContext(), "binding.phyChart", getString(R.string.chart_phy_share_title))
+            binding.phyChart.takeSnapshotAndShare(requireContext(), "phyChart", getString(R.string.chart_phy_share_title))
             true
         }
         binding.phyChart.setDataSource(newChartDataSource())
@@ -414,7 +414,7 @@ class MainFragment : Fragment() {
         servicesList = services
 
         if (services.isNotEmpty()) {
-           binding.serviceList.adapter = serviceAdapter
+            binding.serviceList.adapter = serviceAdapter
             serviceAdapter.setServices(services)
         } else {
             binding.serviceList.adapter = sourceAdapter
@@ -459,7 +459,8 @@ class MainFragment : Fragment() {
     }
 
     private fun setBAAvailability(available: Boolean) {
-        binding.userAgentWebView.visibility = if (available) View.VISIBLE else View.GONE // GONE will prevent BA from sending resize requests when UA is not visible
+        binding.userAgentWebView.visibility =
+            if (available) View.VISIBLE else View.GONE // GONE will prevent BA from sending resize requests when UA is not visible
     }
 
     private fun showFileChooser() {
@@ -494,7 +495,8 @@ class MainFragment : Fragment() {
 
     private fun loadBroadcasterApplication(appData: AppData) {
         if (binding.userAgentWebView.serverCertificateHash == null) {
-            binding.userAgentWebView.serverCertificateHash = receiverContentResolver.queryServerCertificate()
+            binding.userAgentWebView.serverCertificateHash =
+                receiverContentResolver.queryServerCertificate()
         }
         binding.userAgentWebView.loadBAContent(appData.appEntryPage)
         receiverContentResolver.publishApplicationState(ApplicationState.LOADED)
