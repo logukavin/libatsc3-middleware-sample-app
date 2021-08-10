@@ -3,7 +3,6 @@ package com.nextgenbroadcast.mobile.middleware.sample
 import android.app.Application
 import com.bugfender.sdk.Bugfender
 import com.nextgenbroadcast.mobile.core.LOG
-import com.nextgenbroadcast.mobile.middleware.service.EmbeddedAtsc3Service
 
 class App : Application() {
 
@@ -21,7 +20,5 @@ class App : Application() {
         } catch (e: Exception) {
             LOG.d("App", "Failed to read Device Id", e)
         }
-
-        EmbeddedAtsc3Service.init()
     }
 }
