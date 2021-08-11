@@ -11,6 +11,15 @@
 <!-- jjustman-2020-12-16- todo - remove me?   <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />-->
     <uses-feature android:glEsVersion="0x00030002" android:required="true" />
 
+
+    <queries>
+        <!-- Specific apps you interact with, eg: -->
+        <package android:name="com.vuzix.companion" />
+        <intent>
+            <action android:name="com.nextgen.vuzixmonitor.action.TELEMETRY" />
+        </intent>
+    </queries>
+
     <application
         android:name=".App"
         android:allowBackup="true"
