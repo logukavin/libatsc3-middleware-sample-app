@@ -224,13 +224,13 @@ afterEvaluate {
             embeddedRelease(MavenPublication) {
                 groupId = 'com.nextgenbroadcast.mobile'
                 version = project.hasProperty('artifactVersion') ? artifactVersion : null
-                artifactId = project.name + "-embedded"
+                artifactId = project.name
                 from components.embeddedRelease
             }
             standaloneRelease(MavenPublication) {
                 groupId = 'com.nextgenbroadcast.mobile'
                 version = project.hasProperty('artifactVersion') ? artifactVersion : null
-                artifactId = project.name + "-standalone"
+                artifactId = project.name + "-stln"
                 from components.standaloneRelease
             }
         }
