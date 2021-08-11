@@ -121,7 +121,7 @@ public class Atsc3MMTExtractor implements Extractor {
                 buffer.setPosition(0);
             }
         } catch (Exception ex) {
-            Log.w("MMTExtractor", "readSample - packet_id: ${currentSampleId}, Exception, returning END_OF_INPUT - causing ExoPlayer DataSource teardown/unwind, ex: " + ex + ", messgae: " + ex.getMessage() + ",  Type: " + currentSampleType + ", sample TimeUs: " + currentSampleTimeUs + ",  sample size: " + currentSampleSize);
+            Log.w("MMTExtractor", "readSample - packet_id: " + currentSampleId + ", Exception, returning END_OF_INPUT - causing ExoPlayer DataSource teardown/unwind, ex: " + ex + ", messgae: " + ex.getMessage() + ",  Type: " + currentSampleType + ", sample TimeUs: " + currentSampleTimeUs + ",  sample size: " + currentSampleSize);
 
             return Extractor.RESULT_END_OF_INPUT;
         }
