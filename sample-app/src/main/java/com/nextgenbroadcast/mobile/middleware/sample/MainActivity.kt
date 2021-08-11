@@ -19,6 +19,9 @@ import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import com.google.android.play.core.appupdate.AppUpdateInfo
 import com.google.android.play.core.appupdate.AppUpdateManager
 import com.google.android.play.core.appupdate.AppUpdateManagerFactory
@@ -39,6 +42,7 @@ import kotlinx.coroutines.launch
 
 class MainActivity : BaseActivity() {
     private lateinit var appUpdateManager: AppUpdateManager
+    private lateinit var rootView:View
 
     private val viewViewModel: ViewViewModel by viewModels()
 
@@ -92,6 +96,7 @@ class MainActivity : BaseActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        rootView = window.decorView.findViewById(android.R.id.content)
         appUpdateManager = AppUpdateManagerFactory.create(applicationContext)
 
         supportFragmentManager
@@ -226,14 +231,18 @@ class MainActivity : BaseActivity() {
         if (isInPictureInPictureMode) return
 
         if (config.orientation == Configuration.ORIENTATION_LANDSCAPE) {
-            window.decorView.systemUiVisibility = (View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-                    or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                    or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                    or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                    or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                    or View.SYSTEM_UI_FLAG_FULLSCREEN)
+            WindowCompat.setDecorFitsSystemWindows(window, false)
+
+            WindowInsetsControllerCompat(window, rootView).let { controller ->
+                controller.hide(WindowInsetsCompat.Type.systemBars())
+                controller.systemBarsBehavior =
+                    WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            }
+
+
         } else if (config.orientation == Configuration.ORIENTATION_PORTRAIT) {
-            window.decorView.systemUiVisibility = (View.SYSTEM_UI_FLAG_VISIBLE)
+            WindowCompat.setDecorFitsSystemWindows(window, true)
+            WindowInsetsControllerCompat(window, rootView).show(WindowInsetsCompat.Type.systemBars())
         }
     }
 
