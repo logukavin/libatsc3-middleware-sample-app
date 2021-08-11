@@ -1,16 +1,13 @@
 package com.nextgenbroadcast.mobile.middleware.provider.mmt;
 
-import android.annotation.SuppressLint;
 import android.content.ContentProvider;
 import android.content.ContentResolver;
 import android.content.ContentUris;
 import android.content.ContentValues;
 import android.content.Context;
-import android.content.pm.ProviderInfo;
 import android.database.Cursor;
 import android.database.MatrixCursor;
 import android.net.Uri;
-import android.os.AsyncTask;
 import android.os.ParcelFileDescriptor;
 import android.provider.OpenableColumns;
 import android.util.Log;
@@ -39,6 +36,11 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.Executor;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMediaMMTBridgeCallbacks {
@@ -50,14 +52,22 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
 
     private static final String[] COLUMNS = {OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE};
 
-    private final AtomicInteger mSessionCount = new AtomicInteger();
-//    private final ConcurrentLinkedDeque<MMTFileDescriptor> descriptors = new ConcurrentLinkedDeque<>();
+    private static final int CORE_POOL_SIZE = 1;
+    private static final int MAXIMUM_POOL_SIZE = 5;
+    private static final int KEEP_ALIVE_SECONDS = 3;
+
+    private final ThreadFactory threadFactory = new ThreadFactory() {
+        private final AtomicInteger mCount = new AtomicInteger(1);
+        public Thread newThread(Runnable r) {
+            return new Thread(r, "MMT Pipe #" + mCount.getAndIncrement());
+        }
+    };
+
     private final CopyOnWriteArrayList<MMTFragmentWriter> descriptors = new CopyOnWriteArrayList<>();
 
+    private Executor threadPoolExecutor;
     private Atsc3ReceiverCore receiver;
     private Atsc3NdkMediaMMTBridge atsc3NdkMediaMMTBridge;
-//    private Handler mHandler;
-//    private StorageManager mStorageManager;
 
     private boolean FirstMfuBufferVideoKeyframeSent = false;
 
@@ -65,22 +75,14 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
     public boolean onCreate() {
         MmtPacketIdContext.Initialize();
 
+        threadPoolExecutor = new ThreadPoolExecutor(
+                CORE_POOL_SIZE, MAXIMUM_POOL_SIZE, KEEP_ALIVE_SECONDS, TimeUnit.SECONDS,
+                new SynchronousQueue(), threadFactory);
+
         receiver = Atsc3ReceiverStandalone.get(getContext());
         atsc3NdkMediaMMTBridge = new Atsc3NdkMediaMMTBridge(this);
 
-//        HandlerThread handlerThread = new HandlerThread("mmt-content-provider");
-//        handlerThread.start();
-//
-//        mHandler = new Handler(handlerThread.getLooper());
-
         return true;
-    }
-
-    @Override
-    public void attachInfo(@NonNull Context context, @NonNull ProviderInfo info) {
-        super.attachInfo(context, info);
-
-//        mStorageManager = (StorageManager) context.getSystemService(Context.STORAGE_SERVICE);
     }
 
     @Override
@@ -146,18 +148,25 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
     public ParcelFileDescriptor openFile(@NonNull Uri uri, @NonNull String mode)
             throws FileNotFoundException {
         // ContentProvider has already checked granted permissions
-        Log.i("MMTContentProvider",String.format("openFile with uri: %s, mode: %s", uri.toString(), mode));
+        Log.i(TAG, String.format("openFile with uri: %s, mode: %s", uri.toString(), mode));
 
         final AVService service = getServiceForUri(uri);
         if (service == null) {
             throw new FileNotFoundException("Unable to find service for " + uri);
         }
 
+        boolean audioOnly = service.getCategory() == SLTConstants.SERVICE_CATEGORY_AO;
+
         try {
-            mSessionCount.incrementAndGet();
-            //TODO: temporary solution
-            //jjustman-2021-05-24 - TODO: fix this
-            if (!ATSC3PlayerFlags.ATSC3PlayerStartPlayback) {
+            final ParcelFileDescriptor[] fds = ParcelFileDescriptor.createPipe();
+            final MMTFragmentWriter writer = new MMTFragmentWriter(audioOnly);
+
+            synchronized (descriptors) {
+                descriptors.add(writer);
+            }
+
+            // hack to force an audio playback because we don't get an MFU initialization data that usually rise it
+            if (audioOnly) {
                 ATSC3PlayerFlags.ATSC3PlayerStartPlayback = true;
 
                 //jjustman-2021-01-13 - HACK
@@ -165,87 +174,51 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
                 MMTClockAnchor.MfuClockAnchor = 0;
             }
 
-            boolean audioOnly = service.getCategory() == SLTConstants.SERVICE_CATEGORY_AO;
-            // hack to force an audio playback because we don't get an MFU initialization data that usually rise it
-            if (audioOnly) {
-                ATSC3PlayerFlags.ATSC3PlayerStartPlayback = true;
-            }
+            threadPoolExecutor.execute(() -> {
+                writeToFile(fds[1], writer, service);
 
-            /*
-                An old solution based on Proxy File Descriptor. Was replaced one based on Pipe File Descriptor
-             */
-//            MMTFileDescriptor descriptor = new MMTFileDescriptor(audioOnly) {
-//                @Override
-//                public void onRelease() {
-//                    super.onRelease();
-//
-//                    int sessionCount = mSessionCount.decrementAndGet();
-//                    descriptors.remove(this);
-//
-//                    ATSC3PlayerFlags.ATSC3PlayerStartPlayback = (sessionCount > 0);
-//                }
-//            };
-//
-//            descriptors.add(descriptor);
-//
-//            final int fileMode = modeToMode(mode);
-//            return mStorageManager.openProxyFileDescriptor(fileMode, descriptor, mHandler);
-
-            final ParcelFileDescriptor[] fds = ParcelFileDescriptor.createPipe();
-            final MMTFragmentWriter writer = new MMTFragmentWriter(audioOnly);
-
-            @SuppressLint("StaticFieldLeak")
-            AsyncTask<Object, Object, Object> task = new AsyncTask<Object, Object, Object>() {
-                @Override
-                protected void onPreExecute() {
-                    descriptors.add(writer);
-                }
-
-                @Override
-                protected Object doInBackground(Object... params) {
-                    try (FileOutputStream out = new ParcelFileDescriptor.AutoCloseOutputStream(fds[1])) {
-                        /*
-                         * Read MMT data until requested service is selected. Check selected service
-                         * every 5 seconds if no MMT data available. That could be if another service
-                         * selected, route closed or some other problems happened. Short retry loop tries
-                         * to receive MMT data during 500 mills if writer didn't write anything to output stream.
-                         */
-                        while (receiver.getSelectedService() == service) {
-                            int counter = -50; // 5 sec
-                            while (counter < 5) {
-                                int bytesRead = writer.write(out);
-                                if (bytesRead > 0) {
-                                    counter = 0;
-                                } else {
-                                    counter++;
-                                    if (counter < 0) {
-                                        Thread.sleep(100);
-                                    }
-                                }
-                            }
-                        }
-                    } catch (Exception e) {
-                        LOG.i(TAG, "Failed to read MMT media stream", e);
-                    } finally {
-                        writer.close();
-                    }
-
-                    return null;
-                }
-
-                @Override
-                protected void onPostExecute(Object o) {
-                    int sessionCount = mSessionCount.decrementAndGet();
+                synchronized (descriptors) {
                     descriptors.remove(writer);
 
-                    ATSC3PlayerFlags.ATSC3PlayerStartPlayback = (sessionCount > 0);
+                    if (descriptors.isEmpty()) {
+                        ATSC3PlayerFlags.ATSC3PlayerStartPlayback = false;
+                    }
                 }
-            };
-            task.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, (Object[]) null);
+            });
 
             return fds[0];
         } catch (IOException e) {
             throw new FileNotFoundException(e.getMessage());
+        }
+    }
+
+    private void writeToFile(ParcelFileDescriptor fd, MMTFragmentWriter writer, AVService service) {
+        try (FileOutputStream out = new ParcelFileDescriptor.AutoCloseOutputStream(fd)) {
+            /*
+             * Read MMT data until requested service is selected. Check selected service
+             * every 5 seconds if no MMT data available. That could be if another service
+             * selected, route closed or some other problems happened. Short retry loop tries
+             * to receive MMT data during 500 mills if writer didn't write anything to output stream.
+             */
+            while (receiver.getSelectedService() == service) {
+                int counter = -50; // 5 sec
+                while (counter < 5) {
+                    int bytesRead = writer.write(out);
+                    if (bytesRead > 0) {
+                        counter = 0;
+                    } else {
+                        counter++;
+                        if (counter < 0) {
+                            //noinspection BusyWait
+                            Thread.sleep(100);
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            LOG.i(TAG, "Failed to read MMT media stream", e);
+        } finally {
+            writer.close();
         }
     }
 
@@ -256,34 +229,6 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
     public static Uri getUriForService(@NonNull Context context, @NonNull String authority, @NonNull String serviceId) {
         return new Uri.Builder().scheme(ContentResolver.SCHEME_CONTENT)
                 .authority(authority).encodedPath(serviceId).build();
-    }
-
-    /**
-     * Copied from ContentResolver.java
-     */
-    private static int modeToMode(String mode) {
-        int modeBits;
-        if ("r".equals(mode)) {
-            modeBits = ParcelFileDescriptor.MODE_READ_ONLY;
-        } else if ("w".equals(mode) || "wt".equals(mode)) {
-            modeBits = ParcelFileDescriptor.MODE_WRITE_ONLY
-                    | ParcelFileDescriptor.MODE_CREATE
-                    | ParcelFileDescriptor.MODE_TRUNCATE;
-        } else if ("wa".equals(mode)) {
-            modeBits = ParcelFileDescriptor.MODE_WRITE_ONLY
-                    | ParcelFileDescriptor.MODE_CREATE
-                    | ParcelFileDescriptor.MODE_APPEND;
-        } else if ("rw".equals(mode)) {
-            modeBits = ParcelFileDescriptor.MODE_READ_WRITE
-                    | ParcelFileDescriptor.MODE_CREATE;
-        } else if ("rwt".equals(mode)) {
-            modeBits = ParcelFileDescriptor.MODE_READ_WRITE
-                    | ParcelFileDescriptor.MODE_CREATE
-                    | ParcelFileDescriptor.MODE_TRUNCATE;
-        } else {
-            throw new IllegalArgumentException("Invalid mode: " + mode);
-        }
-        return modeBits;
     }
 
     private static String[] copyOf(String[] original, int newLength) {
@@ -347,7 +292,7 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
     }
 
     private boolean isActive() {
-        return mSessionCount.get() > 0;
+        return !descriptors.isEmpty();
     }
 
     private void InitMpuMetadata_HEVC_NAL_Payload(MpuMetadata_HEVC_NAL_Payload payload) {
@@ -365,10 +310,13 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
             Log.d("MMTContentProvider", String.format("PushMfuByteBufferFragment:WARN V: packet_id: %d, mpu_sequence_number: %d, video.duration_us: %d, missing extracted_sample_duration",
                     mfuByteBufferFragment.packet_id, mfuByteBufferFragment.mpu_sequence_number,
                     MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us));
-        } else if(MmtPacketIdContext.isAudioPacket(mfuByteBufferFragment.packet_id) && MmtPacketIdContext.getAudioPacketStatistic(mfuByteBufferFragment.packet_id).extracted_sample_duration_us == 0) {
-            Log.d("MMTContentProvider", String.format("PushMfuByteBufferFragment:WARN A: packet_id: %d, mpu_sequence_number: %d, audio.duration_us: %d, missing extracted_sample_duration",
-                    mfuByteBufferFragment.packet_id, mfuByteBufferFragment.mpu_sequence_number,
-                    MmtPacketIdContext.getAudioPacketStatistic(mfuByteBufferFragment.packet_id).extracted_sample_duration_us)); //jjustman-2021-06-02: make this...not dumb? :)
+        } else if (MmtPacketIdContext.isAudioPacket(mfuByteBufferFragment.packet_id)) {
+            MmtPacketIdContext.MmtMfuStatistics audioPacketStatistic = MmtPacketIdContext.getAudioPacketStatistic(mfuByteBufferFragment.packet_id);
+            if (audioPacketStatistic != null && audioPacketStatistic.extracted_sample_duration_us == 0) {
+                Log.d("MMTContentProvider", String.format("PushMfuByteBufferFragment:WARN A: packet_id: %d, mpu_sequence_number: %d, audio.duration_us: %d, missing extracted_sample_duration",
+                        mfuByteBufferFragment.packet_id, mfuByteBufferFragment.mpu_sequence_number,
+                        audioPacketStatistic.extracted_sample_duration_us)); //jjustman-2021-06-02: make this...not dumb? :)
+            }
         }
 
         //jjustman-2020-12-02 - TODO: fix me
@@ -509,7 +457,7 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
                     mfuByteBufferFragment.sample_number,
                     mfuByteBufferFragment.bytebuffer_length,
                     mfuByteBufferFragment.get_safe_mfu_presentation_time_uS_computed(),
-                    maxQueueSize()/*mfuBufferQueue.size()*/));
+                    maxQueueSize()));
         }
     }
 

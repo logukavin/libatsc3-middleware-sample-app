@@ -4,6 +4,7 @@ import android.util.Log
 
 object LOG {
 
+    @JvmOverloads
     @JvmStatic
     fun v(tag: String, msg: String, tr: Throwable? = null) {
         if (tr != null) {
@@ -13,6 +14,7 @@ object LOG {
         }
     }
 
+    @JvmOverloads
     @JvmStatic
     fun d(tag: String, msg: String, tr: Throwable? = null) {
         if (tr != null) {
@@ -22,6 +24,7 @@ object LOG {
         }
     }
 
+    @JvmOverloads
     @JvmStatic
     fun i(tag: String, msg: String, tr: Throwable? = null) {
         if (tr != null) {
@@ -31,6 +34,7 @@ object LOG {
         }
     }
 
+    @JvmOverloads
     @JvmStatic
     fun w(tag: String, msg: String, tr: Throwable? = null) {
         if (tr != null) {
@@ -40,6 +44,7 @@ object LOG {
         }
     }
 
+    @JvmOverloads
     @JvmStatic
     fun e(tag: String, msg: String, tr: Throwable? = null) {
         if (tr != null) {
