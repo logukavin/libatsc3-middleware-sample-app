@@ -91,8 +91,6 @@ internal class MediaHolder(
     }
 
     fun onServiceChanged(service: AVService?) {
-        player.reset()
-
         mediaSession.setQueueTitle(service?.shortName)
         mediaSession.isActive = service != null
         mediaSession.setMetadata(
@@ -141,11 +139,13 @@ internal class MediaHolder(
     }
 
     fun onMediaUrlChanged(mediaUrl: MediaUrl?) {
-        val service = mediaUrl?.let {
+        val canPlay = mediaUrl?.let {
             receiver.findServiceById(mediaUrl.bsid, mediaUrl.serviceId)
-        } ?: return
+        }?.let { service ->
+            receiver.playEmbedded(service)
+        }
 
-        if (receiver.playEmbedded(service)) {
+        if (canPlay == true) {
             player.play(receiver.getMediaUri(mediaUrl))
         } else {
             player.reset()
