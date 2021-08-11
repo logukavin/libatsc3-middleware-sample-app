@@ -131,13 +131,13 @@ class MainActivity : BaseActivity() {
         appUpdateManager.appUpdateInfo.addOnSuccessListener { appUpdateInfo ->
             if (appUpdateInfo.updateAvailability() == UpdateAvailability.DEVELOPER_TRIGGERED_UPDATE_IN_PROGRESS) {
                 // If an in-app update is already running, resume the update.
-                appUpdateManager.startUpdateFlowForResult(appUpdateInfo, AppUpdateType.IMMEDIATE, this, APP_UPDATE_REQUEST_CODE);
+                appUpdateManager.startUpdateFlowForResult(appUpdateInfo, AppUpdateType.IMMEDIATE, this, APP_UPDATE_REQUEST_CODE)
             }
         }
     }
 
     override fun onStop() {
-        Log.w(TAG, "onStop() invoked - our activity is no longer visible");
+        Log.w(TAG, "onStop() invoked - our activity is no longer visible")
 
         super.onStop()
 
