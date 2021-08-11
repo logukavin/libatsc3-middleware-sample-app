@@ -69,9 +69,9 @@ class PhyChartView @JvmOverloads constructor(
         override fun getSeries() = listOf(graphSeries)
     }
 
-    data class PhyPayload(
-        val snr1000: Int
-    )
+//    data class PhyPayload(
+//        val snr1000: Int
+//    )
 
     companion object {
         private const val SNR_MAX_VALUE = 30.0

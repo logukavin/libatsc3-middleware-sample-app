@@ -10,8 +10,6 @@ import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.player.Atsc3MediaPlayer
 import com.nextgenbroadcast.mobile.player.MMTConstants
-import java.util.*
-import kotlin.concurrent.fixedRateTimer
 
 typealias OnPlaybackChangeListener = (state: PlaybackState, position: Long, rate: Float) -> Unit
 
