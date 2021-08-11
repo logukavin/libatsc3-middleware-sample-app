@@ -22,6 +22,11 @@ import java.util.Arrays;
 
 public class Atsc3MMTExtractor implements Extractor {
     public static final String TAG = Atsc3MMTExtractor.class.getSimpleName();
+
+    private static final int AV_SAMPLE_BUFFER_SIZE = 32 * 1024;
+    private static final int AO_SAMPLE_BUFFER_SIZE = 2 * 1024;
+    private static final int DEFAULT_SAMPLE_BUFFER_SIZE = 1024;
+
     public static int ReadSample_TrackIsNull_counter = 0;
     public static int ReadSample_ExtractSampleHeader_counter = 0;
 
@@ -36,11 +41,11 @@ public class Atsc3MMTExtractor implements Extractor {
     private boolean hasOutputFormat;
     private boolean hasOutputSeekMap;
 
-    private final ParsableByteArray buffer = new ParsableByteArray(64 * 1024);
+    private final ParsableByteArray sampleBuffer = new ParsableByteArray(DEFAULT_SAMPLE_BUFFER_SIZE);
     private final SparseArray<MmtTrack> tracks = new SparseArray<>();
 
     public Atsc3MMTExtractor() {
-        buffer.setPosition(buffer.limit());
+        sampleBuffer.setPosition(sampleBuffer.limit());
     }
 
     @Override
@@ -94,31 +99,31 @@ public class Atsc3MMTExtractor implements Extractor {
     private int readSample(ExtractorInput extractorInput) throws IOException, InterruptedException {
         try {
             if (currentSampleBytesRemaining == 0) {
-                if (buffer.bytesLeft() < MMTConstants.SIZE_SAMPLE_HEADER) {
+                if (sampleBuffer.bytesLeft() < MMTConstants.SIZE_SAMPLE_HEADER) {
                     int offset = 0;
-                    if (buffer.bytesLeft() > 0) {
-                        offset = buffer.bytesLeft();
-                        System.arraycopy(buffer.data, buffer.getPosition(), buffer.data, 0, buffer.bytesLeft());
+                    if (sampleBuffer.bytesLeft() > 0) {
+                        offset = sampleBuffer.bytesLeft();
+                        System.arraycopy(sampleBuffer.data, sampleBuffer.getPosition(), sampleBuffer.data, 0, sampleBuffer.bytesLeft());
                     }
 
-                    extractorInput.readFully(buffer.data, /* offset= */ offset, /* length= */ /*MMTConstants.SIZE_SAMPLE_HEADER*/ buffer.limit() - offset);
-                    buffer.setPosition(0);
+                    extractorInput.readFully(sampleBuffer.data, /* offset= */ offset, /* length= */ /*MMTConstants.SIZE_SAMPLE_HEADER*/ sampleBuffer.limit() - offset);
+                    sampleBuffer.setPosition(0);
                 }
 
-                currentSampleType = (byte) buffer.readUnsignedByte();
-                currentSampleSize = buffer.readInt();
-                currentSampleId = buffer.readInt();
-                currentSampleTimeUs = buffer.readLong();
-                currentSampleIsKey = buffer.readUnsignedByte() == 1;
+                currentSampleType = (byte) sampleBuffer.readUnsignedByte();
+                currentSampleSize = sampleBuffer.readInt();
+                currentSampleId = sampleBuffer.readInt();
+                currentSampleTimeUs = sampleBuffer.readLong();
+                currentSampleIsKey = sampleBuffer.readUnsignedByte() == 1;
                 currentSampleBytesRemaining = currentSampleSize;
                 //Log.d("!!!", "sid: " + currentSampleId + ", sample Type: " + currentSampleType + ", sample TimeUs: " + currentSampleTimeUs + ",  sample size: " + currentSampleSize);
                 if((ReadSample_ExtractSampleHeader_counter++ % 1000) == 0) {
                     Log.d("MMTExtractor", String.format("sampleType: %d, packet_id: %d, sampleTimeUs: %d, count: %d", currentSampleType, currentSampleId, currentSampleTimeUs, ReadSample_ExtractSampleHeader_counter));
                 }
 
-            } else if (buffer.bytesLeft() == 0) {
-                extractorInput.readFully(buffer.data, /* offset= */ 0, /* length= */ buffer.limit());
-                buffer.setPosition(0);
+            } else if (sampleBuffer.bytesLeft() == 0) {
+                extractorInput.readFully(sampleBuffer.data, /* offset= */ 0, /* length= */ sampleBuffer.limit());
+                sampleBuffer.setPosition(0);
             }
         } catch (Exception ex) {
             Log.w("MMTExtractor", "readSample - packet_id: " + currentSampleId + ", Exception, returning END_OF_INPUT - causing ExoPlayer DataSource teardown/unwind, ex: " + ex + ", messgae: " + ex.getMessage() + ",  Type: " + currentSampleType + ", sample TimeUs: " + currentSampleTimeUs + ",  sample size: " + currentSampleSize);
@@ -130,9 +135,9 @@ public class Atsc3MMTExtractor implements Extractor {
         if (track == null) {
             int skipped = 0;
             if (currentSampleBytesRemaining > 0) {
-                if (buffer.bytesLeft() > 0) {
-                    skipped = Math.min(currentSampleBytesRemaining, buffer.bytesLeft());
-                    buffer.skipBytes(skipped);
+                if (sampleBuffer.bytesLeft() > 0) {
+                    skipped = Math.min(currentSampleBytesRemaining, sampleBuffer.bytesLeft());
+                    sampleBuffer.skipBytes(skipped);
                 }
                 currentSampleBytesRemaining -= skipped;
             }
@@ -146,9 +151,9 @@ public class Atsc3MMTExtractor implements Extractor {
         TrackOutput trackOutput = track.trackOutput;
 
         int bytesAppended = 0;
-        if (buffer.bytesLeft() > 0) {
-            int read = Math.min(buffer.bytesLeft(), currentSampleBytesRemaining);
-            trackOutput.sampleData(buffer, read);
+        if (sampleBuffer.bytesLeft() > 0) {
+            int read = Math.min(sampleBuffer.bytesLeft(), currentSampleBytesRemaining);
+            trackOutput.sampleData(sampleBuffer, read);
             bytesAppended += read;
         }
 
@@ -207,6 +212,9 @@ public class Atsc3MMTExtractor implements Extractor {
             input.readFully(buffer.array(), /* offset= */ 0, /* length= */ mediaHeaderSize);
             buffer.rewind();
 
+            boolean hasVideoTrack = false;
+            boolean hasAudioTrack = false;
+
             while (buffer.remaining() > 0) {
                 int headerSize = buffer.getInt();
                 int trackType = buffer.get();
@@ -226,6 +234,8 @@ public class Atsc3MMTExtractor implements Extractor {
                         TrackOutput videoOutput = MMTMediaTrackUtils.createVideoOutput(extractorOutput, packetId, videoType, videoWidth, videoHeight, videoFrameRate, data);
                         if (videoOutput != null) {
                             tracks.put(packetId, new MmtTrack(videoOutput, defaultSampleDurationUs));
+
+                            hasVideoTrack = true;
                         }
                     }
                     break;
@@ -242,6 +252,8 @@ public class Atsc3MMTExtractor implements Extractor {
                             TrackOutput audioOutput = extractorOutput.track(packetId, C.TRACK_TYPE_AUDIO);
                             audioOutput.format(audioFormat);
                             tracks.put(packetId, new MmtTrack(audioOutput, defaultSampleDurationUs));
+
+                            hasAudioTrack = true;
                         }
                     }
                     break;
@@ -258,6 +270,13 @@ public class Atsc3MMTExtractor implements Extractor {
                     break;
                 }
             }
+
+            if (hasVideoTrack) {
+                sampleBuffer.reset(AV_SAMPLE_BUFFER_SIZE);
+            } else if (hasAudioTrack) {
+                sampleBuffer.reset(AO_SAMPLE_BUFFER_SIZE);
+            }
+            sampleBuffer.setPosition(sampleBuffer.limit());
 
             extractorOutput.endTracks();
         }
