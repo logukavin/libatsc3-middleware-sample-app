@@ -14,7 +14,7 @@ public class Atsc3RingBuffer {
     private final boolean invertByteOrder;
     private final ByteBuffer zeroBuffer = ByteBuffer.allocate(0);
 
-    private int currentPageNumber;
+    private int currentPageNumber = 1; // should be greater then zero
     private int lastPageNumber;
     private int lastBufferPosition;
 
@@ -28,7 +28,9 @@ public class Atsc3RingBuffer {
     public int readNextPage(ByteBuffer outBuffer) {
         outBuffer.clear();
         int pageSize = readNextPage(0, outBuffer.capacity(), outBuffer.array(), zeroBuffer);
-        outBuffer.position(RING_BUFFER_PAGE_HEADER_OFFSET);
+        if (pageSize > 0) {
+            outBuffer.position(RING_BUFFER_PAGE_HEADER_OFFSET);
+        }
         return pageSize;
     }
 

@@ -22,12 +22,10 @@ import com.nextgenbroadcast.mobile.player.MMTConstants;
 import com.nextgenbroadcast.mobile.core.model.AVService;
 import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverCore;
 import com.nextgenbroadcast.mobile.core.atsc3.SLTConstants;
-import com.nextgenbroadcast.mobile.core.atsc3.mmt.MMTConstants;
 import com.nextgenbroadcast.mobile.middleware.atsc3.buffer.Atsc3RingBuffer;
 
 import org.ngbp.libatsc3.middleware.Atsc3NdkMediaMMTBridge;
 import org.ngbp.libatsc3.middleware.android.ATSC3PlayerFlags;
-import org.ngbp.libatsc3.middleware.android.DebuggingFlags;
 import org.ngbp.libatsc3.middleware.android.application.interfaces.IAtsc3NdkMediaMMTBridgeCallbacks;
 import org.ngbp.libatsc3.middleware.android.mmt.MfuByteBufferFragment;
 import org.ngbp.libatsc3.middleware.android.mmt.MmtPacketIdContext;
@@ -163,32 +161,21 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
             throw new FileNotFoundException("Unable to find service for " + uri);
         }
 
-        ByteBuffer buffer = fragmentBuffer.duplicate();
-        Atsc3RingBuffer fragmentBuff = new Atsc3RingBuffer(buffer, FRAGMENT_BUFFER_PAGE_SIZE);
-
-        //MMTFileDescriptor descriptor = new MMTFileDescriptor(service.getId(), fragmentBuff, audioOnly) {
-
         boolean audioOnly = service.getCategory() == SLTConstants.SERVICE_CATEGORY_AO;
 
         try {
             final ParcelFileDescriptor[] fds = ParcelFileDescriptor.createPipe();
-            final MMTFragmentWriter writer = new MMTFragmentWriter(audioOnly);
+            final Atsc3RingBuffer fragmentBuff = new Atsc3RingBuffer(fragmentBuffer.duplicate(), FRAGMENT_BUFFER_PAGE_SIZE);
+            final MMTFragmentWriter writer = new MMTFragmentWriter(service.getId(), fragmentBuff, audioOnly);
 
             synchronized (descriptors) {
                 descriptors.add(writer);
+
+                atsc3NdkMediaMMTBridge.rewindBuffer();
             }
 
-            //TODO: temporary solution
+            //TODO: temporary solution, requared for atsc3_onExtractedSampleDuration()
             if (!ATSC3PlayerFlags.ATSC3PlayerStartPlayback) {
-                ATSC3PlayerFlags.ATSC3PlayerStartPlayback = true;
-
-                //jjustman-2021-01-13 - HACK
-                MMTClockAnchor.SystemClockAnchor = 0;
-                MMTClockAnchor.MfuClockAnchor = 0;
-            }
-
-            // hack to force an audio playback because we don't get an MFU initialization data that usually rise it
-            if (audioOnly) {
                 ATSC3PlayerFlags.ATSC3PlayerStartPlayback = true;
 
                 //jjustman-2021-01-13 - HACK
@@ -227,6 +214,8 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
                 while (counter < 5) {
                     int bytesRead = writer.write(out);
                     if (bytesRead > 0) {
+                        //noinspection BusyWait
+                        Thread.sleep(10); // await for data
                         counter = 0;
                     } else {
                         counter++;
