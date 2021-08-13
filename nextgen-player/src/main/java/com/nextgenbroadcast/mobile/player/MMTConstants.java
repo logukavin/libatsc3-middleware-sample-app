@@ -14,8 +14,7 @@ public final class MMTConstants {
             + Byte.BYTES;       /* is key frame */
 
     public static final int HEADER_SIZE =
-            Integer.BYTES       /* full header size */
-            + Long.BYTES;       /* default sample duration */
+            Integer.BYTES;       /* full header size */
 
     public static final int VIDEO_TRACK_HEADER_SIZE =
             Integer.BYTES       /* header size */

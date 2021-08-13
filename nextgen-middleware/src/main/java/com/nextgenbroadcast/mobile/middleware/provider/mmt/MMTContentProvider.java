@@ -46,10 +46,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMediaMMTBridgeCallbacks {
     public static final String TAG = MMTContentProvider.class.getSimpleName();
 
-    //jjustman-2020-12-23 - give the a/v/s decoder some time to decode frames, otherwise we will stall at startup
-    //jjustman-2021-01-13 - TODO: remove me
-    public static final long PTS_OFFSET_US = 266000L;
-
     private static final String[] COLUMNS = {OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE};
 
     private static final int CORE_POOL_SIZE = 1;
