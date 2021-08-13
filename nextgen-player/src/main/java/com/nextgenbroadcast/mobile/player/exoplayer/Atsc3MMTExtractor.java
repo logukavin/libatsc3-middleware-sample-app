@@ -23,8 +23,6 @@ import java.util.Arrays;
 public class Atsc3MMTExtractor implements Extractor {
     public static final String TAG = Atsc3MMTExtractor.class.getSimpleName();
 
-    private static final int AV_SAMPLE_BUFFER_SIZE = 32 * 1024;
-    private static final int AO_SAMPLE_BUFFER_SIZE = 2 * 1024;
     private static final int DEFAULT_SAMPLE_BUFFER_SIZE = 1024;
 
     public static int ReadSample_TrackIsNull_counter = 0;
@@ -212,9 +210,6 @@ public class Atsc3MMTExtractor implements Extractor {
             input.readFully(buffer.array(), /* offset= */ 0, /* length= */ mediaHeaderSize);
             buffer.rewind();
 
-            boolean hasVideoTrack = false;
-            boolean hasAudioTrack = false;
-
             while (buffer.remaining() > 0) {
                 int headerSize = buffer.getInt();
                 int trackType = buffer.get();
@@ -234,8 +229,6 @@ public class Atsc3MMTExtractor implements Extractor {
                         TrackOutput videoOutput = MMTMediaTrackUtils.createVideoOutput(extractorOutput, packetId, videoType, videoWidth, videoHeight, videoFrameRate, data);
                         if (videoOutput != null) {
                             tracks.put(packetId, new MmtTrack(videoOutput, defaultSampleDurationUs));
-
-                            hasVideoTrack = true;
                         }
                     }
                     break;
@@ -252,8 +245,6 @@ public class Atsc3MMTExtractor implements Extractor {
                             TrackOutput audioOutput = extractorOutput.track(packetId, C.TRACK_TYPE_AUDIO);
                             audioOutput.format(audioFormat);
                             tracks.put(packetId, new MmtTrack(audioOutput, defaultSampleDurationUs));
-
-                            hasAudioTrack = true;
                         }
                     }
                     break;
@@ -270,13 +261,6 @@ public class Atsc3MMTExtractor implements Extractor {
                     break;
                 }
             }
-
-            if (hasVideoTrack) {
-                sampleBuffer.reset(AV_SAMPLE_BUFFER_SIZE);
-            } else if (hasAudioTrack) {
-                sampleBuffer.reset(AO_SAMPLE_BUFFER_SIZE);
-            }
-            sampleBuffer.setPosition(sampleBuffer.limit());
 
             extractorOutput.endTracks();
         }
