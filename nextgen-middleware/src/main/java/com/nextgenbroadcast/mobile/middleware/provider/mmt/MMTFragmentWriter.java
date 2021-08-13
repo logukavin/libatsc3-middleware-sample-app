@@ -117,8 +117,7 @@ public class MMTFragmentWriter {
         fileHeaderBuffer.put(MMTConstants.mmtSignature);
 
         // write stream Header data
-        fileHeaderBuffer.putInt(headerSize)
-                .putLong(MMTContentProvider.PTS_OFFSET_US);
+        fileHeaderBuffer.putInt(headerSize);
 
         if (videoTrackCount > 0) {
             int videoFormat = getIntegerCodeForString("hev1");
@@ -289,8 +288,7 @@ public class MMTFragmentWriter {
                 }
             }
             long anchorMfuPresentationTimestampUs = getMinNonZeroMfuPresentationTimestampForAnchor(toProcessMfuByteBufferFragment.packet_id);
-            long mpuPresentationTimestampDeltaUs = toProcessMfuByteBufferFragment.mfu_presentation_time_uS_computed - anchorMfuPresentationTimestampUs;
-            return mpuPresentationTimestampDeltaUs + MMTContentProvider.PTS_OFFSET_US;
+            return toProcessMfuByteBufferFragment.mfu_presentation_time_uS_computed - anchorMfuPresentationTimestampUs;
         }
 
         return 0;

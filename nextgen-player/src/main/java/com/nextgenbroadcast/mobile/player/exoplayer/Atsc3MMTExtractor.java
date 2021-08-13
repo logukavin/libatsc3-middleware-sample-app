@@ -167,22 +167,6 @@ public class Atsc3MMTExtractor implements Extractor {
             sampleFlags = C.BUFFER_FLAG_KEY_FRAME;
         }
 
-        /*
-            jjustman-2020-12-25: NOTE:
-                track.correctSampleTime will try to re-base from System.currentTimeMillis() - trackStartTime, BUT we have already done that in:
-
-                    MMTDataByteBuffer.getPresentationTimestampUs
-
-                NOTE: for track a/v sync, the trackStartTime needs to be the periodStartTime in millis, otherwise we will have track positionUs differences
-                        that are unable to reconcile against MMT's mpu_timestamp_descriptor NTP timestamp for track syncronization,
-                        even if super small (e.g. A/V lip sync observable)
-        Log.d("Atsc3MMTExtractor",String.format("JJ: readSample: NOT calling track.correctSampleTime(), sample_type: %d, currentSampleTimeUs: %d", currentSampleType, currentSampleTimeUs));
-
-     */
-//        long correctSampleTime = track.correctSampleTime(currentSampleTimeUs);
-//        //Log.d("Atsc3MMTExtractor",String.format("JJ: readSample: sample_type: %d, correctSampleTime: %d", currentSampleType, correctSampleTime));
-//        Log.d("Atsc3MMTExtractor",String.format("JJ: readSample: sample_type: %d, currentSampleTimeUs: %d, correctSampleTime: %d, diff: %d", currentSampleType, currentSampleTimeUs, correctSampleTime, (currentSampleTimeUs - correctSampleTime)));
-
         trackOutput.sampleMetadata(
                 currentSampleTimeUs,
                 sampleFlags,
@@ -204,7 +188,6 @@ public class Atsc3MMTExtractor implements Extractor {
             buffer.rewind();
 
             int mediaHeaderSize = buffer.getInt() - MMTConstants.HEADER_SIZE;
-            long defaultSampleDurationUs = buffer.getLong();
 
             buffer = ByteBuffer.allocate(mediaHeaderSize);
             input.readFully(buffer.array(), /* offset= */ 0, /* length= */ mediaHeaderSize);
@@ -228,7 +211,7 @@ public class Atsc3MMTExtractor implements Extractor {
 
                         TrackOutput videoOutput = MMTMediaTrackUtils.createVideoOutput(extractorOutput, packetId, videoType, videoWidth, videoHeight, videoFrameRate, data);
                         if (videoOutput != null) {
-                            tracks.put(packetId, new MmtTrack(videoOutput, defaultSampleDurationUs));
+                            tracks.put(packetId, new MmtTrack(videoOutput));
                         }
                     }
                     break;
@@ -244,7 +227,7 @@ public class Atsc3MMTExtractor implements Extractor {
                         if (audioFormat != null) {
                             TrackOutput audioOutput = extractorOutput.track(packetId, C.TRACK_TYPE_AUDIO);
                             audioOutput.format(audioFormat);
-                            tracks.put(packetId, new MmtTrack(audioOutput, defaultSampleDurationUs));
+                            tracks.put(packetId, new MmtTrack(audioOutput));
                         }
                     }
                     break;
@@ -255,7 +238,7 @@ public class Atsc3MMTExtractor implements Extractor {
 
                         TrackOutput textOutput = MMTMediaTrackUtils.createTextOutput(extractorOutput, packetId, textType, "us");
                         if (textOutput != null) {
-                            tracks.put(packetId, new MmtTrack(textOutput, 0));
+                            tracks.put(packetId, new MmtTrack(textOutput));
                         }
                     }
                     break;
@@ -276,36 +259,10 @@ public class Atsc3MMTExtractor implements Extractor {
     }
 
     private static final class MmtTrack {
-
         public final TrackOutput trackOutput;
-        private final long defaultSampleDurationUs;
 
-        private long timeOffsetUs = 0;
-        private long someTime = 0;
-
-        public MmtTrack(TrackOutput trackOutput, long defaultSampleDurationUs) {
+        public MmtTrack(TrackOutput trackOutput) {
             this.trackOutput = trackOutput;
-            this.defaultSampleDurationUs = defaultSampleDurationUs;
-        }
-
-        public long correctSampleTime(long sampleTimeUs) {
-            if (sampleTimeUs <= 0) {
-                final long offset;
-                if (someTime > 0) {
-                    offset = (System.currentTimeMillis() - someTime) * 1000;
-                } else {
-                    offset = 0;
-                    someTime = System.currentTimeMillis();
-                }
-
-                //by default for any missing MMT SI emissions or flash-cut into MMT flow emission, use now_Us + 66000uS for our presentationTimestampUs
-                return timeOffsetUs + offset + defaultSampleDurationUs;
-            } else {
-                someTime = 0;
-                timeOffsetUs = sampleTimeUs;
-
-                return sampleTimeUs;
-            }
         }
     }
 }
