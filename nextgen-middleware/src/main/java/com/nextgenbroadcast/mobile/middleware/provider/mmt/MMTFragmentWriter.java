@@ -22,6 +22,7 @@ public class MMTFragmentWriter {
     private static final int MAX_KEY_FRAME_WAIT_TIME = 5000;
     private static final byte RING_BUFFER_PAGE_INIT = 1;
     private static final byte RING_BUFFER_PAGE_FRAGMENT = 2;
+    public static final int FRAGMENT_PACKET_HEADER = Integer.BYTES /* packet_id */ + Integer.BYTES /* sample_number */ + Long.BYTES /* mpu_presentation_time_uS_from_SI */ + 7 /* reserved */;
 
     private final byte[] header = {(byte) 0xAC, 0x40, (byte) 0xFF, (byte) 0xFF, 0x00, 0x00, 0x00};
 
@@ -287,7 +288,7 @@ public class MMTFragmentWriter {
 
             if (InitMpuMetadata_HEVC_NAL_Payload == null) {
                 ByteBuffer init = ByteBuffer.allocate(bufferLen);
-                init.put(buffer.array(), buffer.position() + Atsc3RingBuffer.RING_BUFFER_PAGE_HEADER_FRAGMENT, bufferLen);
+                init.put(buffer.array(), buffer.position() + FRAGMENT_PACKET_HEADER, bufferLen);
                 InitMpuMetadata_HEVC_NAL_Payload = init;
             }
 
