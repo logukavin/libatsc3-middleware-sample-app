@@ -50,9 +50,10 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
     //jjustman-2020-12-23 - give the a/v/s decoder some time to decode frames, otherwise we will stall at startup
     //jjustman-2021-01-13 - TODO: remove me
     public static final long PTS_OFFSET_US = 0L;
-    private static final int FRAGMENT_BUFFER_MAX_PAGE_COUNT = 320;
-    private static final int FRAGMENT_BUFFER_PAGE_SIZE = 16 * 1024;
-    private static final int FRAGMENT_BUFFER_SIZE = FRAGMENT_BUFFER_MAX_PAGE_COUNT * FRAGMENT_BUFFER_PAGE_SIZE;
+
+    private static final int RING_BUFFER_MAX_PAGE_COUNT = 320;
+    private static final int RING_BUFFER_PAGE_SIZE = 16 * 1024;
+    private static final int RING_BUFFER_SIZE = RING_BUFFER_MAX_PAGE_COUNT * RING_BUFFER_PAGE_SIZE;
 
     private static final String[] COLUMNS = {OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE};
 
@@ -75,7 +76,7 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
 
     private boolean FirstMfuBufferVideoKeyframeSent = false;
 
-    private final ByteBuffer fragmentBuffer = ByteBuffer.allocateDirect(FRAGMENT_BUFFER_SIZE);
+    private final ByteBuffer fragmentBuffer = ByteBuffer.allocateDirect(RING_BUFFER_SIZE);
 
     @Override
     public boolean onCreate() {
@@ -86,7 +87,7 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
                 new SynchronousQueue(), threadFactory);
 
         receiver = Atsc3ReceiverStandalone.get(getContext());
-        atsc3NdkMediaMMTBridge = new Atsc3NdkMediaMMTBridge(this, fragmentBuffer, FRAGMENT_BUFFER_MAX_PAGE_COUNT);
+        atsc3NdkMediaMMTBridge = new Atsc3NdkMediaMMTBridge(this, fragmentBuffer, RING_BUFFER_MAX_PAGE_COUNT);
 
         return true;
     }
@@ -165,7 +166,7 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
 
         try {
             final ParcelFileDescriptor[] fds = ParcelFileDescriptor.createPipe();
-            final Atsc3RingBuffer fragmentBuff = new Atsc3RingBuffer(fragmentBuffer.duplicate(), FRAGMENT_BUFFER_PAGE_SIZE);
+            final Atsc3RingBuffer fragmentBuff = new Atsc3RingBuffer(fragmentBuffer.duplicate(), RING_BUFFER_PAGE_SIZE);
             final MMTFragmentWriter writer = new MMTFragmentWriter(service.getId(), fragmentBuff, audioOnly);
 
             synchronized (descriptors) {
@@ -214,8 +215,6 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
                 while (counter < 5) {
                     int bytesRead = writer.write(out);
                     if (bytesRead > 0) {
-                        //noinspection BusyWait
-                        Thread.sleep(10); // await for data
                         counter = 0;
                     } else {
                         counter++;
