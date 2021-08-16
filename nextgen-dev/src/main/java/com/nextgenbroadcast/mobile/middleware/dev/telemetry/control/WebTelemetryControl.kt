@@ -1,8 +1,7 @@
-package com.nextgenbroadcast.mobile.middleware.telemetry.control
+package com.nextgenbroadcast.mobile.middleware.dev.telemetry.control
 
-import com.nextgenbroadcast.mobile.middleware.dev.telemetry.control.ITelemetryControl
+import com.nextgenbroadcast.mobile.core.dev.IWebInterface
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.entity.TelemetryControl
-import com.nextgenbroadcast.mobile.middleware.server.web.IMiddlewareWebServer
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.channels.sendBlocking
@@ -12,7 +11,7 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.collect
 
 class WebTelemetryControl(
-        private val webServer: IMiddlewareWebServer
+        private val webServer: IWebInterface
 ) : ITelemetryControl {
 
     override suspend fun subscribe(commandFlow: MutableSharedFlow<TelemetryControl>) {
