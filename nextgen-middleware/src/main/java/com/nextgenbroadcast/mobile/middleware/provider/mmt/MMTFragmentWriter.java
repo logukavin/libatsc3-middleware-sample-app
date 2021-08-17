@@ -17,19 +17,20 @@ import java.nio.ByteBuffer;
 public class MMTFragmentWriter {
     public static final String TAG = MMTFragmentWriter.class.getSimpleName();
 
-    private static final int MAX_QUEUE_SIZE = 120;
     private static final int MAX_FIRST_MFU_WAIT_TIME = 5000;
     private static final int MAX_KEY_FRAME_WAIT_TIME = 5000;
     private static final byte RING_BUFFER_PAGE_INIT = 1;
     private static final byte RING_BUFFER_PAGE_FRAGMENT = 2;
     public static final int FRAGMENT_PACKET_HEADER = Integer.BYTES /* packet_id */ + Integer.BYTES /* sample_number */ + Long.BYTES /* mpu_presentation_time_uS_from_SI */ + 7 /* reserved */;
 
-    private final byte[] header = {(byte) 0xAC, 0x40, (byte) 0xFF, (byte) 0xFF, 0x00, 0x00, 0x00};
+    private final byte[] ac4header = {(byte) 0xAC, 0x40, (byte) 0xFF, (byte) 0xFF, 0x00, 0x00, 0x00};
+    // SIZE_SAMPLE_HEADER
+    private final byte[] emptyFragmentHeader = {(byte) MMTConstants.TRACK_TYPE_EMPTY, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
     private final Boolean audioOnly;
     private final int serviceId;
     private final Atsc3RingBuffer ringBuffer;
-    private final ByteBuffer pageBuffer = ByteBuffer.allocate(MAX_QUEUE_SIZE * 1024);
+    private final ByteBuffer fragmentBuffer = ByteBuffer.allocate(1024 * 1024);
     private final ArrayMap<Integer, MMTAudioDecoderConfigurationRecord> audioConfigurationMap = new ArrayMap<>();
 
     private ByteBuffer InitMpuMetadata_HEVC_NAL_Payload = null;
@@ -50,7 +51,7 @@ public class MMTFragmentWriter {
         this.ringBuffer = fragmentBuffer;
         this.audioOnly = audioOnly;
 
-        pageBuffer.limit(0);
+        this.fragmentBuffer.limit(0);
     }
 
     public int write(FileOutputStream out) throws IOException {
@@ -64,7 +65,7 @@ public class MMTFragmentWriter {
                         mpuWaitingStartTime = System.currentTimeMillis();
                     }
 
-                    scanMpuMetadata(pageBuffer);
+                    scanMpuMetadata(fragmentBuffer);
 
                     if (!hasMpuMetadata()) {
                         if ((System.currentTimeMillis() - mpuWaitingStartTime) < MAX_FIRST_MFU_WAIT_TIME) {
@@ -79,7 +80,7 @@ public class MMTFragmentWriter {
                     keyFrameWaitingStartTime = System.currentTimeMillis();
                 }
 
-                if (!skipUntilKeyFrame(pageBuffer) && (System.currentTimeMillis() - keyFrameWaitingStartTime) < MAX_KEY_FRAME_WAIT_TIME) {
+                if (!skipUntilKeyFrame(fragmentBuffer) && (System.currentTimeMillis() - keyFrameWaitingStartTime) < MAX_KEY_FRAME_WAIT_TIME) {
                     return 0;
                 }
             }
@@ -174,20 +175,28 @@ public class MMTFragmentWriter {
         return fileHeaderBuffer;
     }
 
+    // write empty fragment to buffer to check stream is still alive
+    private void testOutStream(FileOutputStream out) throws IOException {
+        out.write(emptyFragmentHeader,0 , emptyFragmentHeader.length);
+        out.flush();
+    }
+
     private int writeQueue(FileOutputStream out) throws IOException {
+        testOutStream(out);
+
         int bytesRead = 0;
         while (isActive) {
-            if (pageBuffer.remaining() == 0) {
-                readFragment(pageBuffer);
+            if (fragmentBuffer.remaining() == 0) {
+                readFragment(fragmentBuffer);
             }
 
             // read the sample buffer
-            int bytesToRead = pageBuffer.remaining();
+            int bytesToRead = fragmentBuffer.remaining();
             if (bytesToRead == 0) {
                 break;
             }
 
-            bytesRead += writeBuffer(out, pageBuffer);
+            bytesRead += writeBuffer(out, fragmentBuffer);
 
             out.flush();
         }
@@ -239,16 +248,16 @@ public class MMTFragmentWriter {
             int headerDiff = Atsc3RingBuffer.RING_BUFFER_PAGE_HEADER_SIZE - MMTConstants.SIZE_SAMPLE_HEADER;
 
             if (sampleType == MMTConstants.TRACK_TYPE_AUDIO) {
-                headerDiff -= header.length;
+                headerDiff -= ac4header.length;
 
-                header[4] = (byte) (pageSize >> 16 & 0xFF);
-                header[5] = (byte) (pageSize >> 8 & 0xFF);
-                header[6] = (byte) (pageSize & 0xFF);
+                ac4header[4] = (byte) (pageSize >> 16 & 0xFF);
+                ac4header[5] = (byte) (pageSize >> 8 & 0xFF);
+                ac4header[6] = (byte) (pageSize & 0xFF);
 
                 buffer.position(headerDiff + MMTConstants.SIZE_SAMPLE_HEADER);
-                buffer.put(header);
+                buffer.put(ac4header);
 
-                pageSize += header.length;
+                pageSize += ac4header.length;
             }
 
             buffer.position(headerDiff);
