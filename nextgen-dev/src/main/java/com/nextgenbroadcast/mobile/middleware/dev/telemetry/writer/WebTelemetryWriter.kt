@@ -1,9 +1,8 @@
-package com.nextgenbroadcast.mobile.middleware.telemetry.writer
+package com.nextgenbroadcast.mobile.middleware.dev.telemetry.writer
 
 import com.google.gson.Gson
+import com.nextgenbroadcast.mobile.core.dev.IWebInterface
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.entity.TelemetryEvent
-import com.nextgenbroadcast.mobile.middleware.dev.telemetry.writer.ITelemetryWriter
-import com.nextgenbroadcast.mobile.middleware.server.web.IMiddlewareWebServer
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
@@ -16,7 +15,7 @@ import javax.servlet.AsyncListener
 import javax.servlet.http.HttpServletRequest
 
 class WebTelemetryWriter(
-        private val webServer: IMiddlewareWebServer
+        private val webServer: IWebInterface
 ) : ITelemetryWriter {
 
     private val gson = Gson()
