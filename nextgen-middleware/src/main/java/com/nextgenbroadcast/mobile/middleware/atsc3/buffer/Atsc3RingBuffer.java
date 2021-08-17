@@ -1,5 +1,7 @@
 package com.nextgenbroadcast.mobile.middleware.atsc3.buffer;
 
+import com.nextgenbroadcast.mobile.core.LOG;
+
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
@@ -21,6 +23,8 @@ public class Atsc3RingBuffer {
         } RingBufferPageHeader;
 
      */
+
+    public static final String TAG = Atsc3RingBuffer.class.getSimpleName();
 
     public static final int RING_BUFFER_PAGE_HEADER_SIZE = 37; // sizeof(RingBufferPageHeader)
     public static final int RING_BUFFER_PAYLOAD_HEADER_OFFSET = Byte.BYTES /* page lock */ + Integer.BYTES /* page number */ + Integer.BYTES /* payload length */;
@@ -76,6 +80,7 @@ public class Atsc3RingBuffer {
 
         // skip page if payload bigger than out buffer
         if (bytesRemaining > readLength + tailBuffer.capacity()) {
+            LOG.d(TAG, "Skip extra large fragment: " + bytesRemaining);
             buffer.position(ringPosition + pageSize * packetPageCount);
             return -2;
         }
@@ -109,7 +114,13 @@ public class Atsc3RingBuffer {
             ringPosition = buffer.position();
 
             // Peek next page lock state and sequence page number, drop if page is locked or sequency number is wrong
-            boolean segmentIsLocked = buffer.get() != 0;
+            boolean segmentIsLocked;
+            // short await loop
+            int retryCount = 5;
+            while ((segmentIsLocked = (buffer.get() != 0)) && (retryCount > 0)) {
+                buffer.position(buffer.position() - 1);
+                retryCount--;
+            }
             int segmentPageNum = getInt(buffer);
             if (segmentIsLocked || earlyPageNum != segmentPageNum) {
                 buffer.position(ringPosition + pageSize * (packetPageCount - segmentNum));
@@ -118,7 +129,7 @@ public class Atsc3RingBuffer {
             }
 
             // Check next page segment number
-            byte nextSegmentNum = buffer.get(ringPosition + RING_BUFFER_PAGE_HEADER_SIZE  - 7/*pagePayloadOffset - 7 /* reserved part 7 bytes */);
+            byte nextSegmentNum = buffer.get(ringPosition + RING_BUFFER_PAGE_HEADER_SIZE  - 7 /* reserved part 7 bytes */);
             if (segmentNum != nextSegmentNum) {
                 buffer.position(ringPosition + pageSize * (packetPageCount - segmentNum));
                 tailBuffer.limit(0);

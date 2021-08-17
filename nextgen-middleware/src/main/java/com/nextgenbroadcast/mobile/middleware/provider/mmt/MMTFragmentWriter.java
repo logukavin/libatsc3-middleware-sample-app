@@ -54,6 +54,14 @@ public class MMTFragmentWriter {
         this.fragmentBuffer.limit(0);
     }
 
+    public int getServiceId() {
+        return serviceId;
+    }
+
+    public boolean isActive() {
+        return isActive;
+    }
+
     public int write(FileOutputStream out) throws IOException {
         if (!isActive) throw new IOException("Reader is not active");
 
@@ -212,16 +220,31 @@ public class MMTFragmentWriter {
     }
 
     private void readFragment(ByteBuffer buffer) {
+        int retryCount = 5;
         while (true) {
             int pageSize = ringBuffer.readNextPage(buffer);
-            if (pageSize == -2) continue; // we skipped page in some reason, let's try again
+
+            if (pageSize == -2) {
+                if (--retryCount >= 0) {
+                    continue; // we skipped page in some reason, let's try again
+                } else {
+                    return;
+                }
+            }
+
             if (pageSize <= 0) {
                 buffer.limit(0);
                 return;
             }
 
             int pageType = buffer.get();
-            if (pageType != RING_BUFFER_PAGE_FRAGMENT) continue;
+            if (pageType != RING_BUFFER_PAGE_FRAGMENT) {
+                if (--retryCount >= 0) {
+                    continue;
+                } else {
+                    return;
+                }
+            }
 
             int service_id = ringBuffer.getInt(buffer);
             if (service_id != serviceId) {
