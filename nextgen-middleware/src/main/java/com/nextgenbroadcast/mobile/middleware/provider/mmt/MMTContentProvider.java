@@ -74,7 +74,7 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
     private Atsc3ReceiverCore receiver;
     private Atsc3NdkMediaMMTBridge atsc3NdkMediaMMTBridge;
 
-    private boolean FirstMfuBufferVideoKeyframeSent = false;
+//    private boolean FirstMfuBufferVideoKeyframeSent = false;
 
     private final ByteBuffer fragmentBuffer = ByteBuffer.allocateDirect(RING_BUFFER_SIZE);
 
@@ -170,6 +170,17 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
             final MMTFragmentWriter writer = new MMTFragmentWriter(service.getId(), fragmentBuff, audioOnly);
 
             synchronized (descriptors) {
+                // close all sessions of wrong service
+                int serviceId = service.getId();
+                descriptors.removeIf(w -> {
+                    if (w.getServiceId() != serviceId) {
+                        w.close();
+                        return true;
+                    } else {
+                        return false;
+                    }
+                });
+
                 descriptors.add(writer);
 
                 atsc3NdkMediaMMTBridge.rewindBuffer();
@@ -179,9 +190,12 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
             if (!ATSC3PlayerFlags.ATSC3PlayerStartPlayback) {
                 ATSC3PlayerFlags.ATSC3PlayerStartPlayback = true;
 
-                //jjustman-2021-01-13 - HACK
-                MMTClockAnchor.SystemClockAnchor = 0;
-                MMTClockAnchor.MfuClockAnchor = 0;
+                // vmatiash - reset time for first session only
+                if (descriptors.size() == 1) {
+                    //jjustman-2021-01-13 - HACK
+                    MMTClockAnchor.SystemClockAnchor = 0;
+                    MMTClockAnchor.MfuClockAnchor = 0;
+                }
             }
 
             threadPoolExecutor.execute(() -> {
@@ -212,7 +226,7 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
              */
             while (receiver.getSelectedService() == service) {
                 int counter = -50; // 5 sec
-                while (counter < 5) {
+                while (counter < 5 && writer.isActive()) {
                     int bytesRead = writer.write(out);
                     if (bytesRead > 0) {
                         counter = 0;
