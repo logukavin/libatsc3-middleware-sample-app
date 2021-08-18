@@ -42,6 +42,6 @@ class DatagramSocketWrapper(
     }
 
     companion object {
-        const val SOCKET_PORT = 6969
+        const val SOCKET_PORT = 6970
     }
 }

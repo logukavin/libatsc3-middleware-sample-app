@@ -39,18 +39,22 @@ class ScoreboardPagerActivity : FragmentActivity(), ServiceConnection {
 
         sharedViewModel.devicesToAdd.observe(this) { devices ->
             val binder = serviceBinder ?: return@observe
-            devices?.forEach { deviceId ->
+            devices?.mapNotNull { deviceId ->
                 binder.connectDevice(deviceId)?.let { flow ->
-                    sharedViewModel.addFlow(deviceId, flow)
+                    deviceId to flow
                 }
+            }?.let {
+                sharedViewModel.addFlows(it)
             }
         }
 
         sharedViewModel.devicesToRemove.observe(this) { devices ->
             val binder = serviceBinder ?: return@observe
-            devices?.forEach { deviceId ->
-                binder.disconnectDevice(deviceId)
-                sharedViewModel.removeFlow(deviceId)
+            devices?.let { it ->
+                it.forEach { deviceId ->
+                    binder.disconnectDevice(deviceId)
+                }
+                sharedViewModel.removeFlows(it.toList())
             }
         }
 

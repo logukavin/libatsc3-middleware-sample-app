@@ -37,7 +37,7 @@ class ScoreboardFragment : Fragment() {
         deviceAdapter = DeviceListAdapter(layoutInflater, selectChartListener) { device ->
             val deviceId = device.id
             sharedViewModel.getDeviceFlow(deviceId)
-                ?.shareIn(lifecycleScope, SharingStarted.Lazily)
+                ?.shareIn(lifecycleScope, SharingStarted.Lazily, 100)
                 ?.mapNotNull { event ->
                     try {
                         val payload = gson.fromJson<PhyPayload>(event.payload, phyType)
@@ -53,15 +53,9 @@ class ScoreboardFragment : Fragment() {
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        binding.chartList.layoutManager = LinearLayoutManager(context)
+        binding.chartList.layoutManager = LinearLayoutManager(context, RecyclerView.VERTICAL, false)
         binding.chartList.adapter = deviceAdapter
         binding.chartList.addItemDecoration(DividerItemDecoration(context, DividerItemDecoration.VERTICAL))
-        PagerSnapHelper().attachToRecyclerView(binding.chartList)
-
-        binding.pagerModeSwitch.setOnCheckedChangeListener { _, isChecked ->
-            val orientation = if (isChecked) RecyclerView.HORIZONTAL else RecyclerView.VERTICAL
-            binding.chartList.layoutManager = LinearLayoutManager(context, orientation, false)
-        }
 
         sharedViewModel.chartDevicesWithFlow.observe(viewLifecycleOwner) { devices ->
             deviceAdapter.submitList(devices ?: emptyList())
