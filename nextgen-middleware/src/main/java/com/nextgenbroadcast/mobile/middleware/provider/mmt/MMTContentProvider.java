@@ -183,7 +183,10 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
 
                 descriptors.add(writer);
 
-                atsc3NdkMediaMMTBridge.rewindBuffer();
+                // reset with first descriptor only
+                if (descriptors.size() == 1) {
+                    atsc3NdkMediaMMTBridge.rewindBuffer();
+                }
             }
 
             //TODO: temporary solution, requared for atsc3_onExtractedSampleDuration()
