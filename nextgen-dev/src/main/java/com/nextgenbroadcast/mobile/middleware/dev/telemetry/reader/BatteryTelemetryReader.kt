@@ -46,6 +46,6 @@ class BatteryTelemetryReader(
     }
 }
 
-private data class BatteryData(
+data class BatteryData(
         val level: Float
 ) : TelemetryPayload()
