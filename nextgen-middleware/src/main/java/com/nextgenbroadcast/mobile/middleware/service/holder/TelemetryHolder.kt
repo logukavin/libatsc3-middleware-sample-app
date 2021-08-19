@@ -213,7 +213,6 @@ internal class TelemetryHolder(
         val thing = AWSIoThing(
             AWSIOT_RECEIVER_TEMPLATE_NAME,
             AWSIOT_CLIENT_ID_FORMAT,
-            AWSIOT_EVENT_TOPIC_FORMAT,
             BuildConfig.AWSIoTCustomerUrl,
             serialNumber,
             encryptedSharedPreferences(context, IoT_PREFERENCE),
@@ -228,15 +227,15 @@ internal class TelemetryHolder(
         }
 
         telemetryBroker?.addWriter(
-                AWSIoTelemetryWriter(thing)
+            AWSIoTelemetryWriter(AWSIOT_EVENT_TOPIC_FORMAT, thing)
         )
 
         remoteControl?.addControl(
-                AWSIoTelemetryControl(
-                    AWSIOT_TOPIC_CONTROL,
-                    AWSIOT_GLOBAL_TOPIC_CONTROL,
-                    thing
-                )
+            AWSIoTelemetryControl(
+                AWSIOT_TOPIC_CONTROL,
+                AWSIOT_GLOBAL_TOPIC_CONTROL,
+                thing
+            )
         )
     }
 
