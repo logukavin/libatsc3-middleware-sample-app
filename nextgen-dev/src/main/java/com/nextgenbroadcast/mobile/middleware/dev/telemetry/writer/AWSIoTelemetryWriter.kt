@@ -9,8 +9,10 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
 
 class AWSIoTelemetryWriter(
-        private val thing: AWSIoThing
+    eventTopicFormat: String,
+    private val thing: AWSIoThing
 ) : ITelemetryWriter {
+    private val eventTopic = eventTopicFormat.replace(AWSIoThing.AWSIOT_FORMAT_SERIAL, thing.clientId)
     private val gson = Gson()
 
     override fun open() {
@@ -23,7 +25,7 @@ class AWSIoTelemetryWriter(
         eventFlow.collect { event ->
             try {
                 //LOG.d(TAG, "AWS IoT event: ${event.topic} - ${event.payload}")
-                thing.publish(event.topic, gson.toJson(event.payload))
+                thing.publish("$eventTopic/${event.topic}", gson.toJson(event.payload))
             } catch (e: AwsIotRuntimeException) {
                 LOG.e(TAG, "Can't publish telemetry topic: ${event.topic}", e)
             }
