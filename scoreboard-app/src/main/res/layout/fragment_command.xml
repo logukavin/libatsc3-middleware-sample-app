@@ -33,7 +33,7 @@
             app:layout_constraintStart_toEndOf="@+id/edit_text_tune"
             app:layout_constraintTop_toBottomOf="@+id/view_separate_ping" />
 
-        <EditText
+        <androidx.appcompat.widget.AppCompatEditText
             android:id="@+id/edit_text_tune"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -60,7 +60,7 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/view_separate_tune" />
 
-        <EditText
+        <androidx.appcompat.widget.AppCompatEditText
             android:id="@+id/edit_text_service_name"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -69,15 +69,15 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="@+id/button_select_service" />
 
-        <EditText
+        <androidx.appcompat.widget.AppCompatEditText
             android:id="@+id/edit_text_bs_id"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="16dp"
             android:layout_marginEnd="16dp"
             android:hint="@string/bs_id"
-            app:layout_constraintEnd_toStartOf="@id/button_select_service"
             app:layout_constraintBottom_toBottomOf="@+id/button_select_service"
+            app:layout_constraintEnd_toStartOf="@id/button_select_service"
             app:layout_constraintStart_toEndOf="@+id/edit_text_service_name"
             app:layout_constraintTop_toTopOf="@+id/button_select_service" />
 
@@ -96,7 +96,7 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/view_separate_select_service" />
 
-        <EditText
+        <androidx.appcompat.widget.AppCompatEditText
             android:id="@+id/edit_text_test_case"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -123,7 +123,7 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/view_separate_apply_text" />
 
-        <SeekBar
+        <androidx.appcompat.widget.AppCompatSeekBar
             android:id="@+id/seek_bar_volume"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -168,7 +168,7 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/separator_reboot" />
 
-        <EditText
+        <androidx.appcompat.widget.AppCompatEditText
             android:id="@+id/edit_text_resrart_app"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -208,13 +208,12 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="@+id/button_show_debug_info" />
 
-        <CheckBox
+        <androidx.appcompat.widget.AppCompatCheckBox
             android:id="@+id/checkbox_phy"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="16dp"
             android:text="@string/phy"
-            app:layout_constraintEnd_toStartOf="debug"
             app:layout_constraintBottom_toBottomOf="@+id/button_show_debug_info"
             app:layout_constraintStart_toEndOf="@+id/checkbox_debug"
             app:layout_constraintTop_toTopOf="@+id/button_show_debug_info" />
@@ -249,7 +248,7 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/separator_network_info" />
 
-        <EditText
+        <androidx.appcompat.widget.AppCompatEditText
             android:id="@+id/edit_text_file_name"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -258,7 +257,7 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="@+id/button_write_to_file" />
 
-        <EditText
+        <androidx.appcompat.widget.AppCompatEditText
             android:id="@+id/edit_text_writing_duration"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -285,7 +284,7 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="@+id/edit_text_telemetry_names" />
 
-        <EditText
+        <androidx.appcompat.widget.AppCompatEditText
             android:id="@+id/edit_text_telemetry_names"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -297,7 +296,7 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/separator_write_to_file" />
 
-        <CheckBox
+        <androidx.appcompat.widget.AppCompatCheckBox
             android:id="@+id/checkbox_telemetry_enable"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

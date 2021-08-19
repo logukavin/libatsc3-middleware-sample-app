@@ -16,7 +16,6 @@ import kotlin.coroutines.coroutineContext
 class AWSIoThing(
     templateName: String,
     clientIdFormat: String,
-    eventTopicFormat: String,
     private val customerUrl: String,
     private val serialNumber: String,
     private val preferences: SharedPreferences,
@@ -33,8 +32,7 @@ class AWSIoThing(
     private val AWSIOT_SUBSCRIPTION_REGISTER_THING_ACCEPTED = "\$aws/provisioning-templates/$templateName/provision/$AWSIOT_PAYLOAD_FORMAT/accepted"
     private val AWSIOT_SUBSCRIPTION_REGISTER_THING_REJECTED = "\$aws/provisioning-templates/$templateName/provision/$AWSIOT_PAYLOAD_FORMAT/rejected"
 
-    private val clientId = clientIdFormat.replace(AWSIOT_FORMAT_SERIAL, serialNumber)
-    private val eventTopic = eventTopicFormat.replace(AWSIOT_FORMAT_SERIAL, clientId)
+    val clientId = clientIdFormat.replace(AWSIOT_FORMAT_SERIAL, serialNumber)
 
     @Volatile
     private var thingAwsIotClient: AWSIotMqttClient? = null
@@ -52,10 +50,7 @@ class AWSIoThing(
         try {
             if (client.connectionStatus != AWSIotConnectionStatus.DISCONNECTED) {
                 client.publish(
-                        LoggingAWSIotMessage(
-                                "$eventTopic/$topic",
-                                payload
-                        ), 1000
+                    LoggingAWSIotMessage(topic, payload), 1000
                 )
             }
         } catch (e: Exception) {
