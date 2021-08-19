@@ -35,6 +35,7 @@ class TelemetryManager(
         context.getSystemService(Context.NSD_SERVICE) as NsdManager
     }
 
+    private val scope = CoroutineScope(Dispatchers.Main)
     private val timer = Timer()
     private val telemetryClient = TelemetryClient2(100)
     private val globalDeviceObserver: AWSTelemetryObserver
@@ -53,7 +54,6 @@ class TelemetryManager(
         awsIoThing = AWSIoThing(
             AWSIOT_MANAGER_TEMPLATE_NAME,
             AWSIOT_MANAGER_ID_FORMAT,
-            AWSIOT_GLOBAL_EVENT_TOPIC_FORMAT,
             BuildConfig.AWSIoTCustomerUrl,
             serialNum,
             encryptedSharedPreferences(context, IoT_PREFERENCE),
@@ -104,13 +104,13 @@ class TelemetryManager(
         }
 
         awsUpdateTask = timer.scheduleAtFixedRate(0, AWSIOT_PING_PERIOD) {
-            CoroutineScope(Dispatchers.Main).launch {
-                awsIoThing.publish(AWSIOT_TOPIC_PING, "")
-            }
+            sendGlobalCommand(AWSIOT_TOPIC_PING, "")
         }
     }
 
     fun stop() {
+        scope.cancel()
+
         awsUpdateTask?.cancel()
         awsUpdateTask = null
 
@@ -127,6 +127,23 @@ class TelemetryManager(
 
         CoroutineScope(Dispatchers.Main).launch {
             awsIoThing.close()
+        }
+    }
+
+    fun sendGlobalCommand(topic: String, payload: String) {
+        scope.launch {
+            awsIoThing.publish("$AWSIOT_COMMAND_GLOBAL/$topic", payload)
+        }
+    }
+
+    fun sendDeviceCommand(devices: List<String>, payload: String) {
+        scope.launch {
+            devices.forEach { deviceId ->
+                awsIoThing.publish(
+                    AWSIOT_COMMAND_SINGLE_DEVICE.replace(AWSIoThing.AWSIOT_FORMAT_SERIAL, deviceId),
+                    payload
+                )
+            }
         }
     }
 
@@ -290,7 +307,8 @@ class TelemetryManager(
         private const val AWSIOT_MANAGER_TEMPLATE_NAME = "ATSC3MobileManagerProvisioning"
         private const val AWSIOT_MANAGER_ID_FORMAT = "ATSC3MobileManager_${AWSIoThing.AWSIOT_FORMAT_SERIAL}"
         private const val AWSIOT_EVENT_TOPIC_FORMAT = "telemetry/${AWSIoThing.AWSIOT_FORMAT_SERIAL}"
-        private const val AWSIOT_GLOBAL_EVENT_TOPIC_FORMAT = "global/command/request"
+        private const val AWSIOT_COMMAND_GLOBAL = "global/command/request"
+        private const val AWSIOT_COMMAND_SINGLE_DEVICE = "control/ATSC3MobileReceiver_${AWSIoThing.AWSIOT_FORMAT_SERIAL}"
         private const val AWSIOT_CLIENT_ID_FORMAT = "ATSC3MobileReceiver_${AWSIoThing.AWSIOT_FORMAT_SERIAL}"
         private const val AWSIOT_CLIENT_ID_ANY = "+"
 
