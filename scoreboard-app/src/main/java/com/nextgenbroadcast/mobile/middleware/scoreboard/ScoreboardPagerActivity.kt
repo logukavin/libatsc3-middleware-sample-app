@@ -1,6 +1,5 @@
 package com.nextgenbroadcast.mobile.middleware.scoreboard
 
-import CommandFragment
 import android.content.*
 import android.os.Bundle
 import android.os.IBinder
@@ -64,7 +63,7 @@ class ScoreboardPagerActivity : FragmentActivity(), ServiceConnection {
             serviceBinder?.selectDevice(deviceId)
         }
 
-        if(savedInstanceState==null){
+        if (savedInstanceState == null) {
             binding.viewPager.currentItem = 1
         }
     }
