@@ -467,11 +467,11 @@ class MainFragment : Fragment() {
     }
 
     private fun switchApplication(appData: AppData?) {
-        if (appData != null && appData.isAvailable()) {
+        if (appData != null && appData.isAvailable) {
             if (!requireActivity().isInPictureInPictureMode) {
                 setBAAvailability(true)
             }
-            if (!appData.isAppEquals(currentAppData) || appData.isAvailable() != currentAppData?.isAvailable()) {
+            if (!appData.isAppEquals(currentAppData) || appData.isAvailable != currentAppData?.isAvailable) {
                 loadBroadcasterApplication(appData)
             }
         } else {
@@ -480,7 +480,7 @@ class MainFragment : Fragment() {
         currentAppData = appData
     }
 
-    private fun isBAvailable() = currentAppData?.isAvailable() ?: false
+    private fun isBAvailable() = currentAppData?.isAvailable ?: false
 
     private fun updateRMPLayout(x: Float, y: Float, scale: Float) {
         ConstraintSet().apply {
