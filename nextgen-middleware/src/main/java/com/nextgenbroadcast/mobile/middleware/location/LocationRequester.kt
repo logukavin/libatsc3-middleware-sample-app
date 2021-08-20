@@ -12,7 +12,6 @@ import android.location.LocationManager
 import android.os.Bundle
 import android.util.Log
 import androidx.core.content.ContextCompat
-import com.nextgenbroadcast.mobile.middleware.service.init.FrequencyInitializer
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.awaitClose
@@ -88,7 +87,7 @@ class LocationRequester(
                     locationRequest = Pair(locationManager, locationListener)
                 }
             } catch (e: Exception) {
-                Log.w(FrequencyInitializer.TAG, "Error on location request ", e)
+                Log.w(TAG, "Error on location request ", e)
                 cancel()
                 cont.resume(null)
             }
@@ -186,7 +185,7 @@ class LocationRequester(
     }
 
     companion object {
-        val TAG = LocationRequester::class.java.simpleName
+        val TAG: String = LocationRequester::class.java.simpleName
 
         private val permissions = listOf(
             Manifest.permission.ACCESS_COARSE_LOCATION,

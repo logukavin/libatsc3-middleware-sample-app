@@ -16,7 +16,7 @@ import android.webkit.*
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.distinctUntilChanged
-import com.nextgenbroadcast.mobile.core.Atsc3Config
+import com.nextgenbroadcast.mobile.core.atsc3.Atsc3Config
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.core.cert.CertificateUtils.publicHash
 import kotlinx.coroutines.*
@@ -68,7 +68,7 @@ class UserAgentView @JvmOverloads constructor(
 
         clearCache(true)
         setBackgroundColor(Color.TRANSPARENT)
-        settings?.apply {
+        with(settings) {
             javaScriptEnabled = true
             domStorageEnabled = true
             mediaPlaybackRequiresUserGesture = false

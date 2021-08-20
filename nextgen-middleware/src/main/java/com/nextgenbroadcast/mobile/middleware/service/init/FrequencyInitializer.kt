@@ -102,7 +102,7 @@ internal class FrequencyInitializer(
 
     private fun readAttributes(parser: XmlResourceParser): List<Int> {
         val result = ArrayList<Int>()
-        try {
+        parser.use {
             parser.iterateDocument { name ->
                 if (name == "frequencies") {
                     parser.iterateSubTags { subName ->
@@ -118,10 +118,8 @@ internal class FrequencyInitializer(
                     parser.skipTag()
                 }
             }
-        } finally {
-            parser.close()
-            return result
         }
+        return result
     }
 
     companion object {

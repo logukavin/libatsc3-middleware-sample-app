@@ -21,6 +21,7 @@ class AboutDialog(
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         setStyle(STYLE_NORMAL, R.style.Dialog)
     }
 
@@ -32,6 +33,7 @@ class AboutDialog(
         }
 
         view.findViewById<TextView>(R.id.tv_about_content).text = getInfo()
+
         return view
     }
 
