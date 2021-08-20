@@ -1,6 +1,6 @@
 package com.nextgenbroadcast.mobile.middleware.server
 
-import com.nextgenbroadcast.mobile.core.Atsc3Config
+import com.nextgenbroadcast.mobile.core.atsc3.Atsc3Config
 
 internal object ServerConstants {
     const val HOST_NAME = "localhost"

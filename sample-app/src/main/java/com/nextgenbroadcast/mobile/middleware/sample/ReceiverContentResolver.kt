@@ -13,7 +13,7 @@ import androidx.core.database.getDoubleOrNull
 import androidx.core.database.getIntOrNull
 import androidx.core.database.getStringOrNull
 import androidx.core.net.toUri
-import com.nextgenbroadcast.mobile.core.atsc3.PhyVersionInfo
+import com.nextgenbroadcast.mobile.core.atsc3.PhyInfoConstants
 import com.nextgenbroadcast.mobile.core.model.*
 import java.nio.ByteBuffer
 
@@ -263,10 +263,10 @@ class ReceiverContentResolver(
     fun getPhyInfo(): Map<String, String?>? {
         return receiverPhyInfoUri.queryFirst { cursor ->
             mutableMapOf<String, String?>().apply {
-                put(PhyVersionInfo.INFO_DEVICE_ID, cursor.getStringOrNull(PhyVersionInfo.INFO_DEVICE_ID))
-                put(PhyVersionInfo.INFO_SDK_VERSION, cursor.getStringOrNull(PhyVersionInfo.INFO_SDK_VERSION))
-                put(PhyVersionInfo.INFO_FIRMWARE_VERSION, cursor.getStringOrNull(PhyVersionInfo.INFO_FIRMWARE_VERSION))
-                put(PhyVersionInfo.INFO_PHY_TYPE, cursor.getStringOrNull(PhyVersionInfo.INFO_PHY_TYPE))
+                put(PhyInfoConstants.INFO_DEVICE_ID, cursor.getStringOrNull(PhyInfoConstants.INFO_DEVICE_ID))
+                put(PhyInfoConstants.INFO_SDK_VERSION, cursor.getStringOrNull(PhyInfoConstants.INFO_SDK_VERSION))
+                put(PhyInfoConstants.INFO_FIRMWARE_VERSION, cursor.getStringOrNull(PhyInfoConstants.INFO_FIRMWARE_VERSION))
+                put(PhyInfoConstants.INFO_PHY_TYPE, cursor.getStringOrNull(PhyInfoConstants.INFO_PHY_TYPE))
             }
         }
     }
@@ -387,7 +387,7 @@ class ReceiverContentResolver(
             val uri = getUriForPath(context, CONTENT_PHY_VERSION_INFO)
             return context.contentResolver.query(uri, null, null, null)?.use { cursor ->
                 if (cursor.moveToFirst()) {
-                    cursor.getStringOrNull(cursor.getColumnIndex(PhyVersionInfo.INFO_DEVICE_ID))
+                    cursor.getStringOrNull(cursor.getColumnIndex(PhyInfoConstants.INFO_DEVICE_ID))
                 } else null
             }
         }

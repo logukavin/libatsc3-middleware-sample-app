@@ -160,7 +160,6 @@ play {
 def coreKtxVersion = rootProject.ext.coreKtxVersion
 def lifecycleVersion = rootProject.ext.lifecycleVersion
 def coroutinesVersion = rootProject.ext.coroutinesVersion
-def startupRuntime = rootProject.ext.startupRuntime
 def exoplayerVersion = rootProject.ext.exoplayerVersion
 
 dependencies {

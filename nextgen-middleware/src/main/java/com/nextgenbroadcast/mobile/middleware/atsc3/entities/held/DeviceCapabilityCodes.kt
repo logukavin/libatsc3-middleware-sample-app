@@ -1,19 +1,5 @@
 package com.nextgenbroadcast.mobile.middleware.atsc3.entities.held
 
-/*
-    ccode = 1*4HEXDIG
-    capability_string_code = ubyte "=" 1*utf8
-    ubyte = 1*3DIGIT
-    utf8 = *( UTF8-char )
-    boperator = and / or
-    and = "&"
-    or = "|"
-    expr = ccode
-    / capability_string_code
-    / expr WSP expr WSP boperator
-    capabilities = expr
- */
-
 object DeviceCapabilityCodes {
     const val FORBIDDEN = 0x0000 // Forbidden
 
