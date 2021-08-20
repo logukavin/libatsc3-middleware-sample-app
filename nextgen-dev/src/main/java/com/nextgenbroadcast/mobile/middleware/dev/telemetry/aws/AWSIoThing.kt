@@ -6,6 +6,7 @@ import com.amazonaws.services.iot.client.core.AwsIotRuntimeException
 import com.google.gson.*
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.core.cert.CertificateUtils
+import com.nextgenbroadcast.mobile.middleware.dev.BuildConfig
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -16,9 +17,9 @@ import kotlin.coroutines.coroutineContext
 class AWSIoThing(
     templateName: String,
     clientIdFormat: String,
-    private val customerUrl: String,
     private val serialNumber: String,
     private val preferences: SharedPreferences,
+    private val customerUrl: String = BuildConfig.AWSIoTCustomerUrl,
     private val getClientKeystore: (password: String) -> KeyStore
 ) {
     private val gson = Gson()

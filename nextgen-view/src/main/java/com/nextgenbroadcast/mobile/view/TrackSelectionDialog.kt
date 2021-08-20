@@ -214,7 +214,6 @@ class TrackSelectionDialog : DialogFragment() {
             trackSelector.setParameters(builder)
         }
 
-
         private fun showTracksForRenderer(mappedTrackInfo: MappedTrackInfo?, rendererIndex: Int): Boolean {
             if (mappedTrackInfo == null) return false
             val trackGroupArray = mappedTrackInfo.getTrackGroups(rendererIndex)

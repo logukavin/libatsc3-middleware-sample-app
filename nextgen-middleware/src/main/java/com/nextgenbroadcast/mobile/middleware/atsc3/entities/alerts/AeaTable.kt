@@ -15,6 +15,5 @@ data class AeaTable(
         const val CANCEL_ALERT = "cancel"
         const val UPDATE_ALERT = "update"
         const val ALERT = "alert"
-
     }
 }

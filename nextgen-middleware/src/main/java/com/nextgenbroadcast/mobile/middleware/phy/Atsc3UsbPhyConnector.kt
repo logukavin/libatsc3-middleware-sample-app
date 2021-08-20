@@ -14,7 +14,7 @@ class Atsc3UsbPhyConnector : IUsbConnector {
                 device.vendorId == vendor && device.productId == product
             } != null
         }?.let { device ->
-            // open device using a new Intent to start Service as foreground
+            // open device using new Intent to start Service as foreground
             startAtsc3ServiceForDevice(context, device, false)
         }
 

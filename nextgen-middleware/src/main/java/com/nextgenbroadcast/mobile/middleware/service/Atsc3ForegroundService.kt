@@ -38,7 +38,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         AlertNotificationHelper(this)
     }
 
-    //TODO: create own scope?
+    //TODO: create internal scope?
     private val serviceScope = CoroutineScope(Dispatchers.Default)
 
     private lateinit var playbackState: StateFlow<PlaybackState>

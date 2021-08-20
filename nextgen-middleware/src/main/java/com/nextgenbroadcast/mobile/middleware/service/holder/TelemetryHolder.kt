@@ -22,6 +22,7 @@ import com.nextgenbroadcast.mobile.core.model.PhyFrequency
 import com.nextgenbroadcast.mobile.middleware.*
 import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverCore
 import com.nextgenbroadcast.mobile.middleware.dev.nsd.NsdConfig
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.CertificateStore
 import com.nextgenbroadcast.mobile.middleware.gateway.web.ConnectionType
 import com.nextgenbroadcast.mobile.middleware.server.web.IMiddlewareWebServer
 import com.nextgenbroadcast.mobile.middleware.service.Atsc3ForegroundService
@@ -213,15 +214,11 @@ internal class TelemetryHolder(
         val thing = AWSIoThing(
             AWSIOT_RECEIVER_TEMPLATE_NAME,
             AWSIOT_CLIENT_ID_FORMAT,
-            BuildConfig.AWSIoTCustomerUrl,
             serialNumber,
             encryptedSharedPreferences(context, IoT_PREFERENCE),
         ) { keyPassword ->
-            CertificateUtils.createKeyStore(
-                context.assets.open("9200fd27be-certificate.pem.crt"),
-                context.assets.open("9200fd27be-private.pem.key"),
-                keyPassword
-            ) ?: throw IOException("Failed to read certificate from resources")
+            CertificateStore.getReceiverCert(context, keyPassword)
+                ?: throw IOException("Failed to read certificate from resources")
         }.also {
             awsIoThing = it
         }
@@ -270,10 +267,11 @@ internal class TelemetryHolder(
                     } ?: let {
                         receiver.findActiveServiceById(serviceId)
                     }
+                } ?: let {
+                    arguments[ITelemetryControl.CONTROL_ARGUMENT_SERVICE_NAME]?.let { serviceName ->
+                        receiver.findServiceByName(serviceName)
+                    }
                 }
-                        ?: arguments[ITelemetryControl.CONTROL_ARGUMENT_SERVICE_NAME]?.let { serviceName ->
-                            receiver.findServiceByName(serviceName)
-                        }
 
                 if (service != null) {
                     receiver.selectService(service)
@@ -361,7 +359,7 @@ internal class TelemetryHolder(
             }
 
             ITelemetryControl.CONTROL_ACTION_RESET_RECEIVER_DEMODE -> {
-                /// TODO should be implemented
+                /// TODO TBD
             }
         }
 

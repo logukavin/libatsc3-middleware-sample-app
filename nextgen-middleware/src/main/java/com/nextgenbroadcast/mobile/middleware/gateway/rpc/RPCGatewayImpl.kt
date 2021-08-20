@@ -325,11 +325,10 @@ internal class RPCGatewayImpl(
         }
     }
 
-    private fun List<AeaTable>.mapToRpcAlertList() =
-            map {
-                AlertingSignalingRpcResponse.Alert(AlertingSignalingRpcResponse.Alert.AEAT,
-                        joinToString(separator = "", prefix = "<AEAT>", postfix = "</AEAT>") { it.xml })
-            }
+    private fun List<AeaTable>.mapToRpcAlertList() = map {
+        AlertingSignalingRpcResponse.Alert(AlertingSignalingRpcResponse.Alert.AEAT,
+            joinToString(separator = "", prefix = "<AEAT>", postfix = "</AEAT>") { it.xml })
+    }
 
     companion object {
         val SUPPORTED_NOTIFICATIONS = setOf(

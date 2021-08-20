@@ -29,7 +29,7 @@ internal class Atsc3ReceiverCore(
     private val serviceGuideReader: IServiceGuideDeliveryUnitReader,
     val analytics: IAtsc3Analytics
 ) : IAtsc3ReceiverCore {
-    //TODO: create own scope?
+    //TODO: create internal scope?
     private val coreScope: CoroutineScope = CoroutineScope(Dispatchers.Default)
     private val mainScope: CoroutineScope = CoroutineScope(Dispatchers.Main)
 
