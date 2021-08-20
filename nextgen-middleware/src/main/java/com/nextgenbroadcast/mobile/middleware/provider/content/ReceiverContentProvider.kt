@@ -177,12 +177,13 @@ class ReceiverContentProvider : ContentProvider() {
             }
 
             QUERY_APP_DATA -> {
-                MatrixCursor(arrayOf(COLUMN_APP_CONTEXT_ID, COLUMN_APP_ENTRY_PAGE, COLUMN_APP_SERVICE_IDS, COLUMN_APP_CACHE_PATH)).apply {
+                MatrixCursor(arrayOf(COLUMN_APP_CONTEXT_ID, COLUMN_APP_ENTRY_PAGE, COLUMN_APP_SERVICE_IDS, COLUMN_APP_CACHE_PATH, COLUMN_APP_AVAILABLE)).apply {
                     appData.value?.let { data ->
                         newRow().add(COLUMN_APP_CONTEXT_ID, data.appContextId)
                             .add(COLUMN_APP_ENTRY_PAGE, data.appEntryPage)
                             .add(COLUMN_APP_SERVICE_IDS, data.compatibleServiceIds.joinToString(" ") { it.toString() })
                             .add(COLUMN_APP_CACHE_PATH, data.cachePath)
+                            .add(COLUMN_APP_AVAILABLE, if (data.isAvailable) 1 else 0)
                     }
                 }
             }
@@ -379,6 +380,7 @@ class ReceiverContentProvider : ContentProvider() {
         const val COLUMN_APP_STATE_VALUE = "appStateValue"
         const val COLUMN_APP_SERVICE_IDS = "appServiceIds"
         const val COLUMN_APP_CACHE_PATH = "appCachePath"
+        const val COLUMN_APP_AVAILABLE = "appAvailable"
 
         const val COLUMN_CERTIFICATE = "certificate"
 

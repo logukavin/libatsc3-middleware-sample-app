@@ -8,10 +8,9 @@ data class AppData(
         val appContextId: String,
         val appEntryPage: String,
         val compatibleServiceIds: List<Int>,
-        val cachePath: String?
+        val cachePath: String?,
+        val isAvailable: Boolean
 ) : Parcelable {
-    fun isAvailable() = cachePath?.isNotEmpty() ?: false
-
     fun isAppEquals(other: AppData?): Boolean {
         return other?.let {
             this.appContextId == other.appContextId
