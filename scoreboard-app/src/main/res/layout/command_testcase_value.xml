@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<merge xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:showIn="@layout/fragment_command">
+
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/button_apply_test"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="@string/apply_test_case"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/view_separate_select_service" />
+
+    <androidx.appcompat.widget.AppCompatEditText
+        android:id="@+id/edit_text_test_case"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="16dp"
+        android:hint="@string/test_case"
+        app:layout_constraintBottom_toBottomOf="@+id/button_apply_test"
+        app:layout_constraintEnd_toStartOf="@+id/button_apply_test"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/button_apply_test" />
+
+    <View
+        android:id="@+id/view_separate_apply_text"
+        style="@style/ViewSeparatorCommand"
+        app:layout_constraintBottom_toTopOf="@+id/button_volume"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/button_apply_test" />
+
+</merge>

@@ -70,6 +70,7 @@ class ScoreboardPagerActivity : FragmentActivity(), ServiceConnection {
 
     override fun onStart() {
         super.onStart()
+
         bindService()
     }
 
