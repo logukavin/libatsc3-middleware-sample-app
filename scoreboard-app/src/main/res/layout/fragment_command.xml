@@ -2,7 +2,8 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:fillViewport="true">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
@@ -23,124 +24,13 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/button_ping" />
 
-        <androidx.appcompat.widget.AppCompatButton
-            android:id="@+id/button_tune"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="@string/tune"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toEndOf="@+id/edit_text_tune"
-            app:layout_constraintTop_toBottomOf="@+id/view_separate_ping" />
+        <include layout="@layout/command_tune_view" />
 
-        <androidx.appcompat.widget.AppCompatEditText
-            android:id="@+id/edit_text_tune"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="16dp"
-            android:hint="@string/frequency_in_mhz"
-            app:layout_constraintBottom_toBottomOf="@+id/button_tune"
-            app:layout_constraintEnd_toStartOf="@+id/button_tune"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="@+id/button_tune" />
+        <include layout="@layout/command_select_service_view" />
 
-        <View
-            android:id="@+id/view_separate_tune"
-            style="@style/ViewSeparatorCommand"
-            app:layout_constraintBottom_toTopOf="@+id/button_select_service"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/button_tune" />
+        <include layout="@layout/command_testcase_value" />
 
-        <androidx.appcompat.widget.AppCompatButton
-            android:id="@+id/button_select_service"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/select_service"
-            app:layout_constraintBottom_toBottomOf="@+id/edit_text_bs_id"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/view_separate_tune" />
-
-        <androidx.appcompat.widget.AppCompatEditText
-            android:id="@+id/edit_text_service_name"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:hint="@string/service_name_or_id"
-            app:layout_constraintBottom_toBottomOf="@+id/button_select_service"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="@+id/button_select_service" />
-
-        <androidx.appcompat.widget.AppCompatEditText
-            android:id="@+id/edit_text_bs_id"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:layout_marginEnd="16dp"
-            android:hint="@string/bs_id"
-            app:layout_constraintBottom_toBottomOf="@+id/button_select_service"
-            app:layout_constraintEnd_toStartOf="@id/button_select_service"
-            app:layout_constraintStart_toEndOf="@+id/edit_text_service_name"
-            app:layout_constraintTop_toTopOf="@+id/button_select_service" />
-
-        <View
-            android:id="@+id/view_separate_select_service"
-            style="@style/ViewSeparatorCommand"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/button_select_service" />
-
-        <androidx.appcompat.widget.AppCompatButton
-            android:id="@+id/button_apply_test"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="@string/apply_test_case"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/view_separate_select_service" />
-
-        <androidx.appcompat.widget.AppCompatEditText
-            android:id="@+id/edit_text_test_case"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="16dp"
-            android:hint="@string/test_case"
-            app:layout_constraintBottom_toBottomOf="@+id/button_apply_test"
-            app:layout_constraintEnd_toStartOf="@+id/button_apply_test"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="@+id/button_apply_test" />
-
-        <View
-            android:id="@+id/view_separate_apply_text"
-            style="@style/ViewSeparatorCommand"
-            app:layout_constraintBottom_toTopOf="@+id/button_volume"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/button_apply_test" />
-
-        <androidx.appcompat.widget.AppCompatButton
-            android:id="@+id/button_volume"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="@string/volume"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/view_separate_apply_text" />
-
-        <androidx.appcompat.widget.AppCompatSeekBar
-            android:id="@+id/seek_bar_volume"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="16dp"
-            android:hint="@string/volume"
-            app:layout_constraintBottom_toBottomOf="@+id/button_volume"
-            app:layout_constraintEnd_toStartOf="@+id/button_volume"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="@+id/button_volume" />
-
-        <View
-            android:id="@+id/view_separate_volume"
-            style="@style/ViewSeparatorCommand"
-            app:layout_constraintBottom_toTopOf="@+id/button_rebootDevice"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/button_volume" />
-
+        <include layout="@layout/command_volume_view" />
 
         <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/button_rebootDevice"
@@ -158,71 +48,9 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/button_rebootDevice" />
 
+        <include layout="@layout/command_restart_app_view" />
 
-        <androidx.appcompat.widget.AppCompatButton
-            android:id="@+id/button_restartApp"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="@string/restartApp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/separator_reboot" />
-
-        <androidx.appcompat.widget.AppCompatEditText
-            android:id="@+id/edit_text_resrart_app"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="16dp"
-            android:hint="@string/delay_in_second"
-            app:layout_constraintBottom_toBottomOf="@+id/button_restartApp"
-            app:layout_constraintEnd_toStartOf="@+id/button_restartApp"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="@+id/button_restartApp" />
-
-        <View
-            android:id="@+id/separator_restart"
-            style="@style/ViewSeparatorCommand"
-            app:layout_constraintBottom_toTopOf="@+id/button_show_debug_info"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/button_restartApp" />
-
-
-        <androidx.appcompat.widget.AppCompatButton
-            android:id="@+id/button_show_debug_info"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="@string/show_debug_info"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/separator_restart" />
-
-        <CheckBox
-            android:id="@+id/checkbox_debug"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="8dp"
-            android:text="@string/debug"
-            app:layout_constraintBottom_toBottomOf="@+id/button_show_debug_info"
-            app:layout_constraintEnd_toStartOf="@+id/checkbox_phy"
-            app:layout_constraintStart_toEndOf="@+id/button_show_debug_info"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="@+id/button_show_debug_info" />
-
-        <androidx.appcompat.widget.AppCompatCheckBox
-            android:id="@+id/checkbox_phy"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:text="@string/phy"
-            app:layout_constraintBottom_toBottomOf="@+id/button_show_debug_info"
-            app:layout_constraintStart_toEndOf="@+id/checkbox_debug"
-            app:layout_constraintTop_toTopOf="@+id/button_show_debug_info" />
-
-        <View
-            android:id="@+id/view_separate_show_debug_info"
-            style="@style/ViewSeparatorCommand"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/button_show_debug_info" />
+        <include layout="@layout/command_debug_info" />
 
         <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/button_show_network_info"
@@ -239,86 +67,8 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/button_show_network_info" />
 
-        <androidx.appcompat.widget.AppCompatButton
-            android:id="@+id/button_write_to_file"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/write_to_file"
-            app:layout_constraintBottom_toTopOf="@+id/separator_write_to_file"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/separator_network_info" />
+        <include layout="@layout/command_save_file_view" />
 
-        <androidx.appcompat.widget.AppCompatEditText
-            android:id="@+id/edit_text_file_name"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:text="@string/file_name"
-            app:layout_constraintBottom_toBottomOf="@+id/button_write_to_file"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="@+id/button_write_to_file" />
-
-        <androidx.appcompat.widget.AppCompatEditText
-            android:id="@+id/edit_text_writing_duration"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:text="@string/duration"
-            app:layout_constraintBottom_toBottomOf="@+id/button_write_to_file"
-            app:layout_constraintStart_toEndOf="@+id/edit_text_file_name"
-            app:layout_constraintTop_toTopOf="@+id/button_write_to_file" />
-
-        <View
-            android:id="@+id/separator_write_to_file"
-            style="@style/ViewSeparatorCommand"
-            app:layout_constraintBottom_toTopOf="@+id/button_set_telemetry"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/button_write_to_file" />
-
-        <androidx.appcompat.widget.AppCompatButton
-            android:id="@+id/button_set_telemetry"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-
-            android:text="@string/telemetry"
-            app:layout_constraintBottom_toBottomOf="@+id/edit_text_telemetry_delay"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="@+id/edit_text_telemetry_names" />
-
-        <androidx.appcompat.widget.AppCompatEditText
-            android:id="@+id/edit_text_telemetry_names"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:layout_marginEnd="16dp"
-            android:hint="@string/telemetry_by_name_or_in_general"
-            android:lines="3"
-            app:layout_constraintEnd_toStartOf="@+id/button_set_telemetry"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/separator_write_to_file" />
-
-        <androidx.appcompat.widget.AppCompatCheckBox
-            android:id="@+id/checkbox_telemetry_enable"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/enable"
-            app:layout_constraintBottom_toBottomOf="@+id/edit_text_telemetry_delay"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/edit_text_telemetry_names" />
-
-        <androidx.appcompat.widget.AppCompatEditText
-            android:id="@+id/edit_text_telemetry_delay"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:hint="@string/delay"
-            app:layout_constraintStart_toEndOf="@+id/checkbox_telemetry_enable"
-            app:layout_constraintTop_toBottomOf="@+id/edit_text_telemetry_names" />
-
-        <View
-            android:id="@+id/separator_telemetry"
-            style="@style/ViewSeparatorCommand"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/checkbox_telemetry_enable" />
-
+        <include layout="@layout/command_telemetry_view" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 </ScrollView>
