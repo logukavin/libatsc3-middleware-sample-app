@@ -13,7 +13,8 @@ data class AVService(
         val majorChannelNo: Int,
         val minorChannelNo: Int,
         val category: Int,
-        val hidden: Boolean = false
+        val hidden: Boolean = false,
+        val default: Boolean = false
 ) : Parcelable {
 
     fun uniqueId(): Long {
@@ -30,6 +31,7 @@ data class AVService(
             putInt(FIELD_MINOR_CHANNEL_NO, minorChannelNo)
             putInt(FIELD_CATEGORY, category)
             putBoolean(FIELD_HIDDEN, hidden)
+            putBoolean(FIELD_DEFAULT, default)
         }
     }
 
@@ -43,6 +45,8 @@ data class AVService(
         private const val FIELD_CATEGORY = "category"
         private const val FIELD_HIDDEN = "hidden"
 
+        private const val FIELD_DEFAULT = "default"
+
         fun fromBundle(bundle: Bundle): AVService {
             return AVService(
                     bundle.getInt(FIELD_BSID),
@@ -52,7 +56,8 @@ data class AVService(
                     bundle.getInt(FIELD_MAJOR_CHANNEL_NO),
                     bundle.getInt(FIELD_MINOR_CHANNEL_NO),
                     bundle.getInt(FIELD_CATEGORY),
-                    bundle.getBoolean(FIELD_HIDDEN)
+                    bundle.getBoolean(FIELD_HIDDEN),
+                    bundle.getBoolean(FIELD_DEFAULT)
             )
         }
     }

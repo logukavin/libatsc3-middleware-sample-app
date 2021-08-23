@@ -19,6 +19,9 @@ import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverCore
 import com.nextgenbroadcast.mobile.middleware.service.Atsc3ForegroundService
 import com.nextgenbroadcast.mobile.core.media.MediaSessionConstants
+import com.nextgenbroadcast.mobile.middleware.MiddlewareConfig
+import com.nextgenbroadcast.mobile.middleware.dev.config.DevConfig
+import com.nextgenbroadcast.mobile.middleware.isTheSameAs
 import com.nextgenbroadcast.mobile.player.Atsc3MediaPlayer
 import kotlinx.coroutines.flow.MutableStateFlow
 
@@ -72,14 +75,25 @@ internal class MediaHolder(
     }
 
     fun onServiceListChanged(services: List<AVService>) {
+        val defaultService = if (MiddlewareConfig.DEV_TOOLS) {
+            DevConfig.get(context).service
+        } else null
+
         val queue = services.map { service ->
+            var srv = service
+            defaultService?.let {
+                if (service.isTheSameAs(it)) {
+                    srv = service.copy(default = true)
+                }
+            }
+
             MediaSessionCompat.QueueItem(
                     MediaDescriptionCompat.Builder()
-                            .setMediaId(service.globalId)
-                            .setTitle(service.shortName)
-                            .setExtras(service.toBundle())
+                            .setMediaId(srv.globalId)
+                            .setTitle(srv.shortName)
+                            .setExtras(srv.toBundle())
                             .build(),
-                    service.uniqueId()
+                srv.uniqueId()
             )
         }
 
