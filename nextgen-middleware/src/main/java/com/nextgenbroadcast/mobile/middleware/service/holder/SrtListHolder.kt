@@ -2,11 +2,10 @@ package com.nextgenbroadcast.mobile.middleware.service.holder
 
 import android.content.Context
 import androidx.annotation.MainThread
-import com.nextgenbroadcast.mobile.core.FileUtils
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.core.model.RouteUrl
-import com.nextgenbroadcast.mobile.middleware.service.SrtConfigReader
-import java.util.*
+import com.nextgenbroadcast.mobile.middleware.MiddlewareConfig
+import com.nextgenbroadcast.mobile.middleware.dev.config.DevConfig
 
 class SrtListHolder(
     private val context: Context,
@@ -15,16 +14,14 @@ class SrtListHolder(
 
     @MainThread
     fun read() {
-        try {
-            FileUtils.openExternalFileDescriptor(context, EXTERNAL_FILE_NAME)?.use { file ->
-                externalSrtServices.addAll(
-                    SrtConfigReader.readSrtListFromFile(file).map { (title, path, default) ->
-                        RouteUrl(UUID.randomUUID().toString(), path, title, default)
-                    }
-                )
+        if (MiddlewareConfig.DEV_TOOLS) {
+            try {
+                DevConfig.get(context).srtList?.let {
+                    externalSrtServices.addAll(it)
+                }
+            } catch (e: Exception) {
+                LOG.w(TAG, "Failed to open external SRT config", e)
             }
-        } catch (e: Exception) {
-            LOG.w(TAG, "Failed to open external SRT config: $EXTERNAL_FILE_NAME", e)
         }
     }
 
@@ -45,8 +42,6 @@ class SrtListHolder(
 
     companion object {
         val TAG: String = SrtListHolder::class.java.simpleName
-
-        const val EXTERNAL_FILE_NAME = "srt.conf"
 
         val sourceList = listOf(
             RouteUrl(
