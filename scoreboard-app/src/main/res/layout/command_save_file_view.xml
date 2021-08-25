@@ -8,35 +8,26 @@
         android:id="@+id/button_write_to_file"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/write_to_file"
-        app:layout_constraintBottom_toTopOf="@+id/separator_write_to_file"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/separator_network_info" />
+        android:text="@string/write_to_file" />
 
     <androidx.appcompat.widget.AppCompatEditText
         android:id="@+id/edit_text_file_name"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:text="@string/file_name"
-        app:layout_constraintBottom_toBottomOf="@+id/button_write_to_file"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/button_write_to_file" />
+        android:hint="@string/file_name" />
 
     <androidx.appcompat.widget.AppCompatEditText
         android:id="@+id/edit_text_writing_duration"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
-        android:text="@string/duration"
-        app:layout_constraintBottom_toBottomOf="@+id/button_write_to_file"
-        app:layout_constraintStart_toEndOf="@+id/edit_text_file_name"
-        app:layout_constraintTop_toTopOf="@+id/button_write_to_file" />
+        android:hint="@string/duration" />
 
-    <View
-        android:id="@+id/separator_write_to_file"
-        style="@style/ViewSeparatorCommand"
-        app:layout_constraintBottom_toTopOf="@+id/button_set_telemetry"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/button_write_to_file" />
+    <androidx.constraintlayout.helper.widget.Flow
+        android:id="@+id/command_save_file_flow"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:constraint_referenced_ids="edit_text_file_name,edit_text_writing_duration,button_write_to_file"
+        app:flow_horizontalGap="@dimen/command_layout_padding" />
 
 </merge>

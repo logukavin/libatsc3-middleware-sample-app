@@ -14,61 +14,84 @@
             android:id="@+id/button_ping"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/ping"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            android:text="@string/ping" />
 
-        <View
+        <include
             android:id="@+id/view_separate_ping"
-            style="@style/ViewSeparatorCommand"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/button_ping" />
+            layout="@layout/command_separator" />
 
         <include layout="@layout/command_tune_view" />
 
+        <include
+            android:id="@+id/view_separate_tune"
+            layout="@layout/command_separator" />
+
         <include layout="@layout/command_select_service_view" />
+
+        <include
+            android:id="@+id/view_separate_select_service"
+            layout="@layout/command_separator" />
 
         <include layout="@layout/command_testcase_value" />
 
+        <include
+            android:id="@+id/view_separate_apply_text"
+            layout="@layout/command_separator" />
+
         <include layout="@layout/command_volume_view" />
+
+        <include
+            android:id="@+id/view_separate_volume"
+            layout="@layout/command_separator" />
 
         <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/button_rebootDevice"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="@string/rebootDevice"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/view_separate_volume" />
+            android:text="@string/rebootDevice" />
 
-        <View
+        <include
             android:id="@+id/separator_reboot"
-            style="@style/ViewSeparatorCommand"
-            app:layout_constraintBottom_toTopOf="@+id/button_restartApp"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/button_rebootDevice" />
+            layout="@layout/command_separator" />
 
         <include layout="@layout/command_restart_app_view" />
 
+        <include
+            android:id="@+id/separator_restart"
+            layout="@layout/command_separator" />
+
         <include layout="@layout/command_debug_info" />
+
+        <include
+            android:id="@+id/view_separate_show_debug_info"
+            layout="@layout/command_separator" />
 
         <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/button_show_network_info"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="@string/networkInfo"
-            app:layout_constraintTop_toBottomOf="@+id/view_separate_show_debug_info" />
+            android:text="@string/networkInfo" />
 
-        <View
+        <include
             android:id="@+id/separator_network_info"
-            style="@style/ViewSeparatorCommand"
-            app:layout_constraintBottom_toTopOf="@+id/button_write_to_file"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/button_show_network_info" />
+            layout="@layout/command_separator" />
 
         <include layout="@layout/command_save_file_view" />
 
+        <include
+            android:id="@+id/separator_write_to_file"
+            layout="@layout/command_separator" />
+
         <include layout="@layout/command_telemetry_view" />
+
+        <androidx.constraintlayout.helper.widget.Flow
+            android:id="@+id/command_flow"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            app:constraint_referenced_ids="button_ping,view_separate_ping,command_tune_flow,view_separate_tune,command_select_service_flow,view_separate_select_service,command_testcase_flow,view_separate_apply_text,command_volume_flow,view_separate_volume,button_rebootDevice,separator_reboot,command_restart_flow,separator_restart,command_debug_flow,view_separate_show_debug_info,button_show_network_info,separator_network_info,command_save_file_flow,separator_write_to_file,command_telemetry_flow"
+            app:flow_verticalGap="@dimen/command_layout_padding"
+            app:layout_constraintTop_toTopOf="parent" />
+
     </androidx.constraintlayout.widget.ConstraintLayout>
 </ScrollView>
