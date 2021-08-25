@@ -1,34 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
-<merge xmlns:tools="http://schemas.android.com/tools"
+<merge xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     tools:showIn="@layout/fragment_command">
 
     <androidx.appcompat.widget.AppCompatButton
         android:id="@+id/button_restartApp"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:text="@string/restartApp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/separator_reboot" />
+        android:text="@string/restartApp" />
 
     <androidx.appcompat.widget.AppCompatEditText
         android:id="@+id/edit_text_restart_app"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginEnd="16dp"
-        android:hint="@string/delay_in_second"
-        app:layout_constraintBottom_toBottomOf="@+id/button_restartApp"
-        app:layout_constraintEnd_toStartOf="@+id/button_restartApp"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/button_restartApp" />
+        android:hint="@string/delay_in_second" />
 
-    <View
-        android:id="@+id/separator_restart"
-        style="@style/ViewSeparatorCommand"
-        app:layout_constraintBottom_toTopOf="@+id/button_show_debug_info"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/button_restartApp" />
+    <androidx.constraintlayout.helper.widget.Flow
+        android:id="@+id/command_restart_flow"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:constraint_referenced_ids="edit_text_restart_app,button_restartApp"
+        app:flow_horizontalGap="@dimen/command_layout_padding" />
 
 </merge>

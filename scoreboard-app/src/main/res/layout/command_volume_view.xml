@@ -8,27 +8,20 @@
         android:id="@+id/button_volume"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:text="@string/volume"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/view_separate_apply_text" />
+        android:text="@string/volume" />
 
     <androidx.appcompat.widget.AppCompatSeekBar
         android:id="@+id/seek_bar_volume"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginEnd="16dp"
-        android:hint="@string/volume"
-        app:layout_constraintBottom_toBottomOf="@+id/button_volume"
-        app:layout_constraintEnd_toStartOf="@+id/button_volume"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/button_volume" />
+        android:hint="@string/volume" />
 
-    <View
-        android:id="@+id/view_separate_volume"
-        style="@style/ViewSeparatorCommand"
-        app:layout_constraintBottom_toTopOf="@+id/button_rebootDevice"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/button_volume" />
+    <androidx.constraintlayout.helper.widget.Flow
+        android:id="@+id/command_volume_flow"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:constraint_referenced_ids="seek_bar_volume,button_volume"
+        app:flow_horizontalGap="@dimen/command_layout_padding" />
 
 </merge>

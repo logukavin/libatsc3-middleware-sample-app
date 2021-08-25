@@ -8,28 +8,22 @@
         android:id="@+id/button_tune"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:text="@string/tune"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toEndOf="@+id/edit_text_tune"
-        app:layout_constraintTop_toBottomOf="@+id/view_separate_ping" />
+        android:text="@string/tune" />
 
     <androidx.appcompat.widget.AppCompatEditText
         android:id="@+id/edit_text_tune"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginEnd="16dp"
         android:hint="@string/frequency_in_mhz"
-        app:layout_constraintBottom_toBottomOf="@+id/button_tune"
-        app:layout_constraintEnd_toStartOf="@+id/button_tune"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/button_tune" />
+        android:inputType="numberDecimal"
+        android:maxLines="1" />
 
-    <View
-        android:id="@+id/view_separate_tune"
-        style="@style/ViewSeparatorCommand"
-        app:layout_constraintBottom_toTopOf="@+id/button_select_service"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/button_tune" />
+    <androidx.constraintlayout.helper.widget.Flow
+        android:id="@+id/command_tune_flow"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:constraint_referenced_ids="edit_text_tune,button_tune"
+        app:flow_horizontalGap="@dimen/command_layout_padding" />
 
 </merge>
