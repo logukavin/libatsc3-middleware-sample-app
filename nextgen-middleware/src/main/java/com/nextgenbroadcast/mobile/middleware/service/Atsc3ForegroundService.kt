@@ -11,6 +11,7 @@ import android.os.PowerManager.WakeLock
 import android.support.v4.media.MediaBrowserCompat
 import android.util.Log
 import androidx.core.content.ContextCompat
+import com.nextgenbroadcast.mobile.core.MiddlewareConfig
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.middleware.*

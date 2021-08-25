@@ -18,6 +18,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.distinctUntilChanged
 import com.nextgenbroadcast.mobile.core.atsc3.Atsc3Config
 import com.nextgenbroadcast.mobile.core.LOG
+import com.nextgenbroadcast.mobile.core.MiddlewareConfig
 import com.nextgenbroadcast.mobile.core.cert.CertificateUtils.publicHash
 import kotlinx.coroutines.*
 import java.io.ByteArrayInputStream
@@ -74,7 +75,7 @@ class UserAgentView @JvmOverloads constructor(
             mediaPlaybackRequiresUserGesture = false
             userAgentString = getAtsc3UserAgent()
         }
-        if (BuildConfig.DEBUG) {
+        if (MiddlewareConfig.DEV_TOOLS) {
             setWebContentsDebuggingEnabled(true)
         }
         clearSslPreferences()
