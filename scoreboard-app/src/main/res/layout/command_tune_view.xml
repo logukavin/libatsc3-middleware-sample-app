@@ -16,14 +16,24 @@
         android:layout_height="wrap_content"
         android:hint="@string/frequency_in_mhz"
         android:inputType="numberDecimal"
+        android:maxLength="3"
         android:maxLines="1" />
+
+    <TextView
+        android:id="@+id/text_view_mhz"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/tune_mhz"
+        android:textColor="@color/black"
+        android:textSize="16sp"
+        android:textStyle="bold" />
 
     <androidx.constraintlayout.helper.widget.Flow
         android:id="@+id/command_tune_flow"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        app:constraint_referenced_ids="edit_text_tune,button_tune"
+        app:constraint_referenced_ids="edit_text_tune,text_view_mhz,button_tune"
         app:flow_horizontalGap="@dimen/command_layout_padding" />
 
 </merge>
