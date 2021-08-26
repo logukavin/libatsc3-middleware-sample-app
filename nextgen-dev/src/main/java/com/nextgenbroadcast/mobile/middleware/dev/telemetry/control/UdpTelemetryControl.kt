@@ -76,29 +76,3 @@ class UdpTelemetryControl(
         val TAG: String = UdpTelemetryControl::class.java.simpleName
     }
 }
-
-/*
-Sending Broadcast Udp with socket:
-
-                val buf = "test".toByteArray()
-                val address = getBroadcastAddress()
-                val packet = DatagramPacket(buf, buf.size, address, 8081)
-                CoroutineScope(Dispatchers.IO).launch {
-                    socket.send(packet)
-                }
-
-    private val socket = DatagramSocket(/*8081, InetAddress.getByName("0.0.0.0")*/).apply {
-        broadcast = true
-    }
-
-    @Throws(IOException::class)
-    fun getBroadcastAddress(): InetAddress? {
-        val wifi = context.getSystemService(Context.WIFI_SERVICE) as WifiManager
-        val dhcp = wifi.dhcpInfo
-        // handle null somehow
-        val broadcast = dhcp.ipAddress and dhcp.netmask or dhcp.netmask.inv()
-        val quads = ByteArray(4)
-        for (k in 0..3) quads[k] = (broadcast shr k * 8 and 0xFF).toByte()
-        return InetAddress.getByAddress(quads)
-    }
- */

@@ -38,7 +38,7 @@ object DateUtils {
         }
     }
 
-    fun parse(value: String, default: LocalDateTime) = DateUtils.parse(value) ?: default
+    fun parse(value: String, default: LocalDateTime) = parse(value) ?: default
 
     fun parse(value: String): LocalDateTime? {
         return try {

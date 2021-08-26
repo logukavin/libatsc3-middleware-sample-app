@@ -38,7 +38,7 @@ import javax.servlet.http.HttpServletResponse
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
-internal class MiddlewareWebServer constructor(
+internal class MiddlewareWebServer (
         private val server: Server,
         private val webGateway: IWebGateway?,
         private val stateScope: CoroutineScope?

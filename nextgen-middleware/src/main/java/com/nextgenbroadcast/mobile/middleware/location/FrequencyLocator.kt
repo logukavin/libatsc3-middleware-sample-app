@@ -58,22 +58,6 @@ class FrequencyLocator : IFrequencyLocator {
     }
 
     private suspend fun getFrequenciesByLocation(latitude: Double, longitude: Double): List<Int> {
-//        val request = Auth0Request.Builder()
-//            .username(Auth0.username())
-//            .password(Auth0.password())
-//            .audience(BuildConfig.Auth0Audience)
-//            .clientId(Auth0.clientId())
-//            .clientSecret(Auth0.clientSecret())
-//            .build(BuildConfig.Auth0TokenUrl)
-//
-//        try {
-//            val stations: List<Station>? = httpClient.newCall(request).await { response ->
-//                response.body?.let { body ->
-//                    Auth0Response(body.string())
-//                }?.accessToken
-//            }?.let { token ->
-//                val frequenciesRequest = SinclairPlatform(BuildConfig.SinclairPlatformUrl).frequenciesRequest(token, latitude, longitude)
-
         try {
             val frequenciesRequest = SinclairPlatform(BuildConfig.SinclairPlatformUrl)
                 .frequenciesRequest(latitude, longitude, Auth0.clientKey())

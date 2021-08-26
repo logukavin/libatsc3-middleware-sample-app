@@ -1,4 +1,4 @@
-package com.nextgenbroadcast.mobile.core
+package com.nextgenbroadcast.mobile.core.atsc3
 
 object Atsc3Config {
     const val A300_YEAR =   "2020"

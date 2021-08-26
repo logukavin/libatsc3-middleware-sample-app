@@ -44,18 +44,6 @@ internal class ServiceGuideDeliveryUnitReader(
 
                 store.storeService(serviceMap)
                 store.storeContent(contentMap)
-
-                /*
-                Log.d("!!!", "serviceMap.size: ${serviceMap.size}, contentMap.size: ${contentMap.size}")
-                Log.d("!!!", "_________________________________________")
-                schedule.entries.forEach {
-                    val startTime = it.value.minByOrNull { it.startTime }?.startTime
-                    val endTime = it.value.maxByOrNull { it.startTime }?.startTime
-
-                    Log.d("!!!", "service: ${it.key.id}, size: ${it.value.size}, startTime: $startTime, endTime: $endTime")
-                }
-                Log.d("!!!", "------------------------------------")
-                 */
             }
         }
     }

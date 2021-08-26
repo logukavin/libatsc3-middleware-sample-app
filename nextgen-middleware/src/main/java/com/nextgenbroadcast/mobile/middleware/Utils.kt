@@ -8,8 +8,9 @@ import androidx.core.content.ContextCompat
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import com.nextgenbroadcast.mobile.core.LOG
+import com.nextgenbroadcast.mobile.core.model.AVService
 
-fun encryptedSharedPreferences(context: Context, fileName: String): SharedPreferences {
+internal fun encryptedSharedPreferences(context: Context, fileName: String): SharedPreferences {
     val appContext = context.applicationContext
     return EncryptedSharedPreferences.create(
             appContext,
@@ -20,7 +21,7 @@ fun encryptedSharedPreferences(context: Context, fileName: String): SharedPrefer
     )
 }
 
-fun startTVApplication(context: Context) {
+internal fun startTVApplication(context: Context) {
     try {
         val intent = Intent(context.getString(R.string.defaultActionWatch)).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -36,4 +37,10 @@ fun startTVApplication(context: Context) {
     } catch (e: ActivityNotFoundException) {
         LOG.i("startTVApplication", "Unable to start TV application", e)
     }
+}
+
+internal fun AVService.isTheSameAs(service: AVService): Boolean {
+    return (service.bsid == bsid && service.id == id)
+            || service.globalId?.equals(globalId, true) == true
+            || service.shortName?.equals(shortName, true) == true
 }
