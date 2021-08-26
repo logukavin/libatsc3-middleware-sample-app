@@ -78,12 +78,13 @@ class MainActivity : BaseActivity() {
     }
 
     override fun onMediaSessionCreated() {
-        viewViewModel.services.value = mediaController.queue?.mapNotNull { it.toService() }
-                ?: emptyList()
-        viewViewModel.currentServiceTitle.value = mediaController.queueTitle?.toString()
-        viewViewModel.isPlaying.value = mediaController.playbackState?.state == PlaybackState.STATE_PLAYING
+        with(mediaController) {
+            viewViewModel.services.value = queue?.mapNotNull { it.toService() } ?: emptyList()
+            viewViewModel.currentServiceTitle.value = queueTitle?.toString()
+            viewViewModel.isPlaying.value = playbackState?.state == PlaybackState.STATE_PLAYING
 
-        mediaController.registerCallback(mediaControllerCallback)
+            registerCallback(mediaControllerCallback)
+        }
     }
 
     private fun MediaSession.QueueItem.toService(): AVService? {

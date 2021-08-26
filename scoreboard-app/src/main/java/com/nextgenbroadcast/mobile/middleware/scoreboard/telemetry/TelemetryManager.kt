@@ -4,12 +4,12 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
-import android.util.Log
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.core.cert.CertificateUtils
 import com.nextgenbroadcast.mobile.middleware.dev.nsd.NsdConfig
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.CertificateStore
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.TelemetryClient2
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.aws.AWSIoThing
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.entity.ClientTelemetryEvent
@@ -55,15 +55,11 @@ class TelemetryManager(
         awsIoThing = AWSIoThing(
             AWSIOT_MANAGER_TEMPLATE_NAME,
             AWSIOT_MANAGER_ID_FORMAT,
-            BuildConfig.AWSIoTCustomerUrl,
             serialNum,
             encryptedSharedPreferences(context, IoT_PREFERENCE),
         ) { keyPassword ->
-            CertificateUtils.createKeyStore(
-                context.assets.open("cc74370283-certificate.pem.crt"),
-                context.assets.open("cc74370283-private.pem.key"),
-                keyPassword
-            ) ?: throw IOException("Failed to read certificate from resources")
+            CertificateStore.getManagerCert(context, keyPassword)
+                ?: throw IOException("Failed to read certificate from resources")
         }.apply {
             globalDeviceObserver = AWSTelemetryObserver(
                 AWSIOT_EVENT_TOPIC_FORMAT,

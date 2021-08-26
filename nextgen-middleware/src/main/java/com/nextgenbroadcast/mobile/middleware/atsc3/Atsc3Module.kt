@@ -2,10 +2,10 @@ package com.nextgenbroadcast.mobile.middleware.atsc3
 
 import android.util.Log
 import com.nextgenbroadcast.mobile.core.LOG
-import com.nextgenbroadcast.mobile.core.atsc3.PhyVersionInfo
+import com.nextgenbroadcast.mobile.core.atsc3.PhyInfoConstants
 import com.nextgenbroadcast.mobile.core.model.MediaUrl
 import com.nextgenbroadcast.mobile.core.isEquals
-import com.nextgenbroadcast.mobile.middleware.MiddlewareConfig
+import com.nextgenbroadcast.mobile.core.MiddlewareConfig
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.Atsc3ServiceLocationTable
 import com.nextgenbroadcast.mobile.core.atsc3.SLTConstants
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.alerts.LLSParserAEAT
@@ -46,7 +46,7 @@ internal class Atsc3Module(
     private val systemProperties = atsc3NdkApplicationBridge.atsc3_slt_alc_get_system_properties()
     private val serviceLocationTable = ConcurrentHashMap<Int, Atsc3ServiceLocationTable>()
     private val serviceToSourceConfig = ConcurrentHashMap<Int, Int>()
-    private val applicationPackageMap = ConcurrentHashMap<String, Atsc3Application>()  // TODO: concurent? onPackageExtractCompleted
+    private val applicationPackageMap = ConcurrentHashMap<String, Atsc3Application>()
     private val stateLock = ReentrantLock()
     private val configurationTimer = Timer()
     private val stateScope = CoroutineScope(Executors.newSingleThreadExecutor().asCoroutineDispatcher())
@@ -104,7 +104,7 @@ internal class Atsc3Module(
     }
 
     /**
-     * Tune to one frequency or scan over all frequency in [frequencyList] and collect SLT from.
+     * Tune to one frequency or scan over all frequency in [frequencyList] and collect SLT from all of them.
      * The first one will be used as default.
      * frequencyList - list of frequencies in KHz
      */
@@ -745,10 +745,10 @@ internal class Atsc3Module(
 
     override fun getVersionInfo(): Map<String, String?> {
         return mutableMapOf<String, String?>().apply {
-            put(PhyVersionInfo.INFO_SERIAL_NUMBER, getSerialNum())
+            put(PhyInfoConstants.INFO_SERIAL_NUMBER, getSerialNum())
             source?.let { src ->
-                put(PhyVersionInfo.INFO_SDK_VERSION, src.getSdkVersion())
-                put(PhyVersionInfo.INFO_FIRMWARE_VERSION, src.getFirmwareVersion())
+                put(PhyInfoConstants.INFO_SDK_VERSION, src.getSdkVersion())
+                put(PhyInfoConstants.INFO_FIRMWARE_VERSION, src.getFirmwareVersion())
                 if (src is UsbPhyAtsc3Source) {
                     val deviceType = when (src.type) {
                         Atsc3Source.DEVICE_TYPE_KAILASH -> "KAILASH"
@@ -756,7 +756,7 @@ internal class Atsc3Module(
                         Atsc3Source.DEVICE_TYPE_AUTO -> "MARKONE"
                         else -> src.type.toString()
                     }
-                    put(PhyVersionInfo.INFO_PHY_TYPE, deviceType)
+                    put(PhyInfoConstants.INFO_PHY_TYPE, deviceType)
                 }
             }
         }

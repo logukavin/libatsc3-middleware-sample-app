@@ -86,7 +86,6 @@ internal class ServiceControllerImpl(
     }
 
     override fun onConfigurationChanged(index: Int, count: Int, isKnown: Boolean) {
-        // we don't need MainScope because it's thread safe
         atsc3Configuration.value = Triple(index, count, isKnown)
     }
 

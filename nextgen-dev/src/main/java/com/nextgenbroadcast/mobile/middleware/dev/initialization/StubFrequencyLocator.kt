@@ -1,26 +1,16 @@
 package com.nextgenbroadcast.mobile.middleware.dev.initialization
 
 import android.content.Context
-import com.nextgenbroadcast.mobile.core.FileUtils
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.core.initialization.IFrequencyLocator
-import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlin.coroutines.resume
+import com.nextgenbroadcast.mobile.middleware.dev.config.DevConfig
 
 class StubFrequencyLocator : IFrequencyLocator {
     override suspend fun locateFrequency(context: Context): List<Int> {
         try {
-            return suspendCancellableCoroutine { cont ->
-                val frequencies = FileUtils.readExternalFileAsString(context, EXTERNAL_FILE_NAME)?.let { config ->
-                    config.split(";")
-                        .mapNotNull { it.toIntOrNull() }
-                        .map { it * 1000 }
-                } ?: emptyList()
-
-                cont.resume(frequencies)
-            }
+            return DevConfig.get(context).frequencies ?: emptyList()
         } catch (e: Exception) {
-            LOG.w(TAG, "Failed to open external SRT config: $EXTERNAL_FILE_NAME", e)
+            LOG.w(TAG, "Failed to frequencies from external config", e)
         }
 
         return emptyList()
@@ -28,7 +18,5 @@ class StubFrequencyLocator : IFrequencyLocator {
 
     companion object {
         val TAG: String = StubFrequencyLocator::class.java.simpleName
-
-        const val EXTERNAL_FILE_NAME = "freq.conf"
     }
 }

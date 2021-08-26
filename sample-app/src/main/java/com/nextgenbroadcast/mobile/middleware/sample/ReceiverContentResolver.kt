@@ -13,7 +13,7 @@ import androidx.core.database.getDoubleOrNull
 import androidx.core.database.getIntOrNull
 import androidx.core.database.getStringOrNull
 import androidx.core.net.toUri
-import com.nextgenbroadcast.mobile.core.atsc3.PhyVersionInfo
+import com.nextgenbroadcast.mobile.core.atsc3.PhyInfoConstants
 import com.nextgenbroadcast.mobile.core.model.*
 import java.nio.ByteBuffer
 
@@ -196,16 +196,23 @@ class ReceiverContentResolver(
                     val category = cursor.getIntOrNull(COLUMN_SERVICE_CATEGORY) ?: continue
                     val majorChannelNo = cursor.getIntOrNull(COLUMN_SERVICE_MAJOR_NO) ?: 0
                     val minorChannelNo = cursor.getIntOrNull(COLUMN_SERVICE_MINOR_NO) ?: 0
+                    val isDefault = cursor.getIntOrNull(COLUMN_SERVICE_DEFAULT) == 1
 
-                    add(AVService(bsid, serviceId, shortName, serviceGlobalId, majorChannelNo, minorChannelNo, category))
+                    add(AVService(bsid, serviceId, shortName, serviceGlobalId, majorChannelNo, minorChannelNo, category, default = isDefault))
                 }
             }
         }
     }
 
-    fun queryServerCertificate(): String? {
-        return certificateUri.queryFirst { cursor ->
-            cursor.getStringOrNull(COLUMN_CERTIFICATE)
+    fun queryServerCertificate(): List<String>? {
+        return certificateUri.query { cursor ->
+            mutableListOf<String>().apply {
+                while (cursor.moveToNext()) {
+                    cursor.getStringOrNull(COLUMN_CERTIFICATE)?.let {
+                        add(it)
+                    }
+                }
+            }
         }
     }
 
@@ -221,13 +228,14 @@ class ReceiverContentResolver(
             val appEntryPage = cursor.getStringOrNull(COLUMN_APP_ENTRY_PAGE)
             val appServiceIds = cursor.getStringOrNull(COLUMN_APP_SERVICE_IDS)
             val appCachePath = cursor.getStringOrNull(COLUMN_APP_CACHE_PATH)
+            val isAvailable = cursor.getIntOrNull(COLUMN_APP_AVAILABLE) == 1
 
             if (appContextID != null && appEntryPage != null) {
                 val serviceIds = appServiceIds?.split(" ")?.mapNotNull {
                     it.toIntOrNull()
                 } ?: emptyList()
 
-                AppData(appContextID, appEntryPage, serviceIds, appCachePath)
+                AppData(appContextID, appEntryPage, serviceIds, appCachePath, isAvailable)
             } else null
         }
     }
@@ -263,10 +271,10 @@ class ReceiverContentResolver(
     fun getPhyInfo(): Map<String, String?>? {
         return receiverPhyInfoUri.queryFirst { cursor ->
             mutableMapOf<String, String?>().apply {
-                put(PhyVersionInfo.INFO_DEVICE_ID, cursor.getStringOrNull(PhyVersionInfo.INFO_DEVICE_ID))
-                put(PhyVersionInfo.INFO_SDK_VERSION, cursor.getStringOrNull(PhyVersionInfo.INFO_SDK_VERSION))
-                put(PhyVersionInfo.INFO_FIRMWARE_VERSION, cursor.getStringOrNull(PhyVersionInfo.INFO_FIRMWARE_VERSION))
-                put(PhyVersionInfo.INFO_PHY_TYPE, cursor.getStringOrNull(PhyVersionInfo.INFO_PHY_TYPE))
+                put(PhyInfoConstants.INFO_DEVICE_ID, cursor.getStringOrNull(PhyInfoConstants.INFO_DEVICE_ID))
+                put(PhyInfoConstants.INFO_SDK_VERSION, cursor.getStringOrNull(PhyInfoConstants.INFO_SDK_VERSION))
+                put(PhyInfoConstants.INFO_FIRMWARE_VERSION, cursor.getStringOrNull(PhyInfoConstants.INFO_FIRMWARE_VERSION))
+                put(PhyInfoConstants.INFO_PHY_TYPE, cursor.getStringOrNull(PhyInfoConstants.INFO_PHY_TYPE))
             }
         }
     }
@@ -309,8 +317,8 @@ class ReceiverContentResolver(
         }
     }
 
-    private inline fun Uri.query(action: (cursor: Cursor) -> Unit) {
-        providerClient?.query(this, null, null, null)?.use { cursor ->
+    private inline fun <R> Uri.query(action: (cursor: Cursor) -> R?): R? {
+        return providerClient?.query(this, null, null, null)?.use { cursor ->
             action(cursor)
         }
     }
@@ -349,6 +357,7 @@ class ReceiverContentResolver(
         const val COLUMN_APP_STATE_VALUE = "appStateValue"
         const val COLUMN_APP_SERVICE_IDS = "appServiceIds"
         const val COLUMN_APP_CACHE_PATH = "appCachePath"
+        const val COLUMN_APP_AVAILABLE = "appAvailable"
 
         const val COLUMN_CERTIFICATE = "certificate"
 
@@ -368,6 +377,7 @@ class ReceiverContentResolver(
         const val COLUMN_SERVICE_CATEGORY = "receiverServiceCategory"
         const val COLUMN_SERVICE_MAJOR_NO = "receiverServiceMajorNo"
         const val COLUMN_SERVICE_MINOR_NO = "receiverServiceMinorNo"
+        const val COLUMN_SERVICE_DEFAULT = "receiverServiceDefault"
 
         const val COLUMN_PLAYER_MEDIA_URL = "receiverPlayerMediaUrl"
         const val COLUMN_PLAYER_LAYOUT_SCALE = "receiverPlayerLayoutScale"
@@ -387,7 +397,7 @@ class ReceiverContentResolver(
             val uri = getUriForPath(context, CONTENT_PHY_VERSION_INFO)
             return context.contentResolver.query(uri, null, null, null)?.use { cursor ->
                 if (cursor.moveToFirst()) {
-                    cursor.getStringOrNull(cursor.getColumnIndex(PhyVersionInfo.INFO_DEVICE_ID))
+                    cursor.getStringOrNull(cursor.getColumnIndex(PhyInfoConstants.INFO_DEVICE_ID))
                 } else null
             }
         }
