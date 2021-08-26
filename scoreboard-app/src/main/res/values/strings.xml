@@ -36,4 +36,5 @@
     <string name="telemetry_by_name_or_in_general">Telemetry by name or in general</string>
     <string name="tune_mhz">MHz</string>
     <string name="command_has_been_sent">Command has been sent</string>
+    <string name="clear_test_case">Clear</string>
 </resources>

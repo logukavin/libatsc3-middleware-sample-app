@@ -32,7 +32,7 @@
             android:id="@+id/view_separate_select_service"
             layout="@layout/command_separator" />
 
-        <include layout="@layout/command_testcase_value" />
+        <include layout="@layout/command_testcase_view" />
 
         <include
             android:id="@+id/view_separate_apply_text"
