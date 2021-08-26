@@ -2,9 +2,11 @@ package com.nextgenbroadcast.mobile.middleware.scoreboard
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import com.nextgenbroadcast.mobile.middleware.scoreboard.ScoreboardService.Companion.ACTION_COMMANDS
@@ -13,11 +15,12 @@ import com.nextgenbroadcast.mobile.middleware.scoreboard.ScoreboardService.Compa
 import com.nextgenbroadcast.mobile.middleware.scoreboard.databinding.CommandTuneViewBinding
 import com.nextgenbroadcast.mobile.middleware.scoreboard.databinding.FragmentCommandBinding
 import org.json.JSONObject
+import java.lang.NumberFormatException
 
 class CommandFragment : Fragment(), View.OnClickListener {
     private val sharedViewModel by activityViewModels<SharedViewModel>()
-    lateinit var binding: FragmentCommandBinding
-    lateinit var tuneBinding: CommandTuneViewBinding
+    private lateinit var binding: FragmentCommandBinding
+    private lateinit var tuneBinding: CommandTuneViewBinding
     private var isGlobalCommand = false
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
@@ -38,14 +41,19 @@ class CommandFragment : Fragment(), View.OnClickListener {
 
     private fun sendTuneCommand() {
         val frequencyValues = tuneBinding.editTextTune.text.toString()
-        val arguments = JSONObject().apply {
-            put("frequency", frequencyValues + "000")
+        try {
+            val arguments = JSONObject().apply {
+                put("frequency", frequencyValues.toInt() * 1000)
+            }
+            sendCommand("tune", arguments)
+            showToast(getString(R.string.command_has_been_sent))
+        } catch (e: NumberFormatException) {
+            Log.e(TAG, "sendTuneCommand: $e")
         }
+    }
 
-        sendCommand("tune", arguments)
-
-        tuneBinding.editTextTune.setText("")
-        tuneBinding.editTextTune.clearFocus()
+    private fun showToast(message: String) {
+        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
     }
 
     private fun sendPingCommand() {
@@ -54,7 +62,7 @@ class CommandFragment : Fragment(), View.OnClickListener {
 
     private fun sendCommand(command: String, arguments: JSONObject?) {
         if (!isGlobalCommand) {
-            with(Intent(context, ScoreboardService::class.java)) {
+            (Intent(context, ScoreboardService::class.java)).apply {
                 action = ACTION_COMMANDS
                 val jsonObject = JSONObject().apply {
                     put(ACTION, command)
