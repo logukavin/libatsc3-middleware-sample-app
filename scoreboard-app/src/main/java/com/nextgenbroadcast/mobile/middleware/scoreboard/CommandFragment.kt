@@ -2,7 +2,6 @@ package com.nextgenbroadcast.mobile.middleware.scoreboard
 
 import android.content.Intent
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -12,22 +11,25 @@ import androidx.fragment.app.activityViewModels
 import com.nextgenbroadcast.mobile.middleware.scoreboard.ScoreboardService.Companion.ACTION_COMMANDS
 import com.nextgenbroadcast.mobile.middleware.scoreboard.ScoreboardService.Companion.COMMAND_EXTRAS
 import com.nextgenbroadcast.mobile.middleware.scoreboard.ScoreboardService.Companion.DEVICES_EXTRAS
+import com.nextgenbroadcast.mobile.middleware.scoreboard.databinding.CommandSelectServiceViewBinding
 import com.nextgenbroadcast.mobile.middleware.scoreboard.databinding.CommandTuneViewBinding
 import com.nextgenbroadcast.mobile.middleware.scoreboard.databinding.FragmentCommandBinding
 import org.json.JSONObject
-import java.lang.NumberFormatException
 
 class CommandFragment : Fragment(), View.OnClickListener {
     private val sharedViewModel by activityViewModels<SharedViewModel>()
     private lateinit var binding: FragmentCommandBinding
     private lateinit var tuneBinding: CommandTuneViewBinding
+    private lateinit var selectServiceBinding: CommandSelectServiceViewBinding
     private var isGlobalCommand = false
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         binding = FragmentCommandBinding.inflate(inflater, container, false)
         tuneBinding = CommandTuneViewBinding.bind(binding.root)
+        selectServiceBinding = CommandSelectServiceViewBinding.bind(binding.root)
         binding.buttonPing.setOnClickListener(this)
         tuneBinding.buttonTune.setOnClickListener(this)
+        selectServiceBinding.buttonSelectService.setOnClickListener(this)
 
         return binding.root
     }
@@ -36,19 +38,36 @@ class CommandFragment : Fragment(), View.OnClickListener {
         when (view.id) {
             binding.buttonPing.id -> sendPingCommand()
             tuneBinding.buttonTune.id -> sendTuneCommand()
+            selectServiceBinding.buttonSelectService.id -> sendSelectServiceCommand()
         }
     }
 
+    private fun sendSelectServiceCommand() {
+        val serviceName = selectServiceBinding.editTextServiceName.text.toString()
+        val serviceId = serviceName.toIntOrNull()
+        val serviceBsid = selectServiceBinding.editTextBsId.text.toString().toIntOrNull()
+
+        val arguments = JSONObject().apply {
+            if (serviceId == null) {
+                put("serviceName", serviceName)
+            } else {
+                put("serviceId", serviceId)
+            }
+
+            serviceBsid?.let { bsId ->
+                put("serviceBsid", bsId)
+            }
+        }
+
+        sendCommand("acquireService", arguments)
+    }
+
     private fun sendTuneCommand() {
-        val frequencyValues = tuneBinding.editTextTune.text.toString()
-        try {
+        tuneBinding.editTextTune.text.toString().toIntOrNull()?.let { frequencyValues ->
             val arguments = JSONObject().apply {
-                put("frequency", frequencyValues.toInt() * 1000)
+                put("frequency", frequencyValues * 1000)
             }
             sendCommand("tune", arguments)
-            showToast(getString(R.string.command_has_been_sent))
-        } catch (e: NumberFormatException) {
-            Log.e(TAG, "sendTuneCommand: $e")
         }
     }
 
@@ -78,6 +97,8 @@ class CommandFragment : Fragment(), View.OnClickListener {
                 }
 
                 context?.startService(this)
+
+                showToast(getString(R.string.command_has_been_sent))
             }
         }
     }
@@ -86,17 +107,5 @@ class CommandFragment : Fragment(), View.OnClickListener {
         val TAG: String = CommandFragment::class.java.simpleName
         const val ACTION = "action"
         const val CONTROL_ARGUMENTS = "arguments"
-//        const val FREQUENCY_ARG = "frequency"
-//        const val CONTROL_ACTION_TUNE = "tune"
-//        const val CONTROL_ACTION_PING = "ping"
-//        const val CONTROL_ACTION_ACQUIRE_SERVICE = "acquireService"
-//        const val CONTROL_ACTION_SET_TEST_CASE = "setTestCase"
-//        const val CONTROL_ACTION_RESTART_APP = "restartApp"
-//        const val CONTROL_ACTION_REBOOT_DEVICE = "rebootDevice"
-//        const val CONTROL_ACTION_TELEMETRY_ENABLE = "enableTelemetry"
-//        const val CONTROL_ACTION_VOLUME = "volume"
-//        const val CONTROL_ACTION_WIFI_INFO = "networkInfo"
-//        const val CONTROL_ACTION_FILE_WRITER = "fileWriter"
-//        const val CONTROL_ACTION_RESET_RECEIVER_DEMODE = "reset"
     }
 }
