@@ -9,6 +9,7 @@ import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import com.nextgenbroadcast.mobile.middleware.scoreboard.databinding.CommandSelectServiceViewBinding
+import com.nextgenbroadcast.mobile.middleware.scoreboard.databinding.CommandTestcaseViewBinding
 import com.nextgenbroadcast.mobile.middleware.scoreboard.databinding.CommandTuneViewBinding
 import com.nextgenbroadcast.mobile.middleware.scoreboard.databinding.FragmentCommandBinding
 import org.json.JSONObject
@@ -19,6 +20,7 @@ class CommandFragment : Fragment(), View.OnClickListener {
     private lateinit var binding: FragmentCommandBinding
     private lateinit var tuneBinding: CommandTuneViewBinding
     private lateinit var selectServiceBinding: CommandSelectServiceViewBinding
+    private lateinit var setTestCaseBinding: CommandTestcaseViewBinding
 
     private var isGlobalCommand = false
 
@@ -27,6 +29,7 @@ class CommandFragment : Fragment(), View.OnClickListener {
 
         tuneBinding = CommandTuneViewBinding.bind(binding.root)
         selectServiceBinding = CommandSelectServiceViewBinding.bind(binding.root)
+        setTestCaseBinding = CommandTestcaseViewBinding.bind(binding.root)
 
         return binding.root
     }
@@ -38,6 +41,8 @@ class CommandFragment : Fragment(), View.OnClickListener {
             buttonPing.setOnClickListener(this@CommandFragment)
             tuneBinding.buttonTune.setOnClickListener(this@CommandFragment)
             selectServiceBinding.buttonSelectService.setOnClickListener(this@CommandFragment)
+            setTestCaseBinding.buttonApplyTest.setOnClickListener(this@CommandFragment)
+            setTestCaseBinding.buttonClearTest.setOnClickListener(this@CommandFragment)
         }
     }
 
@@ -46,7 +51,22 @@ class CommandFragment : Fragment(), View.OnClickListener {
             binding.buttonPing.id -> sendPingCommand()
             tuneBinding.buttonTune.id -> sendTuneCommand()
             selectServiceBinding.buttonSelectService.id -> sendSelectServiceCommand()
+            setTestCaseBinding.buttonApplyTest.id -> sendTestCaseCommand()
+            setTestCaseBinding.buttonClearTest.id -> clearTestCaseCommand()
         }
+    }
+
+    private fun clearTestCaseCommand() {
+        setTestCaseBinding.editTextTestCase.setText("")
+        sendTestCaseCommand()
+    }
+
+    private fun sendTestCaseCommand() {
+        val testCase = setTestCaseBinding.editTextTestCase.text?.toString()
+        val arguments = JSONObject().apply {
+            put("case", testCase)
+        }
+        sendCommand("setTestCase", arguments)
     }
 
     private fun sendSelectServiceCommand() {
