@@ -493,9 +493,9 @@ class MainFragment : Fragment() {
     }
 
     private fun loadBroadcasterApplication(appData: AppData) {
-        if (binding.userAgentWebView.serverCertificateHash == null) {
+        if (binding.userAgentWebView.serverCertificateHash.isEmpty()) {
             binding.userAgentWebView.serverCertificateHash =
-                receiverContentResolver.queryServerCertificate()
+                receiverContentResolver.queryServerCertificate() ?: emptyList()
         }
         binding.userAgentWebView.loadBAContent(appData.appEntryPage)
         receiverContentResolver.publishApplicationState(ApplicationState.LOADED)
