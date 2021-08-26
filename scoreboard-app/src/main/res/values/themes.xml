@@ -13,4 +13,10 @@
         <item name="android:navigationBarColor">@color/black</item>
         <item name="android:defaultFocusHighlightEnabled">true</item>
     </style>
+
+    <style name="DimensionLable">
+        <item name="android:textColor">@color/gray</item>
+        <item name="android:textSize">16sp</item>
+    </style>
+
 </resources>
