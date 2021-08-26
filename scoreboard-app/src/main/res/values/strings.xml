@@ -34,4 +34,5 @@
     <string name="enable">Enable</string>
     <string name="delay">Delay</string>
     <string name="telemetry_by_name_or_in_general">Telemetry by name or in general</string>
+    <string name="tune_mhz">MHz</string>
 </resources>
