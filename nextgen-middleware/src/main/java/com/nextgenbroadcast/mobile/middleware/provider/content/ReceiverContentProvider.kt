@@ -5,6 +5,7 @@ import android.database.Cursor
 import android.database.MatrixCursor
 import android.net.Uri
 import android.os.Build
+import com.nextgenbroadcast.mobile.core.MiddlewareConfig
 import com.nextgenbroadcast.mobile.core.model.*
 import com.nextgenbroadcast.mobile.core.atsc3.PhyInfoConstants.INFO_DEVICE_ID
 import com.nextgenbroadcast.mobile.core.atsc3.PhyInfoConstants.INFO_FIRMWARE_VERSION
