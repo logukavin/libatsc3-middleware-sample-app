@@ -3,8 +3,8 @@ package com.nextgenbroadcast.mobile.middleware.service.holder
 import android.content.Context
 import androidx.annotation.MainThread
 import com.nextgenbroadcast.mobile.core.LOG
+import com.nextgenbroadcast.mobile.core.MiddlewareConfig
 import com.nextgenbroadcast.mobile.core.model.RouteUrl
-import com.nextgenbroadcast.mobile.middleware.MiddlewareConfig
 import com.nextgenbroadcast.mobile.middleware.dev.config.DevConfig
 
 class SrtListHolder(
