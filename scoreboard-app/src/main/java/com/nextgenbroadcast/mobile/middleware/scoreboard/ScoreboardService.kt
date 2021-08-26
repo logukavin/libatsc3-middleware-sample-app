@@ -91,11 +91,23 @@ class ScoreboardService : Service() {
     }
 
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
-        if (intent.action == ACTION_STOP) {
-            stopSelf()
+        when (intent.action) {
+            ACTION_STOP -> stopSelf()
+            ACTION_COMMANDS -> sendCommand(intent)
         }
 
         return START_NOT_STICKY
+    }
+
+    private fun sendCommand(intent: Intent) {
+        val deviceList = intent.getStringArrayListExtra(DEVICES_EXTRAS)
+        val commandStr = intent.getStringExtra(COMMAND_EXTRAS)
+
+        if (!deviceList.isNullOrEmpty()) {
+            commandStr?.let {
+                telemetryManager.sendDeviceCommand(deviceList, commandStr)
+            }
+        }
     }
 
     override fun onBind(intent: Intent): IBinder {
@@ -179,5 +191,8 @@ class ScoreboardService : Service() {
         private const val CHANNEL_NAME: String = "foreground_phy_name"
         private const val NOTIFICATION_ID = 34569
         private const val ACTION_STOP = "${BuildConfig.APPLICATION_ID}.action_stop"
+        const val ACTION_COMMANDS = "${BuildConfig.APPLICATION_ID}.commands"
+        const val COMMAND_EXTRAS = "commands"
+        const val DEVICES_EXTRAS = "devices_id_list"
     }
 }
