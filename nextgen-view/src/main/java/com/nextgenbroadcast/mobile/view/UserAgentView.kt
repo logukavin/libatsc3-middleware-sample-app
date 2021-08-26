@@ -46,7 +46,7 @@ class UserAgentView @JvmOverloads constructor(
     private var layerCanvas: Canvas? = null
     private var lastCaptureTime: Long = 0
 
-    var serverCertificateHash: String? = null
+    var serverCertificateHash: List<String> = emptyList()
 
     var captureContentVisibility = false
     var isContentVisible: LiveData<Boolean> = _isContentVisible.distinctUntilChanged()
@@ -176,7 +176,7 @@ class UserAgentView @JvmOverloads constructor(
                     getX509Certificate(error.certificate)
                 }
 
-                if (cert != null && cert.publicHash() == serverCertificateHash) {
+                if (cert != null && serverCertificateHash.contains(cert.publicHash())) {
                     handler.proceed()
                     return
                 }

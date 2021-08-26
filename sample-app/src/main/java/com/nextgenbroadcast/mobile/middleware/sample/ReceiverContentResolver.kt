@@ -196,16 +196,23 @@ class ReceiverContentResolver(
                     val category = cursor.getIntOrNull(COLUMN_SERVICE_CATEGORY) ?: continue
                     val majorChannelNo = cursor.getIntOrNull(COLUMN_SERVICE_MAJOR_NO) ?: 0
                     val minorChannelNo = cursor.getIntOrNull(COLUMN_SERVICE_MINOR_NO) ?: 0
+                    val isDefault = cursor.getIntOrNull(COLUMN_SERVICE_DEFAULT) == 1
 
-                    add(AVService(bsid, serviceId, shortName, serviceGlobalId, majorChannelNo, minorChannelNo, category))
+                    add(AVService(bsid, serviceId, shortName, serviceGlobalId, majorChannelNo, minorChannelNo, category, default = isDefault))
                 }
             }
         }
     }
 
-    fun queryServerCertificate(): String? {
-        return certificateUri.queryFirst { cursor ->
-            cursor.getStringOrNull(COLUMN_CERTIFICATE)
+    fun queryServerCertificate(): List<String>? {
+        return certificateUri.query { cursor ->
+            mutableListOf<String>().apply {
+                while (cursor.moveToNext()) {
+                    cursor.getStringOrNull(COLUMN_CERTIFICATE)?.let {
+                        add(it)
+                    }
+                }
+            }
         }
     }
 
@@ -310,8 +317,8 @@ class ReceiverContentResolver(
         }
     }
 
-    private inline fun Uri.query(action: (cursor: Cursor) -> Unit) {
-        providerClient?.query(this, null, null, null)?.use { cursor ->
+    private inline fun <R> Uri.query(action: (cursor: Cursor) -> R?): R? {
+        return providerClient?.query(this, null, null, null)?.use { cursor ->
             action(cursor)
         }
     }
@@ -370,6 +377,7 @@ class ReceiverContentResolver(
         const val COLUMN_SERVICE_CATEGORY = "receiverServiceCategory"
         const val COLUMN_SERVICE_MAJOR_NO = "receiverServiceMajorNo"
         const val COLUMN_SERVICE_MINOR_NO = "receiverServiceMinorNo"
+        const val COLUMN_SERVICE_DEFAULT = "receiverServiceDefault"
 
         const val COLUMN_PLAYER_MEDIA_URL = "receiverPlayerMediaUrl"
         const val COLUMN_PLAYER_LAYOUT_SCALE = "receiverPlayerLayoutScale"

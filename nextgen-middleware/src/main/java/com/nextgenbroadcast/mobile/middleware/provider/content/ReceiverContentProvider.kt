@@ -6,13 +6,14 @@ import android.database.MatrixCursor
 import android.net.Uri
 import android.os.Build
 import com.nextgenbroadcast.mobile.core.model.*
-import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverCore
-import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverStandalone
-import com.nextgenbroadcast.mobile.middleware.R
 import com.nextgenbroadcast.mobile.core.atsc3.PhyInfoConstants.INFO_DEVICE_ID
 import com.nextgenbroadcast.mobile.core.atsc3.PhyInfoConstants.INFO_FIRMWARE_VERSION
 import com.nextgenbroadcast.mobile.core.atsc3.PhyInfoConstants.INFO_PHY_TYPE
 import com.nextgenbroadcast.mobile.core.atsc3.PhyInfoConstants.INFO_SDK_VERSION
+import com.nextgenbroadcast.mobile.middleware.*
+import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverCore
+import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverStandalone
+import com.nextgenbroadcast.mobile.middleware.dev.config.DevConfig
 import com.nextgenbroadcast.mobile.middleware.server.cert.IUserAgentSSLContext
 import com.nextgenbroadcast.mobile.middleware.server.cert.UserAgentSSLContext
 import com.nextgenbroadcast.mobile.middleware.service.Atsc3ForegroundService
@@ -32,14 +33,16 @@ class ReceiverContentProvider : ContentProvider() {
     private lateinit var rmpLayoutParams: StateFlow<RPMParams>
     private lateinit var rmpState: StateFlow<PlaybackState>
 
+    private val appContext: Context  by lazy {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            requireContext()
+        } else {
+            context ?: throw IllegalStateException("Provider $this not attached to a context.")
+        }
+    }
+
     private val sslContext: IUserAgentSSLContext by lazy {
-        UserAgentSSLContext.newInstance(
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                requireContext()
-            } else {
-                context ?: throw IllegalStateException("Provider $this not attached to a context.")
-            }
-        )
+        UserAgentSSLContext.newInstance(appContext)
     }
 
     override fun onCreate(): Boolean {
@@ -162,8 +165,15 @@ class ReceiverContentProvider : ContentProvider() {
 
             QUERY_RECEIVER_SERVICE_LIST -> {
                 MatrixCursor(arrayOf(COLUMN_SERVICE_BSID, COLUMN_SERVICE_ID, COLUMN_SERVICE_GLOBAL_ID,
-                    COLUMN_SERVICE_SHORT_NAME, COLUMN_SERVICE_CATEGORY, COLUMN_SERVICE_MAJOR_NO, COLUMN_SERVICE_MINOR_NO)).apply {
-                    receiver.getServiceList().forEach{ service ->
+                    COLUMN_SERVICE_SHORT_NAME, COLUMN_SERVICE_CATEGORY, COLUMN_SERVICE_MAJOR_NO,
+                    COLUMN_SERVICE_MINOR_NO, COLUMN_SERVICE_DEFAULT)).apply {
+
+                    val defaultService = if (MiddlewareConfig.DEV_TOOLS) {
+                        DevConfig.get(appContext).service
+                    } else null
+
+                    receiver.getServiceList().forEach { service ->
+                        val isDefault = defaultService?.isTheSameAs(service) ?: false
                         newRow()
                             .add(COLUMN_SERVICE_BSID, service.bsid)
                             .add(COLUMN_SERVICE_ID, service.id)
@@ -172,6 +182,7 @@ class ReceiverContentProvider : ContentProvider() {
                             .add(COLUMN_SERVICE_CATEGORY, service.category)
                             .add(COLUMN_SERVICE_MAJOR_NO, service.majorChannelNo)
                             .add(COLUMN_SERVICE_MINOR_NO, service.minorChannelNo)
+                            .add(COLUMN_SERVICE_DEFAULT, if (isDefault) 1 else 0)
                     }
                 }
             }
@@ -179,11 +190,20 @@ class ReceiverContentProvider : ContentProvider() {
             QUERY_APP_DATA -> {
                 MatrixCursor(arrayOf(COLUMN_APP_CONTEXT_ID, COLUMN_APP_ENTRY_PAGE, COLUMN_APP_SERVICE_IDS, COLUMN_APP_CACHE_PATH, COLUMN_APP_AVAILABLE)).apply {
                     appData.value?.let { data ->
-                        newRow().add(COLUMN_APP_CONTEXT_ID, data.appContextId)
-                            .add(COLUMN_APP_ENTRY_PAGE, data.appEntryPage)
-                            .add(COLUMN_APP_SERVICE_IDS, data.compatibleServiceIds.joinToString(" ") { it.toString() })
-                            .add(COLUMN_APP_CACHE_PATH, data.cachePath)
-                            .add(COLUMN_APP_AVAILABLE, if (data.isAvailable) 1 else 0)
+                        var d = data
+                        if (MiddlewareConfig.DEV_TOOLS) {
+                            DevConfig.get(appContext).applicationEntryPoint?.let { entryPage ->
+                                d = AppData(data.appContextId,
+                                    entryPage + data.appEntryPage.substring(data.appEntryPage.indexOf('?')),
+                                    emptyList(), null, true)
+                            }
+                        }
+
+                        newRow().add(COLUMN_APP_CONTEXT_ID, d.appContextId)
+                            .add(COLUMN_APP_ENTRY_PAGE, d.appEntryPage)
+                            .add(COLUMN_APP_SERVICE_IDS, d.compatibleServiceIds.joinToString(" ") { it.toString() })
+                            .add(COLUMN_APP_CACHE_PATH, d.cachePath)
+                            .add(COLUMN_APP_AVAILABLE, if (d.isAvailable) 1 else 0)
                     }
                 }
             }
@@ -202,6 +222,12 @@ class ReceiverContentProvider : ContentProvider() {
             QUERY_CERTIFICATE -> {
                 MatrixCursor(arrayOf(COLUMN_CERTIFICATE)).apply {
                     newRow().add(COLUMN_CERTIFICATE, sslContext.getCertificateHash())
+
+                    if (MiddlewareConfig.DEV_TOOLS) {
+                        DevConfig.get(appContext).serverCertHash?.let {
+                            newRow().add(COLUMN_CERTIFICATE, it)
+                        }
+                    }
                 }
             }
 
@@ -400,6 +426,7 @@ class ReceiverContentProvider : ContentProvider() {
         const val COLUMN_SERVICE_CATEGORY = "receiverServiceCategory"
         const val COLUMN_SERVICE_MAJOR_NO = "receiverServiceMajorNo"
         const val COLUMN_SERVICE_MINOR_NO = "receiverServiceMinorNo"
+        const val COLUMN_SERVICE_DEFAULT = "receiverServiceDefault"
 
         const val COLUMN_PLAYER_MEDIA_URL = "receiverPlayerMediaUrl"
         const val COLUMN_PLAYER_LAYOUT_SCALE = "receiverPlayerLayoutScale"
