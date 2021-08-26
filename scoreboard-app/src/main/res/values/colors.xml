@@ -6,6 +6,7 @@
 
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+    <color name="gray">#FF767676</color>
     <color name="alert">#FFFF0F0F</color>
 
     <color name="chart_grid_color">#4CFFFFFF</color>
