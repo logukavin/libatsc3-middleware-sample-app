@@ -55,6 +55,7 @@ class CommandFragment : Fragment(), View.OnClickListener {
             buttonRebootDevice.setOnClickListener(this@CommandFragment)
             restartAppViewBinding.buttonRestartApp.setOnClickListener(this@CommandFragment)
             showDebugInfoBinding.buttonShowDebugInfo.setOnClickListener(this@CommandFragment)
+            buttonShowNetworkInfo.setOnClickListener(this@CommandFragment)
         }
     }
 
@@ -69,6 +70,7 @@ class CommandFragment : Fragment(), View.OnClickListener {
             binding.buttonRebootDevice.id -> sendRebootDeviceCommand()
             restartAppViewBinding.buttonRestartApp.id -> sendRestartAppCommand()
             showDebugInfoBinding.buttonShowDebugInfo.id -> sendShowDebugInfoCommand()
+            binding.buttonShowNetworkInfo.id -> sendShowNetworkInfoCommand()
         }
     }
 
@@ -161,6 +163,10 @@ class CommandFragment : Fragment(), View.OnClickListener {
             put("phy", showDebugInfoBinding.checkboxPhy.isChecked)
         }
         sendCommand("showDebugInfo", arguments)
+    }
+
+    private fun sendShowNetworkInfoCommand() {
+        sendCommand("networkInfo", null)
     }
 
     private fun sendCommand(command: String, arguments: JSONObject?) {
