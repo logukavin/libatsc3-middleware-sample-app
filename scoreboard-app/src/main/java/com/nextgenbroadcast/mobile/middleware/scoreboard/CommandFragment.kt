@@ -7,7 +7,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
-import androidx.core.util.TimeUtils
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import com.nextgenbroadcast.mobile.middleware.scoreboard.databinding.*
@@ -23,19 +22,21 @@ class CommandFragment : Fragment(), View.OnClickListener {
     private lateinit var setTestCaseBinding: CommandTestcaseViewBinding
     private lateinit var setVolumeViewBinding: CommandVolumeViewBinding
     private lateinit var restartAppViewBinding: CommandRestartAppViewBinding
+    private lateinit var showDebugInfoBinding: CommandDebugInfoBinding
 
     private var isGlobalCommand = false
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         binding = FragmentCommandBinding.inflate(inflater, container, false)
-
         val view = binding.root
+
         with(view) {
             tuneBinding = CommandTuneViewBinding.bind(this)
             selectServiceBinding = CommandSelectServiceViewBinding.bind(this)
             setTestCaseBinding = CommandTestcaseViewBinding.bind(this)
             setVolumeViewBinding = CommandVolumeViewBinding.bind(this)
             restartAppViewBinding = CommandRestartAppViewBinding.bind(this)
+            showDebugInfoBinding = CommandDebugInfoBinding.bind(this)
         }
 
         return view
@@ -53,6 +54,7 @@ class CommandFragment : Fragment(), View.OnClickListener {
             setVolumeViewBinding.buttonVolume.setOnClickListener(this@CommandFragment)
             buttonRebootDevice.setOnClickListener(this@CommandFragment)
             restartAppViewBinding.buttonRestartApp.setOnClickListener(this@CommandFragment)
+            showDebugInfoBinding.buttonShowDebugInfo.setOnClickListener(this@CommandFragment)
         }
     }
 
@@ -64,51 +66,14 @@ class CommandFragment : Fragment(), View.OnClickListener {
             setTestCaseBinding.buttonApplyTest.id -> sendTestCaseCommand()
             setTestCaseBinding.buttonClearTest.id -> clearTestCaseCommand()
             setVolumeViewBinding.buttonVolume.id -> sendVolumeCommand()
-            binding.buttonRebootDevice.id -> showRebootDeviceDialog(R.string.reboot_device_warning) { sendRebootDeviceCommand() }
-            restartAppViewBinding.buttonRestartApp.id -> showRebootDeviceDialog(R.string.restart_app_warning) { sendRestartAppCommand() }
+            binding.buttonRebootDevice.id -> sendRebootDeviceCommand()
+            restartAppViewBinding.buttonRestartApp.id -> sendRestartAppCommand()
+            showDebugInfoBinding.buttonShowDebugInfo.id -> sendShowDebugInfoCommand()
         }
     }
 
-    private fun sendRestartAppCommand() {
-        var arguments: JSONObject? = null
-        restartAppViewBinding.editTextRestartApp.text?.toString()?.toLongOrNull()?.let { seconds ->
-            arguments = JSONObject().apply {
-                put("startDelay", TimeUnit.SECONDS.toMillis(seconds))
-            }
-        }
-        sendCommand("restartApp", arguments)
-    }
-
-    private fun showRebootDeviceDialog(messageId: Int, action: () -> Unit) {
-        AlertDialog.Builder(requireContext()).apply {
-            setMessage(getString(messageId, sharedViewModel.chartDevicesWithFlow.value?.size))
-            setPositiveButton(getString(R.string.dialog_ok)) { _, _ -> action() }
-            setNegativeButton(getString(R.string.dialog_cancel)) { _, _ -> }
-        }.show()
-    }
-
-    private fun sendRebootDeviceCommand() {
-        sendCommand("rebootDevice", null)
-    }
-
-    private fun sendVolumeCommand() {
-        val arguments = JSONObject().apply {
-            put("value", setVolumeViewBinding.seekBarVolume.progress)
-        }
-        sendCommand("volume", arguments)
-    }
-
-    private fun clearTestCaseCommand() {
-        setTestCaseBinding.editTextTestCase.setText("")
-        sendTestCaseCommand()
-    }
-
-    private fun sendTestCaseCommand() {
-        val testCase = setTestCaseBinding.editTextTestCase.text?.toString()
-        val arguments = JSONObject().apply {
-            put("case", testCase)
-        }
-        sendCommand("setTestCase", arguments)
+    private fun sendPingCommand() {
+        sendCommand("ping", null)
     }
 
     private fun sendSelectServiceCommand() {
@@ -144,8 +109,58 @@ class CommandFragment : Fragment(), View.OnClickListener {
         sendCommand("tune", arguments)
     }
 
-    private fun sendPingCommand() {
-        sendCommand("ping", null)
+    private fun sendTestCaseCommand() {
+        val testCase = setTestCaseBinding.editTextTestCase.text?.toString()
+        val arguments = JSONObject().apply {
+            put("case", testCase)
+        }
+        sendCommand("setTestCase", arguments)
+    }
+
+    private fun clearTestCaseCommand() {
+        setTestCaseBinding.editTextTestCase.setText("")
+        sendTestCaseCommand()
+    }
+
+    private fun sendVolumeCommand() {
+        val arguments = JSONObject().apply {
+            put("value", setVolumeViewBinding.seekBarVolume.progress)
+        }
+        sendCommand("volume", arguments)
+    }
+
+    private fun showWarningDialog(messageId: Int, action: () -> Unit) {
+        AlertDialog.Builder(requireContext()).apply {
+            setMessage(getString(messageId, sharedViewModel.chartDevicesWithFlow.value?.size))
+            setPositiveButton(getString(R.string.dialog_ok)) { _, _ -> action() }
+            setNegativeButton(getString(R.string.dialog_cancel)) { _, _ -> }
+        }.show()
+    }
+
+    private fun sendRebootDeviceCommand() {
+        showWarningDialog(R.string.reboot_device_warning) {
+            sendCommand("rebootDevice", null)
+        }
+    }
+
+    private fun sendRestartAppCommand() {
+        showWarningDialog(R.string.restart_app_warning) {
+            val arguments =
+                restartAppViewBinding.editTextRestartApp.text?.toString()?.toLongOrNull()?.let { seconds ->
+                    JSONObject().apply {
+                        put("startDelay", TimeUnit.SECONDS.toMillis(seconds))
+                    }
+                }
+            sendCommand("restartApp", arguments)
+        }
+    }
+
+    private fun sendShowDebugInfoCommand() {
+        val arguments = JSONObject().apply {
+            put("debug", showDebugInfoBinding.checkboxDebug.isChecked)
+            put("phy", showDebugInfoBinding.checkboxPhy.isChecked)
+        }
+        sendCommand("showDebugInfo", arguments)
     }
 
     private fun sendCommand(command: String, arguments: JSONObject?) {
