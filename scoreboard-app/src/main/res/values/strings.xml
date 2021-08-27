@@ -37,4 +37,7 @@
     <string name="tune_mhz">MHz</string>
     <string name="command_has_been_sent">Command has been sent</string>
     <string name="clear_test_case">Clear</string>
+    <string name="dialog_ok">Ok</string>
+    <string name="dialog_cancel">Cancel</string>
+    <string name="reboot_device_warning">You are going to reboot %d devices. Continue?</string>
 </resources>

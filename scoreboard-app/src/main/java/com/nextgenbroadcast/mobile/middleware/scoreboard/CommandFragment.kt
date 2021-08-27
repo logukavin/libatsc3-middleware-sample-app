@@ -5,8 +5,8 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.SeekBar
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import com.nextgenbroadcast.mobile.middleware.scoreboard.databinding.*
@@ -43,25 +43,9 @@ class CommandFragment : Fragment(), View.OnClickListener {
             selectServiceBinding.buttonSelectService.setOnClickListener(this@CommandFragment)
             setTestCaseBinding.buttonApplyTest.setOnClickListener(this@CommandFragment)
             setTestCaseBinding.buttonClearTest.setOnClickListener(this@CommandFragment)
-
-            setVolumeViewBinding.apply {
-                buttonVolume.text = getVolumeProgress()
-                buttonVolume.setOnClickListener(this@CommandFragment)
-                seekBarVolume.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-                    override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                        buttonVolume.text = getVolumeProgress()
-                    }
-
-                    override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-                    override fun onStopTrackingTouch(seekBar: SeekBar?) {}
-                })
-
-            }
+            setVolumeViewBinding.buttonVolume.setOnClickListener(this@CommandFragment)
+            buttonRebootDevice.setOnClickListener(this@CommandFragment)
         }
-    }
-
-    private fun getVolumeProgress(): String {
-        return "${getString(R.string.volume)}\n${setVolumeViewBinding.seekBarVolume.progress}"
     }
 
     override fun onClick(view: View) {
@@ -72,7 +56,20 @@ class CommandFragment : Fragment(), View.OnClickListener {
             setTestCaseBinding.buttonApplyTest.id -> sendTestCaseCommand()
             setTestCaseBinding.buttonClearTest.id -> clearTestCaseCommand()
             setVolumeViewBinding.buttonVolume.id -> sendVolumeCommand()
+            binding.buttonRebootDevice.id -> showRebootDeviceDialog(R.string.reboot_device_warning) { sendRebootDeviceCommand() }
         }
+    }
+
+    private fun showRebootDeviceDialog(messageId:Int, action: () -> Unit) {
+        AlertDialog.Builder(requireContext()).apply {
+            setMessage(getString(messageId, sharedViewModel.chartDevicesWithFlow.value?.size))
+            setPositiveButton(getString(R.string.dialog_ok)) { _, _ -> action()}
+            setNegativeButton(getString(R.string.dialog_cancel)) { _, _ -> }
+        }.show()
+    }
+
+    private fun sendRebootDeviceCommand() {
+        sendCommand("rebootDevice", null)
     }
 
     private fun sendVolumeCommand() {
