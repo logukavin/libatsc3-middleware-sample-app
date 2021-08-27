@@ -23,6 +23,7 @@ class CommandFragment : Fragment(), View.OnClickListener {
     private lateinit var setVolumeViewBinding: CommandVolumeViewBinding
     private lateinit var restartAppViewBinding: CommandRestartAppViewBinding
     private lateinit var showDebugInfoBinding: CommandDebugInfoBinding
+    private lateinit var saveFileViewBinding: CommandSaveFileViewBinding
 
     private var isGlobalCommand = false
 
@@ -37,6 +38,7 @@ class CommandFragment : Fragment(), View.OnClickListener {
             setVolumeViewBinding = CommandVolumeViewBinding.bind(this)
             restartAppViewBinding = CommandRestartAppViewBinding.bind(this)
             showDebugInfoBinding = CommandDebugInfoBinding.bind(this)
+            saveFileViewBinding = CommandSaveFileViewBinding.bind(this)
         }
 
         return view
@@ -56,6 +58,7 @@ class CommandFragment : Fragment(), View.OnClickListener {
             restartAppViewBinding.buttonRestartApp.setOnClickListener(this@CommandFragment)
             showDebugInfoBinding.buttonShowDebugInfo.setOnClickListener(this@CommandFragment)
             buttonShowNetworkInfo.setOnClickListener(this@CommandFragment)
+            saveFileViewBinding.buttonWriteToFile.setOnClickListener(this@CommandFragment)
         }
     }
 
@@ -71,6 +74,7 @@ class CommandFragment : Fragment(), View.OnClickListener {
             restartAppViewBinding.buttonRestartApp.id -> sendRestartAppCommand()
             showDebugInfoBinding.buttonShowDebugInfo.id -> sendShowDebugInfoCommand()
             binding.buttonShowNetworkInfo.id -> sendShowNetworkInfoCommand()
+            saveFileViewBinding.buttonWriteToFile.id -> sendSaveToFileCommand()
         }
     }
 
@@ -167,6 +171,18 @@ class CommandFragment : Fragment(), View.OnClickListener {
 
     private fun sendShowNetworkInfoCommand() {
         sendCommand("networkInfo", null)
+    }
+
+    private fun sendSaveToFileCommand() {
+        val fileName = saveFileViewBinding.editTextFileName.text?.toString()
+        if (fileName.isNullOrEmpty()) return
+        val arguments = JSONObject().apply {
+            put("name", fileName)
+            saveFileViewBinding.editTextWritingDuration.text?.toString()?.toIntOrNull()?.let { duration ->
+                put("duration", duration)
+            }
+        }
+        sendCommand("fileWriter", arguments)
     }
 
     private fun sendCommand(command: String, arguments: JSONObject?) {
