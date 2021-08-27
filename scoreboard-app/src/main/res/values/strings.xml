@@ -40,4 +40,5 @@
     <string name="dialog_ok">Ok</string>
     <string name="dialog_cancel">Cancel</string>
     <string name="reboot_device_warning">You are going to reboot %d devices. Continue?</string>
+    <string name="restart_app_warning">You are going to restart app in %d devices. Continue?</string>
 </resources>

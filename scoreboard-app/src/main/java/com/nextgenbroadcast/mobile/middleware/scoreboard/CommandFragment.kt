@@ -7,10 +7,12 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
+import androidx.core.util.TimeUtils
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import com.nextgenbroadcast.mobile.middleware.scoreboard.databinding.*
 import org.json.JSONObject
+import java.util.concurrent.TimeUnit
 
 class CommandFragment : Fragment(), View.OnClickListener {
     private val sharedViewModel: SharedViewModel by activityViewModels()
@@ -20,18 +22,23 @@ class CommandFragment : Fragment(), View.OnClickListener {
     private lateinit var selectServiceBinding: CommandSelectServiceViewBinding
     private lateinit var setTestCaseBinding: CommandTestcaseViewBinding
     private lateinit var setVolumeViewBinding: CommandVolumeViewBinding
+    private lateinit var restartAppViewBinding: CommandRestartAppViewBinding
 
     private var isGlobalCommand = false
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         binding = FragmentCommandBinding.inflate(inflater, container, false)
 
-        tuneBinding = CommandTuneViewBinding.bind(binding.root)
-        selectServiceBinding = CommandSelectServiceViewBinding.bind(binding.root)
-        setTestCaseBinding = CommandTestcaseViewBinding.bind(binding.root)
-        setVolumeViewBinding = CommandVolumeViewBinding.bind(binding.root)
+        val view = binding.root
+        with(view) {
+            tuneBinding = CommandTuneViewBinding.bind(this)
+            selectServiceBinding = CommandSelectServiceViewBinding.bind(this)
+            setTestCaseBinding = CommandTestcaseViewBinding.bind(this)
+            setVolumeViewBinding = CommandVolumeViewBinding.bind(this)
+            restartAppViewBinding = CommandRestartAppViewBinding.bind(this)
+        }
 
-        return binding.root
+        return view
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -45,6 +52,7 @@ class CommandFragment : Fragment(), View.OnClickListener {
             setTestCaseBinding.buttonClearTest.setOnClickListener(this@CommandFragment)
             setVolumeViewBinding.buttonVolume.setOnClickListener(this@CommandFragment)
             buttonRebootDevice.setOnClickListener(this@CommandFragment)
+            restartAppViewBinding.buttonRestartApp.setOnClickListener(this@CommandFragment)
         }
     }
 
@@ -57,13 +65,24 @@ class CommandFragment : Fragment(), View.OnClickListener {
             setTestCaseBinding.buttonClearTest.id -> clearTestCaseCommand()
             setVolumeViewBinding.buttonVolume.id -> sendVolumeCommand()
             binding.buttonRebootDevice.id -> showRebootDeviceDialog(R.string.reboot_device_warning) { sendRebootDeviceCommand() }
+            restartAppViewBinding.buttonRestartApp.id -> showRebootDeviceDialog(R.string.restart_app_warning) { sendRestartAppCommand() }
         }
     }
 
-    private fun showRebootDeviceDialog(messageId:Int, action: () -> Unit) {
+    private fun sendRestartAppCommand() {
+        var arguments: JSONObject? = null
+        restartAppViewBinding.editTextRestartApp.text?.toString()?.toLongOrNull()?.let { seconds ->
+            arguments = JSONObject().apply {
+                put("startDelay", TimeUnit.SECONDS.toMillis(seconds))
+            }
+        }
+        sendCommand("restartApp", arguments)
+    }
+
+    private fun showRebootDeviceDialog(messageId: Int, action: () -> Unit) {
         AlertDialog.Builder(requireContext()).apply {
             setMessage(getString(messageId, sharedViewModel.chartDevicesWithFlow.value?.size))
-            setPositiveButton(getString(R.string.dialog_ok)) { _, _ -> action()}
+            setPositiveButton(getString(R.string.dialog_ok)) { _, _ -> action() }
             setNegativeButton(getString(R.string.dialog_cancel)) { _, _ -> }
         }.show()
     }
