@@ -5,13 +5,11 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.SeekBar
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
-import com.nextgenbroadcast.mobile.middleware.scoreboard.databinding.CommandSelectServiceViewBinding
-import com.nextgenbroadcast.mobile.middleware.scoreboard.databinding.CommandTestcaseViewBinding
-import com.nextgenbroadcast.mobile.middleware.scoreboard.databinding.CommandTuneViewBinding
-import com.nextgenbroadcast.mobile.middleware.scoreboard.databinding.FragmentCommandBinding
+import com.nextgenbroadcast.mobile.middleware.scoreboard.databinding.*
 import org.json.JSONObject
 
 class CommandFragment : Fragment(), View.OnClickListener {
@@ -21,6 +19,7 @@ class CommandFragment : Fragment(), View.OnClickListener {
     private lateinit var tuneBinding: CommandTuneViewBinding
     private lateinit var selectServiceBinding: CommandSelectServiceViewBinding
     private lateinit var setTestCaseBinding: CommandTestcaseViewBinding
+    private lateinit var setVolumeViewBinding: CommandVolumeViewBinding
 
     private var isGlobalCommand = false
 
@@ -30,6 +29,7 @@ class CommandFragment : Fragment(), View.OnClickListener {
         tuneBinding = CommandTuneViewBinding.bind(binding.root)
         selectServiceBinding = CommandSelectServiceViewBinding.bind(binding.root)
         setTestCaseBinding = CommandTestcaseViewBinding.bind(binding.root)
+        setVolumeViewBinding = CommandVolumeViewBinding.bind(binding.root)
 
         return binding.root
     }
@@ -43,7 +43,25 @@ class CommandFragment : Fragment(), View.OnClickListener {
             selectServiceBinding.buttonSelectService.setOnClickListener(this@CommandFragment)
             setTestCaseBinding.buttonApplyTest.setOnClickListener(this@CommandFragment)
             setTestCaseBinding.buttonClearTest.setOnClickListener(this@CommandFragment)
+
+            setVolumeViewBinding.apply {
+                buttonVolume.text = getVolumeProgress()
+                buttonVolume.setOnClickListener(this@CommandFragment)
+                seekBarVolume.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                    override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                        buttonVolume.text = getVolumeProgress()
+                    }
+
+                    override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+                    override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+                })
+
+            }
         }
+    }
+
+    private fun getVolumeProgress(): String {
+        return "${getString(R.string.volume)}\n${setVolumeViewBinding.seekBarVolume.progress}"
     }
 
     override fun onClick(view: View) {
@@ -53,7 +71,15 @@ class CommandFragment : Fragment(), View.OnClickListener {
             selectServiceBinding.buttonSelectService.id -> sendSelectServiceCommand()
             setTestCaseBinding.buttonApplyTest.id -> sendTestCaseCommand()
             setTestCaseBinding.buttonClearTest.id -> clearTestCaseCommand()
+            setVolumeViewBinding.buttonVolume.id -> sendVolumeCommand()
         }
+    }
+
+    private fun sendVolumeCommand() {
+        val arguments = JSONObject().apply {
+            put("value", setVolumeViewBinding.seekBarVolume.progress)
+        }
+        sendCommand("volume", arguments)
     }
 
     private fun clearTestCaseCommand() {
