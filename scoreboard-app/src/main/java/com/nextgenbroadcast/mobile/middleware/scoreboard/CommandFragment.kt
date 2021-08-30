@@ -62,10 +62,18 @@ class CommandFragment : Fragment(), View.OnClickListener {
             buttonShowNetworkInfo.setOnClickListener(this@CommandFragment)
             saveFileViewBinding.buttonWriteToFile.setOnClickListener(this@CommandFragment)
             telemetryViewBinding.buttonSetTelemetry.setOnClickListener(this@CommandFragment)
+            binding.checkboxGlobalCommand.setOnCheckedChangeListener { _, isChecked ->
+                isGlobalCommand = isChecked
+            }
         }
     }
 
     override fun onClick(view: View) {
+        if (!isGlobalCommand && sharedViewModel.chartDevicesWithFlow.value.isNullOrEmpty()) {
+            showToast(getString(R.string.no_selected_devices))
+            return
+        }
+
         when (view.id) {
             binding.buttonPing.id -> sendPingCommand()
             tuneBinding.buttonTune.id -> sendTuneCommand()
@@ -141,10 +149,19 @@ class CommandFragment : Fragment(), View.OnClickListener {
 
     private fun showWarningDialog(messageId: Int, action: () -> Unit) {
         AlertDialog.Builder(requireContext()).apply {
-            setMessage(getString(messageId, sharedViewModel.chartDevicesWithFlow.value?.size))
+            val devices = getDevicesCount()
+            setMessage(getString(messageId, devices))
             setPositiveButton(getString(R.string.dialog_ok)) { _, _ -> action() }
             setNegativeButton(getString(R.string.dialog_cancel)) { _, _ -> }
         }.show()
+    }
+
+    private fun getDevicesCount(): Int? {
+        return if (isGlobalCommand) {
+            sharedViewModel.deviceIdList.value?.size
+        } else {
+            sharedViewModel.chartDevicesWithFlow.value?.size
+        }
     }
 
     private fun sendRebootDeviceCommand() {
@@ -204,13 +221,22 @@ class CommandFragment : Fragment(), View.OnClickListener {
     }
 
     private fun sendCommand(command: String, arguments: JSONObject?) {
-        val devices = sharedViewModel.chartDevicesWithFlow.value?.map { device ->
-            device.id
-        } ?: return
-
         if (isGlobalCommand) {
-            //TODO: implements
+            showWarningDialog(R.string.you_send_command_to_all_devices) {
+                Intent(context, ScoreboardService::class.java).apply {
+                    action = ScoreboardService.ACTION_GLOBAL_COMMANDS
+                    putExtra(TOPIC, command)
+                    val payload = arguments ?: JSONObject()
+                    putExtra(ScoreboardService.COMMAND_EXTRAS, payload.toString())
+                }.run {
+                    sendToService(this)
+                }
+            }
         } else {
+            val devices = sharedViewModel.chartDevicesWithFlow.value?.map { device ->
+                device.id
+            } ?: return
+
             Intent(context, ScoreboardService::class.java).apply {
                 action = ScoreboardService.ACTION_COMMANDS
                 val jsonObject = JSONObject().apply {
@@ -221,11 +247,15 @@ class CommandFragment : Fragment(), View.OnClickListener {
                 putExtra(ScoreboardService.COMMAND_EXTRAS, jsonObject.toString())
                 putStringArrayListExtra(ScoreboardService.DEVICES_EXTRAS, arrayListOf(*devices.toTypedArray()))
             }.run {
-                requireContext().startService(this)
+                sendToService(this)
             }
-
-            showToast(getString(R.string.command_has_been_sent))
         }
+
+    }
+
+    private fun sendToService(intent: Intent) {
+        requireContext().startService(intent)
+        showToast(getString(R.string.command_has_been_sent))
     }
 
     private fun showToast(message: String) {
@@ -233,9 +263,8 @@ class CommandFragment : Fragment(), View.OnClickListener {
     }
 
     companion object {
-        val TAG: String = CommandFragment::class.java.simpleName
-
         private const val ACTION = "action"
         private const val CONTROL_ARGUMENTS = "arguments"
+        const val TOPIC = "topic"
     }
 }
