@@ -14,7 +14,8 @@ import java.util.concurrent.ConcurrentHashMap
 
 class TelemetryBroker(
         private val readers: List<ITelemetryReader>,
-        _writers: List<ITelemetryWriter>
+        _writers: List<ITelemetryWriter>,
+        enableReaders: Boolean
 ) {
     private val coroutineScope = CoroutineScope(Dispatchers.IO)
     private val writers = mutableListOf(*_writers.toTypedArray())
@@ -34,7 +35,7 @@ class TelemetryBroker(
     var testCase: String? = null
 
     private val _readersEnabled: MutableStateFlow<Map<String, Boolean>> = MutableStateFlow(
-            readers.map { it.name to false }.toMap()
+            readers.map { it.name to enableReaders }.toMap()
     )
     private val _readersDelay: MutableStateFlow<Map<String, Long>> = MutableStateFlow(
             readers.map { it.name to it.delayMils }.toMap()

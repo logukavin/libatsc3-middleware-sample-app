@@ -55,6 +55,8 @@ android {
         resValue("string", "nextgenServicesGuideProvider", "com.nextgenbroadcast.mobile.middleware.provider.esg")
         resValue("string", "receiverContentProvider", "com.nextgenbroadcast.mobile.middleware.provider.content")
 
+        resValue("bool", "telemetryEnabled", "false")
+
         buildConfigField("String", "SinclairPlatformUrl", "\"https://prod-property-gateway.sinclairplatform.com\"")
     }
 
