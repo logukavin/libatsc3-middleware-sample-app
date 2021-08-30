@@ -24,6 +24,7 @@ class CommandFragment : Fragment(), View.OnClickListener {
     private lateinit var restartAppViewBinding: CommandRestartAppViewBinding
     private lateinit var showDebugInfoBinding: CommandDebugInfoBinding
     private lateinit var saveFileViewBinding: CommandSaveFileViewBinding
+    private lateinit var telemetryViewBinding: CommandTelemetryViewBinding
 
     private var isGlobalCommand = false
 
@@ -39,6 +40,7 @@ class CommandFragment : Fragment(), View.OnClickListener {
             restartAppViewBinding = CommandRestartAppViewBinding.bind(this)
             showDebugInfoBinding = CommandDebugInfoBinding.bind(this)
             saveFileViewBinding = CommandSaveFileViewBinding.bind(this)
+            telemetryViewBinding = CommandTelemetryViewBinding.bind(this)
         }
 
         return view
@@ -59,6 +61,7 @@ class CommandFragment : Fragment(), View.OnClickListener {
             showDebugInfoBinding.buttonShowDebugInfo.setOnClickListener(this@CommandFragment)
             buttonShowNetworkInfo.setOnClickListener(this@CommandFragment)
             saveFileViewBinding.buttonWriteToFile.setOnClickListener(this@CommandFragment)
+            telemetryViewBinding.buttonSetTelemetry.setOnClickListener(this@CommandFragment)
         }
     }
 
@@ -75,6 +78,7 @@ class CommandFragment : Fragment(), View.OnClickListener {
             showDebugInfoBinding.buttonShowDebugInfo.id -> sendShowDebugInfoCommand()
             binding.buttonShowNetworkInfo.id -> sendShowNetworkInfoCommand()
             saveFileViewBinding.buttonWriteToFile.id -> sendSaveToFileCommand()
+            telemetryViewBinding.buttonSetTelemetry.id -> sendSetTelemetryCommand()
         }
     }
 
@@ -175,7 +179,7 @@ class CommandFragment : Fragment(), View.OnClickListener {
 
     private fun sendSaveToFileCommand() {
         val fileName = saveFileViewBinding.editTextFileName.text?.toString()
-        if (fileName.isNullOrEmpty()) return
+        if (fileName.isNullOrBlank()) return
         val arguments = JSONObject().apply {
             put("name", fileName)
             saveFileViewBinding.editTextWritingDuration.text?.toString()?.toIntOrNull()?.let { duration ->
@@ -183,6 +187,20 @@ class CommandFragment : Fragment(), View.OnClickListener {
             }
         }
         sendCommand("fileWriter", arguments)
+    }
+
+    private fun sendSetTelemetryCommand() {
+        val arguments = JSONObject().apply {
+            put("enable", telemetryViewBinding.checkboxTelemetryEnable.isChecked)
+            telemetryViewBinding.editTextTelemetryDelay.text?.toString()?.toIntOrNull()?.let { telemetryDelay ->
+                put("delay", telemetryDelay)
+            }
+            telemetryViewBinding.editTextTelemetryNames.text?.let { sensors ->
+                put("name", sensors)
+            }
+        }
+
+        sendCommand("enableTelemetry", arguments)
     }
 
     private fun sendCommand(command: String, arguments: JSONObject?) {
