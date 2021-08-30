@@ -129,6 +129,7 @@ class TelemetryManager(
     }
 
     fun sendGlobalCommand(topic: String, payload: String) {
+        Log.d(TAG, "---- sendGlobalCommand topic:$topic payload:$payload")
         scope.launch {
             awsIoThing.publish("$AWSIOT_COMMAND_GLOBAL/$topic", payload)
         }
@@ -304,11 +305,14 @@ class TelemetryManager(
         private const val IoT_PREFERENCE = "${BuildConfig.APPLICATION_ID}.awsiot"
 
         private const val AWSIOT_MANAGER_TEMPLATE_NAME = "ATSC3MobileManagerProvisioning"
-        private const val AWSIOT_MANAGER_ID_FORMAT = "ATSC3MobileManager_${AWSIoThing.AWSIOT_FORMAT_SERIAL}"
+        private const val AWSIOT_MANAGER_ID_FORMAT =
+            "ATSC3MobileManager_${AWSIoThing.AWSIOT_FORMAT_SERIAL}"
         private const val AWSIOT_EVENT_TOPIC_FORMAT = "telemetry/${AWSIoThing.AWSIOT_FORMAT_SERIAL}"
         private const val AWSIOT_COMMAND_GLOBAL = "global/command/request"
-        private const val AWSIOT_COMMAND_SINGLE_DEVICE = "control/ATSC3MobileReceiver_${AWSIoThing.AWSIOT_FORMAT_SERIAL}"
-        private const val AWSIOT_CLIENT_ID_FORMAT = "ATSC3MobileReceiver_${AWSIoThing.AWSIOT_FORMAT_SERIAL}"
+        private const val AWSIOT_COMMAND_SINGLE_DEVICE =
+            "control/ATSC3MobileReceiver_${AWSIoThing.AWSIOT_FORMAT_SERIAL}"
+        private const val AWSIOT_CLIENT_ID_FORMAT =
+            "ATSC3MobileReceiver_${AWSIoThing.AWSIOT_FORMAT_SERIAL}"
         private const val AWSIOT_CLIENT_ID_ANY = "+"
 
         private const val AWSIOT_TOPIC_PING = "ping"

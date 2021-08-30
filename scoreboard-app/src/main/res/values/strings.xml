@@ -41,4 +41,8 @@
     <string name="dialog_cancel">Cancel</string>
     <string name="reboot_device_warning">You are going to reboot %d devices. Continue?</string>
     <string name="restart_app_warning">You are going to restart app in %d devices. Continue?</string>
+    <string name="no_selected_devices">No selected devices</string>
+    <string name="send_global_command">Send Global command</string>
+    <string name="you_send_command_to_all_devices">You are going to send Global command</string>
+    <string name="all_devices">all</string>
 </resources>
