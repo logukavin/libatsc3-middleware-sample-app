@@ -94,6 +94,7 @@ class ScoreboardService : Service() {
         when (intent.action) {
             ACTION_STOP -> stopSelf()
             ACTION_COMMANDS -> sendCommand(intent)
+            ACTION_GLOBAL_COMMANDS -> sendGlobalCommand(intent)
         }
 
         return START_NOT_STICKY
@@ -106,6 +107,14 @@ class ScoreboardService : Service() {
         if (!deviceList.isNullOrEmpty()) {
             commandStr?.let {
                 telemetryManager.sendDeviceCommand(deviceList, commandStr)
+            }
+        }
+    }
+
+    private fun sendGlobalCommand(intent: Intent) {
+        intent.getStringExtra(CommandFragment.TOPIC)?.let { topic ->
+            intent.getStringExtra(COMMAND_EXTRAS)?.let { payload ->
+                telemetryManager.sendGlobalCommand(topic, payload)
             }
         }
     }
@@ -192,6 +201,7 @@ class ScoreboardService : Service() {
         private const val NOTIFICATION_ID = 34569
         private const val ACTION_STOP = "${BuildConfig.APPLICATION_ID}.action_stop"
         const val ACTION_COMMANDS = "${BuildConfig.APPLICATION_ID}.commands"
+        const val ACTION_GLOBAL_COMMANDS = "${BuildConfig.APPLICATION_ID}.global_commands"
         const val COMMAND_EXTRAS = "commands"
         const val DEVICES_EXTRAS = "devices_id_list"
     }

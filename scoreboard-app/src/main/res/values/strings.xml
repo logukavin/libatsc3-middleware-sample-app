@@ -36,4 +36,13 @@
     <string name="telemetry_by_name_or_in_general">Telemetry by name or in general</string>
     <string name="tune_mhz">MHz</string>
     <string name="command_has_been_sent">Command has been sent</string>
+    <string name="clear_test_case">Clear</string>
+    <string name="dialog_ok">Ok</string>
+    <string name="dialog_cancel">Cancel</string>
+    <string name="reboot_device_warning">You are going to reboot %d devices. Continue?</string>
+    <string name="restart_app_warning">You are going to restart app in %d devices. Continue?</string>
+    <string name="no_selected_devices">No selected devices</string>
+    <string name="send_global_command">Send Global command</string>
+    <string name="you_send_command_to_all_devices">You are going to send Global command</string>
+    <string name="all_devices">all</string>
 </resources>
