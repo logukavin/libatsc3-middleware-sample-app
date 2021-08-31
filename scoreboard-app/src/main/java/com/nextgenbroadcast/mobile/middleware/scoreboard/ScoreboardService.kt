@@ -132,6 +132,8 @@ class ScoreboardService : Service() {
         intent.getStringExtra(CommandFragment.TOPIC)?.let { topic ->
             intent.getStringExtra(COMMAND_EXTRAS)?.let { payload ->
                 telemetryManager.sendGlobalCommand(topic, payload)
+
+                commandBackLogFlow.tryEmit("(\"action\"=\"$topic\", \"payload\"=\"$payload\")".commandFormat("<<"))
             }
         }
     }
