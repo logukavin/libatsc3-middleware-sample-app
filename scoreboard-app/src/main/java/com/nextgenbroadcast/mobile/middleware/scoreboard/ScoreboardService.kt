@@ -18,13 +18,18 @@ import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.TelemetryDevic
 import com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry.DatagramSocketWrapper
 import com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry.TelemetryManager
 import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.*
+import java.text.SimpleDateFormat
+import java.util.*
 
 class ScoreboardService : Service() {
     private val gson = Gson()
     private val phyType = object : TypeToken<ScoreboardFragment.PhyPayload>() {}.type
     private val deviceIds = MutableStateFlow<List<TelemetryDevice>>(emptyList())
     private val selectedDeviceId = MutableStateFlow<String?>(null)
+    private val commandBackLogFlow = MutableSharedFlow<String>(1, 5, BufferOverflow.DROP_OLDEST)
+    private val dateFormat = SimpleDateFormat(COMMAND_DATE_FORMAT, Locale.US)
 
     private val socket: DatagramSocketWrapper by lazy {
         DatagramSocketWrapper(applicationContext)
@@ -56,27 +61,37 @@ class ScoreboardService : Service() {
             }
         }
 
-        val pendingIntent = Intent(this, ScoreboardPagerActivity::class.java).let { notificationIntent ->
+        val scoreboardIntent = Intent(this, ScoreboardPagerActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+        }.let { notificationIntent ->
             PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE)
         }
 
-        val deleteIntent = Intent(this, ScoreboardService::class.java).let { deleteIntent ->
-            deleteIntent.action = ACTION_STOP
-            PendingIntent.getService(this, 0, deleteIntent, PendingIntent.FLAG_IMMUTABLE)
+        val closeIntent = Intent(this, ScoreboardService::class.java).apply {
+            action = ACTION_STOP
+        }.let { intent ->
+            PendingIntent.getService(this, 0, intent, PendingIntent.FLAG_IMMUTABLE)
+        }
+
+        val consoleIntent = Intent(this, ConsoleActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+        }.let { intent ->
+            PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_IMMUTABLE)
         }
 
         createNotificationChannel()
 
         customNotificationView = RemoteViews(packageName, R.layout.scoreboard_notification_view).apply {
-                setOnClickPendingIntent(R.id.notification_stop_service_button, deleteIntent)
-                setTextViewText(R.id.notification_text, getNotificationDescription())
-            }
+            setOnClickPendingIntent(R.id.notification_stop_service_button, closeIntent)
+            setOnClickPendingIntent(R.id.notification_open_console_btn, consoleIntent)
+            setTextViewText(R.id.notification_text, getNotificationDescription())
+        }
 
         notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(getText(R.string.app_name))
             .setSmallIcon(R.drawable.notifiaction_icon)
             .setColor(getColor(R.color.green))
-            .setContentIntent(pendingIntent)
+            .setContentIntent(scoreboardIntent)
             .setCustomContentView(customNotificationView)
             .setStyle(NotificationCompat.DecoratedCustomViewStyle())
             .build()
@@ -107,6 +122,8 @@ class ScoreboardService : Service() {
         if (!deviceList.isNullOrEmpty()) {
             commandStr?.let {
                 telemetryManager.sendDeviceCommand(deviceList, commandStr)
+
+                commandBackLogFlow.tryEmit(commandStr.commandFormat("<<"))
             }
         }
     }
@@ -165,9 +182,16 @@ class ScoreboardService : Service() {
         }
     }
 
+    private fun String.commandFormat(prefix: String): String {
+        return "$prefix ${dateFormat.format(Date())} : $this"
+    }
+
     inner class ScoreboardBinding : Binder() {
         val deviceIdList = deviceIds.asStateFlow()
         val selectedDeviceId = this@ScoreboardService.selectedDeviceId.asStateFlow()
+
+        @Volatile
+        private var backLogFlow: SharedFlow<String>? = null
 
         fun connectDevice(deviceId: String): Flow<ClientTelemetryEvent>? {
             return telemetryManager.getDeviceById(deviceId)?.let { device ->
@@ -191,6 +215,26 @@ class ScoreboardService : Service() {
         fun getConnectedDevices(): List<String> {
             return telemetryManager.getConnectedDevices().map { it.id }
         }
+
+        private fun getGlobalEventLogFlow(): Flow<String>? {
+            return telemetryManager.getGlobalEventFlow()?.map { event ->
+                event.toString().commandFormat(">>")
+            }
+        }
+
+        @Synchronized
+        fun getBacklogFlow(): Flow<String>? {
+            val flow = backLogFlow
+            return flow ?: let {
+                getGlobalEventLogFlow()?.let { globalFlow ->
+                    flowOf(globalFlow, commandBackLogFlow)
+                        .flattenMerge()
+                        .shareIn(CoroutineScope(Dispatchers.IO), SharingStarted.Eagerly, 50)
+                }.also {
+                    backLogFlow = it
+                }
+            }
+        }
     }
 
     companion object {
@@ -200,9 +244,12 @@ class ScoreboardService : Service() {
         private const val CHANNEL_NAME: String = "foreground_phy_name"
         private const val NOTIFICATION_ID = 34569
         private const val ACTION_STOP = "${BuildConfig.APPLICATION_ID}.action_stop"
+
         const val ACTION_COMMANDS = "${BuildConfig.APPLICATION_ID}.commands"
         const val ACTION_GLOBAL_COMMANDS = "${BuildConfig.APPLICATION_ID}.global_commands"
         const val COMMAND_EXTRAS = "commands"
         const val DEVICES_EXTRAS = "devices_id_list"
+
+        const val COMMAND_DATE_FORMAT = "HH:mm:ss.SSS"
     }
 }
