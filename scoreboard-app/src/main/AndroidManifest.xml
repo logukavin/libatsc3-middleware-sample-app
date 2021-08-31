@@ -13,8 +13,10 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
 
-        <activity android:name=".ScoreboardPagerActivity"
-            android:launchMode="singleTask">
+        <activity
+            android:name=".ScoreboardPagerActivity"
+            android:exported="true"
+            android:launchMode="singleTop">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -22,9 +24,18 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".ConsoleActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout"
+            android:exported="false"
+            android:launchMode="singleTop"
+            android:resizeableActivity="true"
+            android:supportsPictureInPicture="true"
+            android:taskAffinity=".console" />
+
         <service
             android:name=".ScoreboardService"
-            android:exported="false"/>
+            android:exported="false" />
 
     </application>
 

@@ -8,7 +8,8 @@
     <string name="devices_tab_title">Devices</string>
     <string name="command_tab_title">Command</string>
     <string name="chart_device_name">Device name</string>
-    <string name="notification_action_close">Close Scoreboard</string>
+    <string name="notification_action_close">Finish</string>
+    <string name="notification_action_open_console">Console</string>
     <string name="notification_broadcasting">"Broadcasting:"</string>
     <string name="notification_none">NONE</string>
     <string name="tune">Tune</string>
@@ -37,7 +38,7 @@
     <string name="tune_mhz">MHz</string>
     <string name="command_has_been_sent">Command has been sent</string>
     <string name="clear_test_case">Clear</string>
-    <string name="dialog_ok">Ok</string>
+    <string name="dialog_ok">OK</string>
     <string name="dialog_cancel">Cancel</string>
     <string name="reboot_device_warning">You are going to reboot %d devices. Continue?</string>
     <string name="restart_app_warning">You are going to restart app in %d devices. Continue?</string>
@@ -45,4 +46,7 @@
     <string name="send_global_command">Send Global command</string>
     <string name="you_send_command_to_all_devices">You are going to send Global command</string>
     <string name="all_devices">all</string>
+    <string name="console_close_btn">Close</string>
+    <string name="console_clear_btn">Clear</string>
+    <string name="console_scroll_down">Scroll down</string>
 </resources>

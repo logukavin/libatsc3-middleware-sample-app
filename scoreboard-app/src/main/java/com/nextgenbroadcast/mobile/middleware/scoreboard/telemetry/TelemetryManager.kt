@@ -18,8 +18,11 @@ import com.nextgenbroadcast.mobile.middleware.dev.telemetry.observer.WebTelemetr
 import com.nextgenbroadcast.mobile.middleware.scoreboard.BuildConfig
 import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.TelemetryDevice
 import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.filter
 import okio.internal.commonToUtf8String
 import java.io.IOException
 import java.util.*
@@ -64,12 +67,18 @@ class TelemetryManager(
                 AWSIOT_EVENT_TOPIC_FORMAT,
                 this,
                 AWSIOT_CLIENT_ID_ANY,
-                AWSIOT_TOPIC_PING
+                AWSIOT_TOPIC_ANY
             ).also {
-                telemetryClient.addObserver(it)
+                telemetryClient.addObserver(it, MutableSharedFlow(
+                    replay = 1,
+                    extraBufferCapacity = 10,
+                    onBufferOverflow = BufferOverflow.DROP_OLDEST
+                ))
             }
         }
     }
+
+    fun getGlobalEventFlow() = telemetryClient.getFlow(globalDeviceObserver)
 
     fun start() {
         try {
@@ -82,7 +91,9 @@ class TelemetryManager(
 
         deviceLocationJob = CoroutineScope(Dispatchers.IO).launch {
             try {
-                telemetryClient.getFlow(globalDeviceObserver)?.collect { event ->
+                getGlobalEventFlow()?.filter {
+                    it.topic.endsWith("/$AWSIOT_TOPIC_PING")
+                }?.collect { event ->
                     val start = event.topic.indexOf("_") + 1
                     val end = event.topic.indexOf("/", start)
                     val clientId = event.topic.substring(start, end)
@@ -99,7 +110,7 @@ class TelemetryManager(
             }
         }
 
-        awsUpdateTask = timer.scheduleAtFixedRate(0, AWSIOT_PING_PERIOD) {
+        awsUpdateTask = timer.scheduleAtFixedRate(5_000, AWSIOT_PING_PERIOD) {
             sendGlobalCommand(AWSIOT_TOPIC_PING, "")
         }
     }
@@ -311,6 +322,7 @@ class TelemetryManager(
             "ATSC3MobileReceiver_${AWSIoThing.AWSIOT_FORMAT_SERIAL}"
         private const val AWSIOT_CLIENT_ID_ANY = "+"
 
+        private const val AWSIOT_TOPIC_ANY = "#"
         private const val AWSIOT_TOPIC_PING = "ping"
         private const val AWSIOT_TOPIC_PHY = "phy"
 
