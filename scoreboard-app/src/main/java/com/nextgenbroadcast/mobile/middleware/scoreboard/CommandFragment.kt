@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -76,78 +75,60 @@ class CommandFragment : Fragment(), View.OnClickListener {
 
     private fun saveViewStates() {
         sharedPreferences.edit().apply {
-            binding.checkboxGlobalCommand.let { checkBox ->
-                putBoolean(checkBox.strId, checkBox.isChecked)
-            }
+            putBoolean(CHECK_BOX_GLOBAL_COMMAND_VALUE, binding.checkboxGlobalCommand.isChecked)
 
-            saveEditTextInput(this, tuneBinding.editTextTune)
-            saveEditTextInput(this, selectServiceBinding.editTextServiceName)
-            saveEditTextInput(this, selectServiceBinding.editTextBsId)
-            saveEditTextInput(this, setTestCaseBinding.editTextTestCase)
+            putString(TUNE_VALUE, tuneBinding.editTextTune.textToString())
 
-            setVolumeViewBinding.seekBarVolume.let { seekBar ->
-                putInt(seekBar.strId, seekBar.progress)
-            }
+            putString(SERVICE_NAME_VALUE, selectServiceBinding.editTextServiceName.textToString())
+            putString(SERVICE_BSID_VALUE, selectServiceBinding.editTextBsId.textToString())
 
-            saveEditTextInput(this, restartAppViewBinding.editTextRestartApp)
+            putString(TEST_CASE_VALUE, setTestCaseBinding.editTextTestCase.textToString())
 
-            showDebugInfoBinding.let {
-                putBoolean(it.checkboxDebug.strId, it.checkboxDebug.isChecked)
-                putBoolean(it.checkboxPhy.strId, it.checkboxPhy.isChecked)
-            }
+            putInt(VOLUME_VALUE, setVolumeViewBinding.seekBarVolume.progress)
 
-            saveEditTextInput(this, saveFileViewBinding.editTextFileName)
-            saveEditTextInput(this, saveFileViewBinding.editTextWritingDuration)
-            saveEditTextInput(this, telemetryViewBinding.editTextTelemetryNames)
-            saveEditTextInput(this, telemetryViewBinding.editTextTelemetryDelay)
+            putString(RESTART_APP_VALUE, restartAppViewBinding.editTextRestartApp.textToString())
 
-            telemetryViewBinding.checkboxTelemetryEnable.let {
-                putBoolean(it.strId, it.isChecked)
-            }
+            putBoolean(ENABLE_DEBUG_VALUE, showDebugInfoBinding.checkboxDebug.isChecked)
+            putBoolean(ENABLE_PHY_VALUE, showDebugInfoBinding.checkboxPhy.isChecked)
+
+            putString(FILE_NAME_VALUE, saveFileViewBinding.editTextFileName.textToString())
+            putString(WRITING_DURATION_VALUE, saveFileViewBinding.editTextWritingDuration.textToString())
+
+            putString(TELEMETRY_NAMES_VALUE, telemetryViewBinding.editTextTelemetryNames.textToString())
+            putString(TELEMETRY_DELAY, telemetryViewBinding.editTextTelemetryDelay.textToString())
+            putBoolean(TELEMETRY_ENABLE_VALUE, telemetryViewBinding.checkboxTelemetryEnable.isChecked)
 
         }.apply()
     }
 
     private fun initialSavedViewStates() {
-        binding.checkboxGlobalCommand.apply {
-            isChecked = sharedPreferences.getBoolean(id.toString(), false)
+        with(sharedPreferences) {
+            binding.checkboxGlobalCommand.isChecked =
+                getBoolean(CHECK_BOX_GLOBAL_COMMAND_VALUE, false)
+
+            tuneBinding.editTextTune.setText(getString(TUNE_VALUE, ""))
+
+            selectServiceBinding.editTextServiceName.setText(getString(SERVICE_NAME_VALUE, ""))
+            selectServiceBinding.editTextBsId.setText(getString(SERVICE_BSID_VALUE, ""))
+
+            setTestCaseBinding.editTextTestCase.setText(getString(TEST_CASE_VALUE, ""))
+
+            setVolumeViewBinding.seekBarVolume.progress = getInt(VOLUME_VALUE, DEFAULT_VALUE)
+
+            restartAppViewBinding.editTextRestartApp.setText(getString(RESTART_APP_VALUE, ""))
+
+            showDebugInfoBinding.checkboxDebug.isChecked = getBoolean(ENABLE_DEBUG_VALUE, false)
+            showDebugInfoBinding.checkboxPhy.isChecked = getBoolean(ENABLE_PHY_VALUE, false)
+
+            saveFileViewBinding.editTextFileName.setText(getString(FILE_NAME_VALUE, ""))
+            saveFileViewBinding.editTextWritingDuration.setText(getString(WRITING_DURATION_VALUE, ""))
+
+            telemetryViewBinding.checkboxTelemetryEnable.isChecked =
+                getBoolean(TELEMETRY_ENABLE_VALUE, false)
+            telemetryViewBinding.editTextTelemetryNames.setText(getString(TELEMETRY_NAMES_VALUE, ""))
+            telemetryViewBinding.editTextTelemetryDelay.setText(getString(TELEMETRY_DELAY, ""))
         }
 
-        restoreEditTextInputValue(tuneBinding.editTextTune)
-        restoreEditTextInputValue(selectServiceBinding.editTextServiceName)
-        restoreEditTextInputValue(selectServiceBinding.editTextBsId)
-        restoreEditTextInputValue(setTestCaseBinding.editTextTestCase)
-
-        setVolumeViewBinding.seekBarVolume.apply {
-            progress = sharedPreferences.getInt(id.toString(), DEFAULT_VALUE)
-        }
-
-        restoreEditTextInputValue(restartAppViewBinding.editTextRestartApp)
-
-        showDebugInfoBinding.checkboxDebug.apply {
-            isChecked = sharedPreferences.getBoolean(id.toString(), false)
-        }
-        showDebugInfoBinding.checkboxPhy.apply {
-            isChecked = sharedPreferences.getBoolean(id.toString(), false)
-        }
-
-        restoreEditTextInputValue(saveFileViewBinding.editTextFileName)
-        restoreEditTextInputValue(saveFileViewBinding.editTextWritingDuration)
-
-        telemetryViewBinding.checkboxTelemetryEnable.apply {
-            isChecked = sharedPreferences.getBoolean(id.toString(), false)
-        }
-        restoreEditTextInputValue(telemetryViewBinding.editTextTelemetryNames)
-        restoreEditTextInputValue(telemetryViewBinding.editTextTelemetryDelay)
-
-    }
-
-    private fun saveEditTextInput(editor: SharedPreferences.Editor, editText: EditText) {
-        editor.putString(editText.strId, editText.text.toString())
-    }
-
-    private fun restoreEditTextInputValue(editText: EditText) {
-        editText.setText(sharedPreferences.getString(editText.strId, ""))
     }
 
     override fun onStop() {
@@ -353,11 +334,24 @@ class CommandFragment : Fragment(), View.OnClickListener {
         private const val ACTION = "action"
         private const val DEFAULT_VALUE = 50
         private const val CONTROL_ARGUMENTS = "arguments"
+        private const val CHECK_BOX_GLOBAL_COMMAND_VALUE = "checkbox_global_command"
+        private const val TUNE_VALUE = "tune_value"
+        private const val SERVICE_NAME_VALUE = "service_name_value"
+        private const val SERVICE_BSID_VALUE = "service_bsid_value"
+        private const val TEST_CASE_VALUE = "test_case_value"
+        private const val VOLUME_VALUE = "volume_value"
+        private const val RESTART_APP_VALUE = "restart_app_value"
+        private const val ENABLE_DEBUG_VALUE = "enable_debug_value"
+        private const val ENABLE_PHY_VALUE = "enable_phy_value"
+        private const val FILE_NAME_VALUE = "file_name_value"
+        private const val WRITING_DURATION_VALUE = "writing_duration_value"
+        private const val TELEMETRY_NAMES_VALUE = "telemetry_names_value"
+        private const val TELEMETRY_DELAY = "telemetry_delay_value"
+        private const val TELEMETRY_ENABLE_VALUE = "telemetry_enable_value"
         const val TOPIC = "topic"
     }
 
-    private val View.strId: String
-        get() {
-            return id.toString()
-        }
+    private fun EditText.textToString(): String {
+        return text.toString()
+    }
 }
