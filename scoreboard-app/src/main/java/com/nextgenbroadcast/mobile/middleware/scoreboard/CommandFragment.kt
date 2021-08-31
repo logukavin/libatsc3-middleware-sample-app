@@ -77,25 +77,25 @@ class CommandFragment : Fragment(), View.OnClickListener {
         sharedPreferences.edit().apply {
             putBoolean(CHECK_BOX_GLOBAL_COMMAND_VALUE, binding.checkboxGlobalCommand.isChecked)
 
-            putString(TUNE_VALUE, tuneBinding.editTextTune.textToString())
+            putString(TUNE_VALUE, tuneBinding.editTextTune.string())
 
-            putString(SERVICE_NAME_VALUE, selectServiceBinding.editTextServiceName.textToString())
-            putString(SERVICE_BSID_VALUE, selectServiceBinding.editTextBsId.textToString())
+            putString(SERVICE_NAME_VALUE, selectServiceBinding.editTextServiceName.string())
+            putString(SERVICE_BSID_VALUE, selectServiceBinding.editTextBsId.string())
 
-            putString(TEST_CASE_VALUE, setTestCaseBinding.editTextTestCase.textToString())
+            putString(TEST_CASE_VALUE, setTestCaseBinding.editTextTestCase.string())
 
             putInt(VOLUME_VALUE, setVolumeViewBinding.seekBarVolume.progress)
 
-            putString(RESTART_APP_VALUE, restartAppViewBinding.editTextRestartApp.textToString())
+            putString(RESTART_APP_VALUE, restartAppViewBinding.editTextRestartApp.string())
 
             putBoolean(ENABLE_DEBUG_VALUE, showDebugInfoBinding.checkboxDebug.isChecked)
             putBoolean(ENABLE_PHY_VALUE, showDebugInfoBinding.checkboxPhy.isChecked)
 
-            putString(FILE_NAME_VALUE, saveFileViewBinding.editTextFileName.textToString())
-            putString(WRITING_DURATION_VALUE, saveFileViewBinding.editTextWritingDuration.textToString())
+            putString(FILE_NAME_VALUE, saveFileViewBinding.editTextFileName.string())
+            putString(WRITING_DURATION_VALUE, saveFileViewBinding.editTextWritingDuration.string())
 
-            putString(TELEMETRY_NAMES_VALUE, telemetryViewBinding.editTextTelemetryNames.textToString())
-            putString(TELEMETRY_DELAY, telemetryViewBinding.editTextTelemetryDelay.textToString())
+            putString(TELEMETRY_NAMES_VALUE, telemetryViewBinding.editTextTelemetryNames.string())
+            putString(TELEMETRY_DELAY, telemetryViewBinding.editTextTelemetryDelay.string())
             putBoolean(TELEMETRY_ENABLE_VALUE, telemetryViewBinding.checkboxTelemetryEnable.isChecked)
 
         }.apply()
@@ -351,7 +351,7 @@ class CommandFragment : Fragment(), View.OnClickListener {
         const val TOPIC = "topic"
     }
 
-    private fun EditText.textToString(): String {
+    private fun EditText.string(): String {
         return text.toString()
     }
 }
