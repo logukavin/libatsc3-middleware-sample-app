@@ -18,14 +18,15 @@ import kotlinx.coroutines.flow.collect
 class ScoreboardPagerActivity : FragmentActivity(), ServiceConnection {
     private val sharedViewModel: SharedViewModel by viewModels()
 
+    private lateinit var binding: ActivityScoreboardBinding
     private lateinit var pagerAdapter: PagerAdapter
 
     private var serviceBinder: ScoreboardService.ScoreboardBinding? = null
     private var connectionJob: Job? = null
-    lateinit var binding: ActivityScoreboardBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         binding = ActivityScoreboardBinding.inflate(layoutInflater)
         setContentView(binding.root)
 

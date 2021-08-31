@@ -15,4 +15,8 @@ class ClientTelemetryEvent() {
         this.topic = topic
         this.payload = payload
     }
+
+    override fun toString(): String {
+        return "topic=$topic, payload=$payload"
+    }
 }
