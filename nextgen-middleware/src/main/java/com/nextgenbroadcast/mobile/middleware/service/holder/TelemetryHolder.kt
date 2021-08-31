@@ -129,7 +129,8 @@ internal class TelemetryHolder(
                 listOf(
                         //AWSIoTelemetryWriter(thing),
                         //FileTelemetryWriter(cacheDir, "telemetry.log")
-                )
+                ),
+                context.resources.getBoolean(R.bool.telemetryEnabled)
         ).apply {
             //start() do not start Telemetry with application, use switch in Settings dialog or AWS command
         }.also { broker ->
@@ -246,7 +247,7 @@ internal class TelemetryHolder(
     }
 
     private fun executeCommand(action: String, arguments: Map<String, String>) {
-        LOG.d(TelemetryBroker.TAG, "Control command received: $action, args: $arguments")
+        LOG.d(TAG, "Control command received: $action, args: $arguments")
 
         when (action) {
             ITelemetryControl.CONTROL_ACTION_TUNE -> {

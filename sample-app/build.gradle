@@ -49,6 +49,9 @@ android {
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
         buildConfigField("String", "BugfenderKey", "\"nPbJ6hrKCr3NsDdjybzRmWQz7RlPSIWY\"")
+
+        // enables Telemetry collection by default
+        //resValue("bool", "telemetryEnabled", "true")
     }
 
     signingConfigs {
