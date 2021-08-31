@@ -4,11 +4,9 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
-import android.util.Log
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import com.nextgenbroadcast.mobile.core.LOG
-import com.nextgenbroadcast.mobile.core.cert.CertificateUtils
 import com.nextgenbroadcast.mobile.middleware.dev.nsd.NsdConfig
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.CertificateStore
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.TelemetryClient2
@@ -129,14 +127,12 @@ class TelemetryManager(
     }
 
     fun sendGlobalCommand(topic: String, payload: String) {
-        Log.d(TAG, "---- sendGlobalCommand topic:$topic payload:$payload")
         scope.launch {
             awsIoThing.publish("$AWSIOT_COMMAND_GLOBAL/$topic", payload)
         }
     }
 
     fun sendDeviceCommand(devices: List<String>, payload: String) {
-        Log.d(TAG, "---- sendDeviceCommand device:$devices payload:$payload")
         scope.launch {
             devices.forEach { deviceId ->
                 awsIoThing.publish(

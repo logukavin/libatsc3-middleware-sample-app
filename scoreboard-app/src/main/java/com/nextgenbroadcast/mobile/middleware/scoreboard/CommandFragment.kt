@@ -1,10 +1,14 @@
 package com.nextgenbroadcast.mobile.middleware.scoreboard
 
+import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.EditText
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
@@ -15,7 +19,9 @@ import java.util.concurrent.TimeUnit
 
 class CommandFragment : Fragment(), View.OnClickListener {
     private val sharedViewModel: SharedViewModel by activityViewModels()
-
+    private val sharedPreferences: SharedPreferences by lazy {
+        requireContext().getSharedPreferences("command_preferences", Context.MODE_PRIVATE)
+    }
     private lateinit var binding: FragmentCommandBinding
     private lateinit var tuneBinding: CommandTuneViewBinding
     private lateinit var selectServiceBinding: CommandSelectServiceViewBinding
@@ -25,8 +31,6 @@ class CommandFragment : Fragment(), View.OnClickListener {
     private lateinit var showDebugInfoBinding: CommandDebugInfoBinding
     private lateinit var saveFileViewBinding: CommandSaveFileViewBinding
     private lateinit var telemetryViewBinding: CommandTelemetryViewBinding
-
-    private var isGlobalCommand = false
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         binding = FragmentCommandBinding.inflate(inflater, container, false)
@@ -49,6 +53,10 @@ class CommandFragment : Fragment(), View.OnClickListener {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        if (savedInstanceState == null) {
+            initialSavedViewStates()
+        }
+
         with(binding) {
             buttonPing.setOnClickListener(this@CommandFragment)
             tuneBinding.buttonTune.setOnClickListener(this@CommandFragment)
@@ -62,14 +70,93 @@ class CommandFragment : Fragment(), View.OnClickListener {
             buttonShowNetworkInfo.setOnClickListener(this@CommandFragment)
             saveFileViewBinding.buttonWriteToFile.setOnClickListener(this@CommandFragment)
             telemetryViewBinding.buttonSetTelemetry.setOnClickListener(this@CommandFragment)
-            binding.checkboxGlobalCommand.setOnCheckedChangeListener { _, isChecked ->
-                isGlobalCommand = isChecked
-            }
         }
+
+    }
+
+    private fun saveViewStates() {
+        sharedPreferences.edit().apply {
+            binding.checkboxGlobalCommand.let { checkBox ->
+                putBoolean(checkBox.strId, checkBox.isChecked)
+            }
+
+            saveEditTextInput(this, tuneBinding.editTextTune)
+            saveEditTextInput(this, selectServiceBinding.editTextServiceName)
+            saveEditTextInput(this, selectServiceBinding.editTextBsId)
+            saveEditTextInput(this, setTestCaseBinding.editTextTestCase)
+
+            setVolumeViewBinding.seekBarVolume.let { seekBar ->
+                putInt(seekBar.strId, seekBar.progress)
+            }
+
+            saveEditTextInput(this, restartAppViewBinding.editTextRestartApp)
+
+            showDebugInfoBinding.let {
+                putBoolean(it.checkboxDebug.strId, it.checkboxDebug.isChecked)
+                putBoolean(it.checkboxPhy.strId, it.checkboxPhy.isChecked)
+            }
+
+            saveEditTextInput(this, saveFileViewBinding.editTextFileName)
+            saveEditTextInput(this, saveFileViewBinding.editTextWritingDuration)
+            saveEditTextInput(this, telemetryViewBinding.editTextTelemetryNames)
+            saveEditTextInput(this, telemetryViewBinding.editTextTelemetryDelay)
+
+            telemetryViewBinding.checkboxTelemetryEnable.let {
+                putBoolean(it.strId, it.isChecked)
+            }
+
+        }.apply()
+    }
+
+    private fun initialSavedViewStates() {
+        binding.checkboxGlobalCommand.apply {
+            isChecked = sharedPreferences.getBoolean(id.toString(), false)
+        }
+
+        restoreEditTextInputValue(tuneBinding.editTextTune)
+        restoreEditTextInputValue(selectServiceBinding.editTextServiceName)
+        restoreEditTextInputValue(selectServiceBinding.editTextBsId)
+        restoreEditTextInputValue(setTestCaseBinding.editTextTestCase)
+
+        setVolumeViewBinding.seekBarVolume.apply {
+            progress = sharedPreferences.getInt(id.toString(), DEFAULT_VALUE)
+        }
+
+        restoreEditTextInputValue(restartAppViewBinding.editTextRestartApp)
+
+        showDebugInfoBinding.checkboxDebug.apply {
+            isChecked = sharedPreferences.getBoolean(id.toString(), false)
+        }
+        showDebugInfoBinding.checkboxPhy.apply {
+            isChecked = sharedPreferences.getBoolean(id.toString(), false)
+        }
+
+        restoreEditTextInputValue(saveFileViewBinding.editTextFileName)
+        restoreEditTextInputValue(saveFileViewBinding.editTextWritingDuration)
+
+        telemetryViewBinding.checkboxTelemetryEnable.apply {
+            isChecked = sharedPreferences.getBoolean(id.toString(), false)
+        }
+        restoreEditTextInputValue(telemetryViewBinding.editTextTelemetryNames)
+        restoreEditTextInputValue(telemetryViewBinding.editTextTelemetryDelay)
+
+    }
+
+    private fun saveEditTextInput(editor: SharedPreferences.Editor, editText: EditText) {
+        editor.putString(editText.strId, editText.text.toString())
+    }
+
+    private fun restoreEditTextInputValue(editText: EditText) {
+        editText.setText(sharedPreferences.getString(editText.strId, ""))
+    }
+
+    override fun onStop() {
+        saveViewStates()
+        super.onStop()
     }
 
     override fun onClick(view: View) {
-        if (!isGlobalCommand && sharedViewModel.chartDevicesWithFlow.value.isNullOrEmpty()) {
+        if (!binding.checkboxGlobalCommand.isChecked && sharedViewModel.chartDevicesWithFlow.value.isNullOrEmpty()) {
             showToast(getString(R.string.no_selected_devices))
             return
         }
@@ -156,11 +243,11 @@ class CommandFragment : Fragment(), View.OnClickListener {
         }.show()
     }
 
-    private fun getDevicesCount(): Int? {
-        return if (isGlobalCommand) {
-            sharedViewModel.deviceIdList.value?.size
+    private fun getDevicesCount(): Int {
+        return if (binding.checkboxGlobalCommand.isChecked) {
+            sharedViewModel.deviceIdList.value?.size ?: 0
         } else {
-            sharedViewModel.chartDevicesWithFlow.value?.size
+            sharedViewModel.chartDevicesWithFlow.value?.size ?: 0
         }
     }
 
@@ -221,7 +308,7 @@ class CommandFragment : Fragment(), View.OnClickListener {
     }
 
     private fun sendCommand(command: String, arguments: JSONObject?) {
-        if (isGlobalCommand) {
+        if (binding.checkboxGlobalCommand.isChecked) {
             showWarningDialog(R.string.you_send_command_to_all_devices) {
                 Intent(context, ScoreboardService::class.java).apply {
                     action = ScoreboardService.ACTION_GLOBAL_COMMANDS
@@ -264,7 +351,13 @@ class CommandFragment : Fragment(), View.OnClickListener {
 
     companion object {
         private const val ACTION = "action"
+        private const val DEFAULT_VALUE = 50
         private const val CONTROL_ARGUMENTS = "arguments"
         const val TOPIC = "topic"
     }
+
+    private val View.strId: String
+        get() {
+            return id.toString()
+        }
 }
