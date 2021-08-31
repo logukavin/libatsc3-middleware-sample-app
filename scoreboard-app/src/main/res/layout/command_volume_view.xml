@@ -14,6 +14,8 @@
         android:id="@+id/seek_bar_volume"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:min="0"
+        android:max="100"
         android:hint="@string/volume" />
 
     <androidx.constraintlayout.helper.widget.Flow

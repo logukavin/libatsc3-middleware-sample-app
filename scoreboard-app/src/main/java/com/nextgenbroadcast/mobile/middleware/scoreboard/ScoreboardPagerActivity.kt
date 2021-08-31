@@ -64,7 +64,7 @@ class ScoreboardPagerActivity : FragmentActivity(), ServiceConnection {
         }
 
         if (savedInstanceState == null) {
-            binding.viewPager.currentItem = 1
+            binding.viewPager.setCurrentItem(1, false)
         }
     }
 
