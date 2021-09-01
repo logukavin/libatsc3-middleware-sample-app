@@ -120,6 +120,8 @@ def startupRuntime = rootProject.ext.startupRuntime
 def jettyVersion = '9.4.38.v20210224'
 def powermock_version = "2.0.9"
 def roomVersion = "2.3.0"
+def kronosVersion = "0.0.1-alpha11"
+
 
 dependencies {
     implementation fileTree(dir: "libs", include: ["*.jar"])
@@ -204,6 +206,9 @@ dependencies {
     implementation 'org.bouncycastle:bcpkix-jdk15on:1.56'
 
     implementation 'com.google.firebase:firebase-crashlytics-ktx:18.2.1'
+
+    //jjustman-2021-08-31 - hack for ntp local clock
+    implementation "com.lyft.kronos:kronos-android:$kronosVersion"
 
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.3'
