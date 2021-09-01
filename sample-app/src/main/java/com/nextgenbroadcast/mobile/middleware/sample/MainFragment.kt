@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.text.Html
 import android.util.Log
 import android.view.GestureDetector
 import android.view.LayoutInflater
@@ -306,8 +307,13 @@ class MainFragment : Fragment() {
                 if (phyLoggingJob == null) {
                     phyLoggingJob = GlobalScope.launch {
                         while (true) {
-                            viewViewModel.debugData.postValue("${PHYStatistics.PHYRfStatistics}\n${PHYStatistics.PHYBWStatistics}")
-                            delay(1000)
+                            //text.setText(Html.fromHtml("<font color='#ff0000'>text</font>"));
+                            //no text highlight color for SFN timing error
+                            // viewViewModel.debugData.postValue("${PHYStatistics.PHYRfStatistics}\n${PHYStatistics.PHYBWStatistics}\n\n${PHYStatistics.PHYL1dTimingStatistics}")
+                                //double space hack...
+                            viewViewModel.debugData.postValue(Html.fromHtml("${PHYStatistics.PHYRfStatistics}\n${PHYStatistics.PHYBWStatistics}\n\n${PHYStatistics.PHYL1dTimingStatistics}".replace("\n","<br>").replace("  ", "&nbsp;&nbsp;")))
+
+                            delay(PHY_INFO_UPDATE_INTERVAL_MS)
                         }
                     }
                 }
@@ -517,6 +523,8 @@ class MainFragment : Fragment() {
 
     companion object {
         val TAG: String = MainFragment::class.java.simpleName
+
+        private const val PHY_INFO_UPDATE_INTERVAL_MS = 250L
 
         fun newInstance(): MainFragment {
             return MainFragment()
