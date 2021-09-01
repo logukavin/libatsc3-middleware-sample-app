@@ -157,6 +157,8 @@ class Atsc3MediaPlayer(
         Log.i(TAG, "stop: with lastMediaUri: $lastMediaUri")
 
         _player?.stop(true)
+
+        releaseAudioFocus()
     }
 
     fun reset() {
@@ -170,10 +172,7 @@ class Atsc3MediaPlayer(
         }
         isMMTPlayback = false
 
-        audioFocusRequest?.let {
-            audioManager.abandonAudioFocusRequest(it)
-        }
-        audioFocusRequest = null
+        releaseAudioFocus()
     }
 
     fun clearSavedState() {
@@ -346,6 +345,13 @@ class Atsc3MediaPlayer(
             }
             else -> null
         }
+    }
+
+    private fun releaseAudioFocus() {
+        audioFocusRequest?.let {
+            audioManager.abandonAudioFocusRequest(it)
+        }
+        audioFocusRequest = null
     }
 
     private fun tryRetrievedAudioFocus(): Boolean {
