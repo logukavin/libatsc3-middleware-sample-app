@@ -1,6 +1,7 @@
 package com.nextgenbroadcast.mobile.middleware.atsc3
 
 import android.util.Log
+import com.lyft.kronos.KronosClock
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.core.atsc3.PhyVersionInfo
 import com.nextgenbroadcast.mobile.core.model.MediaUrl
@@ -27,6 +28,7 @@ import org.ngbp.libatsc3.middleware.android.a331.PackageExtractEnvelopeMetadataA
 import org.ngbp.libatsc3.middleware.android.application.interfaces.IAtsc3NdkApplicationBridgeCallbacks
 import org.ngbp.libatsc3.middleware.android.phy.interfaces.IAtsc3NdkPHYBridgeCallbacks
 import org.ngbp.libatsc3.middleware.android.phy.models.BwPhyStatistics
+import org.ngbp.libatsc3.middleware.android.phy.models.L1D_timePhyInformation
 import org.ngbp.libatsc3.middleware.android.phy.models.RfPhyStatistics
 import java.io.File
 import java.util.*
@@ -719,11 +721,22 @@ internal class Atsc3Module(
 
     override fun pushBwPhyStatistics(bwPhyStatistics: BwPhyStatistics) {
         if (USE_DEV_STATISTIC) {
-            PHYStatistics.PHYBWStatistics = "BW: $bwPhyStatistics".also {
+            PHYStatistics.PHYBWStatistics = "$bwPhyStatistics".also {
                 log(it)
             }
         }
     }
+
+    override fun pushL1d_TimeInfo(l1dTimeInfo: L1D_timePhyInformation) {
+        if (USE_DEV_STATISTIC) {
+            PHYStatistics.PHYL1dTimingStatistics = "SFN: "+l1dTimeInfo.toStringFromAnchorNtpTimestamp(
+                Atsc3Module.KronosClock?.getCurrentNtpTimeMs()!!
+            ) .also {
+                log(it)
+            }
+        }
+    }
+
 
     //////////////////////////////////////////////////////////////
 
@@ -828,6 +841,9 @@ internal class Atsc3Module(
 
     companion object {
         val TAG: String = Atsc3Module::class.java.simpleName
+
+        //lateinit
+        var KronosClock: KronosClock? = null
 
         private val SLT_ACQUIRE_TUNE_DELAY = TimeUnit.SECONDS.toMillis(20)
 
