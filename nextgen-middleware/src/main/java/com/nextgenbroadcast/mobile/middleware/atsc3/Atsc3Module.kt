@@ -720,6 +720,12 @@ internal class Atsc3Module(
     }
 
     override fun pushBwPhyStatistics(bwPhyStatistics: BwPhyStatistics) {
+        try {
+            log(bwPhyStatistics.toString())
+        } catch (ex: Exception) {
+            log(ex.toString())
+        }
+
         if (USE_DEV_STATISTIC) {
             PHYStatistics.PHYBWStatistics = "$bwPhyStatistics".also {
                 log(it)
@@ -730,7 +736,7 @@ internal class Atsc3Module(
     override fun pushL1d_TimeInfo(l1dTimeInfo: L1D_timePhyInformation) {
         if (USE_DEV_STATISTIC) {
             PHYStatistics.PHYL1dTimingStatistics = "SFN: "+l1dTimeInfo.toStringFromAnchorNtpTimestamp(
-                Atsc3Module.KronosClock?.getCurrentNtpTimeMs()!!
+                Atsc3Module.KronosClock?.getCurrentNtpTimeMs() ?: -1
             ) .also {
                 log(it)
             }
