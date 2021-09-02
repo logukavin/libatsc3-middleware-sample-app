@@ -51,7 +51,7 @@ class ViewViewModel(
     val showPhyInfo = MutableLiveData<Boolean>()
     val showPhyChart = MutableLiveData<Boolean>()
 
-    val debugData = MutableLiveData<Spanned>()
+    val debugData = MutableLiveData<CharSequence>()
 
     val defaultService = services.distinctUntilChanged().map { list ->
         list.firstOrNull()

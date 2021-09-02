@@ -1,7 +1,5 @@
 package com.nextgenbroadcast.mobile.middleware.atsc3.buffer;
 
-import android.util.Log;
-
 import com.nextgenbroadcast.mobile.core.LOG;
 
 import java.nio.ByteBuffer;
@@ -126,60 +124,13 @@ public class Atsc3RingBuffer {
 
             int segmentPageNum = getInt(buffer);
             if (segmentIsLocked || earlyPageNum != segmentPageNum) {
-
-                /*
-                    jjustman-2021-09-01 - todo: isolate how the below exception occured:
-
-                        2021-09-01 20:43:20.932 5771-5999/com.nextgenbroadcast.mobile.middleware.sample I/chatty: uid=10118(com.nextgenbroadcast.mobile.middleware.sample) MMT Pipe #1 identical 2 lines
-                        2021-09-01 20:43:20.932 5771-5999/com.nextgenbroadcast.mobile.middleware.sample D/MMTContentProvider: writeToFile:: after writer.write, bytesRead: 0
-                        2021-09-01 20:43:20.933 5771-5997/com.nextgenbroadcast.mobile.middleware.sample W/Atsc3MMTExtractor: readSample - packet_id: 200, Exception, returning END_OF_INPUT - causing ExoPlayer DataSource teardown/unwind, ex: java.io.EOFException, messgae: null,  Type: 1, sample TimeUs: 3014511311,  sample size: 500
-                        2021-09-01 20:43:20.934 5771-5996/com.nextgenbroadcast.mobile.middleware.sample D/ExoPlayerImplInternal: updatePlaybackPositions: rendererPositionUs: 3014231000, playbackInfo.positionUs: 3014231000
-                        2021-09-01 20:43:20.944 5771-5996/com.nextgenbroadcast.mobile.middleware.sample D/ExoPlayerImplInternal: updatePlaybackPositions: rendererPositionUs: 3014241000, playbackInfo.positionUs: 3014241000
-                        2021-09-01 20:43:20.945 5771-5996/com.nextgenbroadcast.mobile.middleware.sample W/AudioTrackPositionTracker: pause invoked
-                        2021-09-01 20:43:20.945 5771-5996/com.nextgenbroadcast.mobile.middleware.sample W/AudioTimestampPoller: reset with updateState(STATE_INITIALZING)
-                        2021-09-01 20:43:20.945 5771-5996/com.nextgenbroadcast.mobile.middleware.sample W/DefaultAudioSink: JJ: calling pause()!
-                        2021-09-01 20:43:20.946 5771-5996/com.nextgenbroadcast.mobile.middleware.sample I/ExoPlayerImplInternal: JJ:calling default setState(Player.STATE_BUFFERING) and stopRenderers!
-                        2021-09-01 20:43:20.948 5771-5999/com.nextgenbroadcast.mobile.middleware.sample E/MMTContentProvider: Failed to read MMT media stream
-                            java.lang.IllegalArgumentException: Bad position 663552/655360   (63552 - 655360 = 8192)
-                                at java.nio.Buffer.position(Buffer.java:259)
-                                at com.nextgenbroadcast.mobile.middleware.atsc3.buffer.Atsc3RingBuffer.readNextPage(Atsc3RingBuffer.java:126)
-                                at com.nextgenbroadcast.mobile.middleware.atsc3.buffer.Atsc3RingBuffer.readNextPage(Atsc3RingBuffer.java:51)
-                                at com.nextgenbroadcast.mobile.middleware.provider.mmt.MMTFragmentWriter.readFragment(MMTFragmentWriter.java:227)
-                                at com.nextgenbroadcast.mobile.middleware.provider.mmt.MMTFragmentWriter.writeQueue(MMTFragmentWriter.java:199)
-                                at com.nextgenbroadcast.mobile.middleware.provider.mmt.MMTFragmentWriter.write(MMTFragmentWriter.java:112)
-                                at com.nextgenbroadcast.mobile.middleware.provider.mmt.MMTContentProvider.writeToFile(MMTContentProvider.java:233)
-                                at com.nextgenbroadcast.mobile.middleware.provider.mmt.MMTContentProvider.lambda$openFile$1$MMTContentProvider(MMTContentProvider.java:205)
-                                at com.nextgenbroadcast.mobile.middleware.provider.mmt.MMTContentProvider$$ExternalSyntheticLambda0.run(Unknown Source:8)
-                                at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1167)
-                                at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:641)
-                                at java.lang.Thread.run(Thread.java:764)
-                        2021-09-01 20:43:20.954 5771-5996/com.nextgenbroadcast.mobile.middleware.sample D/ExoPlayerImplInternal: updatePlaybackPositions: rendererPositionUs: 3014251000, playbackInfo.positionUs: 3014251000
-                        2021-09-01 20:43:20.955 5771-5996/com.nextgenbroadcast.mobile.middleware.sample W/AudioTimestampPoller: reset with updateState(STATE_INITIALZING)
-                        2021-09-01 20:43:20.963 5771-5996/com.nextgenbroadcast.mobile.middleware.sample D/ExoPlayerImplInternal: updatePlaybackPositions: rendererPositionUs: 3014261000, playbackInfo.positionUs: 3014261000
-                        2021-09-01 20:43:20.964 5771-5996/com.nextgenbroadcast.mobile.middleware.sample W/AudioTrackPositionTracker: JJ - NOT invoking listener.onUnderrun: bufferSize: 61504, bufferSizeMS: 320
-                        2021-09-01 20:43:20.973 5771-5996/com.nextgenbroadcast.mobile.middleware.sample D/ExoPlayerImplInternal: updatePlaybackPositions: rendererPositionUs: 3014271000, playbackInfo.positionUs: 3014271000
-                        2021-09-01 20:43:20.975 5771-5996/com.nextgenbroadcast.mobile.middleware.sample D/MediaCodecVideoRenderer: JJ: processOutputBuffer, dropOutputBuffer with: bufferIndex: 2, presentationTimeUs: 3012071213, earlyUs: -2221507, elapsedRealtimeUs: 27372394000, isLastBuffer: false, count: 0
-                        2021-09-01 20:43:20.983 5771-5996/com.nextgenbroadcast.mobile.middleware.sample D/ExoPlayerImplInternal: updatePlaybackPositions: rendererPositionUs: 3014281000, playbackInfo.positionUs: 3014281000
-                        2021-09-01 20:43:20.993 5771-5996/com.nextgenbroadcast.mobile.middleware.sample D/ExoPlayerImplInternal: updatePlaybackPositions: rendererPositionUs: 3014291000, playbackInfo.positionUs: 3014291000
-                        2021-09-01 20:43:21.003 5771-5996/com.nextgenbroadcast.mobile.middleware.sample D/ExoPlayerImplInternal: updatePlaybackPositions: rendererPositionUs: 3014301000, playbackInfo.positionUs: 3014301000
-                        2021-09-01 20:43:21.013 5771-5996/com.nextgenbroadcast.mobile.middleware.sample D/ExoPlayerImplInternal: updatePlaybackPositions: rendererPositionUs: 3014311000, playbackInfo.positionUs: 3014311000
-                        2021-09-01 20:43:21.023 5771-5996/com.nextgenbroadcast.mobile.middleware.sample D/ExoPlayerImplInternal: updatePlaybackPositions: rendererPositionUs: 3014321000, playbackInfo.positionUs: 3014321000
-                        2021-09-01 20:43:21.033 5771-5996/com.nextgenbroadcast.mobile.middleware.sample D/ExoPlayerImplInternal: updatePlaybackPositions: rendererPositionUs: 3014331000, playbackInfo.positionUs: 3014331000
-                        2021-09-01 20:43:21.045 5771-5996/com.nextgenbroadcast.mobile.middleware.sample D/ExoPlayerImplInternal: updatePlaybackPositions: rendererPositionUs: 3014343000, playbackInfo.positionUs: 3014343000
-                        2021-09-01 20:43:21.056 5771-5996/com.nextgenbroadcast.mobile.middleware.sample D/ExoPlayerImplInternal: updatePlaybackPositions: rendererPositionUs: 3014354000, playbackInfo.positionUs: 3014354000
-                        2021-09-01 20:43:21.066 5771-5996/com.nextgenbroadcast.mobile.middleware.sample D/ExoPlayerImplInternal: updatePlaybackPositions: rendererPositionUs: 3014364000, playbackInfo.positionUs: 3014364000
-                        2021-09-01 20:43:21.067 5771-5996/com.nextgenbroadcast.mobile.middleware.sample W/AudioTrackPositionTracker: handleEndOfStream: writtenFrames: 117741571
-                        2021-09-01 20:43:21.067 5771-5996/com.nextgenbroadcast.mobile.middleware.sample D/AudioTrack: stop() called with 117741571 frames delivered
-                 */
-
-                int newSeekPosition = ringPosition + pageSize * (packetPageCount - segmentNum);
-                if(newSeekPosition >= 0 && newSeekPosition < buffer.limit()) {
-                    buffer.position(newSeekPosition);
+                int bytesToSkip = pageSize * (packetPageCount - segmentNum);
+                if (buffer.remaining() < bytesToSkip) {
+                    buffer.position(bytesToSkip - (buffer.limit() - ringPosition));
                 } else {
-                    Log.w(TAG, String.format("readNextPage would position past end of buffer limit (overshoot: %d), newSeekPosition: %d, buffer.limit: %d, buffer.capacity: %d, current buffer.position: %d, seeking to 0!",
-                                                                               (newSeekPosition - buffer.limit()), newSeekPosition, buffer.limit(), buffer.capacity(), buffer.position()));
-                    buffer.position(0);
+                    buffer.position(ringPosition + bytesToSkip);
                 }
+
                 tailBuffer.limit(0);
                 return -1;
             }

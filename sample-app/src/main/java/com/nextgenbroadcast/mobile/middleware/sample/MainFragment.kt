@@ -39,6 +39,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
 import java.util.*
+import kotlin.concurrent.fixedRateTimer
 
 class MainFragment : Fragment() {
     private val viewViewModel: ViewViewModel by activityViewModels()
@@ -53,7 +54,7 @@ class MainFragment : Fragment() {
     private var currentAppData: AppData? = null
     private var isShowingTrackSelectionDialog = false
 
-    private var phyLoggingJob: Job? = null
+    private var phyLoggingJob: Timer? = null
 
     private val swipeGestureDetector: GestureDetector by lazy {
         GestureDetector(requireContext(), object : SwipeGestureDetector() {
@@ -305,16 +306,20 @@ class MainFragment : Fragment() {
         }.observe(viewLifecycleOwner) { phyInfoEnabled ->
             if (phyInfoEnabled == true) {
                 if (phyLoggingJob == null) {
-                    phyLoggingJob = GlobalScope.launch {
-                        while (true) {
-                            //text.setText(Html.fromHtml("<font color='#ff0000'>text</font>"));
-                            //no text highlight color for SFN timing error
-                            // viewViewModel.debugData.postValue("${PHYStatistics.PHYRfStatistics}\n${PHYStatistics.PHYBWStatistics}\n\n${PHYStatistics.PHYL1dTimingStatistics}")
-                                //double space hack...
-                            viewViewModel.debugData.postValue(Html.fromHtml("${PHYStatistics.PHYRfStatistics}\n${PHYStatistics.PHYBWStatistics}\n\n${PHYStatistics.PHYL1dTimingStatistics}".replace("\n","<br>").replace("  ", "&nbsp;&nbsp;")))
-
-                            delay(PHY_INFO_UPDATE_INTERVAL_MS)
-                        }
+                    phyLoggingJob = fixedRateTimer(period = PHY_INFO_UPDATE_INTERVAL_MS) {
+                        //text.setText(Html.fromHtml("<font color='#ff0000'>text</font>"));
+                        //no text highlight color for SFN timing error
+                        // viewViewModel.debugData.postValue("${PHYStatistics.PHYRfStatistics}\n${PHYStatistics.PHYBWStatistics}\n\n${PHYStatistics.PHYL1dTimingStatistics}")
+                        //double space hack...
+                        viewViewModel.debugData.postValue(
+                            with(PHYStatistics) {
+                                Html.fromHtml("$PHYRfStatistics\n$PHYBWStatistics\n\n$PHYL1dTimingStatistics"
+                                    .replace("\n", "<br>")
+                                    .replace("  ", "&nbsp;&nbsp;"),
+                                    Html.FROM_HTML_MODE_LEGACY
+                                )
+                            }
+                        )
                     }
                 }
             } else if (phyLoggingJob != null) {
