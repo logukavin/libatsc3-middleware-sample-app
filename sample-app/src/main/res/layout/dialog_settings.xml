@@ -8,141 +8,141 @@
             type="com.nextgenbroadcast.mobile.middleware.sample.lifecycle.ViewViewModel" />
     </data>
 
-<ScrollView
-    xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent">
-
-    <androidx.constraintlayout.widget.ConstraintLayout
+    <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:app="http://schemas.android.com/apk/res-auto"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:padding="24dp">
+        android:fillViewport="true">
 
-        <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/frequencyField"
+        <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="@string/settings_frequency_hint"
-            app:layout_constraintLeft_toLeftOf="parent"
-            app:layout_constraintRight_toRightOf="parent"
-            app:layout_constraintTop_toTopOf="parent">
+            android:padding="24dp">
 
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/frequencyEditText"
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/frequencyField"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:focusedByDefault="true"
-                android:inputType="number"
-                android:maxLength="3" />
+                android:hint="@string/settings_frequency_hint"
+                app:layout_constraintLeft_toLeftOf="parent"
+                app:layout_constraintRight_toRightOf="parent"
+                app:layout_constraintTop_toTopOf="parent">
 
-        </com.google.android.material.textfield.TextInputLayout>
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/frequencyEditText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:focusedByDefault="true"
+                    android:inputType="number"
+                    android:maxLength="3" />
 
-        <Button
-            android:id="@+id/scan_range_btn"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="10dp"
-            android:text="@string/settings_scan_btn"
-            app:layout_constraintEnd_toStartOf="@+id/tune_btn"
-            app:layout_constraintTop_toBottomOf="@+id/frequencyField" />
+            </com.google.android.material.textfield.TextInputLayout>
 
-        <Button
-            android:id="@+id/tune_btn"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/settings_apply_btn"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/frequencyField" />
+            <Button
+                android:id="@+id/scan_range_btn"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="10dp"
+                android:text="@string/settings_scan_btn"
+                app:layout_constraintEnd_toStartOf="@+id/tune_btn"
+                app:layout_constraintTop_toBottomOf="@+id/frequencyField" />
 
-        <androidx.appcompat.widget.SwitchCompat
-            android:id="@+id/enableDebuggingInformation"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="15dp"
-            android:checked="@={viewModel.showDebugInfo}"
-            android:text="@string/settings_enable_debug_info"
-            app:layout_constraintLeft_toLeftOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/tune_btn" />
+            <Button
+                android:id="@+id/tune_btn"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/settings_apply_btn"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/frequencyField" />
 
-        <androidx.appcompat.widget.SwitchCompat
-            android:id="@+id/enablePHYDebuggingInformation"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginLeft="@dimen/settings_margin_level_2"
-            android:layout_marginTop="15dp"
-            android:checked="@={viewModel.showPhyInfo}"
-            android:enabled="@{viewModel.showDebugInfo}"
-            android:text="@string/settings_enable_phy_info"
-            app:layout_constraintLeft_toLeftOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/enableDebuggingInformation" />
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/enableDebuggingInformation"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="15dp"
+                android:checked="@={viewModel.showDebugInfo}"
+                android:text="@string/settings_enable_debug_info"
+                app:layout_constraintLeft_toLeftOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/tune_btn" />
 
-        <androidx.appcompat.widget.SwitchCompat
-            android:id="@+id/enablePHYGraphView"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="15dp"
-            android:checked="@={viewModel.showPhyChart}"
-            android:text="@string/settings_display_phy_chart"
-            app:layout_constraintEnd_toEndOf="@+id/enablePHYDebuggingInformation"
-            app:layout_constraintTop_toBottomOf="@+id/enablePHYDebuggingInformation" />
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/enablePHYDebuggingInformation"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="@dimen/settings_margin_level_2"
+                android:layout_marginTop="15dp"
+                android:checked="@={viewModel.showPhyInfo}"
+                android:enabled="@{viewModel.showDebugInfo}"
+                android:text="@string/settings_enable_phy_info"
+                app:layout_constraintLeft_toLeftOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/enableDebuggingInformation" />
 
-        <androidx.appcompat.widget.SwitchCompat
-            android:id="@+id/switchCollectTelemetry"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="32dp"
-            android:checked="@={viewModel.enableTelemetry}"
-            android:text="@string/settings_enable_telemetry"
-            app:layout_constraintLeft_toLeftOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/enablePHYGraphView" />
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/enablePHYGraphView"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="15dp"
+                android:checked="@={viewModel.showPhyChart}"
+                android:text="@string/settings_display_phy_chart"
+                app:layout_constraintEnd_toEndOf="@+id/enablePHYDebuggingInformation"
+                app:layout_constraintTop_toBottomOf="@+id/enablePHYDebuggingInformation" />
 
-        <androidx.appcompat.widget.SwitchCompat
-            android:id="@+id/switchSensorsTelemetry"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="@dimen/settings_margin_level_2"
-            android:layout_marginTop="15dp"
-            android:checked="@={viewModel.sensorTelemetryEnabled}"
-            android:enabled="@{viewModel.enableTelemetry}"
-            android:text="@string/settings_enable_sensor_telemetry"
-            app:layout_constraintLeft_toLeftOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/switchCollectTelemetry" />
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/switchCollectTelemetry"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="32dp"
+                android:checked="@={viewModel.enableTelemetry}"
+                android:text="@string/settings_enable_telemetry"
+                app:layout_constraintLeft_toLeftOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/enablePHYGraphView" />
 
-        <Spinner
-            android:id="@+id/spinnerSensorsFrequency"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="@dimen/settings_margin_level_2"
-            android:enabled="@{viewModel.enableTelemetry &amp;&amp; viewModel.sensorTelemetryEnabled}"
-            android:spinnerMode="dropdown"
-            app:layout_constraintBottom_toBottomOf="@+id/switchSensorsTelemetry"
-            app:layout_constraintLeft_toRightOf="@+id/switchSensorsTelemetry"
-            app:layout_constraintTop_toTopOf="@+id/switchSensorsTelemetry" />
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/switchSensorsTelemetry"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/settings_margin_level_2"
+                android:layout_marginTop="15dp"
+                android:checked="@={viewModel.sensorTelemetryEnabled}"
+                android:enabled="@{viewModel.enableTelemetry}"
+                android:text="@string/settings_enable_sensor_telemetry"
+                app:layout_constraintLeft_toLeftOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/switchCollectTelemetry" />
 
-        <androidx.appcompat.widget.SwitchCompat
-            android:id="@+id/switchLocationTelemetry"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="@dimen/settings_margin_level_2"
-            android:layout_marginTop="15dp"
-            android:checked="@={viewModel.locationTelemetryEnabled}"
-            android:enabled="@{viewModel.enableTelemetry}"
-            android:text="@string/settings_enable_location_telemetry"
-            app:layout_constraintLeft_toLeftOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/switchSensorsTelemetry" />
+            <Spinner
+                android:id="@+id/spinnerSensorsFrequency"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/settings_margin_level_2"
+                android:enabled="@{viewModel.enableTelemetry &amp;&amp; viewModel.sensorTelemetryEnabled}"
+                android:spinnerMode="dropdown"
+                app:layout_constraintBottom_toBottomOf="@+id/switchSensorsTelemetry"
+                app:layout_constraintLeft_toRightOf="@+id/switchSensorsTelemetry"
+                app:layout_constraintTop_toTopOf="@+id/switchSensorsTelemetry" />
 
-        <Spinner
-            android:id="@+id/spinnerLocationFrequency"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="@dimen/settings_margin_level_2"
-            android:enabled="@{viewModel.enableTelemetry &amp;&amp; viewModel.locationTelemetryEnabled}"
-            android:spinnerMode="dropdown"
-            app:layout_constraintBottom_toBottomOf="@+id/switchLocationTelemetry"
-            app:layout_constraintLeft_toRightOf="@+id/switchLocationTelemetry"
-            app:layout_constraintTop_toTopOf="@+id/switchLocationTelemetry" />
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/switchLocationTelemetry"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/settings_margin_level_2"
+                android:layout_marginTop="15dp"
+                android:checked="@={viewModel.locationTelemetryEnabled}"
+                android:enabled="@{viewModel.enableTelemetry}"
+                android:text="@string/settings_enable_location_telemetry"
+                app:layout_constraintLeft_toLeftOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/switchSensorsTelemetry" />
 
-    </androidx.constraintlayout.widget.ConstraintLayout>
-</ScrollView>
+            <Spinner
+                android:id="@+id/spinnerLocationFrequency"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/settings_margin_level_2"
+                android:enabled="@{viewModel.enableTelemetry &amp;&amp; viewModel.locationTelemetryEnabled}"
+                android:spinnerMode="dropdown"
+                app:layout_constraintBottom_toBottomOf="@+id/switchLocationTelemetry"
+                app:layout_constraintLeft_toRightOf="@+id/switchLocationTelemetry"
+                app:layout_constraintTop_toTopOf="@+id/switchLocationTelemetry" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+    </ScrollView>
 </layout>

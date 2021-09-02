@@ -104,7 +104,7 @@ internal class RPCProcessor(
         return try {
             rpcObjectMapper.objectToJson(ResponseUtils.createResponse(requestId, InternalRpcError(RpcErrorCode.PARSING_ERROR_CODE.code, e.localizedMessage)))
         } catch (ex: JsonProcessingException) {
-            // This catch will never been executed during code logic, but it need because objectMapper throw exception
+            // This catch should never being executed, but it's need because objectMapper throw exception
             ""
         }
     }

@@ -21,7 +21,6 @@ import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTLoadControl
 import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTMediaSource
 import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTRenderersFactory
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
-import com.nextgenbroadcast.mobile.player.exoplayer.Atsc3ContentDataSource
 import com.nextgenbroadcast.mobile.player.exoplayer.Atsc3MMTExtractor
 import com.nextgenbroadcast.mobile.player.exoplayer.RouteDASHLoadControl
 import kotlinx.coroutines.*
@@ -32,6 +31,7 @@ import java.util.concurrent.TimeUnit
 class Atsc3MediaPlayer(
         private val context: Context
 ): AudioManager.OnAudioFocusChangeListener {
+
     interface EventListener {
         fun onPlayerStateChanged(state: PlaybackState) {}
         fun onPlayerError(error: Exception) {}
@@ -157,6 +157,8 @@ class Atsc3MediaPlayer(
         Log.i(TAG, "stop: with lastMediaUri: $lastMediaUri")
 
         _player?.stop(true)
+
+        releaseAudioFocus()
     }
 
     fun reset() {
@@ -170,10 +172,7 @@ class Atsc3MediaPlayer(
         }
         isMMTPlayback = false
 
-        audioFocusRequest?.let {
-            audioManager.abandonAudioFocusRequest(it)
-        }
-        audioFocusRequest = null
+        releaseAudioFocus()
     }
 
     fun clearSavedState() {
@@ -279,7 +278,7 @@ class Atsc3MediaPlayer(
                     listener?.onPlayerError(error)
 
                     // Do not retry if source media file not found
-                    if (isAtsc3ContentDataSourceFileNotFoundException(error.cause)) {
+                    if (isContentDataSourceFileNotFoundException(error.cause)) {
                         return
                     }
 
@@ -317,7 +316,7 @@ class Atsc3MediaPlayer(
             override fun getRetryDelayMsFor(dataType: Int, loadDurationMs: Long, exception: IOException?, errorCount: Int): Long {
                 Log.w("ExoPlayerMMTLoadErrorHandlingPolicy", "dataType: $dataType, loadDurationMs: $loadDurationMs, exception ex: $exception, errorCount: $errorCount")
 
-                if (isAtsc3ContentDataSourceFileNotFoundException(exception)) {
+                if (isContentDataSourceFileNotFoundException(exception)) {
                     return C.TIME_UNSET
                 }
 
@@ -326,8 +325,8 @@ class Atsc3MediaPlayer(
         }
     }
 
-    private fun isAtsc3ContentDataSourceFileNotFoundException(exception: Throwable?): Boolean {
-        if (exception is Atsc3ContentDataSource.Atsc3ContentDataSourceException) {
+    private fun isContentDataSourceFileNotFoundException(exception: Throwable?): Boolean {
+        if (exception is ContentDataSource.ContentDataSourceException) {
             if (exception.cause is FileNotFoundException) {
                 return true
             }
@@ -346,6 +345,13 @@ class Atsc3MediaPlayer(
             }
             else -> null
         }
+    }
+
+    private fun releaseAudioFocus() {
+        audioFocusRequest?.let {
+            audioManager.abandonAudioFocusRequest(it)
+        }
+        audioFocusRequest = null
     }
 
     private fun tryRetrievedAudioFocus(): Boolean {

@@ -54,7 +54,7 @@ class ViewViewModel(
     val debugData = MutableLiveData<CharSequence>()
 
     val defaultService = services.distinctUntilChanged().map { list ->
-        list.firstOrNull()
+        list.firstOrNull { it.default } ?: list.firstOrNull()
     }
 
     // must be cleared on unBind

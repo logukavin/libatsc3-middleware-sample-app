@@ -22,6 +22,7 @@ import com.nextgenbroadcast.mobile.core.model.PhyFrequency
 import com.nextgenbroadcast.mobile.middleware.*
 import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverCore
 import com.nextgenbroadcast.mobile.middleware.dev.nsd.NsdConfig
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.CertificateStore
 import com.nextgenbroadcast.mobile.middleware.gateway.web.ConnectionType
 import com.nextgenbroadcast.mobile.middleware.server.web.IMiddlewareWebServer
 import com.nextgenbroadcast.mobile.middleware.service.Atsc3ForegroundService
@@ -41,8 +42,8 @@ import com.nextgenbroadcast.mobile.middleware.dev.telemetry.task.WiFiInfoTelemet
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.writer.AWSIoTelemetryWriter
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.writer.FileTelemetryWriter
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.writer.VuzixPhyTelemetryWriter
-import com.nextgenbroadcast.mobile.middleware.telemetry.control.WebTelemetryControl
-import com.nextgenbroadcast.mobile.middleware.telemetry.writer.WebTelemetryWriter
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.control.WebTelemetryControl
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.writer.WebTelemetryWriter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
@@ -128,7 +129,8 @@ internal class TelemetryHolder(
                 listOf(
                         //AWSIoTelemetryWriter(thing),
                         //FileTelemetryWriter(cacheDir, "telemetry.log")
-                )
+                ),
+                context.resources.getBoolean(R.bool.telemetryEnabled)
         ).apply {
             //start() do not start Telemetry with application, use switch in Settings dialog or AWS command
         }.also { broker ->
@@ -213,30 +215,25 @@ internal class TelemetryHolder(
         val thing = AWSIoThing(
             AWSIOT_RECEIVER_TEMPLATE_NAME,
             AWSIOT_CLIENT_ID_FORMAT,
-            AWSIOT_EVENT_TOPIC_FORMAT,
-            BuildConfig.AWSIoTCustomerUrl,
             serialNumber,
             encryptedSharedPreferences(context, IoT_PREFERENCE),
         ) { keyPassword ->
-            CertificateUtils.createKeyStore(
-                context.assets.open("9200fd27be-certificate.pem.crt"),
-                context.assets.open("9200fd27be-private.pem.key"),
-                keyPassword
-            ) ?: throw IOException("Failed to read certificate from resources")
+            CertificateStore.getReceiverCert(context, keyPassword)
+                ?: throw IOException("Failed to read certificate from resources")
         }.also {
             awsIoThing = it
         }
 
         telemetryBroker?.addWriter(
-                AWSIoTelemetryWriter(thing)
+            AWSIoTelemetryWriter(AWSIOT_EVENT_TOPIC_FORMAT, thing)
         )
 
         remoteControl?.addControl(
-                AWSIoTelemetryControl(
-                    AWSIOT_TOPIC_CONTROL,
-                    AWSIOT_GLOBAL_TOPIC_CONTROL,
-                    thing
-                )
+            AWSIoTelemetryControl(
+                AWSIOT_TOPIC_CONTROL,
+                AWSIOT_GLOBAL_TOPIC_CONTROL,
+                thing
+            )
         )
     }
 
@@ -250,7 +247,7 @@ internal class TelemetryHolder(
     }
 
     private fun executeCommand(action: String, arguments: Map<String, String>) {
-        LOG.d(TelemetryBroker.TAG, "Control command received: $action, args: $arguments")
+        LOG.d(TAG, "Control command received: $action, args: $arguments")
 
         when (action) {
             ITelemetryControl.CONTROL_ACTION_TUNE -> {
@@ -271,10 +268,11 @@ internal class TelemetryHolder(
                     } ?: let {
                         receiver.findActiveServiceById(serviceId)
                     }
+                } ?: let {
+                    arguments[ITelemetryControl.CONTROL_ARGUMENT_SERVICE_NAME]?.let { serviceName ->
+                        receiver.findServiceByName(serviceName)
+                    }
                 }
-                        ?: arguments[ITelemetryControl.CONTROL_ARGUMENT_SERVICE_NAME]?.let { serviceName ->
-                            receiver.findServiceByName(serviceName)
-                        }
 
                 if (service != null) {
                     receiver.selectService(service)
@@ -362,7 +360,7 @@ internal class TelemetryHolder(
             }
 
             ITelemetryControl.CONTROL_ACTION_RESET_RECEIVER_DEMODE -> {
-                /// TODO should be implemented
+                /// TODO TBD
             }
         }
 

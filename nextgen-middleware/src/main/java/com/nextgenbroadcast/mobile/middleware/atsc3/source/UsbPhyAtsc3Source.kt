@@ -20,8 +20,6 @@ class UsbPhyAtsc3Source(
         try {
             val conn = usbManager.openDevice(device) ?: return null
 
-            //TODO: remove? close() maybe prepare() method?
-
             val atsc3UsbDevice = Atsc3UsbDevice(device, conn)
 
             candidatePHYList.forEach { candidatePHY ->

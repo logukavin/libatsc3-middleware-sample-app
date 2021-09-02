@@ -54,12 +54,11 @@ android {
         resValue("string", "nextgenMMTContentProvider", "com.nextgenbroadcast.mobile.middleware.provider.mmt")
         resValue("string", "nextgenServicesGuideProvider", "com.nextgenbroadcast.mobile.middleware.provider.esg")
         resValue("string", "receiverContentProvider", "com.nextgenbroadcast.mobile.middleware.provider.content")
-        resValue("string", "externalPhyConfig", "saankhya_config.xml")
 
-        buildConfigField("String", "Auth0TokenUrl", "\"https://sinclairplatform.auth0.com/oauth/token\"")
-        buildConfigField("String", "Auth0Audience", "\"https://api.prod.sinclairplatform.com\"")
+        resValue("bool", "telemetryEnabled", "false")
+        resValue("bool", "testAlertsEnabled", "true")
+
         buildConfigField("String", "SinclairPlatformUrl", "\"https://prod-property-gateway.sinclairplatform.com\"")
-        buildConfigField("String", "AWSIoTCustomerUrl", "\"a2mpoqnjkscij4-ats.iot.us-east-1.amazonaws.com\"")
     }
 
     buildTypes {

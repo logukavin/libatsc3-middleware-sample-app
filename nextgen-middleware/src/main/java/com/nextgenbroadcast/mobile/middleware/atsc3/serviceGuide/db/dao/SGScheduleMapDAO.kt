@@ -22,7 +22,6 @@ interface SGScheduleMapDAO {
 
     @Transaction
     fun getContentBy(selection: String?, args: Array<String>, sortOrder: String?): Cursor {
-
         val query = "SELECT sch.*, schc.contentId, schp.startTime, schp.endTime, schp.duration, cnt.icon, cntn.name, cntd.description\n" +
                 "FROM sg_schedule sch, sg_schedule_content schc, sg_presentation schp\n" +
                 "LEFT JOIN sg_content cnt ON cnt.id = schc.contentId\n" +

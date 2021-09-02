@@ -86,7 +86,6 @@ internal class ServiceControllerImpl(
     }
 
     override fun onConfigurationChanged(index: Int, count: Int, isKnown: Boolean) {
-        // we don't need MainScope because it's thread safe
         atsc3Configuration.value = Triple(index, count, isKnown)
     }
 
@@ -274,12 +273,7 @@ internal class ServiceControllerImpl(
                     resetMediaUrl()
                 }
 
-                // ignore auto tune if receiver already tuned or scanning
-                val tuned = if (atsc3Module.isIdle() || forceTune) {
-                    atsc3Module.tune(frequencyList, forceTune)
-                    true
-                } else false
-
+                val tuned = atsc3Module.tune(frequencyList, forceTune)
                 if (tuned) {
                     // Store the first one because it will be used as default
                     receiverFrequency.value = freqKhz

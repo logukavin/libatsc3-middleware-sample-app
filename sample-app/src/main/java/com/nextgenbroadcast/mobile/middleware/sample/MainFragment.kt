@@ -21,7 +21,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.setFragmentResultListener
 import com.google.android.material.bottomsheet.BottomSheetBehavior
-import com.nextgenbroadcast.mobile.core.atsc3.PhyVersionInfo
+import com.nextgenbroadcast.mobile.core.atsc3.PhyInfoConstants
 import com.nextgenbroadcast.mobile.core.model.*
 import com.nextgenbroadcast.mobile.middleware.dev.atsc3.PHYStatistics
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.observer.StaticTelemetryObserver
@@ -393,10 +393,10 @@ class MainFragment : Fragment() {
         var deviceType: String? = null
         var deviceId: String? = null
         receiverContentResolver.getPhyInfo()?.let { info ->
-            sdkVersion = info[PhyVersionInfo.INFO_SDK_VERSION]
-            firmwareVersion = info[PhyVersionInfo.INFO_FIRMWARE_VERSION]
-            deviceType = info[PhyVersionInfo.INFO_PHY_TYPE]
-            deviceId = info[PhyVersionInfo.INFO_DEVICE_ID]
+            sdkVersion = info[PhyInfoConstants.INFO_SDK_VERSION]
+            firmwareVersion = info[PhyInfoConstants.INFO_FIRMWARE_VERSION]
+            deviceType = info[PhyInfoConstants.INFO_PHY_TYPE]
+            deviceId = info[PhyInfoConstants.INFO_DEVICE_ID]
         }
         val frequency = receiverContentResolver.queryReceiverFrequency()
 
@@ -478,11 +478,11 @@ class MainFragment : Fragment() {
     }
 
     private fun switchApplication(appData: AppData?) {
-        if (appData != null && appData.isAvailable()) {
+        if (appData != null && appData.isAvailable) {
             if (!requireActivity().isInPictureInPictureMode) {
                 setBAAvailability(true)
             }
-            if (!appData.isAppEquals(currentAppData) || appData.isAvailable() != currentAppData?.isAvailable()) {
+            if (!appData.isAppEquals(currentAppData) || appData.isAvailable != currentAppData?.isAvailable) {
                 loadBroadcasterApplication(appData)
             }
         } else {
@@ -491,7 +491,7 @@ class MainFragment : Fragment() {
         currentAppData = appData
     }
 
-    private fun isBAvailable() = currentAppData?.isAvailable() ?: false
+    private fun isBAvailable() = currentAppData?.isAvailable ?: false
 
     private fun updateRMPLayout(x: Float, y: Float, scale: Float) {
         ConstraintSet().apply {
@@ -504,9 +504,9 @@ class MainFragment : Fragment() {
     }
 
     private fun loadBroadcasterApplication(appData: AppData) {
-        if (binding.userAgentWebView.serverCertificateHash == null) {
+        if (binding.userAgentWebView.serverCertificateHash.isEmpty()) {
             binding.userAgentWebView.serverCertificateHash =
-                receiverContentResolver.queryServerCertificate()
+                receiverContentResolver.queryServerCertificate() ?: emptyList()
         }
         binding.userAgentWebView.loadBAContent(appData.appEntryPage)
         receiverContentResolver.publishApplicationState(ApplicationState.LOADED)

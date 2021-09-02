@@ -6,10 +6,11 @@
 
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+    <color name="gray">#FF767676</color>
     <color name="alert">#FFFF0F0F</color>
 
     <color name="chart_grid_color">#4CFFFFFF</color>
     <color name="yellow_device_item_bg">#FFFFB7</color>
-
+    <color name="yellow_separator">#FFCC00</color>
     <color name="green">#306F30</color>
 </resources>

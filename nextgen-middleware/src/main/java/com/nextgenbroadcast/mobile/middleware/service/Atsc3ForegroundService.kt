@@ -11,9 +11,11 @@ import android.os.PowerManager.WakeLock
 import android.support.v4.media.MediaBrowserCompat
 import android.util.Log
 import androidx.core.content.ContextCompat
+import com.nextgenbroadcast.mobile.core.MiddlewareConfig
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.middleware.*
+import com.nextgenbroadcast.mobile.middleware.atsc3.entities.alerts.AeaTable
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.Atsc3Source
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.UsbPhyAtsc3Source
 import com.nextgenbroadcast.mobile.middleware.notification.AlertNotificationHelper
@@ -38,7 +40,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         AlertNotificationHelper(this)
     }
 
-    //TODO: create own scope?
+    //TODO: create internal scope?
     private val serviceScope = CoroutineScope(Dispatchers.Default)
 
     private lateinit var playbackState: StateFlow<PlaybackState>
@@ -184,23 +186,11 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
             }
         }
 
-        serviceScope.launch {
-            atsc3Receiver.repository.alertsForNotify.collect { alerts ->
-                val locale = atsc3Receiver.settings.locale.language
-
-                alerts.forEach { alert ->
-                    val message = alert.messages?.let { msgMap ->
-                        msgMap[locale] ?: msgMap[Locale.US.language] ?: msgMap.values.firstOrNull()
-                    }
-
-                    message?.let { msg ->
-                        alertNotificationHelper.showNotification(msg, alert.id, alert.effective)
-                        startActivity(
-                            AlertDialogActivity.newIntent(
-                                this@Atsc3ForegroundService, alert.id, msg, alert.effective
-                            )
-                        )
-                    }
+        if (resources.getBoolean(R.bool.testAlertsEnabled)) {
+            serviceScope.launch {
+                atsc3Receiver.repository.alertsForNotify.collect { alerts ->
+                    val locale = atsc3Receiver.settings.locale.language
+                    showAlertNotifications(alerts, locale)
                 }
             }
         }
@@ -465,6 +455,24 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     }
 
     override fun getReceiverState() = atsc3Receiver.getReceiverState()
+
+    private fun showAlertNotifications(alerts: List<AeaTable>, locale: String) {
+        alerts.forEach { alert ->
+            val message = alert.messages?.let { msgMap ->
+                msgMap[locale] ?: msgMap[Locale.US.language]
+                ?: msgMap.values.firstOrNull()
+            }
+
+            message?.let { msg ->
+                alertNotificationHelper.showNotification(msg, alert.id, alert.effective)
+                startActivity(
+                    AlertDialogActivity.newIntent(
+                        this@Atsc3ForegroundService, alert.id, msg, alert.effective
+                    )
+                )
+            }
+        }
+    }
 
     companion object {
         val TAG: String = Atsc3ForegroundService::class.java.simpleName

@@ -3,10 +3,9 @@ package com.nextgenbroadcast.mobile.middleware.atsc3
 import android.util.Log
 import com.lyft.kronos.KronosClock
 import com.nextgenbroadcast.mobile.core.LOG
-import com.nextgenbroadcast.mobile.core.atsc3.PhyVersionInfo
+import com.nextgenbroadcast.mobile.core.atsc3.PhyInfoConstants
 import com.nextgenbroadcast.mobile.core.model.MediaUrl
-import com.nextgenbroadcast.mobile.core.isEquals
-import com.nextgenbroadcast.mobile.middleware.MiddlewareConfig
+import com.nextgenbroadcast.mobile.core.MiddlewareConfig
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.Atsc3ServiceLocationTable
 import com.nextgenbroadcast.mobile.core.atsc3.SLTConstants
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.alerts.LLSParserAEAT
@@ -49,12 +48,11 @@ internal class Atsc3Module(
     private val systemProperties = atsc3NdkApplicationBridge.atsc3_slt_alc_get_system_properties()
     private val serviceLocationTable = ConcurrentHashMap<Int, Atsc3ServiceLocationTable>()
     private val serviceToSourceConfig = ConcurrentHashMap<Int, Int>()
-    private val applicationPackageMap = ConcurrentHashMap<String, Atsc3Application>()  // TODO: concurent? onPackageExtractCompleted
+    private val applicationPackageMap = ConcurrentHashMap<String, Atsc3Application>()
     private val stateLock = ReentrantLock()
     private val configurationTimer = Timer()
     private val stateScope = CoroutineScope(Executors.newSingleThreadExecutor().asCoroutineDispatcher())
 
-    private var lastTunedFreqList: List<Int> = emptyList()
     private var defaultConfiguration: Map<Any, Atsc3ServiceLocationTable>? = null
 
     @Volatile
@@ -107,43 +105,53 @@ internal class Atsc3Module(
     }
 
     /**
-     * Tune to one frequency or scan over all frequency in [frequencyList] and collect SLT from.
-     * The first one will be used as default.
+     * Tune to one frequency or scan over all frequency in [frequencyList] and collect SLT from all of them.
+     * The first one will be used as default. Tune can be ignored depending on force flag.
      * frequencyList - list of frequencies in KHz
+     * force - if true always apply provided frequencies, otherwise apply only if source not tuned to
+     * any frequency and not under demode lock.
      */
-    override suspend fun tune(frequencyList: List<Int>, force: Boolean) {
-        withContext(stateScope.coroutineContext) {
+    override suspend fun tune(frequencyList: List<Int>, force: Boolean): Boolean {
+        return withContext(stateScope.coroutineContext) {
             val freqKhz = frequencyList.firstOrNull() ?: 0
             val demodLock = phyDemodLock
-            if (!force && (demodLock || (freqKhz != 0 && lastTunedFreqList.isEquals(frequencyList)))) return@withContext
+
+            if (!force && demodLock) return@withContext false
 
             val src = source
-            if (src is ITunableSource) {
+            if (src is PhyAtsc3Source) {
+                if (!force && src.getConfigCount() > 0) return@withContext false
+
                 reset()
 
-                if (src is PhyAtsc3Source) {
-                    src.setConfigs(frequencyList)
+                src.setConfigs(frequencyList)
 
-                    if (USE_PERSISTED_CONFIGURATION) {
-                        withStateLock {
-                            applyDefaultConfiguration(src)
-                        }
+                if (USE_PERSISTED_CONFIGURATION) {
+                    withStateLock {
+                        applyDefaultConfiguration(src)
                     }
-
-                    val config = if (USE_PERSISTED_CONFIGURATION) {
-                        findNextConfigIndexToSniff(src.getCurrentConfigIndex())
-                    } else {
-                        src.getCurrentConfigIndex()
-                    }
-                    applySourceConfig(src, config, src.getConfigCount() > 1)
-
-                    lastTunedFreqList = frequencyList
-                } else {
-                    lastTunedFreqList = listOf(freqKhz)
-
-                    src.tune(freqKhz)
                 }
+
+                val config = if (USE_PERSISTED_CONFIGURATION) {
+                    findNextConfigIndexToSniff(src.getCurrentConfigIndex())
+                } else {
+                    src.getCurrentConfigIndex()
+                }
+                val result = applySourceConfig(src, config, src.getConfigCount() > 1)
+
+                return@withContext result != IAtsc3Source.RESULT_ERROR
+            } else if (src is ITunableSource) {
+                //TODO: add check
+                //if (!force) return@withContext
+
+                reset()
+
+                src.tune(freqKhz)
+
+                return@withContext true
             }
+
+            return@withContext false
         }
     }
 
@@ -175,11 +183,7 @@ internal class Atsc3Module(
                         close()
                     } else {
                         setSourceConfig(result)
-                        val newState = when {
-                            result > 0 -> Atsc3ModuleState.SCANNING
-                            source.getConfigCount() > 0 -> Atsc3ModuleState.SNIFFING
-                            else -> Atsc3ModuleState.IDLE
-                        }
+                        val newState = if (result > 0) Atsc3ModuleState.SCANNING else Atsc3ModuleState.SNIFFING
                         setState(newState)
                         if (source.getConfigCount() > 1) {
                             startSourceConfigTimeoutTask()
@@ -344,12 +348,8 @@ internal class Atsc3Module(
         val (configCount, isKnown) = synchronized(this) {
             currentSourceConfiguration = config
 
-            val configCount = when (val src = source) {
-                null -> 0
-                is ConfigurableAtsc3Source<*> -> src.getConfigCount()
-                else -> 1
-            }
-
+            val src = source
+            val configCount = src?.getConfigCount() ?: 0
             val isKnown = serviceToSourceConfig.values.contains(config)
 
             Pair(configCount, isKnown)
@@ -440,7 +440,6 @@ internal class Atsc3Module(
             defaultConfiguration = null
             setSourceConfig(-1)
 
-            lastTunedFreqList = emptyList()
             reset()
         }
     }
@@ -765,10 +764,10 @@ internal class Atsc3Module(
 
     override fun getVersionInfo(): Map<String, String?> {
         return mutableMapOf<String, String?>().apply {
-            put(PhyVersionInfo.INFO_SERIAL_NUMBER, getSerialNum())
+            put(PhyInfoConstants.INFO_SERIAL_NUMBER, getSerialNum())
             source?.let { src ->
-                put(PhyVersionInfo.INFO_SDK_VERSION, src.getSdkVersion())
-                put(PhyVersionInfo.INFO_FIRMWARE_VERSION, src.getFirmwareVersion())
+                put(PhyInfoConstants.INFO_SDK_VERSION, src.getSdkVersion())
+                put(PhyInfoConstants.INFO_FIRMWARE_VERSION, src.getFirmwareVersion())
                 if (src is UsbPhyAtsc3Source) {
                     val deviceType = when (src.type) {
                         Atsc3Source.DEVICE_TYPE_KAILASH -> "KAILASH"
@@ -776,7 +775,7 @@ internal class Atsc3Module(
                         Atsc3Source.DEVICE_TYPE_AUTO -> "MARKONE"
                         else -> src.type.toString()
                     }
-                    put(PhyVersionInfo.INFO_PHY_TYPE, deviceType)
+                    put(PhyInfoConstants.INFO_PHY_TYPE, deviceType)
                 }
             }
         }

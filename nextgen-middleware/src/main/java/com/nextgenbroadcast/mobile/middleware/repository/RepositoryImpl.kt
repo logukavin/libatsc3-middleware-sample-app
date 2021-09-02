@@ -55,20 +55,27 @@ internal class RepositoryImpl(
     override val heldPackage = MutableStateFlow<Atsc3HeldPackage?>(null)
     override val appData = combine(heldPackage, applications, sessionNum) { held, applications, _ ->
         held?.let {
+            var useBroadband = false
+
             val appContextId = held.appContextId ?: return@let null
             val appUrl = held.bcastEntryPageUrl?.let { entryPageUrl ->
                 ServerUtils.createEntryPoint(entryPageUrl, appContextId, settings)
-            } ?: held.bbandEntryPageUrl ?: return@let null
+            } ?: let {
+                useBroadband = true
+                held.bbandEntryPageUrl
+            } ?: return@let null
             val compatibleServiceIds = held.coupledServices ?: emptyList()
             val application = applications.firstOrNull { app ->
                 app.appContextIdList.contains(appContextId) && app.packageName == held.bcastEntryPackageUrl
             }
+            val cachePath = application?.cachePath
 
             AppData(
                 appContextId,
                 ServerUtils.addSocketPath(appUrl, settings),
                 compatibleServiceIds,
-                application?.cachePath
+                cachePath,
+                useBroadband || cachePath?.isNotEmpty() ?: false
             )
         }
     }

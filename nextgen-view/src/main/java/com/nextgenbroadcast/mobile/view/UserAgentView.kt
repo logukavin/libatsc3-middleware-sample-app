@@ -16,8 +16,9 @@ import android.webkit.*
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.distinctUntilChanged
-import com.nextgenbroadcast.mobile.core.Atsc3Config
+import com.nextgenbroadcast.mobile.core.atsc3.Atsc3Config
 import com.nextgenbroadcast.mobile.core.LOG
+import com.nextgenbroadcast.mobile.core.MiddlewareConfig
 import com.nextgenbroadcast.mobile.core.cert.CertificateUtils.publicHash
 import kotlinx.coroutines.*
 import java.io.ByteArrayInputStream
@@ -45,7 +46,7 @@ class UserAgentView @JvmOverloads constructor(
     private var layerCanvas: Canvas? = null
     private var lastCaptureTime: Long = 0
 
-    var serverCertificateHash: String? = null
+    var serverCertificateHash: List<String> = emptyList()
 
     var captureContentVisibility = false
     var isContentVisible: LiveData<Boolean> = _isContentVisible.distinctUntilChanged()
@@ -68,13 +69,13 @@ class UserAgentView @JvmOverloads constructor(
 
         clearCache(true)
         setBackgroundColor(Color.TRANSPARENT)
-        settings?.apply {
+        with(settings) {
             javaScriptEnabled = true
             domStorageEnabled = true
             mediaPlaybackRequiresUserGesture = false
             userAgentString = getAtsc3UserAgent()
         }
-        if (BuildConfig.DEBUG) {
+        if (MiddlewareConfig.DEV_TOOLS) {
             setWebContentsDebuggingEnabled(true)
         }
         clearSslPreferences()
@@ -175,7 +176,7 @@ class UserAgentView @JvmOverloads constructor(
                     getX509Certificate(error.certificate)
                 }
 
-                if (cert != null && cert.publicHash() == serverCertificateHash) {
+                if (cert != null && serverCertificateHash.contains(cert.publicHash())) {
                     handler.proceed()
                     return
                 }

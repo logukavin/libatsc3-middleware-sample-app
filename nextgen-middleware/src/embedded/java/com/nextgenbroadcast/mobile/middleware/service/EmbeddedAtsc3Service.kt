@@ -7,7 +7,7 @@ import android.os.IBinder
 import com.nextgenbroadcast.mobile.core.asReadOnly
 import com.nextgenbroadcast.mobile.core.dev.service.presentation.IControllerPresenter
 import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverCore
-import com.nextgenbroadcast.mobile.middleware.MiddlewareConfig
+import com.nextgenbroadcast.mobile.core.MiddlewareConfig
 import com.nextgenbroadcast.mobile.core.dev.service.binder.IServiceBinder
 
 class EmbeddedAtsc3Service : Atsc3ForegroundService() {

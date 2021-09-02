@@ -11,25 +11,13 @@ import java.util.*
 
 
 class ESGContentProvider : ContentProvider() {
+    private val uriMatcher = UriMatcher(UriMatcher.NO_MATCH)
+
     private lateinit var AUTHORITY: String
     private lateinit var SERVICE_CONTENT_URI: Uri
     private lateinit var PROGRAM_CONTENT_URI: Uri
-    private lateinit var SERVICES_CONTENT_TYPE: String
-    private lateinit var SERVICE_CONTENT_ITEM_TYPE: String
-    private lateinit var PROGRAMS_CONTENT_TYPE: String
-    private lateinit var PROGRAM_CONTENT_ITEM_TYPE: String
-
-    private val uriMatcher = UriMatcher(UriMatcher.NO_MATCH)
 
     private lateinit var db: SGDataBase
-
-    private fun initializeUriMatching() {
-        uriMatcher.addURI(AUTHORITY, "$SERVICE_CONTENT_PATH/#", URI_SERVICE_BY_ID)
-        uriMatcher.addURI(AUTHORITY, SERVICE_CONTENT_PATH, URI_ALL_SERVICES)
-
-        uriMatcher.addURI(AUTHORITY, "$PROGRAM_CONTENT_PATH/#", URI_PROGRAM_BY_ID)
-        uriMatcher.addURI(AUTHORITY, PROGRAM_CONTENT_PATH, URI_ALL_PROGRAMS)
-    }
 
     override fun onCreate(): Boolean {
         val appContext = context?.applicationContext ?: return false
@@ -38,13 +26,10 @@ class ESGContentProvider : ContentProvider() {
         SERVICE_CONTENT_URI = ESGContentAuthority.getServiceContentUri(appContext)
         PROGRAM_CONTENT_URI = ESGContentAuthority.getProgramContentUri(appContext)
 
-        SERVICES_CONTENT_TYPE = ("vnd.android.cursor.dir/vnd.$AUTHORITY.$SERVICE_CONTENT_PATH")
-        SERVICE_CONTENT_ITEM_TYPE = ("vnd.android.cursor.item/vnd.$AUTHORITY.$SERVICE_CONTENT_PATH")
-
-        PROGRAMS_CONTENT_TYPE = ("vnd.android.cursor.dir/vnd.$AUTHORITY.$PROGRAM_CONTENT_PATH")
-        PROGRAM_CONTENT_ITEM_TYPE = ("vnd.android.cursor.item/vnd.$AUTHORITY.$PROGRAM_CONTENT_PATH")
-
-        initializeUriMatching()
+        uriMatcher.addURI(AUTHORITY, "$SERVICE_CONTENT_PATH/#", URI_SERVICE_BY_ID)
+        uriMatcher.addURI(AUTHORITY, SERVICE_CONTENT_PATH, URI_ALL_SERVICES)
+        uriMatcher.addURI(AUTHORITY, "$PROGRAM_CONTENT_PATH/#", URI_PROGRAM_BY_ID)
+        uriMatcher.addURI(AUTHORITY, PROGRAM_CONTENT_PATH, URI_ALL_PROGRAMS)
 
         db = SGDataBase.getDatabase(appContext)
 
@@ -53,16 +38,15 @@ class ESGContentProvider : ContentProvider() {
 
     override fun getType(uri: Uri): String {
         return when (uriMatcher.match(uri)) {
-            URI_ALL_SERVICES -> SERVICES_CONTENT_TYPE
-            URI_SERVICE_BY_ID -> SERVICE_CONTENT_ITEM_TYPE
-            URI_ALL_PROGRAMS -> PROGRAMS_CONTENT_TYPE
-            URI_PROGRAM_BY_ID -> PROGRAM_CONTENT_ITEM_TYPE
+            URI_ALL_SERVICES -> "vnd.android.cursor.dir/vnd.$AUTHORITY.$SERVICE_CONTENT_PATH"
+            URI_SERVICE_BY_ID -> ".$AUTHORITY.$SERVICE_CONTENT_PATH"
+            URI_ALL_PROGRAMS -> "vnd.android.cursor.dir/vnd.$AUTHORITY.$PROGRAM_CONTENT_PATH"
+            URI_PROGRAM_BY_ID -> "vnd.android.cursor.item/vnd.$AUTHORITY.$PROGRAM_CONTENT_PATH"
             else -> throw IllegalArgumentException("Wrong URI: $uri")
         }
     }
 
     override fun query(uri: Uri, projection: Array<String>?, selection: String?, selectionArgs: Array<String>?, sortOrder: String?): Cursor {
-
         val context = context ?: throw IllegalArgumentException("Wrong context")
         val contentResolver = context.contentResolver
 
@@ -74,7 +58,6 @@ class ESGContentProvider : ContentProvider() {
     }
 
     private fun fillCursor(uri: Uri, selectionArgs: Array<String>?, selection: String?, sortOrder: String?): Cursor {
-
         when (uriMatcher.match(uri)) {
             URI_ALL_SERVICES -> {
                 return db.sgScheduleMapDAO().getAllService(1)
