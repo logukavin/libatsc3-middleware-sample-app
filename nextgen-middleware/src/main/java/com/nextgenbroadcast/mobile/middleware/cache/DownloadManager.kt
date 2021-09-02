@@ -99,7 +99,8 @@ class DownloadManager : IDownloadManager {
 
     companion object {
         val TAG: String = DownloadManager::class.java.simpleName
+
         private const val SEGMENT_SIZE = 8 * 1024L
-        const val LOADING_POSTFIX = "_loading"
+        private const val LOADING_POSTFIX = "_loading"
     }
 }

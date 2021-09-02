@@ -23,8 +23,7 @@ internal class UsbPhyInitializer : IServiceInitializer {
             if (isCanceled) return@forEach
 
             try {
-                val parser = context.resources.getXml(resource)
-                val phys = readPhyAttributes(parser)
+                val phys = readPhyAttributes(context.resources.getXml(resource))
 
                 val instance: Any = component.getDeclaredConstructor().newInstance()
                 val connector = instance as IUsbConnector
@@ -47,7 +46,7 @@ internal class UsbPhyInitializer : IServiceInitializer {
     private fun readPhyAttributes(parser: XmlResourceParser): List<Pair<Int, Int>> {
         val result = ArrayList<Pair<Int, Int>>()
 
-        try {
+        parser.use {
             while (parser.next() != XmlPullParser.END_DOCUMENT) {
                 if (parser.eventType != XmlPullParser.START_TAG) {
                     continue
@@ -79,10 +78,9 @@ internal class UsbPhyInitializer : IServiceInitializer {
                     XmlUtils.skip(parser)
                 }
             }
-        } finally {
-            parser.close()
-            return result
         }
+
+        return result
     }
 
     companion object {

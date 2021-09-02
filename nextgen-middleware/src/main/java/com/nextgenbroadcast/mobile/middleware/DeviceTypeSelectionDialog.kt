@@ -8,7 +8,9 @@ import android.os.Bundle
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import com.nextgenbroadcast.mobile.core.FileUtils
+import com.nextgenbroadcast.mobile.core.MiddlewareConfig
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.Atsc3Source
+import com.nextgenbroadcast.mobile.middleware.dev.config.DevConfig
 import com.nextgenbroadcast.mobile.middleware.phy.Atsc3DeviceReceiver
 import com.nextgenbroadcast.mobile.middleware.service.Atsc3ForegroundService
 
@@ -26,12 +28,11 @@ class DeviceTypeSelectionDialog : AppCompatActivity() {
             return
         }
 
-        val configName = getString(R.string.externalPhyConfig)
-        val typeOverload: Int? = if (configName.isNotBlank()) {
-            FileUtils.readExternalFileAsString(this, configName)?.let { str ->
+        val typeOverload: Int? = if (MiddlewareConfig.DEV_TOOLS) {
+            DevConfig.get(applicationContext).phyType?.let { type ->
                 when {
-                    "YOGA".equals(str, true) -> Atsc3Source.DEVICE_TYPE_YOGA
-                    "KAILASH".equals(str, true) -> Atsc3Source.DEVICE_TYPE_KAILASH
+                    "YOGA".equals(type, true) -> Atsc3Source.DEVICE_TYPE_YOGA
+                    "KAILASH".equals(type, true) -> Atsc3Source.DEVICE_TYPE_KAILASH
                     else -> null
                 }
             }

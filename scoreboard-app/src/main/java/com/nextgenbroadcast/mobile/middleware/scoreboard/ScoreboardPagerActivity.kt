@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.collect
 class ScoreboardPagerActivity : FragmentActivity(), ServiceConnection {
     private val sharedViewModel: SharedViewModel by viewModels()
 
+    private lateinit var binding: ActivityScoreboardBinding
     private lateinit var pagerAdapter: PagerAdapter
 
     private var serviceBinder: ScoreboardService.ScoreboardBinding? = null
@@ -25,37 +26,46 @@ class ScoreboardPagerActivity : FragmentActivity(), ServiceConnection {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val binding = ActivityScoreboardBinding.inflate(layoutInflater)
+
+        binding = ActivityScoreboardBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
         pagerAdapter = PagerAdapter(this)
-        binding.viewPager.offscreenPageLimit = 1
+        binding.viewPager.offscreenPageLimit = 2
         binding.viewPager.adapter = pagerAdapter
 
         val tabLayout = findViewById<TabLayout>(R.id.tab_layout)
-        TabLayoutMediator(tabLayout,  binding.viewPager) { tab, position ->
+        TabLayoutMediator(tabLayout, binding.viewPager) { tab, position ->
             tab.text = getTabName(position)
         }.attach()
 
         sharedViewModel.devicesToAdd.observe(this) { devices ->
             val binder = serviceBinder ?: return@observe
-            devices?.forEach { deviceId ->
+            devices?.mapNotNull { deviceId ->
                 binder.connectDevice(deviceId)?.let { flow ->
-                    sharedViewModel.addFlow(deviceId, flow)
+                    deviceId to flow
                 }
+            }?.let {
+                sharedViewModel.addFlows(it)
             }
         }
 
         sharedViewModel.devicesToRemove.observe(this) { devices ->
             val binder = serviceBinder ?: return@observe
-            devices?.forEach { deviceId ->
-                binder.disconnectDevice(deviceId)
-                sharedViewModel.removeFlow(deviceId)
+            devices?.let { it ->
+                it.forEach { deviceId ->
+                    binder.disconnectDevice(deviceId)
+                }
+                sharedViewModel.removeFlows(it.toList())
             }
         }
 
         sharedViewModel.selectedDeviceId.observe(this@ScoreboardPagerActivity) { deviceId ->
             serviceBinder?.selectDevice(deviceId)
+        }
+
+        if (savedInstanceState == null) {
+            binding.viewPager.setCurrentItem(1, false)
         }
     }
 
@@ -122,19 +132,25 @@ class ScoreboardPagerActivity : FragmentActivity(), ServiceConnection {
     }
 
     private fun getTabName(position: Int): CharSequence {
-        return getString(if (position == 0) R.string.settings_tab_title else R.string.scoreboard_tab_title)
+        val titleStringResource = when (position) {
+            0 -> R.string.command_tab_title
+            1 -> R.string.devices_tab_title
+            else -> R.string.chart_tab_title
+        }
+        return getString(titleStringResource)
     }
 
     class PagerAdapter(
         activity: FragmentActivity
     ) : FragmentStateAdapter(activity) {
 
-        override fun getItemCount(): Int = 2
+        override fun getItemCount(): Int = 3
 
         override fun createFragment(position: Int): Fragment {
             return when (position) {
-                0 -> ScoreboardSettingsFragment()
-                1 -> ScoreboardFragment()
+                0 -> CommandFragment()
+                1 -> ScoreboardSettingsFragment()
+                2 -> ScoreboardFragment()
                 else -> throw IllegalArgumentException("Wrong Fragment index: $position")
             }
         }

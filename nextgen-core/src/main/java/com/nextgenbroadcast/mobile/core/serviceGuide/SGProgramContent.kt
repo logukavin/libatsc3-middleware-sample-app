@@ -1,6 +1,6 @@
 package com.nextgenbroadcast.mobile.core.serviceGuide
 
-class SGProgramContent (
+data class SGProgramContent (
     val id: String?,
     val version: Long,
     val icon: String?,

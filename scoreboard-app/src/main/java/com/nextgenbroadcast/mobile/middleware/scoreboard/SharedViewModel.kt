@@ -66,9 +66,25 @@ class SharedViewModel : ViewModel() {
         }
     }
 
+    fun addFlows(list: List<Pair<String, Flow<ClientTelemetryEvent>>>) {
+        val map = _deviceFlowMap.value?.toMutableMap() ?: mutableMapOf()
+        list.forEach { (deviceId, flow) ->
+            map[deviceId] = flow
+        }
+        _deviceFlowMap.postValue(map)
+    }
+
     fun addFlow(deviceId: String, flow: Flow<ClientTelemetryEvent>) {
         val map = _deviceFlowMap.value?.toMutableMap() ?: mutableMapOf()
         map[deviceId] = flow
+        _deviceFlowMap.postValue(map)
+    }
+
+    fun removeFlows(list: List<String>) {
+        val map = _deviceFlowMap.value?.toMutableMap() ?: return
+        list.forEach { deviceId ->
+            map.remove(deviceId)
+        }
         _deviceFlowMap.postValue(map)
     }
 
@@ -83,13 +99,18 @@ class SharedViewModel : ViewModel() {
     }
 
     fun selectAll(isChecked: Boolean) {
-        deviceIdList.value?.forEach { (id) ->
+        val list = _chartDevices.value?.toMutableList() ?: mutableListOf()
+        deviceIdList.value?.forEach { (deviceId) ->
             if (isChecked) {
-                addDeviceChart(id)
+                if (!list.contains(deviceId)) {
+                    list.add(deviceId)
+                }
             } else {
-                removeDeviceChart(id)
+                list.remove(deviceId)
+                synchronizeChartSelection(deviceId)
             }
         }
+        _chartDevices.value = list
     }
 
 }

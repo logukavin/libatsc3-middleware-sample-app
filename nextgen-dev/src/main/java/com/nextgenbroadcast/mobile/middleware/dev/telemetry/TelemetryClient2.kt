@@ -43,7 +43,10 @@ class TelemetryClient2(
     }
 
     fun addObserver(observer: ITelemetryObserver) {
-        val flow = newEventFlow()
+        addObserver(observer, newEventFlow())
+    }
+
+    fun addObserver(observer: ITelemetryObserver, flow: MutableSharedFlow<ClientTelemetryEvent>) {
         observers[observer] = flow
         coroutineScope.launchObserver(observer, flow)
     }

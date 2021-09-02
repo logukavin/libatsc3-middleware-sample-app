@@ -7,8 +7,8 @@ import android.net.nsd.NsdServiceInfo
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import com.nextgenbroadcast.mobile.core.LOG
-import com.nextgenbroadcast.mobile.core.cert.CertificateUtils
 import com.nextgenbroadcast.mobile.middleware.dev.nsd.NsdConfig
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.CertificateStore
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.TelemetryClient2
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.aws.AWSIoThing
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.entity.ClientTelemetryEvent
@@ -18,8 +18,11 @@ import com.nextgenbroadcast.mobile.middleware.dev.telemetry.observer.WebTelemetr
 import com.nextgenbroadcast.mobile.middleware.scoreboard.BuildConfig
 import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.TelemetryDevice
 import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.filter
 import okio.internal.commonToUtf8String
 import java.io.IOException
 import java.util.*
@@ -35,6 +38,7 @@ class TelemetryManager(
         context.getSystemService(Context.NSD_SERVICE) as NsdManager
     }
 
+    private val scope = CoroutineScope(Dispatchers.Main)
     private val timer = Timer()
     private val telemetryClient = TelemetryClient2(100)
     private val globalDeviceObserver: AWSTelemetryObserver
@@ -53,27 +57,28 @@ class TelemetryManager(
         awsIoThing = AWSIoThing(
             AWSIOT_MANAGER_TEMPLATE_NAME,
             AWSIOT_MANAGER_ID_FORMAT,
-            AWSIOT_GLOBAL_EVENT_TOPIC_FORMAT,
-            BuildConfig.AWSIoTCustomerUrl,
             serialNum,
             encryptedSharedPreferences(context, IoT_PREFERENCE),
         ) { keyPassword ->
-            CertificateUtils.createKeyStore(
-                context.assets.open("cc74370283-certificate.pem.crt"),
-                context.assets.open("cc74370283-private.pem.key"),
-                keyPassword
-            ) ?: throw IOException("Failed to read certificate from resources")
+            CertificateStore.getManagerCert(context, keyPassword)
+                ?: throw IOException("Failed to read certificate from resources")
         }.apply {
             globalDeviceObserver = AWSTelemetryObserver(
                 AWSIOT_EVENT_TOPIC_FORMAT,
                 this,
                 AWSIOT_CLIENT_ID_ANY,
-                AWSIOT_TOPIC_PING
+                AWSIOT_TOPIC_ANY
             ).also {
-                telemetryClient.addObserver(it)
+                telemetryClient.addObserver(it, MutableSharedFlow(
+                    replay = 1,
+                    extraBufferCapacity = 10,
+                    onBufferOverflow = BufferOverflow.DROP_OLDEST
+                ))
             }
         }
     }
+
+    fun getGlobalEventFlow() = telemetryClient.getFlow(globalDeviceObserver)
 
     fun start() {
         try {
@@ -86,7 +91,9 @@ class TelemetryManager(
 
         deviceLocationJob = CoroutineScope(Dispatchers.IO).launch {
             try {
-                telemetryClient.getFlow(globalDeviceObserver)?.collect { event ->
+                getGlobalEventFlow()?.filter {
+                    it.topic.endsWith("/$AWSIOT_TOPIC_PING")
+                }?.collect { event ->
                     val start = event.topic.indexOf("_") + 1
                     val end = event.topic.indexOf("/", start)
                     val clientId = event.topic.substring(start, end)
@@ -103,14 +110,14 @@ class TelemetryManager(
             }
         }
 
-        awsUpdateTask = timer.scheduleAtFixedRate(0, AWSIOT_PING_PERIOD) {
-            CoroutineScope(Dispatchers.Main).launch {
-                awsIoThing.publish(AWSIOT_TOPIC_PING, "")
-            }
+        awsUpdateTask = timer.scheduleAtFixedRate(5_000, AWSIOT_PING_PERIOD) {
+            sendGlobalCommand(AWSIOT_TOPIC_PING, "")
         }
     }
 
     fun stop() {
+        scope.cancel()
+
         awsUpdateTask?.cancel()
         awsUpdateTask = null
 
@@ -127,6 +134,23 @@ class TelemetryManager(
 
         CoroutineScope(Dispatchers.Main).launch {
             awsIoThing.close()
+        }
+    }
+
+    fun sendGlobalCommand(topic: String, payload: String) {
+        scope.launch {
+            awsIoThing.publish("$AWSIOT_COMMAND_GLOBAL/$topic", payload)
+        }
+    }
+
+    fun sendDeviceCommand(devices: List<String>, payload: String) {
+        scope.launch {
+            devices.forEach { deviceId ->
+                awsIoThing.publish(
+                    AWSIOT_COMMAND_SINGLE_DEVICE.replace(AWSIoThing.AWSIOT_FORMAT_SERIAL, deviceId),
+                    payload
+                )
+            }
         }
     }
 
@@ -288,12 +312,17 @@ class TelemetryManager(
         private const val IoT_PREFERENCE = "${BuildConfig.APPLICATION_ID}.awsiot"
 
         private const val AWSIOT_MANAGER_TEMPLATE_NAME = "ATSC3MobileManagerProvisioning"
-        private const val AWSIOT_MANAGER_ID_FORMAT = "ATSC3MobileManager_${AWSIoThing.AWSIOT_FORMAT_SERIAL}"
+        private const val AWSIOT_MANAGER_ID_FORMAT =
+            "ATSC3MobileManager_${AWSIoThing.AWSIOT_FORMAT_SERIAL}"
         private const val AWSIOT_EVENT_TOPIC_FORMAT = "telemetry/${AWSIoThing.AWSIOT_FORMAT_SERIAL}"
-        private const val AWSIOT_GLOBAL_EVENT_TOPIC_FORMAT = "global/command/request"
-        private const val AWSIOT_CLIENT_ID_FORMAT = "ATSC3MobileReceiver_${AWSIoThing.AWSIOT_FORMAT_SERIAL}"
+        private const val AWSIOT_COMMAND_GLOBAL = "global/command/request"
+        private const val AWSIOT_COMMAND_SINGLE_DEVICE =
+            "control/ATSC3MobileReceiver_${AWSIoThing.AWSIOT_FORMAT_SERIAL}"
+        private const val AWSIOT_CLIENT_ID_FORMAT =
+            "ATSC3MobileReceiver_${AWSIoThing.AWSIOT_FORMAT_SERIAL}"
         private const val AWSIOT_CLIENT_ID_ANY = "+"
 
+        private const val AWSIOT_TOPIC_ANY = "#"
         private const val AWSIOT_TOPIC_PING = "ping"
         private const val AWSIOT_TOPIC_PHY = "phy"
 

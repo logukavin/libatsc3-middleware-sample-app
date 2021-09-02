@@ -11,7 +11,7 @@ interface IAtsc3Module {
     fun setListener(listener: Atsc3ModuleListener?)
 
     suspend fun open(source: IAtsc3Source, defaultConfig: Map<Any, Atsc3ServiceLocationTable>? = null): Boolean
-    suspend fun tune(frequencyList: List<Int>, force: Boolean)
+    suspend fun tune(frequencyList: List<Int>, force: Boolean): Boolean
     suspend fun cancelScanning()
     suspend fun selectAdditionalService(serviceId: Int): Boolean
     suspend fun selectService(bsid: Int, serviceId: Int): Boolean

@@ -1,6 +1,7 @@
 plugins {
     id 'com.android.library'
     id 'kotlin-android'
+    id 'kotlin-parcelize'
 }
 
 android {
@@ -22,6 +23,8 @@ android {
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
+
+        buildConfigField("String", "AWSIoTCustomerUrl", "\"a2mpoqnjkscij4-ats.iot.us-east-1.amazonaws.com\"")
     }
 
     buildTypes {
@@ -67,6 +70,9 @@ dependencies {
 
     // Vuzix telemetry writer
     api 'com.vuzix:connectivity-sdk:1.1'
+
+    // Web telemetry writer and control
+    compileOnly 'javax.servlet:javax.servlet-api:3.1.0'
 }
 
 apply from: '../publish.gradle'

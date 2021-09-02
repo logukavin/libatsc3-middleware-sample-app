@@ -124,8 +124,7 @@ public class MMTFragmentWriter {
         fileHeaderBuffer.put(MMTConstants.mmtSignature);
 
         // write stream Header data
-        fileHeaderBuffer.putInt(headerSize)
-                .putLong(MMTContentProvider.MMT_FRAGMENT_WRITER_MMT_EXTRACTOR_DEFAULT_SAMPLE_DURATION_US);
+        fileHeaderBuffer.putInt(headerSize);
 
         if (videoTrackCount > 0) {
             int videoFormat = getIntegerCodeForString("hev1");

@@ -43,6 +43,8 @@ dependencies {
 
     implementation "com.squareup.okio:okio:2.8.0"
     compileOnly 'org.bouncycastle:bcpkix-jdk15on:1.56'
+
+    compileOnly 'javax.servlet:javax.servlet-api:3.1.0'
 }
 
 apply from: '../publish.gradle'
