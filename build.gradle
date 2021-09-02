@@ -6,6 +6,9 @@ buildscript {
 
     repositories {
         google()
+        if (project.getProperty('org.gradle.project.use_local_src_exoplayer_folder').toBoolean()) {
+            jcenter()
+        }
     }
     dependencies {
         classpath 'com.android.tools.build:gradle:7.0.1'
@@ -34,15 +37,15 @@ allprojects {
             dirs 'libs'
         }
         google()
+        if (project.getProperty('org.gradle.project.use_local_src_exoplayer_folder').toBoolean()) {
+            jcenter()
+        }
         maven {
             url 'https://pkgs.dev.azure.com/NGWP/Middleware/_packaging/middleware/maven/v1'
             name 'middleware'
             authentication {
                 basic(BasicAuthentication)
             }
-        }
-        maven {
-            url 'https://maven.google.com'
         }
         maven {
             url "https://jitpack.io"
