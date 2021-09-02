@@ -402,9 +402,8 @@ public class MMTFragmentWriter {
 
     //jjustman-2021-09-02 - TODO: fix isAudioSample() to only check -> audioConfigurationMap.containsKey(packet_id); its checking if MmtPacketIdContext.selected_audio_packet_id == packet_id
 
-    private long getPresentationTimestampUs(int packet_id, int sample_number, long mpu_presentation_time_uS_from_SI) {
+    private long getPresentationTimestampUs_no_anchor(int packet_id, int sample_number, long mpu_presentation_time_uS_from_SI) {
         long mpuPresentationTimestampDeltaUs = 0;
-
 
         if (mpu_presentation_time_uS_from_SI > 0) {
             long mfu_presentation_time_uS_computed = 0;
@@ -462,7 +461,7 @@ public class MMTFragmentWriter {
     }
 
     //jjustman-2020-12-22 - TODO: handle when mfu_presentation_time_uS_computed - push last value?
-    private long jj_2021_09_01_getPresentationTimestampUs(int packet_id, int sample_number, long mpu_presentation_time_uS_from_SI) {
+    private long getPresentationTimestampUs(int packet_id, int sample_number, long mpu_presentation_time_uS_from_SI) {
         if (mpu_presentation_time_uS_from_SI > 0) {
             long mfu_presentation_time_uS_computed = 0;
             long extracted_sample_duration_us;
@@ -527,6 +526,8 @@ public class MMTFragmentWriter {
 
         if (MMTClockAnchor.SystemClockAnchor == 0) {
             MMTClockAnchor.SystemClockAnchor = System.currentTimeMillis() + MMTClockAnchor.SYSTEM_CLOCK_ANCHOR_PTS_OFFSET_MS;
+
+            //not used?
             MMTClockAnchor.MfuClockAnchor = minNonZeroMfuPresentationTimestampForAnchor;
 
         }
