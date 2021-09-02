@@ -465,6 +465,8 @@ public class MMTFragmentWriter {
         if (mpu_presentation_time_uS_from_SI > 0) {
             long mfu_presentation_time_uS_computed = 0;
             long extracted_sample_duration_us;
+
+            long track_anchor_timestamp_us = 0;
             if (isVideoSample(packet_id)) {
                 if (MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us > 0) {
                     mfu_presentation_time_uS_computed = mpu_presentation_time_uS_from_SI + (sample_number - 1) * MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us;
@@ -485,18 +487,24 @@ public class MMTFragmentWriter {
                     if (videoMfuPresentationTimestampUs == Long.MAX_VALUE) {
                         videoMfuPresentationTimestampUs = mfu_presentation_time_uS_computed;
                     }
+                    track_anchor_timestamp_us = videoMfuPresentationTimestampUs;
                 } else if (isAudioSample(packet_id)) {
                     if (!audioMfuPresentationTimestampMap.containsKey(packet_id)) {
                         audioMfuPresentationTimestampMap.put(packet_id, mfu_presentation_time_uS_computed);
                     }
+                    track_anchor_timestamp_us = audioMfuPresentationTimestampMap.get(packet_id);
+
                 } else if (isTextSample(packet_id)) {
                     if (stppMfuPresentationTimestampUs == Long.MAX_VALUE) {
                         stppMfuPresentationTimestampUs = mfu_presentation_time_uS_computed;
                     }
+                    track_anchor_timestamp_us = stppMfuPresentationTimestampUs;
+
                 }
                 long anchorMfuPresentationTimestampUs = getMinNonZeroMfuPresentationTimestampForAnchor(packet_id);
                 long mpuPresentationTimestampDeltaUs = mfu_presentation_time_uS_computed - anchorMfuPresentationTimestampUs;
-                return mpuPresentationTimestampDeltaUs; //MMTContentProvider.PTS_OFFSET_US;
+
+                return mpuPresentationTimestampDeltaUs + MMTClockAnchor.MPU_PRESENTATION_DELTA_PTS_OFFSET_US;
             }
         }
 
@@ -526,17 +534,11 @@ public class MMTFragmentWriter {
 
         if (MMTClockAnchor.SystemClockAnchor == 0) {
             MMTClockAnchor.SystemClockAnchor = System.currentTimeMillis() + MMTClockAnchor.SYSTEM_CLOCK_ANCHOR_PTS_OFFSET_MS;
-
-            //not used?
-            MMTClockAnchor.MfuClockAnchor = minNonZeroMfuPresentationTimestampForAnchor;
-
         }
 
-//        //2021-09-01 - was < ... i think it should be >
-//        if (MMTClockAnchor.MfuClockAnchor > minNonZeroMfuPresentationTimestampForAnchor) {
-//            MMTClockAnchor.MfuClockAnchor = minNonZeroMfuPresentationTimestampForAnchor;
-//        }
-
+        if((MMTClockAnchor.MfuClockAnchor == 0) || (minNonZeroMfuPresentationTimestampForAnchor < MMTClockAnchor.MfuClockAnchor)) {
+            MMTClockAnchor.MfuClockAnchor = minNonZeroMfuPresentationTimestampForAnchor;
+        }
 
         return minNonZeroMfuPresentationTimestampForAnchor;
     }
