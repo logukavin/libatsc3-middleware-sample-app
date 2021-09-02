@@ -45,27 +45,29 @@ internal object Atsc3ReceiverStandalone {
     }
 
     private fun newInstance(appContext: Context): Atsc3ReceiverCore {
-        val atsc3Module = Atsc3Module(appContext.cacheDir)
-
-        if(Atsc3Module.KronosClock == null) {
-            Log.i("KronosClock","before AndroidClockFactory.createKronosClock")
-
-            Atsc3Module.KronosClock = AndroidClockFactory.createKronosClock(appContext,  object : SyncListener {
+        Log.i("KronosClock","before AndroidClockFactory.createKronosClock")
+        val kronosClock = AndroidClockFactory.createKronosClock(
+            appContext,
+            object : SyncListener {
                 override fun onError(host: String, throwable: Throwable) {
-                    Log.e("KronosClock","onError: host: $host, throwable: $throwable")
+                    Log.e("KronosClock", "onError: host: $host, throwable: $throwable")
                 }
 
                 override fun onStartSync(host: String) {
-                    Log.i("KronosClock","onStartSync: host: $host")
+                    Log.i("KronosClock", "onStartSync: host: $host")
                 }
 
                 override fun onSuccess(ticksDelta: Long, responseTimeMs: Long) {
-                    Log.i("KronosClock","onSuccess: ticksDelta: $ticksDelta, responseTimeMs: $responseTimeMs")
+                    Log.i("KronosClock", "onSuccess: ticksDelta: $ticksDelta, responseTimeMs: $responseTimeMs")
                 }
-            }, DefaultParam.NTP_HOSTS, TimeUnit.SECONDS.toMillis(5))
-
-            Atsc3Module.KronosClock!!.syncInBackground()
+            },
+            DefaultParam.NTP_HOSTS,
+            TimeUnit.SECONDS.toMillis(5)
+        ).apply {
+            syncInBackground()
         }
+
+        val atsc3Module = Atsc3Module(appContext.cacheDir, kronosClock)
 
         val preferences = appContext.getSharedPreferences(REPOSITORY_PREFERENCE, Context.MODE_PRIVATE)
         val settings = MiddlewareSettingsImpl(preferences).also { settings ->

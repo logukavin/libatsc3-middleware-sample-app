@@ -40,7 +40,8 @@ import kotlin.concurrent.schedule
 import kotlin.math.max
 
 internal class Atsc3Module(
-        private val cacheDir: File
+        private val cacheDir: File,
+        private val kronosClock: KronosClock
 ) : IAtsc3Module, IAtsc3NdkApplicationBridgeCallbacks, IAtsc3NdkPHYBridgeCallbacks {
 
     private val atsc3NdkApplicationBridge = Atsc3NdkApplicationBridge(this)
@@ -735,14 +736,14 @@ internal class Atsc3Module(
 
     override fun pushL1d_TimeInfo(l1dTimeInfo: L1D_timePhyInformation) {
         if (USE_DEV_STATISTIC) {
-            PHYStatistics.PHYL1dTimingStatistics = "SFN: "+l1dTimeInfo.toStringFromAnchorNtpTimestamp(
-                Atsc3Module.KronosClock?.getCurrentNtpTimeMs() ?: -1
-            ) .also {
+            val anchorNtpTimestamp = l1dTimeInfo.toStringFromAnchorNtpTimestamp(
+                kronosClock.getCurrentNtpTimeMs() ?: -1
+            )
+            PHYStatistics.PHYL1dTimingStatistics = "SFN: $anchorNtpTimestamp".also {
                 log(it)
             }
         }
     }
-
 
     //////////////////////////////////////////////////////////////
 
@@ -847,9 +848,6 @@ internal class Atsc3Module(
 
     companion object {
         val TAG: String = Atsc3Module::class.java.simpleName
-
-        //lateinit
-        var KronosClock: KronosClock? = null
 
         private val SLT_ACQUIRE_TUNE_DELAY = TimeUnit.SECONDS.toMillis(20)
 
