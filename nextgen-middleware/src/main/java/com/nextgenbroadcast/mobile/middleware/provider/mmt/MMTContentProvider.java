@@ -52,7 +52,7 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
     public static final long PTS_OFFSET_US = 0L;
 
     private static final int RING_BUFFER_MAX_PAGE_COUNT = 320;
-    private static final int RING_BUFFER_PAGE_SIZE = 16 * 1024;
+    private static final int RING_BUFFER_PAGE_SIZE = 2 * 1024; //AC-4 audio frame is around ~450 bytes, so don't make this page size bigger than about 33ms latency?
     private static final int RING_BUFFER_SIZE = RING_BUFFER_MAX_PAGE_COUNT * RING_BUFFER_PAGE_SIZE;
 
     private static final String[] COLUMNS = {OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE};
@@ -231,19 +231,23 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
                 int counter = -50; // 5 sec
                 while (counter < 5 && writer.isActive()) {
                     int bytesRead = writer.write(out);
+                    LOG.d(TAG, "writeToFile:: after writer.write, bytesRead: "+bytesRead);
+
                     if (bytesRead > 0) {
                         counter = 0;
                     } else {
                         counter++;
                         if (counter < 0) {
+                            //jjustman-2021-09-01 - was 100ms, changing to 16ms
+                            LOG.d(TAG, "writeToFile:: sleeping for 16ms, counter: "+counter);
                             //noinspection BusyWait
-                            Thread.sleep(100);
+                            Thread.sleep(16);
                         }
                     }
                 }
             }
         } catch (Exception e) {
-            LOG.i(TAG, "Failed to read MMT media stream", e);
+            LOG.e(TAG, "Failed to read MMT media stream", e);
         } finally {
             writer.close();
         }

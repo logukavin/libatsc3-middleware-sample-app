@@ -117,7 +117,7 @@ public class Atsc3MMTExtractor implements Extractor {
                 currentSampleBytesRemaining = currentSampleSize;
 
                 if((ReadSample_ExtractSampleHeader_counter++ % 1000) == 0) {
-                    Log.d("MMTExtractor", String.format("sampleType: %d, packet_id: %d, sampleTimeUs: %d, count: %d", currentSampleType, currentSampleId, currentSampleTimeUs, ReadSample_ExtractSampleHeader_counter));
+                    Log.d(TAG, String.format("sampleType: %d, packet_id: %d, sampleTimeUs: %d, count: %d", currentSampleType, currentSampleId, currentSampleTimeUs, ReadSample_ExtractSampleHeader_counter));
                 }
 
             } else if (sampleBuffer.bytesLeft() == 0) {
@@ -125,7 +125,7 @@ public class Atsc3MMTExtractor implements Extractor {
                 sampleBuffer.setPosition(0);
             }
         } catch (Exception ex) {
-            Log.w("MMTExtractor", "readSample - packet_id: " + currentSampleId + ", Exception, returning END_OF_INPUT - causing ExoPlayer DataSource teardown/unwind, ex: " + ex + ", messgae: " + ex.getMessage() + ",  Type: " + currentSampleType + ", sample TimeUs: " + currentSampleTimeUs + ",  sample size: " + currentSampleSize);
+            Log.w(TAG, "readSample - packet_id: " + currentSampleId + ", Exception, returning END_OF_INPUT - causing ExoPlayer DataSource teardown/unwind, ex: " + ex + ", messgae: " + ex.getMessage() + ",  Type: " + currentSampleType + ", sample TimeUs: " + currentSampleTimeUs + ",  sample size: " + currentSampleSize, ex);
 
             return Extractor.RESULT_END_OF_INPUT;
         }
@@ -142,7 +142,7 @@ public class Atsc3MMTExtractor implements Extractor {
             }
 
             if(((ReadSample_TrackIsNull_counter++) % 1000) == 0) {
-                Log.w("MMTExtractor", String.format("readSample - packet_id: %d, track is NULL, skipped: %d, returning Extrator.RESULT_CONTINUE, count: %d", currentSampleId, skipped, ReadSample_TrackIsNull_counter));
+                Log.w(TAG, String.format("readSample - packet_id: %d, track is NULL, skipped: %d, returning Extrator.RESULT_CONTINUE, count: %d", currentSampleId, skipped, ReadSample_TrackIsNull_counter));
             }
 
             return Extractor.RESULT_CONTINUE;
@@ -159,7 +159,7 @@ public class Atsc3MMTExtractor implements Extractor {
 
         currentSampleBytesRemaining -= bytesAppended;
         if (currentSampleBytesRemaining > 0) {
-            Log.w("MMTExtractor", String.format("readSample - packet_id: %d, currentSampleBytesRemaining: %d, returning Extractor.RESULT_CONTINUE", currentSampleId, currentSampleBytesRemaining));
+            //Log.w(TAG, String.format("readSample - packet_id: %d, currentSampleBytesRemaining: %d, returning Extractor.RESULT_CONTINUE", currentSampleId, currentSampleBytesRemaining));
             return Extractor.RESULT_CONTINUE;
         }
 
