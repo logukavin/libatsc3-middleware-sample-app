@@ -47,9 +47,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMediaMMTBridgeCallbacks {
     public static final String TAG = MMTContentProvider.class.getSimpleName();
 
-    //jjustman-2020-12-23 - give the a/v/s decoder some time to decode frames, otherwise we will stall at startup
-    //jjustman-2021-01-13 - TODO: remove me
-    public static final long PTS_OFFSET_US = 0L;
+    public static final long MMT_FRAGMENT_WRITER_MMT_EXTRACTOR_DEFAULT_SAMPLE_DURATION_US = 0L;
 
     private static final int RING_BUFFER_MAX_PAGE_COUNT = 320;
     private static final int RING_BUFFER_PAGE_SIZE = 2 * 1024; //AC-4 audio frame is around ~450 bytes, so don't make this page size bigger than about 33ms latency?
