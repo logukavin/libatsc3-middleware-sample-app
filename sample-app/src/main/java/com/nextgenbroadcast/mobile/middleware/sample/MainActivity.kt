@@ -100,16 +100,16 @@ class MainActivity : BaseActivity() {
         rootView = window.decorView.findViewById(android.R.id.content)
         appUpdateManager = AppUpdateManagerFactory.create(applicationContext)
 
-        supportFragmentManager
+        // ignore if activity was restored
+        if (savedInstanceState == null) {
+            supportFragmentManager
                 .beginTransaction()
                 .add(android.R.id.content,
-                        MainFragment.newInstance(),
-                        MainFragment.TAG
+                    MainFragment.newInstance(),
+                    MainFragment.TAG
                 )
                 .commit()
 
-        // ignore if activity was restored
-        if (savedInstanceState == null) {
             tryOpenPcapFile(intent)
         }
     }
