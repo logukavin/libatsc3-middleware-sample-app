@@ -19,7 +19,6 @@ public class MMTFragmentWriter {
     public static final String TAG = MMTFragmentWriter.class.getSimpleName();
 
     private static final int MAX_FIRST_MFU_WAIT_TIME = 5000;
-    private static final int MAX_KEY_FRAME_WAIT_TIME = 5000;
     private static final byte RING_BUFFER_PAGE_INIT = 1;
     private static final byte RING_BUFFER_PAGE_FRAGMENT = 2;
     public static final int FRAGMENT_PACKET_HEADER = Integer.BYTES /* packet_id */ + Integer.BYTES /* sample_number */ + Long.BYTES /* mpu_presentation_time_uS_from_SI */ + 7 /* reserved */;
@@ -43,9 +42,9 @@ public class MMTFragmentWriter {
 
     private volatile boolean isActive = true;
     private boolean sendFileHeader = true;
+    private boolean firstKeyFrameReceived = false;
 
     private long mpuWaitingStartTime;
-    private long keyFrameWaitingStartTime;
 
     public MMTFragmentWriter(int serviceId, Atsc3RingBuffer fragmentBuffer, boolean audioOnly) {
         this.serviceId = serviceId;
@@ -68,29 +67,19 @@ public class MMTFragmentWriter {
 
         int bytesRead = 0;
         if (sendFileHeader) {
-            if (!audioOnly) {
+            if (!audioOnly && !hasMpuMetadata()) {
+                if (mpuWaitingStartTime == 0) {
+                    mpuWaitingStartTime = System.currentTimeMillis();
+                }
+
+                scanMpuMetadata(fragmentBuffer);
+
                 if (!hasMpuMetadata()) {
-                    if (mpuWaitingStartTime == 0) {
-                        mpuWaitingStartTime = System.currentTimeMillis();
+                    if ((System.currentTimeMillis() - mpuWaitingStartTime) < MAX_FIRST_MFU_WAIT_TIME) {
+                        return 0;
+                    } else {
+                        throw new IOException("Can't get MPU Metadata");
                     }
-
-                    scanMpuMetadata(fragmentBuffer);
-
-                    if (!hasMpuMetadata()) {
-                        if ((System.currentTimeMillis() - mpuWaitingStartTime) < MAX_FIRST_MFU_WAIT_TIME) {
-                            return 0;
-                        } else {
-                            throw new IOException("Can't get MPU Metadata");
-                        }
-                    }
-                }
-
-                if (keyFrameWaitingStartTime == 0) {
-                    keyFrameWaitingStartTime = System.currentTimeMillis();
-                }
-
-                if (!skipUntilKeyFrame(fragmentBuffer) && (System.currentTimeMillis() - keyFrameWaitingStartTime) < MAX_KEY_FRAME_WAIT_TIME) {
-                    return 0;
                 }
             }
 
@@ -268,6 +257,16 @@ public class MMTFragmentWriter {
                 sampleType = MMTConstants.TRACK_TYPE_TEXT;
             }
 
+            // If it's AV stream skip all fragments except audio till video key frame received
+            if (!audioOnly && !firstKeyFrameReceived) {
+                if (sampleType == MMTConstants.TRACK_TYPE_VIDEO && isKeySample(sample_number)) {
+                    firstKeyFrameReceived = true;
+                } else if (sampleType != MMTConstants.TRACK_TYPE_AUDIO) {
+                    buffer.limit(0);
+                    continue;
+                }
+            }
+
             long computedPresentationTimestampUs = getPresentationTimestampUs(packet_id, sample_number, mpu_presentation_time_uS_from_SI);
 
             int headerDiff = Atsc3RingBuffer.RING_BUFFER_PAGE_HEADER_SIZE - MMTConstants.SIZE_SAMPLE_HEADER;
@@ -333,32 +332,6 @@ public class MMTFragmentWriter {
             buffer.limit(0);
 
             return;
-        }
-    }
-
-    private boolean skipUntilKeyFrame(ByteBuffer buffer) {
-        while (true) {
-            int bufferLen = ringBuffer.readNextPage(buffer);
-            if (bufferLen <= 0) {
-                buffer.limit(0);
-                return false;
-            }
-
-            int pageType = buffer.get();
-            if (pageType != RING_BUFFER_PAGE_FRAGMENT) continue;
-
-            int service_id = ringBuffer.getInt(buffer);
-            // seems it's a fragment from the previous session, skip it
-            if (service_id != serviceId) continue;
-
-            int packet_id = ringBuffer.getInt(buffer);
-            int sample_number = ringBuffer.getInt(buffer);
-
-            if (isKeySample(sample_number) && !isTextSample(packet_id)) {
-                ringBuffer.gotoPreviousPage();
-                buffer.limit(0);
-                return true;
-            }
         }
     }
 
