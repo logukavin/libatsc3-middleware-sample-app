@@ -274,7 +274,11 @@ class AWSIoThing(
                 disconnect(client)
             }
         } catch (e: AWSIotException) {
-            LOG.e(TAG, "AWS IoT registration error", e)
+            LOG.e(TAG, "::requestCertificateAndRegister - AWS IoT registration error AWSIotException is:", e)
+        } catch (jjex: Exception) {
+            //  jjustman-2021-09-01 - note: for non ip connected clients, AWSIotTimeoutException does NOT inerhit from AWSIotException, it just inerhits from Exception...
+            //    com.amazonaws.services.iot.client.AWSIotTimeoutException: Request timed out when processing request null
+            LOG.e(TAG, "::requestCertificateAndRegister - JJ catch exception fallback ", jjex)
         }
 
         return null

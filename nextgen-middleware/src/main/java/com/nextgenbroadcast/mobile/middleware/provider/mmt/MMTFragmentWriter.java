@@ -1,6 +1,7 @@
 package com.nextgenbroadcast.mobile.middleware.provider.mmt;
 
 import android.util.ArrayMap;
+import android.util.Log;
 
 import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTClockAnchor;
 import com.nextgenbroadcast.mobile.middleware.atsc3.buffer.Atsc3RingBuffer;
@@ -16,6 +17,11 @@ import java.nio.ByteBuffer;
 
 public class MMTFragmentWriter {
     public static final String TAG = MMTFragmentWriter.class.getSimpleName();
+
+    //jjustman-2021-09-01 - adjust our systemClockAnchor so we have some initial buffering in a/v essence..
+    //audio track is the clock source from ::getPositionUs() - com.google.android.exoplayer2.audio.SystemClockSynchronizedSimpleDecoderAudioRenderer.getPositionUs
+    public static int SYSTEM_CLOCK_ANCHOR_PTS_OFFSET_MS = 400; //move our SystemClockAnchor 100ms forward in the future, such that System.currentTimeMillis() - SystemClockAnchor
+
 
     private static final int MAX_FIRST_MFU_WAIT_TIME = 5000;
     private static final int MAX_KEY_FRAME_WAIT_TIME = 5000;
@@ -214,6 +220,7 @@ public class MMTFragmentWriter {
 
     private int writeBuffer(FileOutputStream out, ByteBuffer buffer) throws IOException {
         int bytesToWrite = buffer.remaining();
+        //jjustman-2021-09-01-do we need to .sync() out?
         out.write(buffer.array(), buffer.position(), bytesToWrite);
         buffer.limit(0);
         return bytesToWrite;
@@ -291,6 +298,10 @@ public class MMTFragmentWriter {
                     .put(isKeySample(sample_number) ? (byte) 1 : (byte) 0);
 
             int sampleRemaining = pageSize + MMTConstants.SIZE_SAMPLE_HEADER + headerDiff;
+
+            Log.d(TAG, String.format("readFragment: sampleType: %d, packetId: %d, sampleNumber: %d, presentationTimeUs: %d, isKey: %s, fragmentBuffer.position: %d, len: %d",
+                    sampleType, packet_id, sample_number, computedPresentationTimestampUs, isKeySample(sample_number), headerDiff, sampleRemaining));
+
             int limit = Math.max(sampleRemaining, 0);
             buffer.limit(limit);
             buffer.position(headerDiff);
@@ -455,10 +466,11 @@ public class MMTFragmentWriter {
         }
 
         if (MMTClockAnchor.SystemClockAnchor == 0) {
-            MMTClockAnchor.SystemClockAnchor = System.currentTimeMillis();
+            MMTClockAnchor.SystemClockAnchor = System.currentTimeMillis() + SYSTEM_CLOCK_ANCHOR_PTS_OFFSET_MS;
         }
 
-        if (MMTClockAnchor.MfuClockAnchor < minNonZeroMfuPresentationTimestampForAnchor) {
+        //2021-09-01 - was < ... i think it should be >
+        if (MMTClockAnchor.MfuClockAnchor > minNonZeroMfuPresentationTimestampForAnchor) {
             MMTClockAnchor.MfuClockAnchor = minNonZeroMfuPresentationTimestampForAnchor;
         }
 
