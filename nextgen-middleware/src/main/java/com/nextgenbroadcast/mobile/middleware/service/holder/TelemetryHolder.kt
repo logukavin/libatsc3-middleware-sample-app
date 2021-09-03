@@ -367,6 +367,7 @@ internal class TelemetryHolder(
                 val entryPoint = arguments[ITelemetryControl.CONTROL_ARGUMENT_ENTRYPOINT]
                 val certificateHash = arguments[ITelemetryControl.CONTROL_ARGUMENT_CERT_HASH]
                 DevConfig.get(context).setBaEntrypoint(entryPoint, certificateHash)
+                receiver.notifyNewSessionStarted()
             }
         }
 
