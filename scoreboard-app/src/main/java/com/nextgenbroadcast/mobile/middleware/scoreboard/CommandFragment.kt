@@ -30,6 +30,7 @@ class CommandFragment : Fragment(), View.OnClickListener {
     private lateinit var showDebugInfoBinding: CommandDebugInfoBinding
     private lateinit var saveFileViewBinding: CommandSaveFileViewBinding
     private lateinit var telemetryViewBinding: CommandTelemetryViewBinding
+    private lateinit var baEntrypointBinding: CommandBaEntrypointBinding
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         binding = FragmentCommandBinding.inflate(inflater, container, false)
@@ -44,6 +45,7 @@ class CommandFragment : Fragment(), View.OnClickListener {
             showDebugInfoBinding = CommandDebugInfoBinding.bind(this)
             saveFileViewBinding = CommandSaveFileViewBinding.bind(this)
             telemetryViewBinding = CommandTelemetryViewBinding.bind(this)
+            baEntrypointBinding = CommandBaEntrypointBinding.bind(this)
         }
 
         return view
@@ -69,6 +71,7 @@ class CommandFragment : Fragment(), View.OnClickListener {
             buttonShowNetworkInfo.setOnClickListener(this@CommandFragment)
             saveFileViewBinding.buttonWriteToFile.setOnClickListener(this@CommandFragment)
             telemetryViewBinding.buttonSetTelemetry.setOnClickListener(this@CommandFragment)
+            baEntrypointBinding.buttonEntrypointApply.setOnClickListener(this@CommandFragment)
         }
 
     }
@@ -97,6 +100,9 @@ class CommandFragment : Fragment(), View.OnClickListener {
             putString(TELEMETRY_NAMES_VALUE, telemetryViewBinding.editTextTelemetryNames.string())
             putString(TELEMETRY_DELAY, telemetryViewBinding.editTextTelemetryDelay.string())
             putBoolean(TELEMETRY_ENABLE_VALUE, telemetryViewBinding.checkboxTelemetryEnable.isChecked)
+
+            putString(BA_ENTRYPOINT_VALUE, baEntrypointBinding.editTextEntrypoint.string())
+            putString(CERTIFICATE_HASH_VALUE, baEntrypointBinding.editTextCertHash.string())
 
         }.apply()
     }
@@ -127,6 +133,9 @@ class CommandFragment : Fragment(), View.OnClickListener {
                 getBoolean(TELEMETRY_ENABLE_VALUE, false)
             telemetryViewBinding.editTextTelemetryNames.setText(getString(TELEMETRY_NAMES_VALUE, ""))
             telemetryViewBinding.editTextTelemetryDelay.setText(getString(TELEMETRY_DELAY, ""))
+
+            baEntrypointBinding.editTextEntrypoint.setText(getString(BA_ENTRYPOINT_VALUE, ""))
+            baEntrypointBinding.editTextCertHash.setText(getString(CERTIFICATE_HASH_VALUE, ""))
         }
 
     }
@@ -155,6 +164,7 @@ class CommandFragment : Fragment(), View.OnClickListener {
             binding.buttonShowNetworkInfo.id -> sendShowNetworkInfoCommand()
             saveFileViewBinding.buttonWriteToFile.id -> sendSaveToFileCommand()
             telemetryViewBinding.buttonSetTelemetry.id -> sendSetTelemetryCommand()
+            baEntrypointBinding.buttonEntrypointApply.id -> sendBaEntrypointCommand()
         }
     }
 
@@ -288,6 +298,14 @@ class CommandFragment : Fragment(), View.OnClickListener {
         sendCommand("enableTelemetry", arguments)
     }
 
+    private fun sendBaEntrypointCommand() {
+        val arguments = JSONObject().apply {
+            put("entryPoint", baEntrypointBinding.editTextEntrypoint.string())
+            put("serverCertHash", baEntrypointBinding.editTextCertHash.string())
+        }
+        sendCommand("defaultBA", arguments)
+    }
+
     private fun sendCommand(command: String, arguments: JSONObject?) {
         if (binding.checkboxGlobalCommand.isChecked) {
             showWarningDialog(R.string.you_send_command_to_all_devices) {
@@ -348,6 +366,8 @@ class CommandFragment : Fragment(), View.OnClickListener {
         private const val TELEMETRY_NAMES_VALUE = "telemetry_names_value"
         private const val TELEMETRY_DELAY = "telemetry_delay_value"
         private const val TELEMETRY_ENABLE_VALUE = "telemetry_enable_value"
+        private const val BA_ENTRYPOINT_VALUE = "ba_entrypoint_value"
+        private const val CERTIFICATE_HASH_VALUE = "certificate_hash_value"
         const val TOPIC = "topic"
     }
 
