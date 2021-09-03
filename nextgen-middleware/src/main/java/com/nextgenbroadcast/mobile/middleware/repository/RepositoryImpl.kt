@@ -53,7 +53,7 @@ internal class RepositoryImpl(
     // User Agent
     override val applications = MutableStateFlow<List<Atsc3Application>>(emptyList())
     override val heldPackage = MutableStateFlow<Atsc3HeldPackage?>(null)
-    override val appData = combine(heldPackage, applications, sessionNum) { held, applications, _ ->
+    override val appData = combine(heldPackage, applications, sessionNum) { held, applications, sessionId ->
         held?.let {
             var useBroadband = false
 
@@ -75,7 +75,8 @@ internal class RepositoryImpl(
                 ServerUtils.addSocketPath(appUrl, settings),
                 compatibleServiceIds,
                 cachePath,
-                useBroadband || cachePath?.isNotEmpty() ?: false
+                useBroadband || cachePath?.isNotEmpty() ?: false,
+                sessionId
             )
         }
     }

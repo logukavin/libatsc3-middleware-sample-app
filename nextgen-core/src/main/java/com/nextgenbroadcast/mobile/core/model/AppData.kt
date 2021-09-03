@@ -9,7 +9,8 @@ data class AppData(
         val appEntryPage: String,
         val compatibleServiceIds: List<Int>,
         val cachePath: String?,
-        val isAvailable: Boolean
+        val isAvailable: Boolean,
+        val sessionId: Int = 0
 ) : Parcelable {
     fun isAppEquals(other: AppData?): Boolean {
         return other?.let {
