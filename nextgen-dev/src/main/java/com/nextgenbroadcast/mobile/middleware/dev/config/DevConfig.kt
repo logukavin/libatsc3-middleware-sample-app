@@ -95,8 +95,8 @@ class DevConfig private constructor() {
     }
 
     fun setBaEntrypoint(entryPoint: String?, certHash: String?) {
-        applicationEntryPoint = entryPoint
-        serverCertHash = certHash
+        applicationEntryPoint = entryPoint?.takeIf { it.isNotBlank() }
+        serverCertHash = certHash?.takeIf { it.isNotBlank() }
     }
 
     private fun parseSrtList(json: JSONArray) = mutableListOf<RouteUrl>().apply {

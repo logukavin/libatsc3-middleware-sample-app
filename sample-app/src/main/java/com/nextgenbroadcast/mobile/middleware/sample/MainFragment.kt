@@ -494,11 +494,10 @@ class MainFragment : Fragment() {
     }
 
     private fun loadBroadcasterApplication(appData: AppData) {
-        if (binding.userAgentWebView.serverCertificateHash.isEmpty()) {
-            binding.userAgentWebView.serverCertificateHash =
-                receiverContentResolver.queryServerCertificate() ?: emptyList()
+        with(binding.userAgentWebView) {
+            serverCertificateHash = receiverContentResolver.queryServerCertificate() ?: emptyList()
+            loadBAContent(appData.appEntryPage)
         }
-        binding.userAgentWebView.loadBAContent(appData.appEntryPage)
         receiverContentResolver.publishApplicationState(ApplicationState.LOADED)
     }
 
