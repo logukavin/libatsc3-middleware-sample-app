@@ -49,4 +49,7 @@
     <string name="console_close_btn">Close</string>
     <string name="console_clear_btn">Clear</string>
     <string name="console_scroll_down">Scroll down</string>
+    <string name="ba_entrypoint">BA entry point</string>
+    <string name="certificate_hash">Certificate Hash</string>
+    <string name="apply_ba_entrypoint">apply</string>
 </resources>
