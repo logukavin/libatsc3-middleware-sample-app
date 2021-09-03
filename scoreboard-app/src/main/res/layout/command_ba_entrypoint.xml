@@ -4,12 +4,6 @@
     xmlns:tools="http://schemas.android.com/tools"
     tools:showIn="@layout/fragment_command">
 
-    <androidx.appcompat.widget.AppCompatButton
-        android:id="@+id/button_entrypoint_apply"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/apply_ba_entrypoint" />
-
     <androidx.appcompat.widget.AppCompatEditText
         android:id="@+id/edit_text_entrypoint"
         android:layout_width="0dp"
@@ -26,12 +20,26 @@
         android:inputType="text"
         android:maxLines="1" />
 
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/button_entrypoint_apply"
+        android:layout_width="wrap_content"
+        android:layout_height="0dp"
+        android:text="@string/apply_ba_entrypoint" />
+
+    <androidx.constraintlayout.helper.widget.Flow
+        android:id="@+id/command_ba_input_flow"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:constraint_referenced_ids="edit_text_entrypoint,edit_text_cert_hash"
+        app:flow_verticalGap="@dimen/command_layout_padding" />
+
     <androidx.constraintlayout.helper.widget.Flow
         android:id="@+id/command_ba_entrypoint_flow"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        app:constraint_referenced_ids="edit_text_cert_hash,edit_text_entrypoint,button_entrypoint_apply"
+        app:constraint_referenced_ids="command_ba_input_flow,button_entrypoint_apply"
         app:flow_horizontalGap="@dimen/command_layout_padding" />
 
 </merge>
