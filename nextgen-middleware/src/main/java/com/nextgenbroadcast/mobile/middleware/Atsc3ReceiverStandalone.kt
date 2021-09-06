@@ -13,12 +13,18 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.IAtsc3Module
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.ServiceGuideDeliveryUnitReader
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.db.RoomServiceGuideStore
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.db.SGDataBase
+import com.nextgenbroadcast.mobile.middleware.cache.ApplicationCache
+import com.nextgenbroadcast.mobile.middleware.cache.DownloadManager
+import com.nextgenbroadcast.mobile.middleware.cache.PrefetchingCache
+import com.nextgenbroadcast.mobile.middleware.controller.service.ServiceControllerImpl
+import com.nextgenbroadcast.mobile.middleware.controller.view.ViewControllerImpl
 import com.nextgenbroadcast.mobile.middleware.repository.RepositoryImpl
 import com.nextgenbroadcast.mobile.middleware.service.provider.MediaFileProvider
 import com.nextgenbroadcast.mobile.middleware.provider.esg.ESGContentAuthority
 import com.nextgenbroadcast.mobile.middleware.settings.MiddlewareSettingsImpl
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collect
+import java.io.File
 
 internal object Atsc3ReceiverStandalone {
     private const val REPOSITORY_PREFERENCE = "${BuildConfig.LIBRARY_PACKAGE_NAME}.preference"
@@ -73,7 +79,16 @@ internal object Atsc3ReceiverStandalone {
         val scheduler = AnalyticScheduler(WorkManager.getInstance(appContext))
         val analytics = Atsc3Analytics(clockSource, appContext.filesDir, repository, settings, scheduler)
 
-        return Atsc3ReceiverCore(atsc3Module, settings, repository, serviceGuideReader, analytics).apply {
+        val downloadManager = DownloadManager()
+        val applicationCache = ApplicationCache(appContext.cacheDir, downloadManager)
+        val prefetchingCache = PrefetchingCache(File(appContext.cacheDir, "prefetching"), downloadManager)
+
+        val controllerScope = CoroutineScope(Dispatchers.Default)
+
+        val serviceController = ServiceControllerImpl(repository, settings, atsc3Module, analytics, serviceGuideReader, prefetchingCache, controllerScope)
+        val viewController = ViewControllerImpl(repository, analytics)
+
+        return Atsc3ReceiverCore(atsc3Module, serviceController, viewController, settings, repository, analytics, applicationCache).apply {
             MainScope().launch {
                 errorFlow.collect { message ->
                     Toast.makeText(appContext, message, Toast.LENGTH_SHORT).show()
