@@ -173,8 +173,11 @@ internal class ServiceControllerImpl(
         mainScope.launch {
             repository.setAlertList(list)
 
-            //val alernateUrl = "some url"
-            //prefetchingCache.requestFiles(listOf(alernateUrl))
+            list.flatMap { aeaTable ->
+                aeaTable.alternateUrlList as List<String?>
+            }.filterNotNull().also { urlList ->
+                appCache.prefetchFiles(urlList)
+            }
         }
     }
 
