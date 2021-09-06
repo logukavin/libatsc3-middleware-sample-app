@@ -18,6 +18,7 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPacka
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.service.Atsc3Service
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.IServiceGuideDeliveryUnitReader
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.*
+import com.nextgenbroadcast.mobile.middleware.cache.IPrefetchingCache
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
 import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
 import kotlinx.coroutines.*
@@ -34,6 +35,7 @@ internal class ServiceControllerImpl(
         private val atsc3Module: IAtsc3Module,
         private val atsc3Analytics: IAtsc3Analytics,
         private val serviceGuideReader: IServiceGuideDeliveryUnitReader,
+        private val prefetchingCache: IPrefetchingCache,
         private val stateScope: CoroutineScope = CoroutineScope(Dispatchers.IO)
 ) : IServiceController, Atsc3ModuleListener {
 
@@ -170,6 +172,9 @@ internal class ServiceControllerImpl(
     override fun onAeatTableChanged(list: List<AeaTable>) {
         mainScope.launch {
             repository.setAlertList(list)
+
+            //val alernateUrl = "some url"
+            //prefetchingCache.requestFiles(listOf(alernateUrl))
         }
     }
 

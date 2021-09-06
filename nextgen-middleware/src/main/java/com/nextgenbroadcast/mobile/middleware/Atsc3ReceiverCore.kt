@@ -6,13 +6,10 @@ import com.nextgenbroadcast.mobile.core.model.*
 import com.nextgenbroadcast.mobile.middleware.analytics.IAtsc3Analytics
 import com.nextgenbroadcast.mobile.middleware.atsc3.IAtsc3Module
 import com.nextgenbroadcast.mobile.core.atsc3.SLTConstants
-import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.IServiceGuideDeliveryUnitReader
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.IAtsc3Source
 import com.nextgenbroadcast.mobile.middleware.cache.IApplicationCache
 import com.nextgenbroadcast.mobile.middleware.controller.service.IServiceController
-import com.nextgenbroadcast.mobile.middleware.controller.service.ServiceControllerImpl
 import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
-import com.nextgenbroadcast.mobile.middleware.controller.view.ViewControllerImpl
 import com.nextgenbroadcast.mobile.middleware.gateway.rpc.IRPCGateway
 import com.nextgenbroadcast.mobile.middleware.gateway.rpc.RPCGatewayImpl
 import com.nextgenbroadcast.mobile.middleware.gateway.web.IWebGateway
@@ -24,17 +21,14 @@ import kotlinx.coroutines.flow.*
 
 internal class Atsc3ReceiverCore(
     private val atsc3Module: IAtsc3Module,
+    private val serviceController: IServiceController,
+    val viewController: IViewController,
     val settings: IMiddlewareSettings,
     val repository: IRepository,
-    private val serviceGuideReader: IServiceGuideDeliveryUnitReader,
-    val analytics: IAtsc3Analytics
+    val analytics: IAtsc3Analytics,
+    private val appCache: IApplicationCache
 ) : IAtsc3ReceiverCore {
-    //TODO: create internal scope?
-    private val coreScope: CoroutineScope = CoroutineScope(Dispatchers.Default)
     private val mainScope: CoroutineScope = CoroutineScope(Dispatchers.Main)
-
-    private val serviceController: IServiceController = ServiceControllerImpl(repository, settings, atsc3Module, analytics, serviceGuideReader, coreScope)
-    val viewController: IViewController = ViewControllerImpl(repository, analytics)
 
     var ignoreAudioServiceMedia: Boolean = true
         private set
@@ -47,7 +41,7 @@ internal class Atsc3ReceiverCore(
         return WebGatewayImpl(repository, settings)
     }
 
-    fun createRPCGateway(appCache: IApplicationCache, scope: CoroutineScope): IRPCGateway {
+    fun createRPCGateway(scope: CoroutineScope): IRPCGateway {
         return RPCGatewayImpl(repository, viewController, serviceController, appCache, settings, scope)
     }
 
@@ -55,9 +49,6 @@ internal class Atsc3ReceiverCore(
         mainScope.launch {
             serviceController.closeRoute()
         }
-
-        // this instance wouldn't be destroyed so do not finish local scope
-        // coreScope.cancel()
     }
 
     fun isIdle(): Boolean {
@@ -165,8 +156,11 @@ internal class Atsc3ReceiverCore(
     }
 
     suspend inline fun observeCombinedState(playbackStateFlow: Flow<PlaybackState>, crossinline action: suspend (state: Triple<ReceiverState, AVService?, PlaybackState>) -> Unit) {
-        combine(serviceController.receiverState, repository.selectedService, playbackStateFlow) { receiverState, selectedService, playbackState ->
-            Triple(receiverState, selectedService, playbackState)
-        }.stateIn(coreScope, SharingStarted.Eagerly, Triple(ReceiverState.idle(), null, PlaybackState.IDLE)).collect(action)
+        supervisorScope {
+            combine(serviceController.receiverState, repository.selectedService, playbackStateFlow) { receiverState, selectedService, playbackState ->
+                Triple(receiverState, selectedService, playbackState)
+            }.stateIn(this, SharingStarted.Eagerly, Triple(ReceiverState.idle(), null, PlaybackState.IDLE))
+                .collect(action)
+        }
     }
 }
