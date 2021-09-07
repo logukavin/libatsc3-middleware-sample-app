@@ -458,6 +458,7 @@ public class MMTFragmentWriter {
                 if (isVideoSample(packet_id)) {
                     if (videoMfuPresentationTimestampUs == Long.MAX_VALUE) {
                         videoMfuPresentationTimestampUs = mfu_presentation_time_uS_computed;
+                        MMTClockAnchor.SystemClockAnchor = System.currentTimeMillis() + MMTClockAnchor.SYSTEM_CLOCK_ANCHOR_PTS_OFFSET_MS;
 
                     }
                     track_anchor_timestamp_us = videoMfuPresentationTimestampUs;
@@ -506,13 +507,15 @@ public class MMTFragmentWriter {
         }
 
         if (MMTClockAnchor.SystemClockAnchor == 0) {
-            MMTClockAnchor.SystemClockAnchor = System.currentTimeMillis() + MMTClockAnchor.SYSTEM_CLOCK_ANCHOR_PTS_OFFSET_MS;
+            //MMTClockAnchor.SystemClockAnchor = System.currentTimeMillis() + MMTClockAnchor.SYSTEM_CLOCK_ANCHOR_PTS_OFFSET_MS;
         }
 
         if((MMTClockAnchor.MfuClockAnchor == 0) || (minNonZeroMfuPresentationTimestampForAnchor < MMTClockAnchor.MfuClockAnchor)) {
-            MMTClockAnchor.MfuClockAnchor = minNonZeroMfuPresentationTimestampForAnchor;
-            MMTClockAnchor.SystemClockAnchor = System.currentTimeMillis() + MMTClockAnchor.SYSTEM_CLOCK_ANCHOR_PTS_OFFSET_MS;
-
+//            MMTClockAnchor.MfuClockAnchor = minNonZeroMfuPresentationTimestampForAnchor;
+//            long lastSystemClockAnchor = MMTClockAnchor.SystemClockAnchor;
+//            MMTClockAnchor.SystemClockAnchor = System.currentTimeMillis() + MMTClockAnchor.SYSTEM_CLOCK_ANCHOR_PTS_OFFSET_MS;
+//            Log.i(TAG, String.format("old systemClockAnchor: %d, new systemClockAnchor: %d, diff: %d", lastSystemClockAnchor, MMTClockAnchor.SystemClockAnchor, (lastSystemClockAnchor - MMTClockAnchor.SystemClockAnchor)));
+//
         }
 
         return minNonZeroMfuPresentationTimestampForAnchor;
