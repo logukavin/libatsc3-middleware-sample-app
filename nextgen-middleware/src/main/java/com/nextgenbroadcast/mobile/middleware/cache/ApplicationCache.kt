@@ -3,6 +3,7 @@ package com.nextgenbroadcast.mobile.middleware.cache
 import com.nextgenbroadcast.mobile.core.md5
 import kotlinx.coroutines.Job
 import java.io.File
+import java.net.URL
 
 internal class ApplicationCache(
         private val cacheRoot: File,
@@ -52,10 +53,20 @@ internal class ApplicationCache(
         return result
     }
 
-    private fun deleteFile(cacheEntry: CacheEntry, fileName: String) {
-        File(cacheEntry.folder, fileName).takeIf {
-            it.exists()
-        }?.delete()
+    override fun prefetchFiles(urls: List<String>) {
+        urls.map { url ->
+            with(URL(url)) {
+                url.substring(0, url.length - path.length) to path
+            }
+        }.groupBy({ (baseUrl) ->
+            baseUrl
+        }, { (_, fileName) ->
+            fileName
+        }).forEach { (baseUrl, paths) ->
+            requestFiles(getPrefetchContextId(baseUrl), null, baseUrl, paths, null)
+
+            isPrefetched(baseUrl, paths.first())
+        }
     }
 
     override fun clearCache(appContextId: String) {
@@ -73,14 +84,45 @@ internal class ApplicationCache(
         }
     }
 
+    private fun getPrefetchContextId(baseUrl: String): String {
+        return "$PREFETCH_CONTEXT_ID-$baseUrl"
+    }
+
+    private fun isPrefetched(baseUrl: String, path: String): Boolean {
+        return cacheMap[getPrefetchContextId(baseUrl)]?.let { cacheEntry ->
+            val file = File(cacheEntry.folder, path)
+
+            if (!file.exists()) {
+                val loadingFileName = downloadManager.getLoadingName(file)
+                cacheEntry.jobMap.containsKey(loadingFileName)
+            } else true
+        } ?: false
+    }
+
+    private fun getPrefetchedFile(baseUrl: String, path: String): File? {
+        return cacheMap[getPrefetchContextId(baseUrl)]?.let { cacheEntry ->
+            File(cacheEntry.folder, path).takeIf { it.exists() }
+        }
+    }
+
+    private fun deleteFile(cacheEntry: CacheEntry, fileName: String) {
+        File(cacheEntry.folder, fileName).takeIf {
+            it.exists()
+        }?.delete()
+    }
+
     private fun getCachePathForAppContextId(appContextId: String): String {
         return "${cacheRoot.absolutePath}/${appContextId.md5()}/"
     }
-}
 
-private class CacheEntry(
+    private class CacheEntry(
         cachePath: String
-) {
-    val folder = File(cachePath)
-    val jobMap = HashMap<String, Job>()
+    ) {
+        val folder = File(cachePath)
+        val jobMap = HashMap<String, Job>()
+    }
+
+    companion object {
+        private const val PREFETCH_CONTEXT_ID = "prefetch"
+    }
 }
