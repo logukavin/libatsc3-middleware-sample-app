@@ -15,7 +15,6 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.db.RoomServiceG
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.db.SGDataBase
 import com.nextgenbroadcast.mobile.middleware.cache.ApplicationCache
 import com.nextgenbroadcast.mobile.middleware.cache.DownloadManager
-import com.nextgenbroadcast.mobile.middleware.cache.PrefetchingCache
 import com.nextgenbroadcast.mobile.middleware.controller.service.ServiceControllerImpl
 import com.nextgenbroadcast.mobile.middleware.controller.view.ViewControllerImpl
 import com.nextgenbroadcast.mobile.middleware.repository.RepositoryImpl
@@ -81,11 +80,10 @@ internal object Atsc3ReceiverStandalone {
 
         val downloadManager = DownloadManager()
         val applicationCache = ApplicationCache(appContext.cacheDir, downloadManager)
-        val prefetchingCache = PrefetchingCache(File(appContext.cacheDir, "prefetching"), downloadManager)
 
         val controllerScope = CoroutineScope(Dispatchers.Default)
 
-        val serviceController = ServiceControllerImpl(repository, settings, atsc3Module, analytics, serviceGuideReader, prefetchingCache, controllerScope)
+        val serviceController = ServiceControllerImpl(repository, settings, atsc3Module, analytics, serviceGuideReader, applicationCache, controllerScope)
         val viewController = ViewControllerImpl(repository, analytics)
 
         return Atsc3ReceiverCore(atsc3Module, serviceController, viewController, settings, repository, analytics, applicationCache).apply {
