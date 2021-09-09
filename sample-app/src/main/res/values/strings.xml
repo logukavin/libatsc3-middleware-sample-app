@@ -23,4 +23,6 @@
     <string name="message_service_apk_not_found">Application with package name %s is unavailable</string>
     <string name="chart_phy_snr_title">Phy SNR</string>
     <string name="chart_phy_share_title">Phy Chart screenshot</string>
+    <string name="permission_request_info_title">Permission required</string>
+    <string name="permission_request_info_dnd">Permission to change Do Not Disturb mode is important for Emergency Alerting</string>
 </resources>
