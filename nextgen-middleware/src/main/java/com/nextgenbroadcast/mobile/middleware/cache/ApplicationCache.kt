@@ -28,6 +28,15 @@ internal class ApplicationCache(
             val file = File(cacheEntry.folder, relativeFilePath)
 
             if (!file.exists()) {
+
+                if (!appContextId.startsWith(PREFETCH_CONTEXT_ID) && baseUrl != null) {
+                    getPrefetchedFile(baseUrl, relativeFilePath)?.let { prefetchFile ->
+                        prefetchFile.copyTo(file)
+                        return@forEach
+                    }
+
+                }
+
                 result = false
 
                 val loadingFileName = downloadManager.getLoadingName(file)
