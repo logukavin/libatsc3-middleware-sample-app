@@ -10,7 +10,6 @@ import android.content.Intent
 import android.graphics.BitmapFactory
 import android.media.AudioAttributes
 import android.net.Uri
-import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
 import com.nextgenbroadcast.mobile.middleware.AlertDialogActivity
 import com.nextgenbroadcast.mobile.middleware.R
@@ -19,32 +18,48 @@ class AlertNotificationHelper(
     private val context: Context
 ) {
 
-    private val packageName = context.packageName
-    private val notificationChannel =
-        NotificationChannel(
-            ALERT_CHANNEL_ID,
-            ALERT_CHANNEL_NAME,
-            NotificationManager.IMPORTANCE_HIGH
-        ).apply {
-            setSound(
-                Uri.parse(ContentResolver.SCHEME_ANDROID_RESOURCE + "://" + packageName + "/" + R.raw.beep_attention_signal_440_hz_3),
-                AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_NOTIFICATION)
-                    .build()
-            )
-            importance = NotificationManager.IMPORTANCE_HIGH
-            lockscreenVisibility = NotificationCompat.VISIBILITY_PUBLIC
+    private val notificationManager by lazy {
+        (context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).also { nm ->
+            NotificationChannel(
+                ALERT_CHANNEL_ID,
+                ALERT_CHANNEL_NAME,
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                setSound(
+                    Uri.parse("${ContentResolver.SCHEME_ANDROID_RESOURCE}://${context.packageName}/${R.raw.beep_attention_signal_440_hz_3}"),
+                    AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_ALARM)
+                        .build()
+                )
+                lockscreenVisibility = NotificationCompat.VISIBILITY_PUBLIC
+            }.also {
+                nm.createNotificationChannel(it)
+            }
         }
-
-    private val notificationManager: NotificationManager =
-        context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-
-    init {
-        notificationManager.createNotificationChannel(notificationChannel)
     }
 
     fun showNotification(msg: String, msgTag: String, msgTime: String?) {
         val aeaId = msgTag.hashCode()
+
+        if (notificationManager.isNotificationPolicyAccessGranted) {
+            // bypass DND for alerts
+            val currentInterruptionFilter = notificationManager.currentInterruptionFilter
+            if (currentInterruptionFilter != NotificationManager.INTERRUPTION_FILTER_ALL
+                && currentInterruptionFilter != NotificationManager.INTERRUPTION_FILTER_ALARMS
+            ) {
+                notificationManager.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_ALARMS)
+            }
+        }
+
+        /*
+        Do NOT change sound level for now
+
+        val originalVolume = audioManager.getStreamVolume(AudioManager.STREAM_RING)
+        if (originalVolume == 0) {
+            val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_RING)
+            audioManager.setStreamVolume(AudioManager.STREAM_RING, maxVolume / 2, 0)
+        }
+         */
 
         val intent = Intent(context, AlertNotificationReceiver::class.java).apply {
             action = ACTION_DISMISS
@@ -83,6 +98,7 @@ class AlertNotificationHelper(
             .setGroup(ALERT_GROUP_ID)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setPriority(NotificationCompat.PRIORITY_MAX)
+            .setCategory(NotificationCompat.CATEGORY_ALARM)
 
         val notification = builder.build().apply {
             flags = Notification.FLAG_NO_CLEAR
