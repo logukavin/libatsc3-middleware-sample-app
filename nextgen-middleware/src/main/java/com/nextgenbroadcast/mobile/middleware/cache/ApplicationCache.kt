@@ -41,16 +41,20 @@ internal class ApplicationCache(
                             prefetchedFile.safeCopyTo(file)
                             return@forEach
                         } else {
-                            val prefetchLoadingFileName = downloadManager.getLoadingName(file)
+                            val prefetchLoadingFileName = downloadManager.getLoadingName(prefetchedFile)
                             prefetchEntry.jobMap[prefetchLoadingFileName]?.let { prefetchJob ->
-                                cacheEntry.jobMap[loadingFileName] = prefetchJob
-                                prefetchJob.invokeOnCompletion { throwable ->
-                                    synchronized(this@ApplicationCache) {
-                                        cacheEntry.jobMap.remove(loadingFileName)
-                                    }
+                                result = false
 
-                                    if (throwable == null) {
-                                        prefetchedFile.safeCopyTo(file)
+                                if (!cacheEntry.jobMap.containsKey(loadingFileName)) {
+                                    cacheEntry.jobMap[loadingFileName] = prefetchJob
+                                    prefetchJob.invokeOnCompletion { throwable ->
+                                        synchronized(this@ApplicationCache) {
+                                            cacheEntry.jobMap.remove(loadingFileName)
+                                        }
+
+                                        if (throwable == null) {
+                                            prefetchedFile.safeCopyTo(file)
+                                        }
                                     }
                                 }
                                 return@forEach
