@@ -1,5 +1,6 @@
 package com.nextgenbroadcast.mobile.middleware.cache
 
+import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.core.md5
 import kotlinx.coroutines.Job
 import java.io.File
@@ -14,10 +15,7 @@ internal class ApplicationCache(
         hashMapOf()
     }
 
-    private val filesRequestedByAppContextMap: HashMap<String, MutableSet<String>> by lazy {
-        hashMapOf()
-    }
-
+    @Synchronized
     override fun requestFiles(appContextId: String, rootPath: String?, baseUrl: String?, paths: List<String>, filters: List<String>?): Boolean {
         val cacheEntry = cacheMap.getOrElse(appContextId) {
             val cachePath = getCachePathForAppContextId(appContextId) + (rootPath ?: "")
@@ -32,44 +30,48 @@ internal class ApplicationCache(
             val file = File(cacheEntry.folder, relativeFilePath)
 
             if (!file.exists()) {
+                val loadingFileName = downloadManager.getLoadingName(file)
 
-                if (!appContextId.startsWith(PREFETCH_CONTEXT_ID) && baseUrl != null) {
-                    val prefetchedFile = getPrefetchedFile(baseUrl, relativeFilePath)
-                    if (prefetchedFile != null) {
-                        prefetchedFile.copyTo(file)
-                        return@forEach
-                    } else if (cacheMap.containsKey(getPrefetchContextId(baseUrl))) {
-                        addFileToRequestedByAppContentMap(baseUrl, relativeFilePath, appContextId)
-                        result = false
-                        return@forEach
+                if (baseUrl != null) {
+                    cacheMap[getPrefetchContextId(baseUrl)]?.takeIf { entry ->
+                        entry != cacheEntry
+                    }?.let { prefetchEntry ->
+                        val prefetchedFile = File(prefetchEntry.folder, relativeFilePath)
+                        if (prefetchedFile.exists()) {
+                            prefetchedFile.safeCopyTo(file)
+                            return@forEach
+                        } else {
+                            val prefetchLoadingFileName = downloadManager.getLoadingName(file)
+                            prefetchEntry.jobMap[prefetchLoadingFileName]?.let { prefetchJob ->
+                                cacheEntry.jobMap[loadingFileName] = prefetchJob
+                                prefetchJob.invokeOnCompletion { throwable ->
+                                    synchronized(this@ApplicationCache) {
+                                        cacheEntry.jobMap.remove(loadingFileName)
+                                    }
+
+                                    if (throwable == null) {
+                                        prefetchedFile.safeCopyTo(file)
+                                    }
+                                }
+                                return@forEach
+                            }
+                        }
                     }
                 }
 
                 result = false
 
-                val loadingFileName = downloadManager.getLoadingName(file)
                 if (!cacheEntry.jobMap.containsKey(loadingFileName)) {
                     deleteFile(cacheEntry, loadingFileName)
 
                     if (baseUrl != null) {
-                        val sourceUrl = baseUrl + relativeFilePath
-                        downloadManager.downloadFile(sourceUrl, file).also { job ->
+                        downloadManager.downloadFile(baseUrl + relativeFilePath, file).also { job ->
                             cacheEntry.jobMap[loadingFileName] = job
 
                             job.invokeOnCompletion { throwable ->
-                                filesRequestedByAppContextMap[sourceUrl]?.let { contentList ->
-                                    contentList.forEach { contextId ->
-                                        val cachePath = getCachePathForAppContextId(contextId) + (rootPath ?: "")
-                                        val cacheFile = File(cachePath, relativeFilePath)
-
-                                        getPrefetchedFile(baseUrl, relativeFilePath)?.copyTo(cacheFile)
-                                    }
-
-                                    contentList.clear()
-
+                                synchronized(this@ApplicationCache) {
+                                    cacheEntry.jobMap.remove(loadingFileName)
                                 }
-
-                                cacheEntry.jobMap.remove(loadingFileName)
 
                                 if (throwable != null) {
                                     deleteFile(cacheEntry, loadingFileName)
@@ -84,14 +86,6 @@ internal class ApplicationCache(
         return result
     }
 
-    private fun addFileToRequestedByAppContentMap(baseUrl: String, relativeFilePath: String, appContextId: String) {
-        val sourceUrl = baseUrl + relativeFilePath
-        with(filesRequestedByAppContextMap[sourceUrl] ?: mutableSetOf()) {
-            add(appContextId)
-            filesRequestedByAppContextMap[sourceUrl] = this
-        }
-    }
-
     override fun prefetchFiles(urls: List<String>) {
         urls.map { url ->
             with(URL(url)) {
@@ -103,11 +97,10 @@ internal class ApplicationCache(
             fileName
         }).forEach { (baseUrl, paths) ->
             requestFiles(getPrefetchContextId(baseUrl), null, baseUrl, paths, null)
-
-            isPrefetched(baseUrl, paths.first())
         }
     }
 
+    @Synchronized
     override fun clearCache(appContextId: String) {
         cacheMap[appContextId]?.let { cacheEntry ->
             cacheEntry.jobMap.values.forEach { job ->
@@ -124,24 +117,7 @@ internal class ApplicationCache(
     }
 
     private fun getPrefetchContextId(baseUrl: String): String {
-        return "$PREFETCH_CONTEXT_ID-$baseUrl"
-    }
-
-    private fun isPrefetched(baseUrl: String, path: String): Boolean {
-        return cacheMap[getPrefetchContextId(baseUrl)]?.let { cacheEntry ->
-            val file = File(cacheEntry.folder, path)
-
-            if (!file.exists()) {
-                val loadingFileName = downloadManager.getLoadingName(file)
-                cacheEntry.jobMap.containsKey(loadingFileName)
-            } else true
-        } ?: false
-    }
-
-    private fun getPrefetchedFile(baseUrl: String, path: String): File? {
-        return cacheMap[getPrefetchContextId(baseUrl)]?.let { cacheEntry ->
-            File(cacheEntry.folder, path).takeIf { it.exists() }
-        }
+        return "$PREFETCH_CONTEXT_ID-${baseUrl.md5()}"
     }
 
     private fun deleteFile(cacheEntry: CacheEntry, fileName: String) {
@@ -154,6 +130,15 @@ internal class ApplicationCache(
         return "${cacheRoot.absolutePath}/${appContextId.md5()}/"
     }
 
+    private fun File.safeCopyTo(target: File): File? {
+        try {
+            return copyTo(target, overwrite = true)
+        } catch (e: Exception) {
+            LOG.d(TAG, "Failed to copy file $this to $target", e)
+        }
+        return null
+    }
+
     private class CacheEntry(
         cachePath: String
     ) {
@@ -162,6 +147,8 @@ internal class ApplicationCache(
     }
 
     companion object {
+        val TAG: String = ApplicationCache::class.java.simpleName
+
         private const val PREFETCH_CONTEXT_ID = "prefetch"
     }
 }
