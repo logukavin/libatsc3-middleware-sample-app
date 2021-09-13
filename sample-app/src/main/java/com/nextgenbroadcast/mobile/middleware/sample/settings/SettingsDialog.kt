@@ -21,7 +21,7 @@ class SettingsDialog : DialogFragment() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setStyle(STYLE_NORMAL, R.style.Dialog)
+        setStyle(STYLE_NORMAL, R.style.SettingsDialog)
     }
 
     override fun onCreateView(
@@ -33,6 +33,7 @@ class SettingsDialog : DialogFragment() {
             lifecycleOwner = viewLifecycleOwner
             viewModel = viewViewModel
         }
+        dialog?.setTitle(R.string.settings_title)
         pagerAdapter = SettingsPagerAdapter()
         return binding.root
     }

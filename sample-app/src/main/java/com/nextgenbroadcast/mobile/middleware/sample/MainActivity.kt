@@ -229,6 +229,18 @@ class MainActivity : BaseActivity() {
                         locationTelemetryEnabled.value = enableMap[ReceiverTelemetry.TELEMETRY_LOCATION]
                     }
                 }
+
+                launch {
+                    controllerPresenter.logInfoSettings.collect { logsMap ->
+                        logsInfo.value = logsMap
+                    }
+                }
+
+                launch {
+                    for (event in viewViewModel.logChangingChannel) {
+                        controllerPresenter.setAtsc3LogEnabledByName(event.first, event.second)
+                    }
+                }
             }
 
             showDebugInfo.observe(this@MainActivity) { showDebugInfo ->
@@ -292,6 +304,7 @@ class MainActivity : BaseActivity() {
                     controllerPresenter.setTelemetryUpdateDelay(ReceiverTelemetry.TELEMETRY_LOCATION, frequencyType.delay())
                 }
             }
+
         }
     }
 

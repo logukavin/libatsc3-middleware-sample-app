@@ -9,6 +9,7 @@ import com.nextgenbroadcast.mobile.core.dev.service.presentation.IControllerPres
 import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverCore
 import com.nextgenbroadcast.mobile.core.MiddlewareConfig
 import com.nextgenbroadcast.mobile.core.dev.service.binder.IServiceBinder
+import kotlinx.coroutines.flow.StateFlow
 
 class EmbeddedAtsc3Service : Atsc3ForegroundService() {
 
@@ -21,6 +22,7 @@ class EmbeddedAtsc3Service : Atsc3ForegroundService() {
                     override val telemetryEnabled = telemetryHolder.telemetryEnabled.asReadOnly()
                     override val telemetryDelay = telemetryHolder.telemetryDelay.asReadOnly()
                     override val debugInfoSettings = telemetryHolder.debugInfoSettings.asReadOnly()
+                    override val logInfoSettings = telemetryHolder.logInfoSettings.asReadOnly()
 
                     override fun setDebugInfoVisible(type: String, visible: Boolean) {
                         telemetryHolder.setInfoVisible(visible, type)
@@ -37,6 +39,11 @@ class EmbeddedAtsc3Service : Atsc3ForegroundService() {
                     override fun setTelemetryUpdateDelay(type: String, delayMils: Long) {
                         telemetryHolder.setTelemetryDelay(delayMils, type)
                     }
+
+                    override fun setAtsc3LogEnabledByName(name: String, enabled: Boolean) {
+                        telemetryHolder.setAtsc3LogEnabledByName(name, enabled)
+                    }
+
                 }
             }
         } else null
