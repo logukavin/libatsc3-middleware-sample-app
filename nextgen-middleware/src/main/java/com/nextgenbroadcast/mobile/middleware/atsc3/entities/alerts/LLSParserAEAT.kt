@@ -43,6 +43,7 @@ class LLSParserAEAT {
     @Throws(IOException::class, XmlPullParserException::class)
     private fun readAEA(parser: XmlPullParser): AeaTable {
         val aea = AeaTable()
+        val alternateUrlList = mutableListOf<String>()
 
         parser.iterateAttrs { attrName, attrValue ->
             when (attrName) {
@@ -63,9 +64,19 @@ class LLSParserAEAT {
                     aea.expires = XmlUtils.strToDate(header.expires)
                 }
                 "AEAText" -> readAEAText(parser).also {
-                    aea.messages?.put(it.lang, it.message) }
+                    aea.messages?.put(it.lang, it.message)
+                }
+                "Media" -> readMedia(parser).also { aeaMedia ->
+                    aeaMedia.alternateUrl?.let { url ->
+                        alternateUrlList.add(url)
+                    }
+                }
                 else -> parser.skipTag()
             }
+        }
+
+        if (alternateUrlList.isNotEmpty()) {
+           aea.alternateUrlList = alternateUrlList.toList()
         }
 
         return aea
@@ -90,7 +101,7 @@ class LLSParserAEAT {
         return header
     }
 
-    private fun getAEATagsIdx(str : String, substr: String): ArrayList<Int> {
+    private fun getAEATagsIdx(str: String, substr: String): ArrayList<Int> {
         val listIdx = arrayListOf<Int>()
         var lastIndex = -1
         while (str.indexOf(substr, lastIndex + 1).also { lastIndex = it } != -1) {
@@ -116,4 +127,22 @@ class LLSParserAEAT {
 
         return aeaText
     }
+
+    private fun readMedia(parser: XmlPullParser): AeaMedia {
+        var alternativeUrl: String? = null
+
+        parser.iterateAttrs { attrName, attrValue ->
+            when (attrName) {
+                "alternateUrl" -> alternativeUrl = attrValue
+                else -> {
+                    // skip attribute
+                }
+            }
+        }
+
+        parser.iterateSubTags { parser.skipTag() }
+
+        return AeaMedia(alternativeUrl)
+    }
+
 }
