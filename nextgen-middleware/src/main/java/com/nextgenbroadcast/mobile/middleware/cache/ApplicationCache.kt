@@ -14,7 +14,7 @@ internal class ApplicationCache(
         hashMapOf()
     }
 
-    private val filesRequestedByAppContextMap: HashMap<String, MutableList<String>> by lazy {
+    private val filesRequestedByAppContextMap: HashMap<String, MutableSet<String>> by lazy {
         hashMapOf()
     }
 
@@ -86,11 +86,10 @@ internal class ApplicationCache(
 
     private fun addFileToRequestedByAppContentMap(baseUrl: String, relativeFilePath: String, appContextId: String) {
         val sourceUrl = baseUrl + relativeFilePath
-        if (!filesRequestedByAppContextMap.containsKey(sourceUrl)) {
-            filesRequestedByAppContextMap[sourceUrl] = mutableListOf()
+        with(filesRequestedByAppContextMap[sourceUrl] ?: mutableSetOf()) {
+            add(appContextId)
+            filesRequestedByAppContextMap[sourceUrl] = this
         }
-
-        filesRequestedByAppContextMap[sourceUrl]?.add(appContextId)
     }
 
     override fun prefetchFiles(urls: List<String>) {
