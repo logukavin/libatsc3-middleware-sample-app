@@ -409,5 +409,12 @@ class ReceiverContentResolver(
                     put(COLUMN_ROUTE_PATH, uri.toString())
                 })
         }
+
+        fun resetPlayerState(context: Context) {
+            context.contentResolver.delete(
+                getUriForPath(context, CONTENT_RECEIVER_MEDIA_PLAYER),
+                null, null
+            )
+        }
     }
 }

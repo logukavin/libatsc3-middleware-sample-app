@@ -15,6 +15,10 @@
     <string name="settings_enable_sensor_telemetry">Sensors</string>
     <string name="settings_enable_location_telemetry">Location</string>
     <string name="settings_enable_telemetry">Collect Telemetry</string>
+    <string name="settings_tab_tune">Tune</string>
+    <string name="settings_tab_ui">UI</string>
+    <string name="settings_tab_telemetry">Telemetry</string>
+    <string name="settings_tab_logs">Logs</string>
     <string name="track_selection_title">Select media tracks</string>
     <string name="receiver_status_idle">Source not selected</string>
     <string name="receiver_status_scanning">Scanning %d/%d…</string>
@@ -23,4 +27,6 @@
     <string name="message_service_apk_not_found">Application with package name %s is unavailable</string>
     <string name="chart_phy_snr_title">Phy SNR</string>
     <string name="chart_phy_share_title">Phy Chart screenshot</string>
+    <string name="permission_request_info_title">Permission required</string>
+    <string name="permission_request_info_dnd">Permission to change Do Not Disturb mode is important for Emergency Alerting</string>
 </resources>

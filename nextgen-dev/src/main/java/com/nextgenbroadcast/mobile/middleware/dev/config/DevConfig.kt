@@ -94,6 +94,11 @@ class DevConfig private constructor() {
         }
     }
 
+    fun setBaEntrypoint(entryPoint: String?, certHash: String?) {
+        applicationEntryPoint = entryPoint?.takeIf { it.isNotBlank() }
+        serverCertHash = certHash?.takeIf { it.isNotBlank() }
+    }
+
     private fun parseSrtList(json: JSONArray) = mutableListOf<RouteUrl>().apply {
         for (i in 0 until json.length()) {
             val jsonObject = json.getJSONObject(i)
