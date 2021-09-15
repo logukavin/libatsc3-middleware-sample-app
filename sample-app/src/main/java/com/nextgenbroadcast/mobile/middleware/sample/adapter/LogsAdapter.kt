@@ -1,10 +1,10 @@
 package com.nextgenbroadcast.mobile.middleware.sample.adapter
 
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.recyclerview.widget.DiffUtil
-import androidx.recyclerview.widget.ListAdapter
+import androidx.recyclerview.widget.*
 import androidx.recyclerview.widget.RecyclerView.ViewHolder
 import com.nextgenbroadcast.mobile.middleware.sample.adapter.LogsAdapter.LogViewHolder
 import com.nextgenbroadcast.mobile.middleware.sample.databinding.ItemLogGroupBinding
@@ -27,6 +27,7 @@ class LogsAdapter(
     inner class RecordHolder(val binding: ItemLogRecordBinding) : LogViewHolder(binding.root) {
         override fun bind(model: LogInfo) = with(binding.enableDebuggingInformation) {
             if (model !is Record) return@with
+            Log.d("LogsAdapter", "Rendering: $model")
             setOnCheckedChangeListener(null)
             isChecked = model.enabled
             text = model.displayName
@@ -56,6 +57,19 @@ class LogsAdapter(
         }
     }
 
+    override fun onBindViewHolder(
+        holder: LogViewHolder,
+        position: Int,
+        payloads: List<Any>
+    ) {
+        val enabled = payloads.getOrNull(0) as? Boolean
+        if (holder is RecordHolder && enabled != null) {
+            holder.binding.enableDebuggingInformation.isChecked = enabled
+        } else {
+             super.onBindViewHolder(holder, position, payloads)
+        }
+    }
+
     override fun onBindViewHolder(holder: LogViewHolder, position: Int) {
         holder.bind(getItem(position))
     }
@@ -77,6 +91,12 @@ class LogsAdapter(
                 oldItem: LogInfo,
                 newItem: LogInfo
             ): Boolean = oldItem == newItem
+
+            override fun getChangePayload(oldItem: LogInfo, newItem: LogInfo): Any? {
+                return if (oldItem is Record && newItem is Record && oldItem.enabled != newItem.enabled) {
+                    newItem.enabled
+                } else null
+            }
 
         }
     }

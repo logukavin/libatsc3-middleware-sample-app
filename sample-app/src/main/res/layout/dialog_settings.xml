@@ -18,7 +18,6 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:background="@color/white"
-            android:layout_marginTop="8dp"
             app:tabTextAppearance="@style/TabLayoutItemTextAppearance"
             app:tabMode="auto"
             app:layout_constraintStart_toStartOf="parent"
