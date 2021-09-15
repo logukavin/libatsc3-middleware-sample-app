@@ -48,7 +48,7 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
     public static final String TAG = MMTContentProvider.class.getSimpleName();
 
     private static final int RING_BUFFER_MAX_PAGE_COUNT = 320;
-    private static final int RING_BUFFER_PAGE_SIZE = 2 * 1024; //AC-4 audio frame is around ~450 bytes, so don't make this page size bigger than about 33ms latency?
+    private static final int RING_BUFFER_PAGE_SIZE = 16 * 1024; // it should be bigger then AC-4 audio frame that takes around ~450 bytes to prevent multiple RB read requests and buffer joint for video frames
     private static final int RING_BUFFER_SIZE = RING_BUFFER_MAX_PAGE_COUNT * RING_BUFFER_PAGE_SIZE;
 
     private static final String[] COLUMNS = {OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE};
