@@ -174,7 +174,9 @@ public class Atsc3MMTExtractor implements Extractor {
                 /* offset= */ 0,
                 /* encryptionData= */ null);
 
-        Log.d(TAG, String.format("readSample: packet_id: %d, returning after trackOutput.sampleMetadata, currentSampleTimeUs: %d, currentSampleSize: %d", currentSampleId, currentSampleTimeUs, currentSampleSize));
+        if(false) {
+            Log.d(TAG, String.format("readSample: packet_id: %d, returning after trackOutput.sampleMetadata, currentSampleTimeUs: %d, currentSampleSize: %d", currentSampleId, currentSampleTimeUs, currentSampleSize));
+        }
 
         return Extractor.RESULT_CONTINUE;
     }
@@ -224,10 +226,15 @@ public class Atsc3MMTExtractor implements Extractor {
 
                         Format audioFormat = MMTMediaTrackUtils.createAudioFormat(Integer.toString(packetId),
                                 audioType, audioChannelCount, audioSampleRate, 0, null);
+
                         if (audioFormat != null) {
+                            Log.d(TAG, String.format("maybeOutputFormat: TRACK_TYPE_AUDIO: created audioFormat for packet_id: %d, (int)audioType: %d, audioFormat: %s", packetId, audioType, audioFormat));
+
                             TrackOutput audioOutput = extractorOutput.track(packetId, C.TRACK_TYPE_AUDIO);
                             audioOutput.format(audioFormat);
                             tracks.put(packetId, new MmtTrack(audioOutput));
+                        } else {
+                            Log.w(TAG, String.format("maybeOutputFormat: TRACK_TYPE_AUDIO: unable to instantiate audioFormat for packet_id: %d, (int)audioType: %d", packetId, audioType));
                         }
                     }
                     break;

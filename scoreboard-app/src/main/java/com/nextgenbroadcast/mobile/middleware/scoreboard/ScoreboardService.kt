@@ -173,7 +173,7 @@ class ScoreboardService : Service() {
                     telemetryManager.getFlow(device)?.collect { event ->
                         try {
                             val payload = gson.fromJson<ScoreboardFragment.PhyPayload>(event.payload, phyType)
-                            val payloadValue = payload.snr1000
+                            val payloadValue = payload.stat.snr1000_global
                             socket.sendUdpMessage("${deviceId},${payload.timeStamp},$payloadValue")
                         } catch (e: Exception) {
                             Log.w(ScoreboardFragment.TAG, "Can't parse telemetry event payload", e)
