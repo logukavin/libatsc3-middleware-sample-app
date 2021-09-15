@@ -25,6 +25,12 @@
         <item name="windowNoTitle">false</item>
         <item name="android:windowActionBar">false</item>
         <item name="android:windowNoTitle">false</item>
+        <item name="android:windowTitleStyle">@style/SettingsDialogTitle</item>
+    </style>
+
+    <style name="SettingsDialogTitle" parent="TextAppearance.AppCompat.Title">
+        <item name="android:paddingBottom">16dp</item>
+        <item name="android:background">@drawable/ic_bottom_line</item>
     </style>
 
 </resources>
