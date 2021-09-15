@@ -23,7 +23,9 @@ public class MMTFragmentWriter {
     private static final byte RING_BUFFER_PAGE_FRAGMENT = 2;
     public static final int FRAGMENT_PACKET_HEADER = Integer.BYTES /* packet_id */ + Integer.BYTES /* sample_number */ + Long.BYTES /* mpu_presentation_time_uS_from_SI */ + 7 /* reserved */;
 
+    //ac-4 sync frame header
     private final byte[] ac4header = {(byte) 0xAC, 0x40, (byte) 0xFF, (byte) 0xFF, 0x00, 0x00, 0x00};
+
     // SIZE_SAMPLE_HEADER
     private final byte[] emptyFragmentHeader = {(byte) MMTConstants.TRACK_TYPE_EMPTY, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
@@ -145,9 +147,10 @@ public class MMTFragmentWriter {
         }
 
         if (audioTrackCount > 0) {
-            //jjustman-2020-12-02 - TODO - pass-thru fourcc from
-            int audioFormat = getIntegerCodeForString("ac-4");
             for (MMTAudioDecoderConfigurationRecord info : audioConfigurationMap.values()) {
+                //jjustman-2021-09-08 - set audioFormat from our asset_type fourcc code
+                int audioFormat = getIntegerCodeForString(info.asset_type);
+
                 fileHeaderBuffer
                         .putInt(MMTConstants.AUDIO_TRACK_HEADER_SIZE)
                         .put((byte) MMTConstants.TRACK_TYPE_AUDIO)
@@ -271,16 +274,22 @@ public class MMTFragmentWriter {
             int headerDiff = Atsc3RingBuffer.RING_BUFFER_PAGE_HEADER_SIZE - MMTConstants.SIZE_SAMPLE_HEADER;
 
             if (sampleType == MMTConstants.TRACK_TYPE_AUDIO) {
-                headerDiff -= ac4header.length;
 
-                ac4header[4] = (byte) (pageSize >> 16 & 0xFF);
-                ac4header[5] = (byte) (pageSize >> 8 & 0xFF);
-                ac4header[6] = (byte) (pageSize & 0xFF);
+                MMTAudioDecoderConfigurationRecord mmtAudioDecoderConfigurationRecord = audioConfigurationMap.get(packet_id);
 
-                buffer.position(headerDiff + MMTConstants.SIZE_SAMPLE_HEADER);
-                buffer.put(ac4header);
+                //check if our packet_id flow is ac-4, and prepend sync frame header as needed
+                if (mmtAudioDecoderConfigurationRecord != null && getIntegerCodeForString(MMTAudioDecoderConfigurationRecord.AC_4_ID) == getIntegerCodeForString(mmtAudioDecoderConfigurationRecord.asset_type)) {
+                    headerDiff -= ac4header.length;
 
-                pageSize += ac4header.length;
+                    ac4header[4] = (byte) (pageSize >> 16 & 0xFF);
+                    ac4header[5] = (byte) (pageSize >> 8 & 0xFF);
+                    ac4header[6] = (byte) (pageSize & 0xFF);
+
+                    buffer.position(headerDiff + MMTConstants.SIZE_SAMPLE_HEADER);
+                    buffer.put(ac4header);
+
+                    pageSize += ac4header.length;
+                }
             }
 
             buffer.position(headerDiff);
@@ -292,8 +301,10 @@ public class MMTFragmentWriter {
 
             int sampleRemaining = pageSize + MMTConstants.SIZE_SAMPLE_HEADER + headerDiff;
 
-            Log.d(TAG, String.format("readFragment: sampleType: %d, packetId: %d, sampleNumber: %d, presentationTimeUs: %d, isKey: %s, fragmentBuffer.position: %d, len: %d",
-                    sampleType, packet_id, sample_number, computedPresentationTimestampUs, isKeySample(sample_number), headerDiff, sampleRemaining));
+            if(false) {
+                Log.d(TAG, String.format("readFragment: sampleType: %d, packetId: %d, sampleNumber: %d, presentationTimeUs: %d, isKey: %s, fragmentBuffer.position: %d, len: %d",
+                        sampleType, packet_id, sample_number, computedPresentationTimestampUs, isKeySample(sample_number), headerDiff, sampleRemaining));
+            }
 
             int limit = Math.max(sampleRemaining, 0);
             buffer.limit(limit);
@@ -354,6 +365,7 @@ public class MMTFragmentWriter {
     private boolean isAudioSample(int packet_id) {
         return MmtPacketIdContext.selected_audio_packet_id == packet_id && audioConfigurationMap.containsKey(packet_id);
     }
+
 
     private boolean isTextSample(int packet_id) {
         return MmtPacketIdContext.stpp_packet_id == packet_id;
