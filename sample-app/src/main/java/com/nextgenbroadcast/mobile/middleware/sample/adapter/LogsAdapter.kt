@@ -49,9 +49,10 @@ class LogsAdapter(
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): LogViewHolder {
         val inflater = LayoutInflater.from(parent.context)
-        return when (LogInfoType[viewType]) {
+        return when (LogInfoType.getOrNull(viewType)) {
             GROUP -> GroupHolder(ItemLogGroupBinding.inflate(inflater, parent, false))
             RECORD -> RecordHolder(ItemLogRecordBinding.inflate(inflater, parent, false))
+            else -> throw IllegalArgumentException("Cannot create ViewHolder for viewType $viewType")
         }
     }
 
