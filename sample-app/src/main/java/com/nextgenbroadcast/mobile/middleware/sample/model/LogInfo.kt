@@ -18,7 +18,7 @@ enum class LogInfoType {
 
     companion object {
         fun getOrNull(ordinal: Int): LogInfoType? {
-            return runCatching { values()[ordinal] }.getOrNull()
+            return values().getOrNull(ordinal)
         }
     }
 
