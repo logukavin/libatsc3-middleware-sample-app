@@ -227,7 +227,7 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
                 int counter = -50; // 5 sec
                 while (counter < 5 && writer.isActive()) {
                     int bytesRead = writer.write(out);
-                    LOG.d(TAG, "writeToFile:: after writer.write, bytesRead: " + bytesRead);
+                   // LOG.d(TAG, "writeToFile:: after writer.write, bytesRead: " + bytesRead);
 
                     if (bytesRead > 0) {
                         counter = 0;
@@ -235,7 +235,7 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
                         counter++;
                         if (counter < 0) {
                             //jjustman-2021-09-01 - was 100ms, changing to 16ms
-                            LOG.d(TAG, "writeToFile:: sleeping for 16ms, counter: " + counter);
+                           // LOG.d(TAG, "writeToFile:: sleeping for 16ms, counter: " + counter);
                             //noinspection BusyWait
                             Thread.sleep(16);
                         }
