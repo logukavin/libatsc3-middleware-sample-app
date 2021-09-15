@@ -1,10 +1,8 @@
 package com.nextgenbroadcast.mobile.middleware.sample
 
-import android.Manifest
 import android.annotation.SuppressLint
 import android.app.PictureInPictureParams
-import android.content.ActivityNotFoundException
-import android.content.Intent
+import android.content.*
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.media.MediaMetadata
@@ -17,8 +15,6 @@ import android.util.Log
 import android.view.View
 import android.widget.Toast
 import androidx.activity.viewModels
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -41,14 +37,18 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
 class MainActivity : BaseActivity() {
-    private lateinit var appUpdateManager: AppUpdateManager
-    private lateinit var rootView:View
-
     private val viewViewModel: ViewViewModel by viewModels()
 
     private val hasFeaturePIP: Boolean by lazy {
         packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)
     }
+
+    private val permissionResolver: PermissionResolver by lazy {
+        PermissionResolver(this)
+    }
+
+    private lateinit var appUpdateManager: AppUpdateManager
+    private lateinit var rootView: View
 
     private var controllerPresentationJob: Job? = null
 
@@ -100,16 +100,16 @@ class MainActivity : BaseActivity() {
         rootView = window.decorView.findViewById(android.R.id.content)
         appUpdateManager = AppUpdateManagerFactory.create(applicationContext)
 
-        supportFragmentManager
+        // ignore if activity was restored
+        if (savedInstanceState == null) {
+            supportFragmentManager
                 .beginTransaction()
                 .add(android.R.id.content,
-                        MainFragment.newInstance(),
-                        MainFragment.TAG
+                    MainFragment.newInstance(),
+                    MainFragment.TAG
                 )
                 .commit()
 
-        // ignore if activity was restored
-        if (savedInstanceState == null) {
             tryOpenPcapFile(intent)
         }
     }
@@ -126,7 +126,7 @@ class MainActivity : BaseActivity() {
         checkForAppUpdates()
 
         //make sure we can read from device pcap files and get location
-        if (checkSelfPermission()) {
+        if (permissionResolver.checkSelfPermission()) {
             bindService()
         }
     }
@@ -167,35 +167,9 @@ class MainActivity : BaseActivity() {
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
 
-        // permissions could empty if permission request was interrupted
-        if ((requestCode == PERMISSION_REQUEST_FIRST
-                    || requestCode == PERMISSION_REQUEST_SECOND) && permissions.isNotEmpty()) {
-            val requiredPermissions = mutableListOf<String>()
-            permissions.forEachIndexed { i, permission ->
-                if (grantResults[i] != PackageManager.PERMISSION_GRANTED) {
-                    requiredPermissions.add(permission)
-                }
-            }
-
-            if (requiredPermissions.contains(Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
-                Toast.makeText(this, getString(R.string.warning_external_stortage_permission), Toast.LENGTH_LONG).show()
-            }
-
-            if (requiredPermissions.contains(Manifest.permission.ACCESS_COARSE_LOCATION)
-                    || requiredPermissions.contains(Manifest.permission.ACCESS_FINE_LOCATION)) {
-                Toast.makeText(this, getString(R.string.warning_access_background_location_permission), Toast.LENGTH_LONG).show()
-            }
-
-            // Ignore optional permissions
-            requiredPermissions.removeAll(optionalPermissions - necessaryPermissions)
-
-            if (requiredPermissions.isNotEmpty()) {
-                if (requestCode == PERMISSION_REQUEST_FIRST) {
-                    requestPermissions(requiredPermissions, PERMISSION_REQUEST_SECOND)
-                }
-            } else {
-                bindService()
-            }
+        val granted = permissionResolver.processPermissionsResult(requestCode, permissions, grantResults)
+        if (granted) {
+            bindService()
         }
     }
 
@@ -206,26 +180,6 @@ class MainActivity : BaseActivity() {
                 enterPictureInPictureMode(PictureInPictureParams.Builder().build())
             }
         }
-    }
-
-    private fun checkSelfPermission(): Boolean {
-        val needsPermission = mutableListOf<String>()
-        (necessaryPermissions + optionalPermissions).forEach { permission ->
-            if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
-                needsPermission.add(permission)
-            }
-        }
-
-        if (needsPermission.isNotEmpty()) {
-            requestPermissions(needsPermission, PERMISSION_REQUEST_FIRST)
-            return false
-        }
-
-        return true
-    }
-
-    private fun requestPermissions(needsPermission: List<String>, requestCode: Int) {
-        ActivityCompat.requestPermissions(this, needsPermission.toTypedArray(), requestCode)
     }
 
     private fun updateSystemUi(config: Configuration) {
@@ -239,8 +193,6 @@ class MainActivity : BaseActivity() {
                 controller.systemBarsBehavior =
                     WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
             }
-
-
         } else if (config.orientation == Configuration.ORIENTATION_PORTRAIT) {
             WindowCompat.setDecorFitsSystemWindows(window, true)
             WindowInsetsControllerCompat(window, rootView).show(WindowInsetsCompat.Type.systemBars())
@@ -438,19 +390,8 @@ class MainActivity : BaseActivity() {
     }
 
     companion object {
-        private const val PERMISSION_REQUEST_FIRST = 1000
-        private const val PERMISSION_REQUEST_SECOND = 1001
-        private const val APP_UPDATE_REQUEST_CODE = 31337
-
-        private val necessaryPermissions = listOf(
-                Manifest.permission.WRITE_EXTERNAL_STORAGE
-        )
-
-        private val optionalPermissions = listOf(
-            Manifest.permission.ACCESS_COARSE_LOCATION,
-            Manifest.permission.ACCESS_FINE_LOCATION
-        )
-
         val TAG: String = MainActivity::class.java.simpleName
+
+        private const val APP_UPDATE_REQUEST_CODE = 31337
     }
 }

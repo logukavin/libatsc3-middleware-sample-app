@@ -4,8 +4,6 @@ import android.content.Context
 import androidx.annotation.MainThread
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverCore
-import com.nextgenbroadcast.mobile.middleware.cache.ApplicationCache
-import com.nextgenbroadcast.mobile.middleware.cache.DownloadManager
 import com.nextgenbroadcast.mobile.middleware.gateway.rpc.IRPCGateway
 import com.nextgenbroadcast.mobile.middleware.gateway.web.IWebGateway
 import com.nextgenbroadcast.mobile.middleware.server.cert.UserAgentSSLContext
@@ -29,8 +27,6 @@ internal class WebServerHolder(
         if (webServer != null) return
 
         val appContext = context.applicationContext
-        val downloadManager = DownloadManager()
-        val appCache = ApplicationCache(appContext.cacheDir, downloadManager)
         val sslContext = UserAgentSSLContext.newInstance(appContext)
 
         val scope = CoroutineScope(Dispatchers.Default).also {
@@ -39,7 +35,7 @@ internal class WebServerHolder(
         val web = receiver.createWebGateway().also {
             webGateway = it
         }
-        val rpc = receiver.createRPCGateway(appCache, scope).also {
+        val rpc = receiver.createRPCGateway(scope).also {
             rpcGateway = it
         }
 

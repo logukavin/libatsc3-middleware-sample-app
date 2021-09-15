@@ -19,6 +19,7 @@ interface ITelemetryControl {
         const val CONTROL_ACTION_WIFI_INFO = "networkInfo"
         const val CONTROL_ACTION_FILE_WRITER = "fileWriter"
         const val CONTROL_ACTION_RESET_RECEIVER_DEMODE = "reset"
+        const val CONTROL_BA_ENTRYPOINT = "defaultBA"
 
         const val CONTROL_ARGUMENT_DELIMITER = ","
 
@@ -32,5 +33,7 @@ interface ITelemetryControl {
         const val CONTROL_ARGUMENT_ENABLE = "enable"
         const val CONTROL_ARGUMENT_VALUE = "value"
         const val CONTROL_ARGUMENT_DURATION = "duration"
+        const val CONTROL_ARGUMENT_ENTRYPOINT = "entryPoint"
+        const val CONTROL_ARGUMENT_CERT_HASH = "serverCertHash"
     }
 }

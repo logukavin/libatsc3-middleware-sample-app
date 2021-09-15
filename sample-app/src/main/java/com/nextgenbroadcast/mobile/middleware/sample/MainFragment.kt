@@ -17,6 +17,7 @@ import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.constraintlayout.widget.ConstraintSet
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.setFragmentResultListener
@@ -32,6 +33,7 @@ import com.nextgenbroadcast.mobile.middleware.sample.databinding.FragmentMainBin
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.ViewViewModel
 import com.nextgenbroadcast.mobile.middleware.sample.adapter.ServiceAdapter
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.TelemetryClient
+import com.nextgenbroadcast.mobile.middleware.sample.settings.SettingsDialog
 import com.nextgenbroadcast.mobile.view.AboutDialog
 import com.nextgenbroadcast.mobile.view.TrackSelectionDialog
 import com.nextgenbroadcast.mobile.view.UserAgentView
@@ -118,6 +120,8 @@ class MainFragment : Fragment() {
             lifecycleOwner = viewLifecycleOwner
             viewModel = viewViewModel
         }
+
+        ReceiverContentResolver.resetPlayerState(requireContext())
 
         return binding.root
     }
@@ -219,12 +223,7 @@ class MainFragment : Fragment() {
     override fun onStop() {
         super.onStop()
 
-        receiverContentResolver.resetPlayerState()
         receiverContentResolver.unregister()
-
-        unloadBroadcasterApplication()
-        // it's important to reset it allowing BA reload
-        currentAppData = null
 
         binding.receiverPlayer.stop()
         telemetryClient.stop()
@@ -280,11 +279,7 @@ class MainFragment : Fragment() {
 
             viewViewModel.mediaUri.value = mediaUri
 
-            updateRMPLayout(
-                params.x.toFloat() / 100,
-                params.y.toFloat() / 100,
-                params.scale.toFloat() / 100
-            )
+            updateRMPLayout(params.x, params.y, params.scale)
 
             if (mediaUri != null) {
                 binding.receiverPlayer.play(mediaUri)
@@ -434,12 +429,15 @@ class MainFragment : Fragment() {
 
     override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean) {
         val visibility = if (isInPictureInPictureMode) {
-            binding.userAgentWebView.actionExit()
             setBAAvailability(false)
+            updateRMPLayout(1f, 1f, 1f)
             View.INVISIBLE
         } else {
             if (isBAvailable()) {
                 setBAAvailability(true)
+                receiverContentResolver.queryPlayerData()?.let { (_, params) ->
+                    updateRMPLayout(params.x, params.y, params.scale)
+                }
             }
             View.VISIBLE
         }
@@ -469,8 +467,8 @@ class MainFragment : Fragment() {
     }
 
     private fun setBAAvailability(available: Boolean) {
-        binding.userAgentWebView.visibility =
-            if (available) View.VISIBLE else View.GONE // GONE will prevent BA from sending resize requests when UA is not visible
+        // GONE will prevent BA from sending resize requests when UA is not visible
+        binding.userAgentWebView.isVisible = available
     }
 
     private fun showFileChooser() {
@@ -493,6 +491,10 @@ class MainFragment : Fragment() {
 
     private fun isBAvailable() = currentAppData?.isAvailable ?: false
 
+    private fun updateRMPLayout(x: Int, y: Int, scale: Double) {
+        updateRMPLayout(x.toFloat() / 100, y.toFloat() / 100, scale.toFloat() / 100)
+    }
+
     private fun updateRMPLayout(x: Float, y: Float, scale: Float) {
         ConstraintSet().apply {
             clone(binding.userAgentRoot)
@@ -504,11 +506,10 @@ class MainFragment : Fragment() {
     }
 
     private fun loadBroadcasterApplication(appData: AppData) {
-        if (binding.userAgentWebView.serverCertificateHash.isEmpty()) {
-            binding.userAgentWebView.serverCertificateHash =
-                receiverContentResolver.queryServerCertificate() ?: emptyList()
+        with(binding.userAgentWebView) {
+            serverCertificateHash = receiverContentResolver.queryServerCertificate() ?: emptyList()
+            loadBAContent(appData.appEntryPage)
         }
-        binding.userAgentWebView.loadBAContent(appData.appEntryPage)
         receiverContentResolver.publishApplicationState(ApplicationState.LOADED)
     }
 

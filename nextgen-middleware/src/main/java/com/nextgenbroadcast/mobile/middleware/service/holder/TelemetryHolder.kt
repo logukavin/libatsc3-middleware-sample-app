@@ -17,10 +17,10 @@ import androidx.media.MediaBrowserServiceCompat
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.nextgenbroadcast.mobile.core.LOG
-import com.nextgenbroadcast.mobile.core.cert.CertificateUtils
 import com.nextgenbroadcast.mobile.core.model.PhyFrequency
 import com.nextgenbroadcast.mobile.middleware.*
 import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverCore
+import com.nextgenbroadcast.mobile.middleware.dev.config.DevConfig
 import com.nextgenbroadcast.mobile.middleware.dev.nsd.NsdConfig
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.CertificateStore
 import com.nextgenbroadcast.mobile.middleware.gateway.web.ConnectionType
@@ -361,6 +361,13 @@ internal class TelemetryHolder(
 
             ITelemetryControl.CONTROL_ACTION_RESET_RECEIVER_DEMODE -> {
                 /// TODO TBD
+            }
+
+            ITelemetryControl.CONTROL_BA_ENTRYPOINT -> {
+                val entryPoint = arguments[ITelemetryControl.CONTROL_ARGUMENT_ENTRYPOINT]
+                val certificateHash = arguments[ITelemetryControl.CONTROL_ARGUMENT_CERT_HASH]
+                DevConfig.get(context).setBaEntrypoint(entryPoint, certificateHash)
+                receiver.notifyNewSessionStarted()
             }
         }
 
