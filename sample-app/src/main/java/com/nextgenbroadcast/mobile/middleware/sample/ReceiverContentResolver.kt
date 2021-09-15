@@ -15,6 +15,7 @@ import androidx.core.database.getStringOrNull
 import androidx.core.net.toUri
 import com.nextgenbroadcast.mobile.core.atsc3.PhyInfoConstants
 import com.nextgenbroadcast.mobile.core.model.*
+import com.nextgenbroadcast.mobile.middleware.server.ServerUtils
 import java.nio.ByteBuffer
 
 class ReceiverContentResolver(
@@ -235,7 +236,7 @@ class ReceiverContentResolver(
                     it.toIntOrNull()
                 } ?: emptyList()
 
-                AppData(appContextID, appEntryPage, serviceIds, appCachePath, isAvailable)
+                AppData(appContextID, appEntryPage, serviceIds, appCachePath, isAvailable, ServerUtils.createBasePathFromBcastEntryPageUrl(appEntryPage, appContextID))
             } else null
         }
     }

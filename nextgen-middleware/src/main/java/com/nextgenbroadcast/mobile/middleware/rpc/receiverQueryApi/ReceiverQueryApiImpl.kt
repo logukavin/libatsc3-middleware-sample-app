@@ -44,7 +44,7 @@ class ReceiverQueryApiImpl(
     }
 
     override fun queryReceiverWebServerURI(): BaseURIRpcResponse {
-        return BaseURIRpcResponse()
+        return BaseURIRpcResponse(gateway.baseUrl)
     }
 
     override fun queryAlertingSignaling(alertingTypes: List<String>): AlertingSignalingRpcResponse {
