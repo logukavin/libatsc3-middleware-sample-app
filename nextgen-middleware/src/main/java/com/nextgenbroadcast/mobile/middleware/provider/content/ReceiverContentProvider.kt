@@ -15,6 +15,7 @@ import com.nextgenbroadcast.mobile.middleware.*
 import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverCore
 import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverStandalone
 import com.nextgenbroadcast.mobile.middleware.dev.config.DevConfig
+import com.nextgenbroadcast.mobile.middleware.server.ServerUtils
 import com.nextgenbroadcast.mobile.middleware.server.cert.IUserAgentSSLContext
 import com.nextgenbroadcast.mobile.middleware.server.cert.UserAgentSSLContext
 import com.nextgenbroadcast.mobile.middleware.service.Atsc3ForegroundService
@@ -196,7 +197,8 @@ class ReceiverContentProvider : ContentProvider() {
                             DevConfig.get(appContext).applicationEntryPoint?.let { entryPage ->
                                 d = AppData(data.appContextId,
                                     entryPage + data.appEntryPage.substring(data.appEntryPage.indexOf('?')),
-                                    emptyList(), null, true)
+                                    emptyList(), null, true,
+                                        ServerUtils.createBasePathFromBcastEntryPageUrl(entryPage, data.appContextId))
                             }
                         }
 

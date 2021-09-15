@@ -1,5 +1,6 @@
 package com.nextgenbroadcast.mobile.middleware.rpc.processor
 
+import android.util.Log
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.github.nmuzhichin.jsonrpc.api.Processor
 import com.github.nmuzhichin.jsonrpc.api.RpcConsumer
@@ -7,6 +8,7 @@ import com.github.nmuzhichin.jsonrpc.context.ConsumerBuilder
 import com.github.nmuzhichin.jsonrpc.model.request.Request
 import com.github.nmuzhichin.jsonrpc.model.response.ResponseUtils
 import com.github.nmuzhichin.jsonrpc.model.response.errors.Error
+import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3Module
 import com.nextgenbroadcast.mobile.middleware.gateway.rpc.IRPCGateway
 import com.nextgenbroadcast.mobile.middleware.rpc.RpcError
 import com.nextgenbroadcast.mobile.middleware.rpc.RpcErrorCode
@@ -78,8 +80,13 @@ internal class RPCProcessor(
 
             val response = consumer.execution(req)
 
+            if(response.isError) {
+                Log.w(TAG, "processRequest: response.isError: requestId: $requestId, request: $request, $response")
+            }
+
             rpcObjectMapper.objectToJson(response)
         } catch (e: JsonProcessingException) {
+            Log.e(TAG, "processRequest: exception: requestId: $requestId, request: $request", e)
             errorResponse(requestId, e)
         }
     }
@@ -113,5 +120,9 @@ internal class RPCProcessor(
         override fun getData(): Any? {
             return null
         }
+    }
+
+    companion object {
+        val TAG: String = RPCProcessor::class.java.simpleName
     }
 }

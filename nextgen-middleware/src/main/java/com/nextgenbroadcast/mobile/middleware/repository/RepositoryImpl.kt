@@ -53,17 +53,38 @@ internal class RepositoryImpl(
     // User Agent
     override val applications = MutableStateFlow<List<Atsc3Application>>(emptyList())
     override val heldPackage = MutableStateFlow<Atsc3HeldPackage?>(null)
+
+    /*
+        jjustman-2021-09-14 - todo: confirm that:
+
+                                    if we have both bcastEntryPageUrl and bbandEntryPageUrl, then
+                                        try and fetch bbandEntryPageUrl without waiting for the NRT payload extraction callback,
+                                            if bbandEntryPageUrl fetch is successful (e.g. 200),
+                                                then use this path for our BA appUri,
+                                        otherwise, wait for nrt package extract callback and launch via:
+                                            <bcastEntryPackageUrl, bcastEntryPageUrl>
+
+     */
     override val appData = combine(heldPackage, applications, sessionNum) { held, applications, sessionId ->
         held?.let {
             var useBroadband = false
 
             val appContextId = held.appContextId ?: return@let null
+
+            //jjustman-2021-09-14 - generate our baseUriPath as a reference to our local appCache,
+            // used for a/344 org.atsc.query.baseURI jsonrpc method to establish the proper appCache for a bband loaded BA
+            var baseUriPath = ServerUtils.createBasePathFromClientSettings(settings, appContextId)
+
             val appUrl = held.bcastEntryPageUrl?.let { entryPageUrl ->
                 ServerUtils.createEntryPoint(entryPageUrl, appContextId, settings)
+
             } ?: let {
                 useBroadband = true
+
+                //implict notnull bbandEntryPageUrl
                 held.bbandEntryPageUrl
             } ?: return@let null
+
             val compatibleServiceIds = held.coupledServices ?: emptyList()
             val application = applications.firstOrNull { app ->
                 app.appContextIdList.contains(appContextId) && app.packageName == held.bcastEntryPackageUrl
@@ -76,6 +97,7 @@ internal class RepositoryImpl(
                 compatibleServiceIds,
                 cachePath,
                 useBroadband || cachePath?.isNotEmpty() ?: false,
+                baseUriPath,
                 sessionId
             )
         }

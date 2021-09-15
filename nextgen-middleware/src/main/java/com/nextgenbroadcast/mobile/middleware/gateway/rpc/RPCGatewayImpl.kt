@@ -48,6 +48,8 @@ internal class RPCGatewayImpl(
         get() = selectedService.value?.globalId
     override val mediaUrl: String?
         get() = repository.routeMediaUrl.value?.url
+    override val baseUrl: String?
+        get() = currentBaseUrl
     override val playbackState: PlaybackState
         get() = viewController.rmpState.value
     private val rmpPlaybackTime: Long
@@ -55,6 +57,8 @@ internal class RPCGatewayImpl(
 
     private var currentAppContextId: String? = null
     private var currentServiceId: String? = null
+    private var currentBaseUrl: String? = null
+
     private var mediaTimeUpdateJob: Job? = null
 
     init {
@@ -223,6 +227,7 @@ internal class RPCGatewayImpl(
      */
     private fun onAppDataUpdated(appData: AppData, service: AVService) {
         currentAppContextId = appData.appContextId
+        currentBaseUrl = appData.baseUrl
         currentServiceId = service.globalId?.also { globalServiceId ->
             if (currentServiceId != null && currentServiceId != globalServiceId) {
                 if (appData.compatibleServiceIds.contains(service.id)) {
