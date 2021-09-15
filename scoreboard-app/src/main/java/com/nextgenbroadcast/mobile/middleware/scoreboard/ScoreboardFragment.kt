@@ -17,6 +17,7 @@ import com.nextgenbroadcast.mobile.middleware.scoreboard.databinding.FragmentSco
 import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.TelemetryDevice
 import com.nextgenbroadcast.mobile.middleware.scoreboard.view.DeviceItemView
 import kotlinx.coroutines.flow.*
+import org.ngbp.libatsc3.middleware.android.phy.models.RfPhyStatistics
 
 class ScoreboardFragment : Fragment() {
     private val gson = Gson()
@@ -41,7 +42,7 @@ class ScoreboardFragment : Fragment() {
                 ?.mapNotNull { event ->
                     try {
                         val payload = gson.fromJson<PhyPayload>(event.payload, phyType)
-                        val payloadValue = payload.snr1000.toDouble() / 1000
+                        val payloadValue = payload.stat.snr1000_global.toDouble() / 1000
                         val timestamp = payload.timeStamp
                         Pair(timestamp, payloadValue)
                     } catch (e: Exception) {
@@ -133,9 +134,9 @@ class ScoreboardFragment : Fragment() {
         fun selectChart(chartId: String?)
     }
 
-    data class PhyPayload(
-        val snr1000: Int,
-        val timeStamp: Long
+    data class PhyPayload (
+            val stat: RfPhyStatistics,
+            val timeStamp: Long = 0
     )
 
     companion object {
