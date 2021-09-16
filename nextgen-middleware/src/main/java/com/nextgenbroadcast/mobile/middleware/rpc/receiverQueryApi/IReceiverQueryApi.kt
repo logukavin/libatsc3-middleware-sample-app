@@ -36,4 +36,8 @@ interface IReceiverQueryApi {
 
     @JsonRpcMethod("org.atsc.query.serviceGuideUrls")
     fun queryServiceGuideURLs(@JsonRpcParam("service", nullable = true) service: String?): ServiceGuideUrlsRpcResponse
+
+    @JsonRpcMethod("org.atsc.query.signaling")
+    fun querySignaling(@JsonRpcParam("objectNames") objectNames: List<String>): SignalingRpcResponse
+
 }

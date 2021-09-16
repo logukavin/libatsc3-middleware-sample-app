@@ -4,6 +4,7 @@ import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.middleware.rpc.notification.NotificationType
 import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.AlertingSignalingRpcResponse
 import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.ServiceGuideUrlsRpcResponse
+import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.SignalingRpcResponse
 import com.nextgenbroadcast.mobile.middleware.server.ws.MiddlewareWebSocket
 
 interface IRPCGateway {
@@ -35,4 +36,6 @@ interface IRPCGateway {
     fun requestServiceChange(globalServiceId: String): Boolean
 
     fun getAlertChangingData(alertingTypes: List<String>): List<AlertingSignalingRpcResponse.Alert>
+
+    fun getSignalingInfo(): List<SignalingRpcResponse.SignalingInfo>
 }
