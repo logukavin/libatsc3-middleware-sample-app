@@ -1,6 +1,7 @@
 package com.nextgenbroadcast.mobile.middleware.atsc3
 
 import android.util.Log
+import com.lyft.kronos.KronosClock
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.core.atsc3.PhyInfoConstants
 import com.nextgenbroadcast.mobile.core.model.MediaUrl
@@ -26,6 +27,7 @@ import org.ngbp.libatsc3.middleware.android.a331.PackageExtractEnvelopeMetadataA
 import org.ngbp.libatsc3.middleware.android.application.interfaces.IAtsc3NdkApplicationBridgeCallbacks
 import org.ngbp.libatsc3.middleware.android.phy.interfaces.IAtsc3NdkPHYBridgeCallbacks
 import org.ngbp.libatsc3.middleware.android.phy.models.BwPhyStatistics
+import org.ngbp.libatsc3.middleware.android.phy.models.L1D_timePhyInformation
 import org.ngbp.libatsc3.middleware.android.phy.models.RfPhyStatistics
 import java.io.File
 import java.util.*
@@ -37,7 +39,8 @@ import kotlin.concurrent.schedule
 import kotlin.math.max
 
 internal class Atsc3Module(
-        private val cacheDir: File
+        private val cacheDir: File,
+        private val kronosClock: KronosClock
 ) : IAtsc3Module, IAtsc3NdkApplicationBridgeCallbacks, IAtsc3NdkPHYBridgeCallbacks {
 
     private val atsc3NdkApplicationBridge = Atsc3NdkApplicationBridge(this)
@@ -717,8 +720,25 @@ internal class Atsc3Module(
     }
 
     override fun pushBwPhyStatistics(bwPhyStatistics: BwPhyStatistics) {
+        try {
+            log(bwPhyStatistics.toString())
+        } catch (ex: Exception) {
+            log(ex.toString())
+        }
+
         if (USE_DEV_STATISTIC) {
-            PHYStatistics.PHYBWStatistics = "BW: $bwPhyStatistics".also {
+            PHYStatistics.PHYBWStatistics = "$bwPhyStatistics".also {
+                log(it)
+            }
+        }
+    }
+
+    override fun pushL1d_TimeInfo(l1dTimeInfo: L1D_timePhyInformation) {
+        if (USE_DEV_STATISTIC) {
+            val anchorNtpTimestamp = l1dTimeInfo.toStringFromAnchorNtpTimestamp(
+                kronosClock.getCurrentNtpTimeMs() ?: -1
+            )
+            PHYStatistics.PHYL1dTimingStatistics = "SFN: $anchorNtpTimestamp".also {
                 log(it)
             }
         }
