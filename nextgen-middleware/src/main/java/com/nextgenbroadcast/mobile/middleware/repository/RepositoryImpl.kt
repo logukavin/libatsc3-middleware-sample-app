@@ -70,21 +70,13 @@ internal class RepositoryImpl(
             var useBroadband = false
 
             val appContextId = held.appContextId ?: return@let null
-
-            //jjustman-2021-09-14 - generate our baseUriPath as a reference to our local appCache,
-            // used for a/344 org.atsc.query.baseURI jsonrpc method to establish the proper appCache for a bband loaded BA
-            var baseUriPath = ServerUtils.createBasePathFromClientSettings(settings, appContextId)
-
+            val baseUriPath = ServerUtils.createEntryPoint(appContextId, null, settings)
             val appUrl = held.bcastEntryPageUrl?.let { entryPageUrl ->
-                ServerUtils.createEntryPoint(entryPageUrl, appContextId, settings)
-
+                ServerUtils.createEntryPoint(appContextId, entryPageUrl, settings)
             } ?: let {
                 useBroadband = true
-
-                //implict notnull bbandEntryPageUrl
                 held.bbandEntryPageUrl
             } ?: return@let null
-
             val compatibleServiceIds = held.coupledServices ?: emptyList()
             val application = applications.firstOrNull { app ->
                 app.appContextIdList.contains(appContextId) && app.packageName == held.bcastEntryPackageUrl
@@ -93,11 +85,11 @@ internal class RepositoryImpl(
 
             AppData(
                 appContextId,
+                baseUriPath,
                 ServerUtils.addSocketPath(appUrl, settings),
                 compatibleServiceIds,
                 cachePath,
                 useBroadband || cachePath?.isNotEmpty() ?: false,
-                baseUriPath,
                 sessionId
             )
         }

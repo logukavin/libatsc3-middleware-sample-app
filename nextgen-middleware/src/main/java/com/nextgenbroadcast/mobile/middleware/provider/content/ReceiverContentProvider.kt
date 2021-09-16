@@ -15,7 +15,6 @@ import com.nextgenbroadcast.mobile.middleware.*
 import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverCore
 import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverStandalone
 import com.nextgenbroadcast.mobile.middleware.dev.config.DevConfig
-import com.nextgenbroadcast.mobile.middleware.server.ServerUtils
 import com.nextgenbroadcast.mobile.middleware.server.cert.IUserAgentSSLContext
 import com.nextgenbroadcast.mobile.middleware.server.cert.UserAgentSSLContext
 import com.nextgenbroadcast.mobile.middleware.service.Atsc3ForegroundService
@@ -190,19 +189,22 @@ class ReceiverContentProvider : ContentProvider() {
             }
 
             QUERY_APP_DATA -> {
-                MatrixCursor(arrayOf(COLUMN_APP_CONTEXT_ID, COLUMN_APP_ENTRY_PAGE, COLUMN_APP_SERVICE_IDS, COLUMN_APP_CACHE_PATH, COLUMN_APP_AVAILABLE)).apply {
+                MatrixCursor(arrayOf(COLUMN_APP_CONTEXT_ID, COLUMN_APP_BASE_URL, COLUMN_APP_ENTRY_PAGE,
+                    COLUMN_APP_SERVICE_IDS, COLUMN_APP_CACHE_PATH, COLUMN_APP_AVAILABLE)
+                ).apply {
                     appData.value?.let { data ->
                         var d = data
                         if (MiddlewareConfig.DEV_TOOLS) {
                             DevConfig.get(appContext).applicationEntryPoint?.let { entryPage ->
                                 d = AppData(data.appContextId,
+                                    data.appBaseUrl,
                                     entryPage + data.appEntryPage.substring(data.appEntryPage.indexOf('?')),
-                                    emptyList(), null, true,
-                                        ServerUtils.createBasePathFromBcastEntryPageUrl(entryPage, data.appContextId))
+                                    emptyList(), null, true)
                             }
                         }
 
                         newRow().add(COLUMN_APP_CONTEXT_ID, d.appContextId)
+                            .add(COLUMN_APP_BASE_URL, d.appBaseUrl)
                             .add(COLUMN_APP_ENTRY_PAGE, d.appEntryPage)
                             .add(COLUMN_APP_SERVICE_IDS, d.compatibleServiceIds.joinToString(" ") { it.toString() })
                             .add(COLUMN_APP_CACHE_PATH, d.cachePath)
@@ -405,6 +407,7 @@ class ReceiverContentProvider : ContentProvider() {
         const val CONTENT_RECEIVER_MEDIA_PLAYER = "receiverMediaPlayer"
 
         const val COLUMN_APP_CONTEXT_ID = "appContextId"
+        const val COLUMN_APP_BASE_URL = "appBaseUrl"
         const val COLUMN_APP_ENTRY_PAGE = "appEntryPage"
         const val COLUMN_APP_STATE_VALUE = "appStateValue"
         const val COLUMN_APP_SERVICE_IDS = "appServiceIds"

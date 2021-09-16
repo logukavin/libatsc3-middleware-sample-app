@@ -12,7 +12,7 @@ interface IRPCGateway {
     val language: String
     val queryServiceId: String?
     val mediaUrl: String?
-    val baseUrl: String?
+    val currentAppBaseUrl: String?
     val playbackState: PlaybackState
 
     fun onSocketOpened(socket: MiddlewareWebSocket)

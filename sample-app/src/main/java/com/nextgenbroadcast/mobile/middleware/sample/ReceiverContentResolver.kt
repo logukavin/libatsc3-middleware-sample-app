@@ -15,7 +15,6 @@ import androidx.core.database.getStringOrNull
 import androidx.core.net.toUri
 import com.nextgenbroadcast.mobile.core.atsc3.PhyInfoConstants
 import com.nextgenbroadcast.mobile.core.model.*
-import com.nextgenbroadcast.mobile.middleware.server.ServerUtils
 import java.nio.ByteBuffer
 
 class ReceiverContentResolver(
@@ -226,17 +225,18 @@ class ReceiverContentResolver(
     fun queryAppData(): AppData? {
         return appDataUri.queryFirst { cursor ->
             val appContextID = cursor.getStringOrNull(COLUMN_APP_CONTEXT_ID)
+            val appBaseUrl = cursor.getStringOrNull(COLUMN_APP_BASE_URL)
             val appEntryPage = cursor.getStringOrNull(COLUMN_APP_ENTRY_PAGE)
             val appServiceIds = cursor.getStringOrNull(COLUMN_APP_SERVICE_IDS)
             val appCachePath = cursor.getStringOrNull(COLUMN_APP_CACHE_PATH)
             val isAvailable = cursor.getIntOrNull(COLUMN_APP_AVAILABLE) == 1
 
-            if (appContextID != null && appEntryPage != null) {
+            if (appContextID != null && appBaseUrl != null && appEntryPage != null) {
                 val serviceIds = appServiceIds?.split(" ")?.mapNotNull {
                     it.toIntOrNull()
                 } ?: emptyList()
 
-                AppData(appContextID, appEntryPage, serviceIds, appCachePath, isAvailable, ServerUtils.createBasePathFromBcastEntryPageUrl(appEntryPage, appContextID))
+                AppData(appContextID, appBaseUrl, appEntryPage, serviceIds, appCachePath, isAvailable)
             } else null
         }
     }
@@ -354,6 +354,7 @@ class ReceiverContentResolver(
         const val CONTENT_RECEIVER_MEDIA_PLAYER = "receiverMediaPlayer"
 
         const val COLUMN_APP_CONTEXT_ID = "appContextId"
+        const val COLUMN_APP_BASE_URL = "appBaseUrl"
         const val COLUMN_APP_ENTRY_PAGE = "appEntryPage"
         const val COLUMN_APP_STATE_VALUE = "appStateValue"
         const val COLUMN_APP_SERVICE_IDS = "appServiceIds"
