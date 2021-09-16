@@ -311,7 +311,7 @@ class CommandFragment : Fragment(), View.OnClickListener {
             showWarningDialog(R.string.you_send_command_to_all_devices) {
                 Intent(context, ScoreboardService::class.java).apply {
                     action = ScoreboardService.ACTION_GLOBAL_COMMANDS
-                    putExtra(TOPIC, command)
+                    putExtra(ScoreboardService.TOPIC, command)
                     val payload = arguments ?: JSONObject()
                     putExtra(ScoreboardService.COMMAND_EXTRAS, payload.toString())
                 }.run {
@@ -368,7 +368,6 @@ class CommandFragment : Fragment(), View.OnClickListener {
         private const val TELEMETRY_ENABLE_VALUE = "telemetry_enable_value"
         private const val BA_ENTRYPOINT_VALUE = "ba_entrypoint_value"
         private const val CERTIFICATE_HASH_VALUE = "certificate_hash_value"
-        const val TOPIC = "topic"
     }
 
     private fun EditText.string(): String {

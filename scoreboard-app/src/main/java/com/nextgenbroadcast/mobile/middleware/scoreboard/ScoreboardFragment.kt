@@ -14,10 +14,10 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.middleware.scoreboard.databinding.FragmentScoreboardBinding
+import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.PhyPayload
 import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.TelemetryDevice
 import com.nextgenbroadcast.mobile.middleware.scoreboard.view.DeviceItemView
 import kotlinx.coroutines.flow.*
-import org.ngbp.libatsc3.middleware.android.phy.models.RfPhyStatistics
 
 class ScoreboardFragment : Fragment() {
     private val gson = Gson()
@@ -133,11 +133,6 @@ class ScoreboardFragment : Fragment() {
     interface ISelectChartListener {
         fun selectChart(chartId: String?)
     }
-
-    data class PhyPayload (
-            val stat: RfPhyStatistics,
-            val timeStamp: Long = 0
-    )
 
     companion object {
         val TAG: String = ScoreboardFragment::class.java.simpleName

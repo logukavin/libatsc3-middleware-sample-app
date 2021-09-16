@@ -14,6 +14,7 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.entity.ClientTelemetryEvent
+import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.PhyPayload
 import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.TelemetryDevice
 import com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry.DatagramSocketWrapper
 import com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry.TelemetryManager
@@ -25,7 +26,7 @@ import java.util.*
 
 class ScoreboardService : Service() {
     private val gson = Gson()
-    private val phyType = object : TypeToken<ScoreboardFragment.PhyPayload>() {}.type
+    private val phyType = object : TypeToken<PhyPayload>() {}.type
     private val deviceIds = MutableStateFlow<List<TelemetryDevice>>(emptyList())
     private val selectedDeviceId = MutableStateFlow<String?>(null)
     private val commandBackLogFlow = MutableSharedFlow<String>(1, 5, BufferOverflow.DROP_OLDEST)
@@ -129,7 +130,7 @@ class ScoreboardService : Service() {
     }
 
     private fun sendGlobalCommand(intent: Intent) {
-        intent.getStringExtra(CommandFragment.TOPIC)?.let { topic ->
+        intent.getStringExtra(TOPIC)?.let { topic ->
             intent.getStringExtra(COMMAND_EXTRAS)?.let { payload ->
                 telemetryManager.sendGlobalCommand(topic, payload)
 
@@ -172,11 +173,11 @@ class ScoreboardService : Service() {
                 socketJob = CoroutineScope(Dispatchers.IO).launch {
                     telemetryManager.getFlow(device)?.collect { event ->
                         try {
-                            val payload = gson.fromJson<ScoreboardFragment.PhyPayload>(event.payload, phyType)
+                            val payload = gson.fromJson<PhyPayload>(event.payload, phyType)
                             val payloadValue = payload.stat.snr1000_global
                             socket.sendUdpMessage("${deviceId},${payload.timeStamp},$payloadValue")
                         } catch (e: Exception) {
-                            Log.w(ScoreboardFragment.TAG, "Can't parse telemetry event payload", e)
+                            Log.w(TAG, "Can't parse telemetry event payload", e)
                         }
                     }
                 }
@@ -251,6 +252,7 @@ class ScoreboardService : Service() {
         const val ACTION_GLOBAL_COMMANDS = "${BuildConfig.APPLICATION_ID}.global_commands"
         const val COMMAND_EXTRAS = "commands"
         const val DEVICES_EXTRAS = "devices_id_list"
+        const val TOPIC = "topic"
 
         const val COMMAND_DATE_FORMAT = "HH:mm:ss.SSS"
     }
