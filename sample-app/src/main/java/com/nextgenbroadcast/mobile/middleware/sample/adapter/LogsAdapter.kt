@@ -27,7 +27,6 @@ class LogsAdapter(
     inner class RecordHolder(val binding: ItemLogRecordBinding) : LogViewHolder(binding.root) {
         override fun bind(model: LogInfo) = with(binding.enableDebuggingInformation) {
             if (model !is Record) return@with
-            Log.d("LogsAdapter", "Rendering: $model")
             setOnCheckedChangeListener(null)
             isChecked = model.enabled
             text = model.displayName
