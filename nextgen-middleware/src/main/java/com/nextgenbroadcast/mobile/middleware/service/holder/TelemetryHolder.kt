@@ -49,6 +49,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import org.ngbp.libatsc3.middleware.android.Atsc3NdkCoreLogs
 import java.io.IOException
 import kotlin.math.max
 import kotlin.math.min
@@ -79,7 +80,11 @@ internal class TelemetryHolder(
     private val sharedPreferences: SharedPreferences by lazy {
         context.getSharedPreferences(SHARED_PREFERENCES_NAME, Context.MODE_PRIVATE)
     }
-    private val atsc3NdkCoreLogs by lazy(::Atsc3NdkCoreLogs)
+    private val atsc3NdkCoreLogs by lazy {
+        Atsc3NdkCoreLogs().apply {
+            init()
+        }
+    }
 
     @Volatile
     private var isClosed = false
