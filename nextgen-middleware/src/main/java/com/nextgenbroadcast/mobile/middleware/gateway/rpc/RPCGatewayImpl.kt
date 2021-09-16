@@ -15,6 +15,7 @@ import com.nextgenbroadcast.mobile.middleware.rpc.notification.NotificationType
 import com.nextgenbroadcast.mobile.middleware.rpc.notification.RPCNotificationHelper
 import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.AlertingSignalingRpcResponse
 import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.ServiceGuideUrlsRpcResponse
+import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.SignalingRpcResponse
 import com.nextgenbroadcast.mobile.middleware.server.ServerUtils
 import com.nextgenbroadcast.mobile.middleware.server.ws.MiddlewareWebSocket
 import kotlinx.coroutines.*
@@ -216,6 +217,10 @@ internal class RPCGatewayImpl(
         } else {
             alertingTypes.flatMap { type -> rpcAlertList.filter { type == it.alertingType }}
         }
+    }
+
+    override fun getSignalingInfo(): List<SignalingRpcResponse.SignalingInfo> {
+        TODO("Not yet implemented")
     }
 
     /**
