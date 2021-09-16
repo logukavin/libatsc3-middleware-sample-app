@@ -3,6 +3,7 @@ package com.nextgenbroadcast.mobile.middleware.sample.lifecycle
 import android.app.Application
 import android.net.Uri
 import android.text.Html
+import android.text.Spanned
 import androidx.lifecycle.*
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.AppData
@@ -59,7 +60,7 @@ class ViewViewModel(
     val showPhyInfo = MutableLiveData<Boolean>()
     val showPhyChart = MutableLiveData<Boolean>()
 
-    val debugData = MutableLiveData<String>()
+    val debugData = MutableLiveData<CharSequence>()
 
     val defaultService = services.distinctUntilChanged().map { list ->
         list.firstOrNull { it.default } ?: list.firstOrNull()

@@ -104,7 +104,7 @@ public class Atsc3MMTExtractor implements Extractor {
                         System.arraycopy(sampleBuffer.data, sampleBuffer.getPosition(), sampleBuffer.data, 0, sampleBuffer.bytesLeft());
                     }
 
-                    extractorInput.readFully(sampleBuffer.data, /* offset= */ offset, /* length= */ /*MMTConstants.SIZE_SAMPLE_HEADER*/ sampleBuffer.limit() - offset);
+                    extractorInput.readFully(sampleBuffer.data, /* offset= */ offset, /* length= */ sampleBuffer.limit() - offset);
                     sampleBuffer.setPosition(0);
                 }
 
@@ -113,10 +113,11 @@ public class Atsc3MMTExtractor implements Extractor {
                 currentSampleId = sampleBuffer.readInt();
                 currentSampleTimeUs = sampleBuffer.readLong();
                 currentSampleIsKey = sampleBuffer.readUnsignedByte() == 1;
+
                 currentSampleBytesRemaining = currentSampleSize;
-                //Log.d("!!!", "sid: " + currentSampleId + ", sample Type: " + currentSampleType + ", sample TimeUs: " + currentSampleTimeUs + ",  sample size: " + currentSampleSize);
+
                 if((ReadSample_ExtractSampleHeader_counter++ % 1000) == 0) {
-                    Log.d("MMTExtractor", String.format("sampleType: %d, packet_id: %d, sampleTimeUs: %d, count: %d", currentSampleType, currentSampleId, currentSampleTimeUs, ReadSample_ExtractSampleHeader_counter));
+                    Log.d(TAG, String.format("sampleType: %d, packet_id: %d, sampleTimeUs: %d, count: %d", currentSampleType, currentSampleId, currentSampleTimeUs, ReadSample_ExtractSampleHeader_counter));
                 }
 
             } else if (sampleBuffer.bytesLeft() == 0) {
@@ -124,7 +125,7 @@ public class Atsc3MMTExtractor implements Extractor {
                 sampleBuffer.setPosition(0);
             }
         } catch (Exception ex) {
-            Log.w("MMTExtractor", "readSample - packet_id: " + currentSampleId + ", Exception, returning END_OF_INPUT - causing ExoPlayer DataSource teardown/unwind, ex: " + ex + ", messgae: " + ex.getMessage() + ",  Type: " + currentSampleType + ", sample TimeUs: " + currentSampleTimeUs + ",  sample size: " + currentSampleSize);
+            Log.w(TAG, "readSample - packet_id: " + currentSampleId + ", Exception, returning END_OF_INPUT - causing ExoPlayer DataSource teardown/unwind, ex: " + ex + ", messgae: " + ex.getMessage() + ",  Type: " + currentSampleType + ", sample TimeUs: " + currentSampleTimeUs + ",  sample size: " + currentSampleSize, ex);
 
             return Extractor.RESULT_END_OF_INPUT;
         }
@@ -141,8 +142,9 @@ public class Atsc3MMTExtractor implements Extractor {
             }
 
             if(((ReadSample_TrackIsNull_counter++) % 1000) == 0) {
-                Log.w("MMTExtractor", String.format("readSample - packet_id: %d, track is NULL, skipped: %d, returning Extrator.RESULT_CONTINUE, count: %d", currentSampleId, skipped, ReadSample_TrackIsNull_counter));
+                Log.w(TAG, String.format("readSample - packet_id: %d, track is NULL, skipped: %d, returning Extrator.RESULT_CONTINUE, count: %d", currentSampleId, skipped, ReadSample_TrackIsNull_counter));
             }
+
             return Extractor.RESULT_CONTINUE;
         }
 
@@ -157,8 +159,7 @@ public class Atsc3MMTExtractor implements Extractor {
 
         currentSampleBytesRemaining -= bytesAppended;
         if (currentSampleBytesRemaining > 0) {
-
-            Log.w("MMTExtractor", String.format("readSample - packet_id: %d, currentSampleBytesRemaining: %d, returning Extractor.RESULT_CONTINUE", currentSampleId, currentSampleBytesRemaining));
+            //Log.w(TAG, String.format("readSample - packet_id: %d, currentSampleBytesRemaining: %d, returning Extractor.RESULT_CONTINUE", currentSampleId, currentSampleBytesRemaining));
             return Extractor.RESULT_CONTINUE;
         }
 
@@ -174,7 +175,9 @@ public class Atsc3MMTExtractor implements Extractor {
                 /* offset= */ 0,
                 /* encryptionData= */ null);
 
-        Log.d(TAG, String.format("readSample: packet_id: %d, returning after trackOutput.sampleMetadata, currentSampleTimeUs: %d, currentSampleSize: %d", currentSampleId, currentSampleTimeUs, currentSampleSize));
+        if(false) {
+            Log.d(TAG, String.format("readSample: packet_id: %d, returning after trackOutput.sampleMetadata, currentSampleTimeUs: %d, currentSampleSize: %d", currentSampleId, currentSampleTimeUs, currentSampleSize));
+        }
 
         return Extractor.RESULT_CONTINUE;
     }
@@ -224,10 +227,15 @@ public class Atsc3MMTExtractor implements Extractor {
 
                         Format audioFormat = MMTMediaTrackUtils.createAudioFormat(Integer.toString(packetId),
                                 audioType, audioChannelCount, audioSampleRate, 0, null);
+
                         if (audioFormat != null) {
+                            Log.d(TAG, String.format("maybeOutputFormat: TRACK_TYPE_AUDIO: created audioFormat for packet_id: %d, (int)audioType: %d, audioFormat: %s", packetId, audioType, audioFormat));
+
                             TrackOutput audioOutput = extractorOutput.track(packetId, C.TRACK_TYPE_AUDIO);
                             audioOutput.format(audioFormat);
                             tracks.put(packetId, new MmtTrack(audioOutput));
+                        } else {
+                            Log.w(TAG, String.format("maybeOutputFormat: TRACK_TYPE_AUDIO: unable to instantiate audioFormat for packet_id: %d, (int)audioType: %d", packetId, audioType));
                         }
                     }
                     break;

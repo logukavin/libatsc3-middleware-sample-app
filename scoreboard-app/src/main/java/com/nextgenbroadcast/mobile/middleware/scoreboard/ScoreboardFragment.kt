@@ -14,6 +14,7 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.middleware.scoreboard.databinding.FragmentScoreboardBinding
+import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.PhyPayload
 import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.TelemetryDevice
 import com.nextgenbroadcast.mobile.middleware.scoreboard.view.DeviceItemView
 import kotlinx.coroutines.flow.*
@@ -41,7 +42,7 @@ class ScoreboardFragment : Fragment() {
                 ?.mapNotNull { event ->
                     try {
                         val payload = gson.fromJson<PhyPayload>(event.payload, phyType)
-                        val payloadValue = payload.snr1000.toDouble() / 1000
+                        val payloadValue = payload.stat.snr1000_global.toDouble() / 1000
                         val timestamp = payload.timeStamp
                         Pair(timestamp, payloadValue)
                     } catch (e: Exception) {
@@ -132,11 +133,6 @@ class ScoreboardFragment : Fragment() {
     interface ISelectChartListener {
         fun selectChart(chartId: String?)
     }
-
-    data class PhyPayload(
-        val snr1000: Int,
-        val timeStamp: Long
-    )
 
     companion object {
         val TAG: String = ScoreboardFragment::class.java.simpleName
