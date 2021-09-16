@@ -21,7 +21,9 @@ public class MMTFragmentWriter {
     private static final int MAX_FIRST_MFU_WAIT_TIME = 5000;
     private static final byte RING_BUFFER_PAGE_INIT = 1;
     private static final byte RING_BUFFER_PAGE_FRAGMENT = 2;
-    public static final int FRAGMENT_PACKET_HEADER = Integer.BYTES /* packet_id */ + Integer.BYTES /* sample_number */ + Long.BYTES /* mpu_presentation_time_uS_from_SI */ + 7 /* reserved */;
+    private static final int FRAGMENT_PACKET_HEADER = Integer.BYTES /* packet_id */ + Integer.BYTES /* sample_number */ + Long.BYTES /* mpu_presentation_time_uS_from_SI */ + 7 /* reserved */;
+
+    private static final int AC_4_CODE = getIntegerCodeForString(MMTAudioDecoderConfigurationRecord.AC_4_ID);
 
     //ac-4 sync frame header
     private final byte[] ac4header = {(byte) 0xAC, 0x40, (byte) 0xFF, (byte) 0xFF, 0x00, 0x00, 0x00};
@@ -274,11 +276,10 @@ public class MMTFragmentWriter {
             int headerDiff = Atsc3RingBuffer.RING_BUFFER_PAGE_HEADER_SIZE - MMTConstants.SIZE_SAMPLE_HEADER;
 
             if (sampleType == MMTConstants.TRACK_TYPE_AUDIO) {
-
                 MMTAudioDecoderConfigurationRecord mmtAudioDecoderConfigurationRecord = audioConfigurationMap.get(packet_id);
 
                 //check if our packet_id flow is ac-4, and prepend sync frame header as needed
-                if (mmtAudioDecoderConfigurationRecord != null && getIntegerCodeForString(MMTAudioDecoderConfigurationRecord.AC_4_ID) == getIntegerCodeForString(mmtAudioDecoderConfigurationRecord.asset_type)) {
+                if (mmtAudioDecoderConfigurationRecord != null && getIntegerCodeForString(mmtAudioDecoderConfigurationRecord.asset_type) == AC_4_CODE) {
                     headerDiff -= ac4header.length;
 
                     ac4header[4] = (byte) (pageSize >> 16 & 0xFF);
@@ -550,7 +551,6 @@ public class MMTFragmentWriter {
     /**
      * Copied from ExoPlayer/Utils.java
      */
-
     private static int getIntegerCodeForString(String string) {
         int length = string.length();
         if (length > 4) throw new IllegalArgumentException();
