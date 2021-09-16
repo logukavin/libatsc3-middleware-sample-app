@@ -2,9 +2,13 @@ package com.nextgenbroadcast.mobile.middleware
 
 import android.content.Context
 import android.provider.Settings
+import android.util.Log
 import android.widget.Toast
 import androidx.work.WorkManager
 import com.google.firebase.installations.FirebaseInstallations
+import com.lyft.kronos.AndroidClockFactory
+import com.lyft.kronos.DefaultParam
+import com.lyft.kronos.SyncListener
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.middleware.analytics.Atsc3Analytics
 import com.nextgenbroadcast.mobile.middleware.analytics.scheduler.AnalyticScheduler
@@ -23,7 +27,7 @@ import com.nextgenbroadcast.mobile.middleware.provider.esg.ESGContentAuthority
 import com.nextgenbroadcast.mobile.middleware.settings.MiddlewareSettingsImpl
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collect
-import java.io.File
+import java.util.concurrent.TimeUnit
 
 internal object Atsc3ReceiverStandalone {
     private const val REPOSITORY_PREFERENCE = "${BuildConfig.LIBRARY_PACKAGE_NAME}.preference"
@@ -45,7 +49,29 @@ internal object Atsc3ReceiverStandalone {
     }
 
     private fun newInstance(appContext: Context): Atsc3ReceiverCore {
-        val atsc3Module = Atsc3Module(appContext.cacheDir)
+        Log.i("KronosClock","before AndroidClockFactory.createKronosClock")
+        val kronosClock = AndroidClockFactory.createKronosClock(
+            appContext,
+            object : SyncListener {
+                override fun onError(host: String, throwable: Throwable) {
+                    Log.e("KronosClock", "onError: host: $host, throwable: $throwable")
+                }
+
+                override fun onStartSync(host: String) {
+                    Log.i("KronosClock", "onStartSync: host: $host")
+                }
+
+                override fun onSuccess(ticksDelta: Long, responseTimeMs: Long) {
+                    Log.i("KronosClock", "onSuccess: ticksDelta: $ticksDelta, responseTimeMs: $responseTimeMs")
+                }
+            },
+            DefaultParam.NTP_HOSTS,
+            TimeUnit.SECONDS.toMillis(5)
+        ).apply {
+            syncInBackground()
+        }
+
+        val atsc3Module = Atsc3Module(appContext.cacheDir, kronosClock)
 
         val preferences = appContext.getSharedPreferences(REPOSITORY_PREFERENCE, Context.MODE_PRIVATE)
         val settings = MiddlewareSettingsImpl(preferences).also { settings ->

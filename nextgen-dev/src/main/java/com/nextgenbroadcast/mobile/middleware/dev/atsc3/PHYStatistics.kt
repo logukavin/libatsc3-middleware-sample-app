@@ -9,4 +9,5 @@ object PHYStatistics {
 
     var PHYRfStatistics: String = ""
     var PHYBWStatistics: String = ""
+    var PHYL1dTimingStatistics: String = ""
 }
