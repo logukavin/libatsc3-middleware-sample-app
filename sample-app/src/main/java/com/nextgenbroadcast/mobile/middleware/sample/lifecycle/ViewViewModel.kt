@@ -97,7 +97,7 @@ class ViewViewModel(
                 } ?: records
             } else {
                 groupName?.let { name ->
-                    val singleGroupName = name.split(" ")[0]
+                    val singleGroupName = name.split(" ").first()
                     single[singleGroupName]?.addAll(records) ?: let {
                         single[singleGroupName] = records.toMutableList()
                     }
@@ -121,8 +121,8 @@ class ViewViewModel(
             .filter { it.isNotBlank() }
             .run {
                 getOrNull(1)?.let {
-                    get(0) + " " + it
-                } ?: getOrNull(0)
+                    first() + " " + it
+                } ?: firstOrNull()
             }
     }
 

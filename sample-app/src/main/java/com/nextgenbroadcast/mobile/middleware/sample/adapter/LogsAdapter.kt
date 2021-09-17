@@ -1,6 +1,5 @@
 package com.nextgenbroadcast.mobile.middleware.sample.adapter
 
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -56,11 +55,7 @@ class LogsAdapter(
         }
     }
 
-    override fun onBindViewHolder(
-        holder: LogViewHolder,
-        position: Int,
-        payloads: List<Any>
-    ) {
+    override fun onBindViewHolder(holder: LogViewHolder, position: Int, payloads: List<Any>) {
         val enabled = payloads.getOrNull(0) as? Boolean
         if (holder is RecordHolder && enabled != null) {
             holder.binding.enableDebuggingInformation.isChecked = enabled
