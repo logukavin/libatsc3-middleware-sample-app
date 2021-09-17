@@ -1,6 +1,7 @@
 package com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi
 
 import com.nextgenbroadcast.mobile.middleware.gateway.rpc.IRPCGateway
+import com.nextgenbroadcast.mobile.middleware.rpc.RpcException
 import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.*
 
 class ReceiverQueryApiImpl(
@@ -44,7 +45,9 @@ class ReceiverQueryApiImpl(
     }
 
     override fun queryReceiverWebServerURI(): BaseURIRpcResponse {
-        return BaseURIRpcResponse()
+        return gateway.currentAppBaseUrl?.let {
+            BaseURIRpcResponse(it)
+        } ?: throw RpcException()
     }
 
     override fun queryAlertingSignaling(alertingTypes: List<String>): AlertingSignalingRpcResponse {

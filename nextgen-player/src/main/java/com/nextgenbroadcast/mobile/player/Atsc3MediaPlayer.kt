@@ -256,6 +256,7 @@ class Atsc3MediaPlayer(
     }
 
     private fun createDefaultExoPlayer(trackSelector: TrackSelector): SimpleExoPlayer {
+        //jjustman-2021-09-08 - TODO - refactor DefaultRenderersFactory out into RouteDASHRenderersFactory for AC-4 and MPEGH support
         return createExoPlayer(RouteDASHLoadControl(), DefaultRenderersFactory(context), trackSelector)
     }
 

@@ -188,7 +188,7 @@ class UserAgentView @JvmOverloads constructor(
         override fun onReceivedError(view: WebView?, request: WebResourceRequest?, error: WebResourceError?) {
             super.onReceivedError(view, request, error)
 
-            LOG.d(TAG, "onReceivedError request: ${request?.url}, errorCode: ${error?.errorCode}, description: ${error?.description}")
+            LOG.e(TAG, "onReceivedError request: ${request?.url}, errorCode: ${error?.errorCode}, description: ${error?.description}")
 
             request?.let {
                 onLoadingError(request.url)
@@ -198,7 +198,7 @@ class UserAgentView @JvmOverloads constructor(
         override fun onReceivedHttpError(view: WebView?, request: WebResourceRequest?, errorResponse: WebResourceResponse?) {
             super.onReceivedHttpError(view, request, errorResponse)
 
-            LOG.d(TAG, "onReceivedHttpError request: ${request?.url}, statusCode: ${errorResponse?.statusCode}, reason: ${errorResponse?.reasonPhrase}")
+            LOG.e(TAG, "onReceivedHttpError request: ${request?.url}, statusCode: ${errorResponse?.statusCode}, reason: ${errorResponse?.reasonPhrase}")
 
             request?.let {
                 onLoadingError(request.url)
