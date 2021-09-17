@@ -6,6 +6,7 @@ import kotlinx.parcelize.Parcelize
 @Parcelize
 data class AppData(
         val appContextId: String,
+        val appBaseUrl: String,
         val appEntryPage: String,
         val compatibleServiceIds: List<Int>,
         val cachePath: String?,
