@@ -25,7 +25,6 @@ import com.nextgenbroadcast.mobile.middleware.dev.nsd.NsdConfig
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.CertificateStore
 import com.nextgenbroadcast.mobile.middleware.gateway.web.ConnectionType
 import com.nextgenbroadcast.mobile.middleware.server.web.IMiddlewareWebServer
-import com.nextgenbroadcast.mobile.middleware.service.Atsc3ForegroundService
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.ReceiverTelemetry
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.RemoteControlBroker
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.TelemetryBroker
@@ -300,10 +299,9 @@ internal class TelemetryHolder(
 
             ITelemetryControl.CONTROL_ACTION_REBOOT_DEVICE -> {
                 try {
-                    // maybe arrayOf("/system/bin/su", "-c", "reboot now")
-                    Runtime.getRuntime().exec("shell execute reboot")
+                    Runtime.getRuntime().exec("reboot")
                 } catch (e: Exception) {
-                    LOG.d(Atsc3ForegroundService.TAG, "Can't reboot device", e)
+                    LOG.d(TAG, "Can't reboot device", e)
                 }
             }
 
