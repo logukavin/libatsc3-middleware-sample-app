@@ -1,15 +1,19 @@
 package com.nextgenbroadcast.mobile.middleware.sample.settings
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.*
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import com.google.android.material.tabs.TabLayoutMediator
 import com.nextgenbroadcast.mobile.middleware.sample.R
 import com.nextgenbroadcast.mobile.middleware.sample.databinding.DialogSettingsBinding
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.ViewViewModel
+import com.nextgenbroadcast.mobile.middleware.sample.settings.SettingsDialog.SettingsPage.*
+import kotlin.system.exitProcess
 
 
 class SettingsDialog : DialogFragment() {
@@ -46,6 +50,26 @@ class SettingsDialog : DialogFragment() {
         }.attach()
         setChildFragmentResultListener(REQUEST_KEY_SCAN_RANGE, ::setFragmentResultAndDismiss)
         setChildFragmentResultListener(REQUEST_KEY_FREQUENCY, ::setFragmentResultAndDismiss)
+        setChildFragmentResultListener(REQUEST_KEY_APPLY_CONFIG) { _, _ -> showReloadAppDialog() }
+    }
+
+    private fun showReloadAppDialog() {
+        AlertDialog.Builder(requireContext())
+            .setTitle(R.string.dialog_reload_title)
+            .setMessage(R.string.dialog_reload_message)
+            .setPositiveButton(R.string.dialog_reload_positive) { _, _ ->
+                triggerRebirth()
+            }
+            .setNegativeButton(R.string.dialog_reload_negative, null).show()
+    }
+
+    private fun triggerRebirth() {
+        val activity = requireActivity()
+        val component = activity.packageManager.getLaunchIntentForPackage(activity.packageName)
+            ?.component
+            ?: return // null means unable to determine default activity
+        activity.startActivity(Intent.makeRestartActivityTask(component))
+        exitProcess(0)
     }
 
     private fun setChildFragmentResultListener(key: String, listener: (String, Bundle) -> Unit) {
@@ -57,24 +81,42 @@ class SettingsDialog : DialogFragment() {
         dismiss()
     }
 
-    private inner class SettingsPagerAdapter : FragmentStateAdapter(this) {
+    enum class SettingsPage {
+        Tune,
+        UI,
+        Telemetry,
+        Logs,
+        Config;
 
-        override fun getItemCount(): Int = DIALOG_TAB_COUNT
+        companion object {
 
-        fun getTabName(position: Int): String = when (position) {
-            0 -> getString(R.string.settings_tab_tune)
-            1 -> getString(R.string.settings_tab_ui)
-            2 -> getString(R.string.settings_tab_telemetry)
-            3 -> getString(R.string.settings_tab_logs)
-            else -> throw IllegalArgumentException("Unknown position $position")
+            fun getOrNull(ordinal: Int): SettingsPage? {
+                return values().getOrNull(ordinal)
+            }
         }
 
-        override fun createFragment(position: Int): Fragment = when (position) {
-            0 -> TuneSettingsFragment().apply { arguments = this@SettingsDialog.arguments }
-            1 -> UISettingsFragment()
-            2 -> TelemetrySettingsFragment()
-            3 -> LogsSettingsFragment()
-            else -> throw IllegalArgumentException(
+    }
+
+    private inner class SettingsPagerAdapter : FragmentStateAdapter(this) {
+
+        override fun getItemCount(): Int = SettingsPage.values().size
+
+        fun getTabName(position: Int): String = when (SettingsPage.getOrNull(position)) {
+            Tune -> getString(R.string.settings_tab_tune)
+            UI -> getString(R.string.settings_tab_ui)
+            Telemetry -> getString(R.string.settings_tab_telemetry)
+            Logs -> getString(R.string.settings_tab_logs)
+            Config -> getString(R.string.settings_tab_config)
+            null -> throw IllegalArgumentException("Unknown position $position")
+        }
+
+        override fun createFragment(position: Int): Fragment = when (SettingsPage.getOrNull(position)) {
+            Tune -> TuneSettingsFragment().apply { arguments = this@SettingsDialog.arguments }
+            UI -> UISettingsFragment()
+            Telemetry -> TelemetrySettingsFragment()
+            Logs -> LogsSettingsFragment()
+            Config -> ConfigSettingsFragment()
+            null -> throw IllegalArgumentException(
                 "Unable to create instance of Fragment for position $position"
             )
         }
@@ -88,8 +130,7 @@ class SettingsDialog : DialogFragment() {
 
         const val REQUEST_KEY_FREQUENCY = "requestKey_frequency"
         const val REQUEST_KEY_SCAN_RANGE = "requestKey_scan_range"
-
-        private const val DIALOG_TAB_COUNT = 4
+        const val REQUEST_KEY_APPLY_CONFIG = "requestKey_dismiss"
 
         fun newInstance(freqKhz: Int?): SettingsDialog {
             return SettingsDialog().apply {
