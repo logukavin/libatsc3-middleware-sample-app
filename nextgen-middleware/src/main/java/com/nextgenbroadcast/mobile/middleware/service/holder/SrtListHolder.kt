@@ -25,12 +25,17 @@ class SrtListHolder(
         }
     }
 
-    fun getDefaultRoutes(): String? {
-        val list = externalSrtServices.filter { source ->
-            source.isDefault
-        }
-        return if (list.isNotEmpty()) {
-            list.joinToString("\n") { source ->
+    fun getDefaultRoutes(): String? = externalSrtServices.filter { source ->
+        source.isDefault
+    }.joinPathsOrNull()
+
+    fun getPoolRoutes(): String? = externalSrtServices.filter { source ->
+        source.isPool
+    }.joinPathsOrNull()
+
+    private fun List<RouteUrl>.joinPathsOrNull(): String? {
+        return if (isNotEmpty()) {
+            joinToString(SRT_PATH_SEPARATOR) { source ->
                 source.path
             }
         } else null
@@ -42,6 +47,8 @@ class SrtListHolder(
 
     companion object {
         val TAG: String = SrtListHolder::class.java.simpleName
+
+        const val SRT_PATH_SEPARATOR = "\n"
 
         val sourceList = listOf(
             RouteUrl(
