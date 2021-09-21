@@ -7,6 +7,7 @@ import com.jjoe64.graphview.series.DataPoint
 import com.jjoe64.graphview.series.LineGraphSeries
 import com.nextgenbroadcast.mobile.middleware.dev.chart.TemporalChartView
 import com.nextgenbroadcast.mobile.middleware.scoreboard.R
+import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.TDataPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -40,7 +41,7 @@ class PhyChart @JvmOverloads constructor(
     }
 
     class DataSource(
-        private val flow: Flow<Pair<Long, Double>>,
+        private val flow: Flow<TDataPoint>,
     ) : TemporalDataSource(VISIBLE_PERIOD) {
         private var graphSeries = LineGraphSeries<DataPoint>()
         private var sourceJob: Job? = null
@@ -50,7 +51,7 @@ class PhyChart @JvmOverloads constructor(
 
             sourceJob = CoroutineScope(Dispatchers.Main).launch {
                 flow.collect { (time, value) ->
-                    addValue(graphSeries, min(max(SNR_MIN_VALUE, value), SNR_MAX_VALUE), time)
+                    addValue(graphSeries, min(max(SNR_MIN_VALUE, value / 1000), SNR_MAX_VALUE), time)
                 }
             }
         }

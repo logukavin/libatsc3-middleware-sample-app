@@ -8,20 +8,14 @@ import android.view.ViewGroup
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
-import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.*
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
-import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.middleware.scoreboard.databinding.FragmentScoreboardBinding
-import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.PhyPayload
+import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.TDataPoint
 import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.TelemetryDevice
 import com.nextgenbroadcast.mobile.middleware.scoreboard.view.DeviceItemView
 import kotlinx.coroutines.flow.*
 
 class ScoreboardFragment : Fragment() {
-    private val gson = Gson()
-    private val phyType = object : TypeToken<PhyPayload>() {}.type
     private val sharedViewModel by activityViewModels<SharedViewModel>()
 
     private lateinit var deviceAdapter: DeviceListAdapter
@@ -36,20 +30,7 @@ class ScoreboardFragment : Fragment() {
         super.onAttach(context)
 
         deviceAdapter = DeviceListAdapter(layoutInflater, selectChartListener) { device ->
-            val deviceId = device.id
-            sharedViewModel.getDeviceFlow(deviceId)
-                ?.shareIn(lifecycleScope, SharingStarted.Lazily, 100)
-                ?.mapNotNull { event ->
-                    try {
-                        val payload = gson.fromJson<PhyPayload>(event.payload, phyType)
-                        val payloadValue = payload.stat.snr1000_global.toDouble() / 1000
-                        val timestamp = payload.timeStamp
-                        Pair(timestamp, payloadValue)
-                    } catch (e: Exception) {
-                        LOG.w(TAG, "Can't parse telemetry event payload", e)
-                        null
-                    }
-                }
+            sharedViewModel.getDeviceFlow(device.id)
         }
     }
 
@@ -76,7 +57,7 @@ class ScoreboardFragment : Fragment() {
     class DeviceListAdapter(
         private val inflater: LayoutInflater,
         private val selectChartListener: ISelectChartListener,
-        private val getFlowForDevice: (TelemetryDevice) -> Flow<Pair<Long, Double>>?
+        private val getFlowForDevice: (TelemetryDevice) -> Flow<TDataPoint>?
     ) : ListAdapter<TelemetryDevice, DeviceListAdapter.Holder>(DIFF_CALLBACK) {
 
         private var selectedChartId: String? = null

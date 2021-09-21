@@ -9,11 +9,16 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.viewpager2.adapter.FragmentStateAdapter
+import androidx.viewpager2.widget.ViewPager2
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 import com.nextgenbroadcast.mobile.middleware.scoreboard.databinding.ActivityScoreboardBinding
+import com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry.mapToDataPoint
+import com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry.mapToEvent
+import com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry.sampleTelemetry
 import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.*
+import java.util.concurrent.TimeUnit
 
 class ScoreboardPagerActivity : FragmentActivity(), ServiceConnection {
     private val sharedViewModel: SharedViewModel by viewModels()
@@ -33,6 +38,11 @@ class ScoreboardPagerActivity : FragmentActivity(), ServiceConnection {
         pagerAdapter = PagerAdapter(this)
         binding.viewPager.offscreenPageLimit = 2
         binding.viewPager.adapter = pagerAdapter
+        binding.viewPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
+            override fun onPageSelected(position: Int) {
+                binding.viewPager.keepScreenOn = (Pages.getOrNull(position) == Pages.Charts)
+            }
+        })
 
         val tabLayout = findViewById<TabLayout>(R.id.tab_layout)
         TabLayoutMediator(tabLayout, binding.viewPager) { tab, position ->
@@ -44,6 +54,10 @@ class ScoreboardPagerActivity : FragmentActivity(), ServiceConnection {
             devices?.mapNotNull { deviceId ->
                 binder.connectDevice(deviceId)?.let { flow ->
                     deviceId to flow
+                        .mapToEvent()
+                        .mapToDataPoint()
+                        .sampleTelemetry(lifecycleScope, TELEMETRY_SAMPLE_DELAY, TELEMETRY_AUTOFILL_DELAY)
+                        .shareIn(lifecycleScope, SharingStarted.Lazily, 100)
                 }
             }?.let {
                 sharedViewModel.addFlows(it)
@@ -131,32 +145,40 @@ class ScoreboardPagerActivity : FragmentActivity(), ServiceConnection {
         serviceBinder = null
     }
 
-    private fun getTabName(position: Int): CharSequence {
-        val titleStringResource = when (position) {
-            0 -> R.string.command_tab_title
-            1 -> R.string.devices_tab_title
-            else -> R.string.chart_tab_title
+    private fun getTabName(position: Int): CharSequence = getString(when (Pages.getOrNull(position)) {
+        Pages.Commands -> R.string.command_tab_title
+        Pages.Devices -> R.string.devices_tab_title
+        Pages.Charts -> R.string.chart_tab_title
+        null -> throw IllegalArgumentException("Wrong Fragment index: $position")
+    })
+
+    private enum class Pages {
+        Commands, Devices, Charts;
+
+        companion object {
+            fun size() = values().size
+            fun getOrNull(index: Int) = values().getOrNull(index)
         }
-        return getString(titleStringResource)
     }
 
     class PagerAdapter(
         activity: FragmentActivity
     ) : FragmentStateAdapter(activity) {
 
-        override fun getItemCount(): Int = 3
+        override fun getItemCount(): Int = Pages.size()
 
-        override fun createFragment(position: Int): Fragment {
-            return when (position) {
-                0 -> CommandFragment()
-                1 -> ScoreboardSettingsFragment()
-                2 -> ScoreboardFragment()
-                else -> throw IllegalArgumentException("Wrong Fragment index: $position")
-            }
+        override fun createFragment(position: Int): Fragment = when (Pages.getOrNull(position)) {
+            Pages.Commands -> CommandFragment()
+            Pages.Devices -> ScoreboardSettingsFragment()
+            Pages.Charts -> ScoreboardFragment()
+            null -> throw IllegalArgumentException("Wrong Fragment index: $position")
         }
     }
 
     companion object {
         private val TAG = ScoreboardPagerActivity::class.java.simpleName
+
+        private val TELEMETRY_SAMPLE_DELAY = TimeUnit.SECONDS.toMillis(1)
+        private val TELEMETRY_AUTOFILL_DELAY = TimeUnit.SECONDS.toMillis(5)
     }
 }

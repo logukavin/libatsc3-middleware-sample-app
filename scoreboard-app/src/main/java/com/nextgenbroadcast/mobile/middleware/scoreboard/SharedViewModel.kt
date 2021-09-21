@@ -1,14 +1,14 @@
 package com.nextgenbroadcast.mobile.middleware.scoreboard
 
 import androidx.lifecycle.*
-import com.nextgenbroadcast.mobile.middleware.dev.telemetry.entity.ClientTelemetryEvent
+import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.TDataPoint
 import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.TelemetryDevice
 import kotlinx.coroutines.flow.Flow
 
 class SharedViewModel : ViewModel() {
     private val _deviceList: MutableLiveData<List<TelemetryDevice>> = MutableLiveData(emptyList())
     private val _chartDevices = MutableLiveData<List<String>>(emptyList())
-    private val _deviceFlowMap = MutableLiveData<Map<String, Flow<ClientTelemetryEvent>>>(emptyMap())
+    private val _deviceFlowMap = MutableLiveData<Map<String, Flow<TDataPoint>>>(emptyMap())
 
     val devicesToAdd = _chartDevices.mapWith(_deviceFlowMap) { (devices, deviceToFlow) ->
         devices?.subtract(deviceToFlow?.keys ?: emptyList())
@@ -66,7 +66,7 @@ class SharedViewModel : ViewModel() {
         }
     }
 
-    fun addFlows(list: List<Pair<String, Flow<ClientTelemetryEvent>>>) {
+    fun addFlows(list: List<Pair<String, Flow<TDataPoint>>>) {
         val map = _deviceFlowMap.value?.toMutableMap() ?: mutableMapOf()
         list.forEach { (deviceId, flow) ->
             map[deviceId] = flow
@@ -74,7 +74,7 @@ class SharedViewModel : ViewModel() {
         _deviceFlowMap.postValue(map)
     }
 
-    fun addFlow(deviceId: String, flow: Flow<ClientTelemetryEvent>) {
+    fun addFlow(deviceId: String, flow: Flow<TDataPoint>) {
         val map = _deviceFlowMap.value?.toMutableMap() ?: mutableMapOf()
         map[deviceId] = flow
         _deviceFlowMap.postValue(map)
@@ -94,7 +94,7 @@ class SharedViewModel : ViewModel() {
         _deviceFlowMap.postValue(map)
     }
 
-    fun getDeviceFlow(deviceId: String): Flow<ClientTelemetryEvent>? {
+    fun getDeviceFlow(deviceId: String): Flow<TDataPoint>? {
         return _deviceFlowMap.value?.get(deviceId)
     }
 
