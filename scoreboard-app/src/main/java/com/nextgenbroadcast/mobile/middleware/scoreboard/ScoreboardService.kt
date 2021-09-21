@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.os.Binder
+import android.os.Bundle
 import android.os.IBinder
 import android.util.Log
 import android.widget.RemoteViews
@@ -13,11 +14,17 @@ import com.google.firebase.installations.FirebaseInstallations
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.nextgenbroadcast.mobile.core.LOG
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.entity.BatteryDataParcel
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.entity.ClientTelemetryEvent
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.entity.RfPhyStatisticsParcel
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.entity.TelemetryEvent
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.reader.BatteryData
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.writer.VuzixPhyTelemetryWriter
 import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.PhyPayload
 import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.TelemetryDevice
 import com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry.DatagramSocketWrapper
 import com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry.TelemetryManager
+import com.vuzix.connectivity.sdk.Connectivity
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.*
@@ -27,6 +34,7 @@ import java.util.*
 class ScoreboardService : Service() {
     private val gson = Gson()
     private val phyType = object : TypeToken<PhyPayload>() {}.type
+    private val batteryType = object : TypeToken<BatteryData>() {}.type
     private val deviceIds = MutableStateFlow<List<TelemetryDevice>>(emptyList())
     private val selectedDeviceId = MutableStateFlow<String?>(null)
     private val commandBackLogFlow = MutableSharedFlow<String>(1, 5, BufferOverflow.DROP_OLDEST)
@@ -37,6 +45,9 @@ class ScoreboardService : Service() {
     }
     private val notificationManager by lazy {
         getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+    }
+    private val connectivity by lazy {
+        Connectivity.get(this)
     }
 
     private lateinit var telemetryManager: TelemetryManager
@@ -173,6 +184,8 @@ class ScoreboardService : Service() {
                 socketJob = CoroutineScope(Dispatchers.IO).launch {
                     telemetryManager.getFlow(device)?.collect { event ->
                         try {
+                            sendVuzixEvent(event, deviceId)
+
                             val payload = gson.fromJson<PhyPayload>(event.payload, phyType)
                             val payloadValue = payload.stat.snr1000_global
                             socket.sendUdpMessage("${deviceId},${payload.timeStamp},$payloadValue")
@@ -182,6 +195,46 @@ class ScoreboardService : Service() {
                     }
                 }
             }
+        }
+    }
+
+    private fun sendVuzixEvent(event: ClientTelemetryEvent, deviceId: String) {
+        if (!connectivity.isAvailable || !connectivity.isLinked) return
+        var eventTimeStamp:Long = 0
+
+        when (event.topic) {
+            TelemetryEvent.EVENT_TOPIC_PHY -> {
+                gson.fromJson<PhyPayload>(event.payload, phyType)?.let {
+                    eventTimeStamp = it.timeStamp
+                    RfPhyStatisticsParcel(it.stat)
+                }
+            }
+
+            TelemetryEvent.EVENT_TOPIC_BATTERY -> {
+                gson.fromJson<BatteryData>(event.payload, batteryType)?.let {
+                    eventTimeStamp = it.timeStamp
+                    BatteryDataParcel(it.level)
+                }
+            }
+
+            else -> null
+        }?.let { payload ->
+            val bundle = Bundle().apply {
+                putString(VuzixPhyTelemetryWriter.EXTRA_DEVICE_ID, deviceId)
+                putString(VuzixPhyTelemetryWriter.EXTRA_TYPE, event.topic)
+                putLong(VuzixPhyTelemetryWriter.EXTRA_TIMESTAMP, eventTimeStamp)
+                putParcelable(VuzixPhyTelemetryWriter.EXTRA_PAYLOAD, payload)
+            }
+
+            try {
+                connectivity.sendBroadcast(Intent(VuzixPhyTelemetryWriter.ACTION).apply {
+                    setPackage(VuzixPhyTelemetryWriter.PACKAGE)
+                    replaceExtras(bundle)
+                })
+            } catch (e: Exception) {
+                LOG.e(TAG, "Failed to publish with Vuzix connectivity", e)
+            }
+
         }
     }
 

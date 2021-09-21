@@ -69,12 +69,12 @@ class VuzixPhyTelemetryWriter(
     companion object {
         val TAG: String = VuzixPhyTelemetryWriter::class.java.simpleName
 
-        private const val PACKAGE = "com.nextgen.vuzixmonitor"
-        private const val ACTION = "$PACKAGE.action.TELEMETRY"
+        const val PACKAGE = "com.nextgen.vuzixmonitor"
+        const val ACTION = "$PACKAGE.action.TELEMETRY"
 
-        private const val EXTRA_DEVICE_ID = "extra_device_id"
-        private const val EXTRA_TYPE = "extra_type"
-        private const val EXTRA_TIMESTAMP = "extra_timestamp"
-        private const val EXTRA_PAYLOAD = "extra_payload"
+        const val EXTRA_DEVICE_ID = "extra_device_id"
+        const val EXTRA_TYPE = "extra_type"
+        const val EXTRA_TIMESTAMP = "extra_timestamp"
+        const val EXTRA_PAYLOAD = "extra_payload"
     }
 }
