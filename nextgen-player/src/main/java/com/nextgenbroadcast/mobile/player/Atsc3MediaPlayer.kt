@@ -20,11 +20,11 @@ import com.google.android.exoplayer2.util.Util
 import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTLoadControl
 import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTMediaSource
 import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTRenderersFactory
+import com.nextgenbroadcast.mobile.core.exception.ServiceNotFoundException
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.player.exoplayer.Atsc3MMTExtractor
 import com.nextgenbroadcast.mobile.player.exoplayer.RouteDASHLoadControl
 import kotlinx.coroutines.*
-import java.io.FileNotFoundException
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 
@@ -278,8 +278,8 @@ class Atsc3MediaPlayer(
                 override fun onPlayerError(error: ExoPlaybackException) {
                     listener?.onPlayerError(error)
 
-                    // Do not retry if source media file not found
-                    if (isContentDataSourceFileNotFoundException(error.cause)) {
+                    // Do not retry if source media service not found
+                    if (isContentDataSourceServiceNotFoundException(error.cause)) {
                         return
                     }
 
@@ -317,7 +317,7 @@ class Atsc3MediaPlayer(
             override fun getRetryDelayMsFor(dataType: Int, loadDurationMs: Long, exception: IOException?, errorCount: Int): Long {
                 Log.w("ExoPlayerMMTLoadErrorHandlingPolicy", "dataType: $dataType, loadDurationMs: $loadDurationMs, exception ex: $exception, errorCount: $errorCount")
 
-                if (isContentDataSourceFileNotFoundException(exception)) {
+                if (isContentDataSourceServiceNotFoundException(exception)) {
                     return C.TIME_UNSET
                 }
 
@@ -326,9 +326,9 @@ class Atsc3MediaPlayer(
         }
     }
 
-    private fun isContentDataSourceFileNotFoundException(exception: Throwable?): Boolean {
+    private fun isContentDataSourceServiceNotFoundException(exception: Throwable?): Boolean {
         if (exception is ContentDataSource.ContentDataSourceException) {
-            if (exception.cause is FileNotFoundException) {
+            if (exception.cause is ServiceNotFoundException) {
                 return true
             }
         }

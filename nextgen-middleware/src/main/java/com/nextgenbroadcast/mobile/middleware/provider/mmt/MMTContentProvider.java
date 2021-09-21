@@ -17,6 +17,7 @@ import androidx.annotation.Nullable;
 
 import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTClockAnchor;
 import com.nextgenbroadcast.mobile.core.LOG;
+import com.nextgenbroadcast.mobile.core.exception.ServiceNotFoundException;
 import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverStandalone;
 import com.nextgenbroadcast.mobile.player.MMTConstants;
 import com.nextgenbroadcast.mobile.core.model.AVService;
@@ -155,7 +156,7 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
 
         final AVService service = getServiceForUri(uri);
         if (service == null) {
-            throw new FileNotFoundException("Unable to find service for " + uri);
+            throw new ServiceNotFoundException("Unable to find service for " + uri);
         }
 
         boolean audioOnly = service.getCategory() == SLTConstants.SERVICE_CATEGORY_AO;
