@@ -5,6 +5,7 @@ import android.util.AttributeSet
 import android.widget.TextView
 import androidx.constraintlayout.widget.ConstraintLayout
 import com.nextgenbroadcast.mobile.middleware.scoreboard.R
+import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.TDataPoint
 import kotlinx.coroutines.flow.Flow
 
 class DeviceItemView @JvmOverloads constructor(
@@ -24,7 +25,7 @@ class DeviceItemView @JvmOverloads constructor(
         phyChart = findViewById(R.id.device_phy_chart)
     }
 
-    fun observe(flow: Flow<Pair<Long, Double>>?) {
+    fun observe(flow: Flow<TDataPoint>?) {
         phyChart.setDataSource(
             flow?.let {
                 PhyChart.DataSource(it)

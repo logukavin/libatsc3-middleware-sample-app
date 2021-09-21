@@ -5,26 +5,19 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.os.Binder
-import android.os.Bundle
 import android.os.IBinder
-import android.util.Log
 import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
 import com.google.firebase.installations.FirebaseInstallations
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 import com.nextgenbroadcast.mobile.core.LOG
-import com.nextgenbroadcast.mobile.middleware.dev.telemetry.entity.BatteryDataParcel
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.entity.ClientTelemetryEvent
-import com.nextgenbroadcast.mobile.middleware.dev.telemetry.entity.RfPhyStatisticsParcel
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.entity.TelemetryEvent
-import com.nextgenbroadcast.mobile.middleware.dev.telemetry.reader.BatteryData
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.writer.VuzixPhyTelemetryWriter
-import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.PhyPayload
 import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.TelemetryDevice
 import com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry.DatagramSocketWrapper
 import com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry.TelemetryManager
-import com.vuzix.connectivity.sdk.Connectivity
+import com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry.mapToDataPoint
+import com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry.mapToEvent
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.*
@@ -32,22 +25,17 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 class ScoreboardService : Service() {
-    private val gson = Gson()
-    private val phyType = object : TypeToken<PhyPayload>() {}.type
-    private val batteryType = object : TypeToken<BatteryData>() {}.type
     private val deviceIds = MutableStateFlow<List<TelemetryDevice>>(emptyList())
     private val selectedDeviceId = MutableStateFlow<String?>(null)
     private val commandBackLogFlow = MutableSharedFlow<String>(1, 5, BufferOverflow.DROP_OLDEST)
     private val dateFormat = SimpleDateFormat(COMMAND_DATE_FORMAT, Locale.US)
+    private val serviceScope = CoroutineScope(Dispatchers.IO)
 
     private val socket: DatagramSocketWrapper by lazy {
         DatagramSocketWrapper(applicationContext)
     }
     private val notificationManager by lazy {
         getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-    }
-    private val connectivity by lazy {
-        Connectivity.get(this)
     }
 
     private lateinit var telemetryManager: TelemetryManager
@@ -111,12 +99,6 @@ class ScoreboardService : Service() {
         startForeground(NOTIFICATION_ID, notification)
     }
 
-    private fun getNotificationDescription(): String {
-        val broadcastText = resources.getString(R.string.notification_broadcasting)
-        val deviceId = selectedDeviceId.value ?: resources.getString(R.string.notification_none)
-        return "$broadcastText $deviceId"
-    }
-
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
         when (intent.action) {
             ACTION_STOP -> stopSelf()
@@ -125,6 +107,28 @@ class ScoreboardService : Service() {
         }
 
         return START_NOT_STICKY
+    }
+
+    override fun onBind(intent: Intent): IBinder {
+        return ScoreboardBinding()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+
+        serviceScope.cancel()
+
+        socketJob?.cancel("Stop service")
+
+        if (this::telemetryManager.isInitialized) {
+            telemetryManager.stop()
+        }
+    }
+
+    private fun getNotificationDescription(): String {
+        val broadcastText = resources.getString(R.string.notification_broadcasting)
+        val deviceId = selectedDeviceId.value ?: resources.getString(R.string.notification_none)
+        return "$broadcastText $deviceId"
     }
 
     private fun sendCommand(intent: Intent) {
@@ -150,25 +154,11 @@ class ScoreboardService : Service() {
         }
     }
 
-    override fun onBind(intent: Intent): IBinder {
-        return ScoreboardBinding()
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-
-        socketJob?.cancel("Stop service")
-
-        if (this::telemetryManager.isInitialized) {
-            telemetryManager.stop()
-        }
-    }
-
     private fun createNotificationChannel() {
-        val channel = NotificationChannel(CHANNEL_ID,
-            CHANNEL_NAME, NotificationManager.IMPORTANCE_NONE)
-        channel.lightColor = Color.BLUE
-        channel.lockscreenVisibility = Notification.VISIBILITY_PRIVATE
+        val channel = NotificationChannel(CHANNEL_ID, CHANNEL_NAME, NotificationManager.IMPORTANCE_NONE).apply {
+            lightColor = Color.BLUE
+            lockscreenVisibility = Notification.VISIBILITY_PRIVATE
+        }
         notificationManager.createNotificationChannel(channel)
     }
 
@@ -181,60 +171,25 @@ class ScoreboardService : Service() {
 
         deviceId?.let {
             telemetryManager.getDeviceById(deviceId)?.let { device ->
-                socketJob = CoroutineScope(Dispatchers.IO).launch {
-                    telemetryManager.getFlow(device)?.collect { event ->
-                        try {
-                            sendVuzixEvent(event, deviceId)
+                socketJob = serviceScope.launch {
+                    telemetryManager.getFlow(device)?.mapToEvent()?.let { eventFlow ->
+                        launch {
+                            VuzixPhyTelemetryWriter(applicationContext, deviceId).write(eventFlow)
+                        }
 
-                            val payload = gson.fromJson<PhyPayload>(event.payload, phyType)
-                            val payloadValue = payload.stat.snr1000_global
-                            socket.sendUdpMessage("${deviceId},${payload.timeStamp},$payloadValue")
-                        } catch (e: Exception) {
-                            Log.w(TAG, "Can't parse telemetry event payload", e)
+                        launch {
+                            eventFlow
+                                .filter { event ->
+                                    event.topic == TelemetryEvent.EVENT_TOPIC_PHY
+                                }
+                                .mapToDataPoint()
+                                .collect { point ->
+                                    socket.sendUdpMessage("${deviceId},${point.timestamp},${point.value}")
+                                }
                         }
                     }
                 }
             }
-        }
-    }
-
-    private fun sendVuzixEvent(event: ClientTelemetryEvent, deviceId: String) {
-        if (!connectivity.isAvailable || !connectivity.isLinked) return
-        var eventTimeStamp:Long = 0
-
-        when (event.topic) {
-            TelemetryEvent.EVENT_TOPIC_PHY -> {
-                gson.fromJson<PhyPayload>(event.payload, phyType)?.let {
-                    eventTimeStamp = it.timeStamp
-                    RfPhyStatisticsParcel(it.stat)
-                }
-            }
-
-            TelemetryEvent.EVENT_TOPIC_BATTERY -> {
-                gson.fromJson<BatteryData>(event.payload, batteryType)?.let {
-                    eventTimeStamp = it.timeStamp
-                    BatteryDataParcel(it.level)
-                }
-            }
-
-            else -> null
-        }?.let { payload ->
-            val bundle = Bundle().apply {
-                putString(VuzixPhyTelemetryWriter.EXTRA_DEVICE_ID, deviceId)
-                putString(VuzixPhyTelemetryWriter.EXTRA_TYPE, event.topic)
-                putLong(VuzixPhyTelemetryWriter.EXTRA_TIMESTAMP, eventTimeStamp)
-                putParcelable(VuzixPhyTelemetryWriter.EXTRA_PAYLOAD, payload)
-            }
-
-            try {
-                connectivity.sendBroadcast(Intent(VuzixPhyTelemetryWriter.ACTION).apply {
-                    setPackage(VuzixPhyTelemetryWriter.PACKAGE)
-                    replaceExtras(bundle)
-                })
-            } catch (e: Exception) {
-                LOG.e(TAG, "Failed to publish with Vuzix connectivity", e)
-            }
-
         }
     }
 
@@ -285,7 +240,7 @@ class ScoreboardService : Service() {
                 getGlobalEventLogFlow()?.let { globalFlow ->
                     flowOf(globalFlow, commandBackLogFlow)
                         .flattenMerge()
-                        .shareIn(CoroutineScope(Dispatchers.IO), SharingStarted.Eagerly, 50)
+                        .shareIn(serviceScope, SharingStarted.Eagerly, 50)
                 }.also {
                     backLogFlow = it
                 }
