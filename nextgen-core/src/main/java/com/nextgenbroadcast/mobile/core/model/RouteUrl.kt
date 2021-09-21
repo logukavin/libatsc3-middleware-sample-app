@@ -4,5 +4,6 @@ data class RouteUrl (
     val id: String,
     val path: String,
     val title: String,
-    val isDefault: Boolean = false
+    val isDefault: Boolean = false,
+    val isPool: Boolean = false
 )

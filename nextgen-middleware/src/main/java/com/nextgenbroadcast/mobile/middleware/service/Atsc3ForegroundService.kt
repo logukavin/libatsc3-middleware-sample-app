@@ -11,7 +11,9 @@ import android.os.PowerManager.WakeLock
 import android.support.v4.media.MediaBrowserCompat
 import android.util.Log
 import androidx.core.content.ContextCompat
+import androidx.core.util.TimeUtils
 import com.nextgenbroadcast.mobile.core.MiddlewareConfig
+import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.middleware.*
@@ -22,12 +24,15 @@ import com.nextgenbroadcast.mobile.middleware.notification.AlertNotificationHelp
 import com.nextgenbroadcast.mobile.middleware.phy.Atsc3DeviceReceiver
 import com.nextgenbroadcast.mobile.middleware.server.web.IMiddlewareWebServer
 import com.nextgenbroadcast.mobile.middleware.service.holder.*
+import com.nextgenbroadcast.mobile.middleware.service.holder.SrtListHolder.Companion.SRT_PATH_SEPARATOR
 import com.nextgenbroadcast.mobile.middleware.service.init.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import java.lang.ref.WeakReference
 import java.util.*
+import java.util.concurrent.TimeUnit
 import kotlin.collections.ArrayList
+import kotlin.random.Random
 
 abstract class Atsc3ForegroundService : BindableForegroundService() {
     private val usbManager: UsbManager by lazy {
@@ -350,8 +355,33 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         }
 
         val sourcePath = srtListHolder.getDefaultRoutes()
+        val immutableSrtPool = srtListHolder.getPoolRoutes()
+            ?.split(SRT_PATH_SEPARATOR)
+            ?.takeIf { it.isNotEmpty() }
         if (sourcePath != null) {
             openRoute(applicationContext, sourcePath, false)
+        } else if (immutableSrtPool != null){
+            val random = Random(System.currentTimeMillis())
+            val srtPool = immutableSrtPool.toMutableList()
+            serviceScope.launch {
+                var services: List<AVService>? = null
+                while (isActive && services.isNullOrEmpty()) {
+                    if (srtPool.isEmpty()) {
+                        srtPool.addAll(immutableSrtPool)
+                    }
+                    val randomIndex = random.nextInt(srtPool.size)
+                    val srt = srtPool[randomIndex]
+                    srtPool.removeAt(randomIndex)
+                    openRoute(applicationContext, srt, false)
+                    services = withTimeoutOrNull(OPEN_TIMEOUT) {
+                        var connectionServices:  List<AVService>?
+                        do {
+                            connectionServices = atsc3Receiver.repository.services.firstOrNull()
+                        } while (isActive && connectionServices.isNullOrEmpty())
+                        connectionServices
+                    }
+                }
+            }
         }
     }
 
@@ -478,6 +508,8 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         val TAG: String = Atsc3ForegroundService::class.java.simpleName
 
         const val SERVICE_INTERFACE = "${BuildConfig.LIBRARY_PACKAGE_NAME}.INTERFACE"
+
+        private val OPEN_TIMEOUT = TimeUnit.SECONDS.toMillis(25L)
 
         private const val SERVICE_ACTION = "${BuildConfig.LIBRARY_PACKAGE_NAME}.intent.action"
 

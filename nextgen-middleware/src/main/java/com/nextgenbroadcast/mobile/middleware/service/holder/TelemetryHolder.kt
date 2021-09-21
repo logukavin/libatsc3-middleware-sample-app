@@ -45,8 +45,10 @@ import com.nextgenbroadcast.mobile.middleware.dev.telemetry.control.WebTelemetry
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.writer.WebTelemetryWriter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import org.ngbp.libatsc3.middleware.android.Atsc3NdkCoreLogs
 import java.io.IOException
 import kotlin.math.max
 import kotlin.math.min
@@ -55,8 +57,8 @@ import kotlin.system.exitProcess
 private typealias PrefsMap = Map<String, Boolean>
 
 internal class TelemetryHolder(
-        private val context: Context,
-        private val receiver: Atsc3ReceiverCore
+    private val context: Context,
+    private val receiver: Atsc3ReceiverCore
 ) {
     private val gson = Gson()
     private val sensorManager: SensorManager by lazy {
@@ -77,6 +79,11 @@ internal class TelemetryHolder(
     private val sharedPreferences: SharedPreferences by lazy {
         context.getSharedPreferences(SHARED_PREFERENCES_NAME, Context.MODE_PRIVATE)
     }
+    private val atsc3NdkCoreLogs by lazy {
+        Atsc3NdkCoreLogs().apply {
+            init()
+        }
+    }
 
     @Volatile
     private var isClosed = false
@@ -86,21 +93,23 @@ internal class TelemetryHolder(
     private var awsIoThing: AWSIoThing? = null
 
     private val _debugInfoSettings: MutableStateFlow<PrefsMap>
+    private val _logInfoSettings: MutableStateFlow<Map<String, Boolean>>
 
     init {
         _debugInfoSettings = MutableStateFlow(
-                readPrefsMap(PREF_DEBUG_INFO_KEY).toMutableMap().apply {
-                    if (isEmpty()) {
-                        put(ReceiverTelemetry.INFO_DEBUG, true)
-                    }
-                }.toMap()
-        ).also { flow ->
-            CoroutineScope(Dispatchers.Main).launch {
-                flow.collect { infoPrefs ->
-                    storePrefsMap(PREF_DEBUG_INFO_KEY, infoPrefs)
+            readPrefsMap(PREF_DEBUG_INFO_KEY).toMutableMap().apply {
+                if (isEmpty()) {
+                    put(ReceiverTelemetry.INFO_DEBUG, true)
                 }
-            }
+            }.toMap()
+        ).also { flow ->
+            flow.observeAndStore(PREF_DEBUG_INFO_KEY)
         }
+
+        _logInfoSettings = MutableStateFlow(initializeLogsInfoSettings())
+            .also { flow ->
+                flow.observeAndStore(PREF_LOG_INFO_KEY)
+            }
     }
 
     val debugInfoSettings = _debugInfoSettings.asStateFlow()
@@ -108,32 +117,34 @@ internal class TelemetryHolder(
         get() = telemetryBroker?.readersEnabled ?: MutableStateFlow(emptyMap())
     val telemetryDelay: StateFlow<Map<String, Long>>
         get() = telemetryBroker?.readersDelay ?: MutableStateFlow(emptyMap())
+    val logInfoSettings = _logInfoSettings.asStateFlow()
 
     @MainThread
     fun open() {
         if (telemetryBroker != null) return
 
         telemetryBroker = TelemetryBroker(
-                listOf(
-                        BatteryTelemetryReader(context),
-                        SensorTelemetryReader(sensorManager, Sensor.TYPE_LINEAR_ACCELERATION),
-                        SensorTelemetryReader(sensorManager, Sensor.TYPE_GYROSCOPE),
-                        SensorTelemetryReader(sensorManager, Sensor.TYPE_SIGNIFICANT_MOTION),
-                        SensorTelemetryReader(sensorManager, Sensor.TYPE_STEP_DETECTOR),
-                        SensorTelemetryReader(sensorManager, Sensor.TYPE_STEP_COUNTER),
-                        SensorTelemetryReader(sensorManager, Sensor.TYPE_ROTATION_VECTOR),
-                        GPSTelemetryReader(context),
-                        RfPhyTelemetryReader(receiver.rfPhyMetricsFlow)
-                ),
-                listOf(
-                        //AWSIoTelemetryWriter(thing),
-                        //FileTelemetryWriter(cacheDir, "telemetry.log")
-                ),
-                context.resources.getBoolean(R.bool.telemetryEnabled)
+            listOf(
+                BatteryTelemetryReader(context),
+                SensorTelemetryReader(sensorManager, Sensor.TYPE_LINEAR_ACCELERATION),
+                SensorTelemetryReader(sensorManager, Sensor.TYPE_GYROSCOPE),
+                SensorTelemetryReader(sensorManager, Sensor.TYPE_SIGNIFICANT_MOTION),
+                SensorTelemetryReader(sensorManager, Sensor.TYPE_STEP_DETECTOR),
+                SensorTelemetryReader(sensorManager, Sensor.TYPE_STEP_COUNTER),
+                SensorTelemetryReader(sensorManager, Sensor.TYPE_ROTATION_VECTOR),
+                GPSTelemetryReader(context),
+                RfPhyTelemetryReader(receiver.rfPhyMetricsFlow)
+            ),
+            listOf(
+                //AWSIoTelemetryWriter(thing),
+                //FileTelemetryWriter(cacheDir, "telemetry.log")
+            ),
+            context.resources.getBoolean(R.bool.telemetryEnabled)
         ).apply {
             //start() do not start Telemetry with application, use switch in Settings dialog or AWS command
         }.also { broker ->
-            val enabledReaderNames = readPrefsMap(PREF_PHY_INFO_KEY).filterValues { it }.keys.toList()
+            val enabledReaderNames =
+                readPrefsMap(PREF_PHY_INFO_KEY).filterValues { it }.keys.toList()
             if (enabledReaderNames.isNotEmpty()) {
                 broker.setReaderEnabled(true, enabledReaderNames)
             }
@@ -146,12 +157,12 @@ internal class TelemetryHolder(
         }
 
         remoteControl = RemoteControlBroker(
-                listOf(
-                        //AWSIoTelemetryControl(thing),
-                        //WebTelemetryControl(),
-                        UdpTelemetryControl(CONNECTION_HOST, CONNECTION_UDP_PORT)
-                ),
-                ::executeCommand
+            listOf(
+                //AWSIoTelemetryControl(thing),
+                //WebTelemetryControl(),
+                UdpTelemetryControl(CONNECTION_HOST, CONNECTION_UDP_PORT)
+            ),
+            ::executeCommand
         ).apply {
             start()
         }
@@ -210,6 +221,57 @@ internal class TelemetryHolder(
         telemetryBroker?.removeWriter(WebTelemetryWriter::class.java)
     }
 
+    fun setAtsc3LogEnabledByName(name: String, enabled: Boolean) {
+        val logEnabled = _logInfoSettings.value[name] ?: return
+        if (logEnabled != enabled) {
+            atsc3NdkCoreLogs.setLogEnabledByName(name, enabled)
+            _logInfoSettings.value = _logInfoSettings.value.toMutableMap().apply {
+                put(name, enabled)
+            }
+        }
+    }
+
+    private fun Flow<PrefsMap>.observeAndStore(key: String): Job {
+        return CoroutineScope(Dispatchers.Main).launch {
+            collect { prefs ->
+                storePrefsMap(key, prefs)
+            }
+        }
+    }
+
+    private fun initializeLogsInfoSettings(): PrefsMap {
+        val logs = atsc3NdkCoreLogs.atsc3LogNames.map { name ->
+            name to false
+        }.sortedBy { it.first }.toMap().toMutableMap()
+        val deviceEnabledLogs = readPrefsMap(PREF_LOG_INFO_KEY)
+        val defaultEnabledLogs = atsc3NdkCoreLogs.atsc3LogEnabledNames
+
+        deviceEnabledLogs.forEach { (key, enabled) ->
+            logs[key] = enabled
+            atsc3NdkCoreLogs.setLogEnabledByName(key, enabled)
+        }
+
+        if (deviceEnabledLogs.isEmpty()) {
+            // saving default enabled logs
+            defaultEnabledLogs.forEach { name ->
+                logs[name] = true
+            }
+        } else {
+            // disabling default enabled logs
+            defaultEnabledLogs.filter {
+                deviceEnabledLogs[it] != true
+            }.forEach {
+                atsc3NdkCoreLogs.setLogEnabledByName(it, false)
+            }
+        }
+
+        return logs
+    }
+
+    private fun Atsc3NdkCoreLogs.setLogEnabledByName(name: String, enabled: Boolean) {
+        setAtsc3LogEnabledByName(name, if (enabled) 1 else 0)
+    }
+
     private fun registerAWSIoThing(serialNumber: String) {
         val thing = AWSIoThing(
             AWSIOT_RECEIVER_TEMPLATE_NAME,
@@ -252,8 +314,8 @@ internal class TelemetryHolder(
             ITelemetryControl.CONTROL_ACTION_TUNE -> {
                 arguments[ITelemetryControl.CONTROL_ARGUMENT_FREQUENCY]?.let { frequencyList ->
                     val frequencies = frequencyList
-                            .split(ITelemetryControl.CONTROL_ARGUMENT_DELIMITER)
-                            .mapNotNull { it.toIntOrNull() }
+                        .split(ITelemetryControl.CONTROL_ARGUMENT_DELIMITER)
+                        .mapNotNull { it.toIntOrNull() }
                     if (frequencies.isNotEmpty()) {
                         receiver.tune(PhyFrequency.user(frequencies))
                     }
@@ -286,13 +348,13 @@ internal class TelemetryHolder(
 
             ITelemetryControl.CONTROL_ACTION_RESTART_APP -> {
                 val delay = max(arguments[ITelemetryControl.CONTROL_ARGUMENT_START_DELAY]?.toLongOrNull()
-                        ?: 0, 100L)
+                    ?: 0, 100L)
                 val intent = Intent(context.getString(R.string.defaultActionWatch)).apply {
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
 
                 alarmManager[AlarmManager.RTC, System.currentTimeMillis() + delay] = PendingIntent.getActivity(
-                        context, 0, intent, PendingIntent.FLAG_CANCEL_CURRENT)
+                    context, 0, intent, PendingIntent.FLAG_CANCEL_CURRENT)
 
                 exitProcess(0)
             }
@@ -445,5 +507,6 @@ internal class TelemetryHolder(
         const val SHARED_PREFERENCES_NAME = "telemetry_pref"
         const val PREF_DEBUG_INFO_KEY = "telemetry_info_debug"
         const val PREF_PHY_INFO_KEY = "telemetry_info_phy"
+        const val PREF_LOG_INFO_KEY = "telemetry_info_log"
     }
 }

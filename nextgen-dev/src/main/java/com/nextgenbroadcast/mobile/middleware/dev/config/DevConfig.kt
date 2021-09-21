@@ -1,6 +1,7 @@
 package com.nextgenbroadcast.mobile.middleware.dev.config
 
 import android.content.Context
+import android.net.Uri
 import com.nextgenbroadcast.mobile.core.FileUtils
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.core.model.AVService
@@ -52,9 +53,29 @@ class DevConfig private constructor() {
         private set
     var frequencies: List<Int>? = null
         private set
+    var rawConfig: String? = null
+        private set
+    val configDetected: Boolean
+        get() = rawConfig != null
+
+    fun write(context: Context, uri: Uri) {
+        FileUtils.writeExternalFile(context, CONFIG_FILENAME, uri)
+        read(context)
+    }
+
+    fun write(context: Context, source: String) {
+        FileUtils.writeExternalFile(context, CONFIG_FILENAME, source)
+        read(context)
+    }
+
+    fun remove(context: Context) {
+        FileUtils.removeFile(context, CONFIG_FILENAME)
+        rawConfig = null
+    }
 
     fun read(context: Context) {
         FileUtils.readExternalFileAsString(context, CONFIG_FILENAME)?.let { str ->
+            rawConfig = str
             try {
                 with(JSONObject(str)) {
                     optJSONArray("srt")?.let {
@@ -89,8 +110,11 @@ class DevConfig private constructor() {
                     }
                 }
             } catch (e: JSONException) {
+                rawConfig = null
                 LOG.e(TAG, "Failed to parse SRT config: ", e)
             }
+        }?.run {
+            rawConfig = null
         }
     }
 
@@ -105,8 +129,9 @@ class DevConfig private constructor() {
             val name = jsonObject.optString("name", "srt $i")
             val url = jsonObject.optString("url")
             val isDefault = jsonObject.optBoolean("default", false)
+            val isPool = jsonObject.optBoolean("pool", false)
             if (url.isNotBlank()) {
-                add(RouteUrl(UUID.randomUUID().toString(), url, name, isDefault))
+                add(RouteUrl(UUID.randomUUID().toString(), url, name, isDefault, isPool))
             }
         }
     }
