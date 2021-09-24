@@ -201,7 +201,7 @@ class ScoreboardService : Service() {
         val selectedDeviceId = this@ScoreboardService.selectedDeviceId.asStateFlow()
 
         val deviceLocationEventFlow by lazy {
-            telemetryManager.locationEventFlow()?.mapToLocationEvent()
+            telemetryManager.getGlobalEventFlow(TelemetryEvent.EVENT_TOPIC_LOCATION)?.mapToLocationEvent()
         }
 
         @Volatile
