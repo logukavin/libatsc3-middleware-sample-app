@@ -18,7 +18,6 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.entities.service.Atsc3Servic
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.service.LLSParserSLT
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.*
 import com.nextgenbroadcast.mobile.middleware.dev.atsc3.PHYStatistics
-import com.nextgenbroadcast.mobile.middleware.dev.telemetry.entity.StatisticsError
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -98,7 +97,7 @@ internal class Atsc3Module(
     @Volatile
     private var nextSourceConfigTuneTimeoutTask: TimerTask? = null
 
-    override val rfPhyMetricsFlow = MutableSharedFlow<Any>(3, 0, BufferOverflow.DROP_OLDEST)
+    override val rfPhyMetricsFlow = MutableSharedFlow<RfPhyStatistics>(3, 0, BufferOverflow.DROP_OLDEST)
 
     override fun setListener(listener: Atsc3ModuleListener?) {
         if (this.listener != null) throw IllegalStateException("Atsc3Module listener already initialized")
@@ -701,7 +700,6 @@ internal class Atsc3Module(
     override fun onPhyError(message: String) {
         listener?.onError("PHY Error: $message")
         log("PHY Error: $message")
-        rfPhyMetricsFlow.tryEmit(StatisticsError(message))
     }
 
     override fun pushRfPhyStatisticsUpdate(rfPhyStatistics: RfPhyStatistics) {

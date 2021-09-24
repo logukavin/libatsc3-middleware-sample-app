@@ -6,7 +6,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import org.ngbp.libatsc3.middleware.android.phy.models.RfPhyStatistics
 
 interface IAtsc3Module {
-    val rfPhyMetricsFlow: SharedFlow<Any>
+    val rfPhyMetricsFlow: SharedFlow<RfPhyStatistics>
 
     fun setListener(listener: Atsc3ModuleListener?)
 
