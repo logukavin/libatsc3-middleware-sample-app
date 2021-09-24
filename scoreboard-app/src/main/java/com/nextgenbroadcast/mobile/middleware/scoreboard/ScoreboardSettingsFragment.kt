@@ -1,7 +1,11 @@
 package com.nextgenbroadcast.mobile.middleware.scoreboard
 
 import android.content.Context
+import android.graphics.Typeface
 import android.os.Bundle
+import android.text.Spannable
+import android.text.SpannableString
+import android.text.style.StyleSpan
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -12,6 +16,8 @@ import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.RecyclerView
 import com.nextgenbroadcast.mobile.middleware.scoreboard.databinding.DeviceIdItemViewBinding
 import com.nextgenbroadcast.mobile.middleware.scoreboard.databinding.FragmentSettingsBinding
+import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.DeviceScoreboardInfo
+import java.text.DecimalFormat
 
 class ScoreboardSettingsFragment : Fragment() {
     private val sharedViewModel by activityViewModels<SharedViewModel>()
@@ -66,11 +72,10 @@ class ScoreboardSettingsFragment : Fragment() {
         private val inflater: LayoutInflater,
         private val deviceListener: DeviceSelectListener
     ) : RecyclerView.Adapter<DeviceIdsAdapter.DeviceIdViewHolder>() {
-        private val deviceIdList = mutableListOf<Pair<String, Boolean>>()
-
+        private val deviceIdList = mutableListOf<DeviceScoreboardInfo>()
         private var selectedChartId: String? = null
 
-        fun setData(deviceIdsList: List<Pair<String, Boolean>>) {
+        fun setData(deviceIdsList: List<DeviceScoreboardInfo>) {
             deviceIdList.clear()
             deviceIdList.addAll(deviceIdsList)
             notifyDataSetChanged()
@@ -82,19 +87,30 @@ class ScoreboardSettingsFragment : Fragment() {
         }
 
         override fun onBindViewHolder(holder: DeviceIdViewHolder, position: Int) {
-            val (deviceId, checked) = deviceIdList.getOrNull(position) ?: return
+            val (device, checked, distance) = deviceIdList.getOrNull(position) ?: return
+            val context = holder.itemView.context
             with(holder) {
-                this.deviceId = deviceId
+                this.deviceId = device.id
 
-                deviceName.text = deviceId
+                deviceName.text = SpannableString(context.getString(R.string.device_id, device.id))
+                    .apply {
+                        setSpan(
+                            StyleSpan(Typeface.BOLD),
+                            length - device.id.length,
+                            length,
+                            Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+                        )
+                    }
+
+                deviceDistance.text = formatDistanceSpannableString(distance, context)
 
                 deviceCheckBox.setOnCheckedChangeListener { _, isChecked ->
                     // we can't change list in bind because it will lead to IllegalStateException
                     deviceCheckBox.post {
                         if (isChecked) {
-                            deviceListener.addDeviceChart(deviceId)
+                            deviceListener.addDeviceChart(device.id)
                         } else {
-                            deviceListener.remoteDeviceChart(deviceId)
+                            deviceListener.remoteDeviceChart(device.id)
                         }
                     }
                 }
@@ -114,6 +130,7 @@ class ScoreboardSettingsFragment : Fragment() {
             var deviceId: String? = null
             val deviceName: TextView = itemBinding.deviceIdTextView
             val deviceCheckBox: CheckBox = itemBinding.deviceIdChechBox
+            val deviceDistance: TextView = itemBinding.deviceDistanceTextView
         }
 
     }

@@ -12,12 +12,10 @@ import com.google.firebase.installations.FirebaseInstallations
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.entity.ClientTelemetryEvent
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.entity.TelemetryEvent
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.reader.LocationData
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.writer.VuzixPhyTelemetryWriter
 import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.TelemetryDevice
-import com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry.DatagramSocketWrapper
-import com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry.TelemetryManager
-import com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry.mapToDataPoint
-import com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry.mapToEvent
+import com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.*
@@ -198,8 +196,13 @@ class ScoreboardService : Service() {
     }
 
     inner class ScoreboardBinding : Binder() {
+
         val deviceIdList = deviceIds.asStateFlow()
         val selectedDeviceId = this@ScoreboardService.selectedDeviceId.asStateFlow()
+
+        val deviceLocationEventFlow by lazy {
+            telemetryManager.locationEventFlow()?.mapToLocationEvent()
+        }
 
         @Volatile
         private var backLogFlow: SharedFlow<String>? = null

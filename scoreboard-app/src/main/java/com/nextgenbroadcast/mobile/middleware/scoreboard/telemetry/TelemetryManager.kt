@@ -80,6 +80,10 @@ class TelemetryManager(
 
     fun getGlobalEventFlow() = telemetryClient.getFlow(globalDeviceObserver)
 
+    fun locationEventFlow() = getGlobalEventFlow()?.filter { event ->
+        event.topic.endsWith(AWSIOT_TOPIC_LOCATION)
+    }
+
     fun start() {
         try {
             nsdManager.discoverServices(NsdConfig.SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, discoveryListener)
@@ -94,9 +98,7 @@ class TelemetryManager(
                 getGlobalEventFlow()?.filter {
                     it.topic.endsWith("/$AWSIOT_TOPIC_PING")
                 }?.collect { event ->
-                    val start = event.topic.indexOf("_") + 1
-                    val end = event.topic.indexOf("/", start)
-                    val clientId = event.topic.substring(start, end)
+                    val clientId = extractClientId(event.topic)
 
                     awsDevices.add(clientId)
 
@@ -309,6 +311,12 @@ class TelemetryManager(
     companion object {
         val TAG: String = TelemetryManager::class.java.simpleName
 
+        fun extractClientId(topic: String): String {
+            val startIndex = topic.indexOf("_") + 1
+            val endIndex = topic.indexOf("/", startIndex)
+            return topic.substring(startIndex, endIndex)
+        }
+
         private const val IoT_PREFERENCE = "${BuildConfig.APPLICATION_ID}.awsiot"
 
         private const val AWSIOT_MANAGER_TEMPLATE_NAME = "ATSC3MobileManagerProvisioning"
@@ -322,6 +330,7 @@ class TelemetryManager(
         private const val AWSIOT_TOPIC_ANY = "#"
         private const val AWSIOT_TOPIC_PING = "ping"
         private const val AWSIOT_TOPIC_PHY = "phy"
+        private const val AWSIOT_TOPIC_LOCATION = "location"
 
         private val AWSIOT_PING_PERIOD = TimeUnit.MINUTES.toMillis(1)
     }

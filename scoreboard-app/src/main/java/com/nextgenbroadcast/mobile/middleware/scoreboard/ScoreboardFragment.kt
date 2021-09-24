@@ -2,6 +2,7 @@ package com.nextgenbroadcast.mobile.middleware.scoreboard
 
 import android.content.Context
 import android.os.Bundle
+import android.text.SpannableString
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -10,6 +11,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.*
 import com.nextgenbroadcast.mobile.middleware.scoreboard.databinding.FragmentScoreboardBinding
+import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.DeviceScoreboardInfo
 import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.TDataPoint
 import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.TelemetryDevice
 import com.nextgenbroadcast.mobile.middleware.scoreboard.view.DeviceItemView
@@ -58,7 +60,7 @@ class ScoreboardFragment : Fragment() {
         private val inflater: LayoutInflater,
         private val selectChartListener: ISelectChartListener,
         private val getFlowForDevice: (TelemetryDevice) -> Flow<TDataPoint>?
-    ) : ListAdapter<TelemetryDevice, DeviceListAdapter.Holder>(DIFF_CALLBACK) {
+    ) : ListAdapter<DeviceScoreboardInfo, DeviceListAdapter.Holder>(DIFF_CALLBACK) {
 
         private var selectedChartId: String? = null
 
@@ -76,36 +78,57 @@ class ScoreboardFragment : Fragment() {
             holder.bind(getItem(position))
         }
 
+        override fun onBindViewHolder(holder: Holder, position: Int, payloads: MutableList<Any>) {
+            (payloads.firstOrNull() as? DeviceScoreboardInfo)?.let { deviceModel ->
+                holder.updateLocationLabel(deviceModel)
+            } ?: super.onBindViewHolder(holder, position, payloads)
+        }
+
         inner class Holder(
             private val deviceView: DeviceItemView
         ) : RecyclerView.ViewHolder(deviceView) {
 
-            fun bind(device: TelemetryDevice) {
+            fun bind(deviceInfo: DeviceScoreboardInfo) {
                 with(deviceView) {
-                    observe(getFlowForDevice(device))
-                    isChartSelected = selectedChartId.equals(device.id)
+                    observe(getFlowForDevice(deviceInfo.device))
+                    isChartSelected = selectedChartId.equals(deviceInfo.device.id)
                     setBackgroundColor(
                         context.getColor(if (isChartSelected) R.color.yellow_device_item_bg else R.color.white)
                     )
-                    title.text = device.id
-                    lostLabel.isVisible = device.isLost
+                    updateLocationLabel(deviceInfo)
+                    lostLabel.isVisible = deviceInfo.device.isLost
 
                     deviceView.setOnClickListener {
-                        val selectedChartId = if (selectedChartId == device.id) null else device.id
+                        val selectedChartId = if (selectedChartId == deviceInfo.device.id) null else deviceInfo.device.id
                         selectChartListener.selectChart(selectedChartId)
                     }
                 }
             }
+
+            fun updateLocationLabel(model: DeviceScoreboardInfo) = with(deviceView) {
+                title.text = formatDistanceAndIdSpannableString(
+                    id = model.device.id,
+                    distance = model.distance,
+                    context = context
+                )
+            }
+
         }
 
         companion object {
-            val DIFF_CALLBACK = object : DiffUtil.ItemCallback<TelemetryDevice>() {
-                override fun areItemsTheSame(oldItem: TelemetryDevice, newItem: TelemetryDevice): Boolean {
-                    return oldItem.id == newItem.id
+            val DIFF_CALLBACK = object : DiffUtil.ItemCallback<DeviceScoreboardInfo>() {
+                override fun areItemsTheSame(oldItem: DeviceScoreboardInfo, newItem: DeviceScoreboardInfo): Boolean {
+                    return oldItem.device.id == newItem.device.id
                 }
 
-                override fun areContentsTheSame(oldItem: TelemetryDevice, newItem: TelemetryDevice): Boolean {
+                override fun areContentsTheSame(oldItem: DeviceScoreboardInfo, newItem: DeviceScoreboardInfo): Boolean {
                     return oldItem == newItem
+                }
+
+                override fun getChangePayload(oldItem: DeviceScoreboardInfo, newItem: DeviceScoreboardInfo): Any? {
+                    return if (oldItem.distance != newItem.distance) {
+                        newItem
+                    } else null
                 }
             }
         }
