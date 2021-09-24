@@ -14,6 +14,15 @@
         app:layout_constraintTop_toTopOf="parent"
         tool:text="Device id" />
 
+    <TextView
+        android:id="@+id/device_distance_text_view"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/device_id_chech_box"
+        app:layout_constraintTop_toBottomOf="@id/device_id_text_view"
+        tool:text="Distance: 5.231km"/>
+
     <CheckBox
         android:id="@+id/device_id_chech_box"
         android:layout_width="wrap_content"

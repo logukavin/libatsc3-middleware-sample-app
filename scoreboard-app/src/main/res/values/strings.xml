@@ -7,7 +7,7 @@
     <string name="chart_tab_title">Chart</string>
     <string name="devices_tab_title">Devices</string>
     <string name="command_tab_title">Command</string>
-    <string name="chart_device_name">Device name</string>
+    <string name="chart_devices">Device</string>
     <string name="notification_action_close">Finish</string>
     <string name="notification_action_open_console">Console</string>
     <string name="notification_broadcasting">"Broadcasting:"</string>
@@ -52,4 +52,12 @@
     <string name="ba_entrypoint">BA entry point</string>
     <string name="certificate_hash">Certificate Hash</string>
     <string name="apply_ba_entrypoint">apply</string>
+    <string name="ok">OK</string>
+    <string name="device_distance">Distance: %s</string>
+    <string name="device_id_and_distance">%s, distance: %s</string>
+    <string name="device_id">Device ID: %s</string>
+    <string name="distance_unknown">unknown</string>
+    <string name="distance_format_km">%.3f km</string>
+    <string name="distance_format_m">%.0f m</string>
+    <string name="warning_access_background_location_permission">Location permission is necessary for correct work of the receiver</string>
 </resources>

@@ -6,6 +6,7 @@ import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.entity.ClientTelemetryEvent
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.entity.TelemetryEvent
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.reader.BatteryData
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.reader.LocationData
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.reader.RfPhyData
 import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.TDataPoint
 import kotlinx.coroutines.CoroutineScope
@@ -19,6 +20,7 @@ import kotlinx.coroutines.selects.select
 private val gson = Gson()
 private val phyType = object : TypeToken<RfPhyData>() {}.type
 private val batteryType = object : TypeToken<BatteryData>() {}.type
+private val locationDataType = object : TypeToken<LocationData>() {}.type
 
 fun Flow<ClientTelemetryEvent>.mapToEvent(): Flow<TelemetryEvent> = mapNotNull { event ->
     try {
@@ -45,6 +47,15 @@ fun Flow<TelemetryEvent>.mapToDataPoint(): Flow<TDataPoint> = mapNotNull { event
         } else null
     } catch (e: Exception) {
         LOG.w("Flow.mapToDataPoint", "Can't parse telemetry event payload", e)
+        null
+    }
+}
+
+fun Flow<ClientTelemetryEvent>.mapToLocationEvent(): Flow<TelemetryEvent> = mapNotNull { event ->
+    try {
+        TelemetryEvent(event.topic, gson.fromJson<LocationData>(event.payload, locationDataType))
+    } catch (e: Exception) {
+        LOG.w("Flow.mapToLocationEvent", "Can't parse telemetry event payload to location", e)
         null
     }
 }

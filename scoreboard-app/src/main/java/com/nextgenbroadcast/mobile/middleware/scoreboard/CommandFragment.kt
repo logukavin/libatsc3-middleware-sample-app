@@ -319,8 +319,8 @@ class CommandFragment : Fragment(), View.OnClickListener {
                 }
             }
         } else {
-            val devices = sharedViewModel.chartDevicesWithFlow.value?.map { device ->
-                device.id
+            val devices = sharedViewModel.chartDevicesWithFlow.value?.map { deviceInfo ->
+                deviceInfo.device.id
             } ?: return
 
             Intent(context, ScoreboardService::class.java).apply {

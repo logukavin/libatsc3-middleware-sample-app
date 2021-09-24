@@ -12,6 +12,9 @@ import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.entity.TelemetryEvent
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.reader.GPSTelemetryReader
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.reader.LocationData
 import com.nextgenbroadcast.mobile.middleware.scoreboard.databinding.ActivityScoreboardBinding
 import com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry.mapToDataPoint
 import com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry.mapToEvent
@@ -28,6 +31,13 @@ class ScoreboardPagerActivity : FragmentActivity(), ServiceConnection {
 
     private var serviceBinder: ScoreboardService.ScoreboardBinding? = null
     private var connectionJob: Job? = null
+    private var gpsTelemetryJob: Job? = null
+    private var gpsTelemetryReader: GPSTelemetryReader? = null
+    private val currentDeviceLocation = MutableSharedFlow<TelemetryEvent>()
+
+    private val scorebordPermissionResolver: ScorebordPermissionResolver by lazy {
+        ScorebordPermissionResolver(this)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -48,6 +58,14 @@ class ScoreboardPagerActivity : FragmentActivity(), ServiceConnection {
         TabLayoutMediator(tabLayout, binding.viewPager) { tab, position ->
             tab.text = getTabName(position)
         }.attach()
+
+        gpsTelemetryReader = GPSTelemetryReader(this)
+
+        lifecycleScope.launch {
+            currentDeviceLocation.collect {
+                sharedViewModel.currentDeviceLiveData.value = it.payload as LocationData
+            }
+        }
 
         sharedViewModel.devicesToAdd.observe(this) { devices ->
             val binder = serviceBinder ?: return@observe
@@ -85,8 +103,19 @@ class ScoreboardPagerActivity : FragmentActivity(), ServiceConnection {
 
     override fun onStart() {
         super.onStart()
-
+        if (scorebordPermissionResolver.checkSelfPermission()) {
+            if (gpsTelemetryJob == null || gpsTelemetryJob?.isActive == false) {
+                startGpsTelemetryReader()
+            }
+        }
         bindService()
+    }
+
+    private fun startGpsTelemetryReader() {
+        gpsTelemetryJob?.cancel()
+        gpsTelemetryJob = lifecycleScope.launch(Dispatchers.IO) {
+            gpsTelemetryReader?.read(currentDeviceLocation)
+        }
     }
 
     override fun onStop() {
@@ -120,6 +149,13 @@ class ScoreboardPagerActivity : FragmentActivity(), ServiceConnection {
                         sharedViewModel.setDeviceSelection(selectedDevice)
                     }
                 }
+
+                launch {
+                    deviceLocationEventFlow?.collect {
+                        sharedViewModel.addDeviceLocation(it)
+                    }
+                }
+
             }
         }
     }
@@ -143,6 +179,13 @@ class ScoreboardPagerActivity : FragmentActivity(), ServiceConnection {
         connectionJob?.cancel("activity onStop()")
         unbindService(this)
         serviceBinder = null
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (scorebordPermissionResolver.processPermissionsResult(requestCode, permissions, grantResults)) {
+            startGpsTelemetryReader()
+        }
     }
 
     private fun getTabName(position: Int): CharSequence = getString(when (Pages.getOrNull(position)) {

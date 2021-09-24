@@ -91,7 +91,7 @@ enum class LocationFrequencyType(
     }
 }
 
-private data class LocationData(
+data class LocationData(
         val provider: String,
         val lat: Double,
         val lng: Double
