@@ -13,5 +13,6 @@ data class TelemetryEvent(
         const val EVENT_TOPIC_ATSC3TRANSPORT = "atsc3transport"
         const val EVENT_TOPIC_WIFI = "wifi"
         const val EVENT_TOPIC_PING = "ping"
+        const val EVENT_TOPIC_ERROR = "error"
     }
 }

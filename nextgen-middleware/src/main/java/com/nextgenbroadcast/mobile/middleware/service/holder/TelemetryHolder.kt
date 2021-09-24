@@ -32,16 +32,13 @@ import com.nextgenbroadcast.mobile.middleware.dev.telemetry.aws.AWSIoThing
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.control.AWSIoTelemetryControl
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.control.ITelemetryControl
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.control.UdpTelemetryControl
-import com.nextgenbroadcast.mobile.middleware.dev.telemetry.reader.BatteryTelemetryReader
-import com.nextgenbroadcast.mobile.middleware.dev.telemetry.reader.GPSTelemetryReader
-import com.nextgenbroadcast.mobile.middleware.dev.telemetry.reader.RfPhyTelemetryReader
-import com.nextgenbroadcast.mobile.middleware.dev.telemetry.reader.SensorTelemetryReader
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.task.PongTelemetryTask
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.task.WiFiInfoTelemetryTask
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.writer.AWSIoTelemetryWriter
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.writer.FileTelemetryWriter
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.writer.VuzixPhyTelemetryWriter
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.control.WebTelemetryControl
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.reader.*
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.writer.WebTelemetryWriter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -124,22 +121,23 @@ internal class TelemetryHolder(
         if (telemetryBroker != null) return
 
         telemetryBroker = TelemetryBroker(
-            listOf(
-                BatteryTelemetryReader(context),
-                SensorTelemetryReader(sensorManager, Sensor.TYPE_LINEAR_ACCELERATION),
-                SensorTelemetryReader(sensorManager, Sensor.TYPE_GYROSCOPE),
-                SensorTelemetryReader(sensorManager, Sensor.TYPE_SIGNIFICANT_MOTION),
-                SensorTelemetryReader(sensorManager, Sensor.TYPE_STEP_DETECTOR),
-                SensorTelemetryReader(sensorManager, Sensor.TYPE_STEP_COUNTER),
-                SensorTelemetryReader(sensorManager, Sensor.TYPE_ROTATION_VECTOR),
-                GPSTelemetryReader(context),
-                RfPhyTelemetryReader(receiver.rfPhyMetricsFlow)
-            ),
-            listOf(
-                //AWSIoTelemetryWriter(thing),
-                //FileTelemetryWriter(cacheDir, "telemetry.log")
-            ),
-            context.resources.getBoolean(R.bool.telemetryEnabled)
+                listOf(
+                        BatteryTelemetryReader(context),
+                        SensorTelemetryReader(sensorManager, Sensor.TYPE_LINEAR_ACCELERATION),
+                        SensorTelemetryReader(sensorManager, Sensor.TYPE_GYROSCOPE),
+                        SensorTelemetryReader(sensorManager, Sensor.TYPE_SIGNIFICANT_MOTION),
+                        SensorTelemetryReader(sensorManager, Sensor.TYPE_STEP_DETECTOR),
+                        SensorTelemetryReader(sensorManager, Sensor.TYPE_STEP_COUNTER),
+                        SensorTelemetryReader(sensorManager, Sensor.TYPE_ROTATION_VECTOR),
+                        GPSTelemetryReader(context),
+                        RfPhyTelemetryReader(receiver.rfPhyMetricsFlow),
+                        ErrorTelemetryReader(receiver.errorFlow)
+                ),
+                listOf(
+                        //AWSIoTelemetryWriter(thing),
+                        //FileTelemetryWriter(cacheDir, "telemetry.log")
+                ),
+                context.resources.getBoolean(R.bool.telemetryEnabled)
         ).apply {
             //start() do not start Telemetry with application, use switch in Settings dialog or AWS command
         }.also { broker ->
