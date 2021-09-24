@@ -12,6 +12,7 @@ import com.nextgenbroadcast.mobile.middleware.dev.telemetry.CertificateStore
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.TelemetryClient2
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.aws.AWSIoThing
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.entity.ClientTelemetryEvent
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.entity.TelemetryEvent
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.observer.AWSTelemetryObserver
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.observer.ITelemetryObserver
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.observer.WebTelemetryObserver
@@ -80,8 +81,8 @@ class TelemetryManager(
 
     fun getGlobalEventFlow() = telemetryClient.getFlow(globalDeviceObserver)
 
-    fun locationEventFlow() = getGlobalEventFlow()?.filter { event ->
-        event.topic.endsWith(AWSIOT_TOPIC_LOCATION)
+    fun getGlobalEventFlow(topic: String) = getGlobalEventFlow()?.filter {
+        it.topic.endsWith("/$topic")
     }
 
     fun start() {
@@ -95,9 +96,7 @@ class TelemetryManager(
 
         deviceLocationJob = CoroutineScope(Dispatchers.IO).launch {
             try {
-                getGlobalEventFlow()?.filter {
-                    it.topic.endsWith("/$AWSIOT_TOPIC_PING")
-                }?.collect { event ->
+                getGlobalEventFlow(AWSIOT_TOPIC_PING)?.collect { event ->
                     val clientId = extractClientId(event.topic)
 
                     awsDevices.add(clientId)
@@ -328,9 +327,8 @@ class TelemetryManager(
         private const val AWSIOT_CLIENT_ID_ANY = "+"
 
         private const val AWSIOT_TOPIC_ANY = "#"
-        private const val AWSIOT_TOPIC_PING = "ping"
-        private const val AWSIOT_TOPIC_PHY = "phy"
-        private const val AWSIOT_TOPIC_LOCATION = "location"
+        private const val AWSIOT_TOPIC_PING = TelemetryEvent.EVENT_TOPIC_PING
+        private const val AWSIOT_TOPIC_PHY = TelemetryEvent.EVENT_TOPIC_PHY
 
         private val AWSIOT_PING_PERIOD = TimeUnit.MINUTES.toMillis(1)
     }
