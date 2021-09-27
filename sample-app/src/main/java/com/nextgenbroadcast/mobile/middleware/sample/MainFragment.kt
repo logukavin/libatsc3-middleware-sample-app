@@ -33,6 +33,7 @@ import com.nextgenbroadcast.mobile.middleware.sample.databinding.FragmentMainBin
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.ViewViewModel
 import com.nextgenbroadcast.mobile.middleware.sample.adapter.ServiceAdapter
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.TelemetryClient
+import com.nextgenbroadcast.mobile.middleware.sample.model.*
 import com.nextgenbroadcast.mobile.middleware.sample.settings.SettingsDialog
 import com.nextgenbroadcast.mobile.view.AboutDialog
 import com.nextgenbroadcast.mobile.view.TrackSelectionDialog
@@ -134,16 +135,20 @@ class MainFragment : Fragment() {
 
         binding.userAgentWebView.setOnTouchListener { _, motionEvent -> swipeGestureDetector.onTouchEvent(motionEvent) }
         binding.userAgentWebView.setListener(object : UserAgentView.IListener {
-            override fun onOpen() {
+            override fun onOpened() {
                 receiverContentResolver.publishApplicationState(ApplicationState.OPENED)
             }
 
-            override fun onClose() {
+            override fun onClosed() {
                 receiverContentResolver.publishApplicationState(ApplicationState.LOADED)
             }
 
             override fun onLoadingError() {
                 onBALoadingError()
+            }
+
+            override fun onLoadingSuccess() {
+                receiverContentResolver.publishApplicationState(ApplicationState.LOADED)
             }
         })
         binding.userAgentWebView.captureContentVisibility = true
@@ -430,7 +435,6 @@ class MainFragment : Fragment() {
     override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean) {
         val visibility = if (isInPictureInPictureMode) {
             setBAAvailability(false)
-            updateRMPLayout(1f, 1f, 1f)
             View.INVISIBLE
         } else {
             if (isBAvailable()) {
@@ -469,27 +473,53 @@ class MainFragment : Fragment() {
     private fun setBAAvailability(available: Boolean) {
         // GONE will prevent BA from sending resize requests when UA is not visible
         binding.userAgentWebView.isVisible = available
+        if (!available) {
+            updateRMPLayout(1f, 1f, 1f)
+        }
     }
 
     private fun showFileChooser() {
         getContent.launch("*/*")
     }
 
+    private fun isBAvailable() = currentAppData?.isAvailable ?: false
+
     private fun switchApplication(appData: AppData?) {
         if (appData != null && appData.isAvailable) {
             if (!requireActivity().isInPictureInPictureMode) {
                 setBAAvailability(true)
             }
-            if (!appData.isAppEquals(currentAppData) || appData.isAvailable != currentAppData?.isAvailable) {
+            if (!appData.isAppEquals(currentAppData)
+                || appData.isBCastAvailable != currentAppData?.isBCastAvailable
+                || appData.isBBandAvailable != currentAppData?.isBBandAvailable
+            ) {
                 loadBroadcasterApplication(appData)
             }
         } else {
             unloadBroadcasterApplication()
         }
-        currentAppData = appData
     }
 
-    private fun isBAvailable() = currentAppData?.isAvailable ?: false
+    private fun loadBroadcasterApplication(appData: AppData) {
+        currentAppData = appData
+        with(binding.userAgentWebView) {
+            serverCertificateHash = receiverContentResolver.queryServerCertificate() ?: emptyList()
+            loadFirstAvailable(mutableListOf<String?>().apply {
+                if (appData.isBCastAvailable) {
+                    add(appData.bCastEntryPageUrlFull)
+                }
+                if (appData.isBBandAvailable) {
+                    add(appData.bBandEntryPageUrl)
+                }
+            }.filterNotNull())
+        }
+    }
+
+    private fun unloadBroadcasterApplication() {
+        currentAppData = null
+        binding.userAgentWebView.unload()
+        receiverContentResolver.publishApplicationState(ApplicationState.UNAVAILABLE)
+    }
 
     private fun updateRMPLayout(x: Int, y: Int, scale: Double) {
         updateRMPLayout(x.toFloat() / 100, y.toFloat() / 100, scale.toFloat() / 100)
@@ -503,19 +533,6 @@ class MainFragment : Fragment() {
             constrainPercentHeight(R.id.receiver_player, scale)
             constrainPercentWidth(R.id.receiver_player, scale)
         }.applyTo(binding.userAgentRoot)
-    }
-
-    private fun loadBroadcasterApplication(appData: AppData) {
-        with(binding.userAgentWebView) {
-            serverCertificateHash = receiverContentResolver.queryServerCertificate() ?: emptyList()
-            loadBAContent(appData.appEntryPage)
-        }
-        receiverContentResolver.publishApplicationState(ApplicationState.LOADED)
-    }
-
-    private fun unloadBroadcasterApplication() {
-        binding.userAgentWebView.unloadBAContent()
-        receiverContentResolver.publishApplicationState(ApplicationState.UNAVAILABLE)
     }
 
     private fun newChartDataSource() = PhyChartView.DataSource(

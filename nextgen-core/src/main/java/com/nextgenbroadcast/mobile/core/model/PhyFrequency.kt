@@ -1,13 +1,9 @@
 package com.nextgenbroadcast.mobile.core.model
 
-import android.os.Parcelable
-import kotlinx.parcelize.Parcelize
-
-@Parcelize
 class PhyFrequency(
         val list: List<Int>,
         val source: Source
-) : Parcelable {
+) {
     enum class Source {
         USER, AUTO
     }

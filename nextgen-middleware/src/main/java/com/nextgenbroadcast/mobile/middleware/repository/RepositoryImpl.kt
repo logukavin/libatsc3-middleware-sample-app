@@ -54,42 +54,20 @@ internal class RepositoryImpl(
     override val applications = MutableStateFlow<List<Atsc3Application>>(emptyList())
     override val heldPackage = MutableStateFlow<Atsc3HeldPackage?>(null)
 
-    /*
-        jjustman-2021-09-14 - todo: confirm that:
-
-                                    if we have both bcastEntryPageUrl and bbandEntryPageUrl, then
-                                        try and fetch bbandEntryPageUrl without waiting for the NRT payload extraction callback,
-                                            if bbandEntryPageUrl fetch is successful (e.g. 200),
-                                                then use this path for our BA appUri,
-                                        otherwise, wait for nrt package extract callback and launch via:
-                                            <bcastEntryPackageUrl, bcastEntryPageUrl>
-
-     */
     override val appData = combine(heldPackage, applications, sessionNum) { held, applications, sessionId ->
         held?.let {
-            var useBroadband = false
-
             val appContextId = held.appContextId ?: return@let null
-            val baseUriPath = ServerUtils.createEntryPoint(appContextId, null, settings)
-            val appUrl = held.bcastEntryPageUrl?.let { entryPageUrl ->
-                ServerUtils.createEntryPoint(appContextId, entryPageUrl, settings)
-            } ?: let {
-                useBroadband = true
-                held.bbandEntryPageUrl
-            } ?: return@let null
-            val compatibleServiceIds = held.coupledServices ?: emptyList()
             val application = applications.firstOrNull { app ->
                 app.appContextIdList.contains(appContextId) && app.packageName == held.bcastEntryPackageUrl
             }
-            val cachePath = application?.cachePath
 
             AppData(
                 appContextId,
-                baseUriPath,
-                ServerUtils.addSocketPath(appUrl, settings),
-                compatibleServiceIds,
-                cachePath,
-                useBroadband || cachePath?.isNotEmpty() ?: false,
+                ServerUtils.createEntryPoint(appContextId, null, settings),
+                held.bbandEntryPageUrl,
+                held.bcastEntryPageUrl?.let { ServerUtils.appendSocketPathOrNull(it, settings) },
+                held.coupledServices ?: emptyList(),
+                application?.cachePath,
                 sessionId
             )
         }

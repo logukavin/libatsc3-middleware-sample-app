@@ -1,22 +1,11 @@
 package com.nextgenbroadcast.mobile.core.model
 
-import android.os.Parcelable
-import kotlinx.parcelize.Parcelize
-
-@Parcelize
 data class AppData(
-        val appContextId: String,
-        val appBaseUrl: String,
-        val appEntryPage: String,
-        val compatibleServiceIds: List<Int>,
-        val cachePath: String?,
-        val isAvailable: Boolean,
-        val sessionId: Int = 0
-) : Parcelable {
-    fun isAppEquals(other: AppData?): Boolean {
-        return other?.let {
-            this.appContextId == other.appContextId
-                    && this.appEntryPage == other.appEntryPage
-        } ?: false
-    }
-}
+    val contextId: String,
+    val baseUrl: String,
+    val bBandEntryPageUrl: String?,
+    val bCastEntryPageUrl: String?,
+    val compatibleServiceIds: List<Int>,
+    val cachePath: String?,
+    val sessionId: Int = 0
+)

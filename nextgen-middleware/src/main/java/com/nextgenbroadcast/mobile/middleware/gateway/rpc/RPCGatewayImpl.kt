@@ -224,8 +224,8 @@ internal class RPCGatewayImpl(
     Broadcaster Application
      */
     private fun onAppDataUpdated(appData: AppData, service: AVService) {
-        currentAppContextId = appData.appContextId
-        currentAppBaseUrl = appData.appBaseUrl
+        currentAppContextId = appData.contextId
+        currentAppBaseUrl = appData.baseUrl
         currentServiceId = service.globalId?.also { globalServiceId ->
             if (currentServiceId != null && currentServiceId != globalServiceId) {
                 if (appData.compatibleServiceIds.contains(service.id)) {

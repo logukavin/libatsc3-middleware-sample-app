@@ -226,17 +226,17 @@ class ReceiverContentResolver(
         return appDataUri.queryFirst { cursor ->
             val appContextID = cursor.getStringOrNull(COLUMN_APP_CONTEXT_ID)
             val appBaseUrl = cursor.getStringOrNull(COLUMN_APP_BASE_URL)
-            val appEntryPage = cursor.getStringOrNull(COLUMN_APP_ENTRY_PAGE)
+            val appBBandEntryPage = cursor.getStringOrNull(COLUMN_APP_BBAND_ENTRY_PAGE)
+            val appBCastEntryPage = cursor.getStringOrNull(COLUMN_APP_BCAST_ENTRY_PAGE)
             val appServiceIds = cursor.getStringOrNull(COLUMN_APP_SERVICE_IDS)
             val appCachePath = cursor.getStringOrNull(COLUMN_APP_CACHE_PATH)
-            val isAvailable = cursor.getIntOrNull(COLUMN_APP_AVAILABLE) == 1
 
-            if (appContextID != null && appBaseUrl != null && appEntryPage != null) {
+            if (appContextID != null && appBaseUrl != null) {
                 val serviceIds = appServiceIds?.split(" ")?.mapNotNull {
                     it.toIntOrNull()
                 } ?: emptyList()
 
-                AppData(appContextID, appBaseUrl, appEntryPage, serviceIds, appCachePath, isAvailable)
+                AppData(appContextID, appBaseUrl, appBBandEntryPage, appBCastEntryPage,  serviceIds, appCachePath)
             } else null
         }
     }
@@ -355,11 +355,11 @@ class ReceiverContentResolver(
 
         const val COLUMN_APP_CONTEXT_ID = "appContextId"
         const val COLUMN_APP_BASE_URL = "appBaseUrl"
-        const val COLUMN_APP_ENTRY_PAGE = "appEntryPage"
+        const val COLUMN_APP_BBAND_ENTRY_PAGE = "appBBandEntryPage"
+        const val COLUMN_APP_BCAST_ENTRY_PAGE = "appBCastEntryPage"
         const val COLUMN_APP_STATE_VALUE = "appStateValue"
         const val COLUMN_APP_SERVICE_IDS = "appServiceIds"
         const val COLUMN_APP_CACHE_PATH = "appCachePath"
-        const val COLUMN_APP_AVAILABLE = "appAvailable"
 
         const val COLUMN_CERTIFICATE = "certificate"
 

@@ -3,11 +3,11 @@ package com.nextgenbroadcast.mobile.middleware.sample.lifecycle
 import android.app.Application
 import android.net.Uri
 import android.text.Html
-import android.text.Spanned
 import androidx.lifecycle.*
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
+import com.nextgenbroadcast.mobile.core.model.bCastEntryPageUrlFull
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.reader.LocationFrequencyType
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.reader.SensorFrequencyType
 import com.nextgenbroadcast.mobile.middleware.sample.R
@@ -144,10 +144,16 @@ class ViewViewModel(
     }
 
     private fun formatLog(data: AppData?, rpmMediaUri: String?): CharSequence {
-        val contextId = data?.appContextId ?: "<b>NO Context ID</b>"
-        val entryPoint = data?.appEntryPage ?: "<b>NO Entry Point</b>"
-        val cachePath = data?.cachePath ?: "<b>NO Application available</b>"
-        val mediaUrl = rpmMediaUri ?: "<b>NO Media Url</b>"
+        val contextId = data?.contextId?.let { id -> "<b>Context ID:</b> $id" } ?: "<b>NO Context ID</b>"
+        val entryPoint = data?.let {
+            listOfNotNull(
+                data.bBandEntryPageUrl?.let { url -> "<b>BB:</b> $url" },
+                data.bCastEntryPageUrlFull?.let { url -> "<b>BC:</b> $url" }
+            ).takeIf { it.isNotEmpty() }
+                ?.joinToString(prefix = "<b>App </b>")
+        } ?: "<b>NO Entry Point</b>"
+        val cachePath = data?.cachePath?.let { path -> "<b>App Path:</b> $path" } ?: "<b>NO Application available</b>"
+        val mediaUrl = rpmMediaUri?.let { uri -> "<b>Media:</b> $uri" } ?: "<b>NO Media Url</b>"
         return Html.fromHtml(
             "> $contextId<br>> $entryPoint<br>> $cachePath<br>> $mediaUrl",
             Html.FROM_HTML_MODE_LEGACY
