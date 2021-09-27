@@ -15,7 +15,7 @@ object RfPhyStatisticsParceler : Parceler<RfPhyStatistics> {
     override fun create(parcel: Parcel) = RfPhyStatistics(
         0, 0, 0, 0, 0,
         0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0
+        0, 0, 0, 0, 
     ).apply {
         tuner_lock = parcel.readInt()
         demod_lock = parcel.readInt()
@@ -23,11 +23,10 @@ object RfPhyStatisticsParceler : Parceler<RfPhyStatistics> {
         plp_lock_all = parcel.readInt()
         plp_lock_by_setplp_index = parcel.readInt()
         cpu_status = parcel.readInt()
-        rssi = parcel.readInt()
+        rssi_1000 = parcel.readInt()
         snr1000_global = parcel.readInt()
         snr1000_l1b = parcel.readInt()
         snr1000_l1d = parcel.readInt()
-        rfLevel1000 = parcel.readInt()
         bootstrap_system_bw = parcel.readInt()
         bootstrap_ea_wakeup = parcel.readInt()
         plp_id_0 = parcel.readInt()
@@ -83,11 +82,10 @@ object RfPhyStatisticsParceler : Parceler<RfPhyStatistics> {
         parcel.writeInt(plp_lock_all)
         parcel.writeInt(plp_lock_by_setplp_index)
         parcel.writeInt(cpu_status)
-        parcel.writeInt(rssi)
+        parcel.writeInt(rssi_1000)
         parcel.writeInt(snr1000_global)
         parcel.writeInt(snr1000_l1b)
         parcel.writeInt(snr1000_l1d)
-        parcel.writeInt(rfLevel1000)
         parcel.writeInt(bootstrap_system_bw)
         parcel.writeInt(bootstrap_ea_wakeup)
         parcel.writeInt(plp_id_0)
