@@ -15,7 +15,7 @@ object RfPhyStatisticsParceler : Parceler<RfPhyStatistics> {
     override fun create(parcel: Parcel) = RfPhyStatistics(
         0, 0, 0, 0, 0,
         0, 0, 0, 0, 0,
-        0, 0, 0, 0, 
+        0, 0, 0, 0
     ).apply {
         tuner_lock = parcel.readInt()
         demod_lock = parcel.readInt()
