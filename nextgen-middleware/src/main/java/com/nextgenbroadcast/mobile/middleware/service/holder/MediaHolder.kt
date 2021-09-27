@@ -14,14 +14,11 @@ import androidx.media.MediaBrowserServiceCompat
 import androidx.media.session.MediaButtonReceiver
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.core.MiddlewareConfig
-import com.nextgenbroadcast.mobile.core.model.MediaUrl
-import com.nextgenbroadcast.mobile.core.model.AVService
-import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverCore
 import com.nextgenbroadcast.mobile.middleware.service.Atsc3ForegroundService
 import com.nextgenbroadcast.mobile.core.media.MediaSessionConstants
+import com.nextgenbroadcast.mobile.core.model.*
 import com.nextgenbroadcast.mobile.middleware.dev.config.DevConfig
-import com.nextgenbroadcast.mobile.middleware.isTheSameAs
 import com.nextgenbroadcast.mobile.player.Atsc3MediaPlayer
 import kotlinx.coroutines.flow.MutableStateFlow
 
@@ -80,12 +77,9 @@ internal class MediaHolder(
         } else null
 
         val queue = services.map { service ->
-            var srv = service
-            defaultService?.let {
-                if (service.isTheSameAs(it)) {
-                    srv = service.copy(default = true)
-                }
-            }
+            val srv = if (service.isServiceEquals(defaultService)) {
+                service.copy(default = true)
+            } else service
 
             MediaSessionCompat.QueueItem(
                     MediaDescriptionCompat.Builder()
@@ -93,7 +87,7 @@ internal class MediaHolder(
                             .setTitle(srv.shortName)
                             .setExtras(srv.toBundle())
                             .build(),
-                srv.uniqueId()
+                srv.uniqueId
             )
         }
 

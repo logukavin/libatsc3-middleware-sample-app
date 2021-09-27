@@ -15,6 +15,7 @@ import com.nextgenbroadcast.mobile.middleware.*
 import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverCore
 import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverStandalone
 import com.nextgenbroadcast.mobile.middleware.dev.config.DevConfig
+import com.nextgenbroadcast.mobile.middleware.server.ServerUtils
 import com.nextgenbroadcast.mobile.middleware.server.cert.IUserAgentSSLContext
 import com.nextgenbroadcast.mobile.middleware.server.cert.UserAgentSSLContext
 import com.nextgenbroadcast.mobile.middleware.service.Atsc3ForegroundService
@@ -134,10 +135,12 @@ class ReceiverContentProvider : ContentProvider() {
             QUERY_RECEIVER_ROUTE_LIST -> {
                 MatrixCursor(arrayOf(COLUMN_ROUTE_ID, COLUMN_ROUTE_PATH, COLUMN_ROUTE_NAME)).apply {
                     receiver.getSourceList().forEach { source ->
-                        newRow()
-                            .add(COLUMN_ROUTE_ID, source.id)
-                            .add(COLUMN_ROUTE_PATH, source.path)
-                            .add(COLUMN_ROUTE_NAME, source.title)
+                        with(source) {
+                            newRow()
+                                .add(COLUMN_ROUTE_ID, id)
+                                .add(COLUMN_ROUTE_PATH, path)
+                                .add(COLUMN_ROUTE_NAME, title)
+                        }
                     }
                 }
             }
@@ -152,14 +155,16 @@ class ReceiverContentProvider : ContentProvider() {
                 MatrixCursor(arrayOf(COLUMN_SERVICE_BSID, COLUMN_SERVICE_ID, COLUMN_SERVICE_GLOBAL_ID,
                     COLUMN_SERVICE_SHORT_NAME, COLUMN_SERVICE_CATEGORY, COLUMN_SERVICE_MAJOR_NO, COLUMN_SERVICE_MINOR_NO)).apply {
                     receiver.getSelectedService()?.let { service ->
-                        newRow()
-                            .add(COLUMN_SERVICE_BSID, service.bsid)
-                            .add(COLUMN_SERVICE_ID, service.id)
-                            .add(COLUMN_SERVICE_GLOBAL_ID, service.globalId)
-                            .add(COLUMN_SERVICE_SHORT_NAME, service.shortName)
-                            .add(COLUMN_SERVICE_CATEGORY, service.category)
-                            .add(COLUMN_SERVICE_MAJOR_NO, service.majorChannelNo)
-                            .add(COLUMN_SERVICE_MINOR_NO, service.minorChannelNo)
+                        with(service) {
+                            newRow()
+                                .add(COLUMN_SERVICE_BSID, bsid)
+                                .add(COLUMN_SERVICE_ID, id)
+                                .add(COLUMN_SERVICE_GLOBAL_ID, globalId)
+                                .add(COLUMN_SERVICE_SHORT_NAME, shortName)
+                                .add(COLUMN_SERVICE_CATEGORY, category)
+                                .add(COLUMN_SERVICE_MAJOR_NO, majorChannelNo)
+                                .add(COLUMN_SERVICE_MINOR_NO, minorChannelNo)
+                        }
                     }
                 }
             }
@@ -174,53 +179,54 @@ class ReceiverContentProvider : ContentProvider() {
                     } else null
 
                     receiver.getServiceList().forEach { service ->
-                        val isDefault = defaultService?.isTheSameAs(service) ?: false
-                        newRow()
-                            .add(COLUMN_SERVICE_BSID, service.bsid)
-                            .add(COLUMN_SERVICE_ID, service.id)
-                            .add(COLUMN_SERVICE_GLOBAL_ID, service.globalId)
-                            .add(COLUMN_SERVICE_SHORT_NAME, service.shortName)
-                            .add(COLUMN_SERVICE_CATEGORY, service.category)
-                            .add(COLUMN_SERVICE_MAJOR_NO, service.majorChannelNo)
-                            .add(COLUMN_SERVICE_MINOR_NO, service.minorChannelNo)
-                            .add(COLUMN_SERVICE_DEFAULT, if (isDefault) 1 else 0)
+                        with(service) {
+                            newRow()
+                                .add(COLUMN_SERVICE_BSID, bsid)
+                                .add(COLUMN_SERVICE_ID, id)
+                                .add(COLUMN_SERVICE_GLOBAL_ID, globalId)
+                                .add(COLUMN_SERVICE_SHORT_NAME, shortName)
+                                .add(COLUMN_SERVICE_CATEGORY, category)
+                                .add(COLUMN_SERVICE_MAJOR_NO, majorChannelNo)
+                                .add(COLUMN_SERVICE_MINOR_NO, minorChannelNo)
+                                .add(COLUMN_SERVICE_DEFAULT, if (service.isServiceEquals(defaultService)) 1 else 0)
+                        }
                     }
                 }
             }
 
             QUERY_APP_DATA -> {
-                MatrixCursor(arrayOf(COLUMN_APP_CONTEXT_ID, COLUMN_APP_BASE_URL, COLUMN_APP_ENTRY_PAGE,
-                    COLUMN_APP_SERVICE_IDS, COLUMN_APP_CACHE_PATH, COLUMN_APP_AVAILABLE)
+                MatrixCursor(arrayOf(COLUMN_APP_CONTEXT_ID, COLUMN_APP_BASE_URL, COLUMN_APP_BBAND_ENTRY_PAGE,
+                    COLUMN_APP_BCAST_ENTRY_PAGE, COLUMN_APP_SERVICE_IDS, COLUMN_APP_CACHE_PATH)
                 ).apply {
                     appData.value?.let { data ->
                         var d = data
                         if (MiddlewareConfig.DEV_TOOLS) {
                             DevConfig.get(appContext).applicationEntryPoint?.let { entryPage ->
-                                d = AppData(data.appContextId,
-                                    data.appBaseUrl,
-                                    entryPage + data.appEntryPage.substring(data.appEntryPage.indexOf('?')),
-                                    emptyList(), null, true)
+                                d = d.copy(bBandEntryPageUrl = ServerUtils.appendSocketPathOrNull(entryPage, receiver.settings), bCastEntryPageUrl = null)
                             }
                         }
 
-                        newRow().add(COLUMN_APP_CONTEXT_ID, d.appContextId)
-                            .add(COLUMN_APP_BASE_URL, d.appBaseUrl)
-                            .add(COLUMN_APP_ENTRY_PAGE, d.appEntryPage)
-                            .add(COLUMN_APP_SERVICE_IDS, d.compatibleServiceIds.joinToString(" ") { it.toString() })
-                            .add(COLUMN_APP_CACHE_PATH, d.cachePath)
-                            .add(COLUMN_APP_AVAILABLE, if (d.isAvailable) 1 else 0)
+                        with(d) {
+                            newRow().add(COLUMN_APP_CONTEXT_ID, contextId)
+                                .add(COLUMN_APP_BASE_URL, baseUrl)
+                                .add(COLUMN_APP_BBAND_ENTRY_PAGE, bBandEntryPageUrl)
+                                .add(COLUMN_APP_BCAST_ENTRY_PAGE, bCastEntryPageUrl)
+                                .add(COLUMN_APP_SERVICE_IDS, compatibleServiceIds.joinToString(" ") { it.toString() })
+                                .add(COLUMN_APP_CACHE_PATH, cachePath)
+                        }
                     }
                 }
             }
 
             QUERY_RECEIVER_MEDIA_PLAYER -> {
                 MatrixCursor(arrayOf(COLUMN_PLAYER_MEDIA_URL, COLUMN_PLAYER_LAYOUT_SCALE, COLUMN_PLAYER_LAYOUT_X, COLUMN_PLAYER_LAYOUT_Y, COLUMN_PLAYER_STATE)).apply {
-                    val params = rmpLayoutParams.value
-                    newRow().add(COLUMN_PLAYER_MEDIA_URL, rmpMediaUri.value?.toString())
-                        .add(COLUMN_PLAYER_LAYOUT_SCALE, params.scale)
-                        .add(COLUMN_PLAYER_LAYOUT_X, params.x)
-                        .add(COLUMN_PLAYER_LAYOUT_Y, params.y)
-                        .add(COLUMN_PLAYER_STATE, rmpState.value.state)
+                    with(rmpLayoutParams.value) {
+                        newRow().add(COLUMN_PLAYER_MEDIA_URL, rmpMediaUri.value?.toString())
+                            .add(COLUMN_PLAYER_LAYOUT_SCALE, scale)
+                            .add(COLUMN_PLAYER_LAYOUT_X, x)
+                            .add(COLUMN_PLAYER_LAYOUT_Y, y)
+                            .add(COLUMN_PLAYER_STATE, rmpState.value.state)
+                    }
                 }
             }
 
@@ -237,11 +243,12 @@ class ReceiverContentProvider : ContentProvider() {
             }
 
             QUERY_RECEIVER_STATE -> {
-                val receiverState = receiver.getReceiverState()
                 MatrixCursor(arrayOf(COLUMN_STATE_CODE, COLUMN_STATE_INDEX, COLUMN_STATE_COUNT)).apply {
-                    newRow().add(COLUMN_STATE_CODE, receiverState.state.code)
-                        .add(COLUMN_STATE_INDEX, receiverState.configIndex)
-                        .add(COLUMN_STATE_COUNT, receiverState.configCount)
+                    with(receiver.getReceiverState()) {
+                        newRow().add(COLUMN_STATE_CODE, state.code)
+                            .add(COLUMN_STATE_INDEX, configIndex)
+                            .add(COLUMN_STATE_COUNT, configCount)
+                    }
                 }
             }
 
@@ -408,11 +415,11 @@ class ReceiverContentProvider : ContentProvider() {
 
         const val COLUMN_APP_CONTEXT_ID = "appContextId"
         const val COLUMN_APP_BASE_URL = "appBaseUrl"
-        const val COLUMN_APP_ENTRY_PAGE = "appEntryPage"
+        const val COLUMN_APP_BBAND_ENTRY_PAGE = "appBBandEntryPage"
+        const val COLUMN_APP_BCAST_ENTRY_PAGE = "appBCastEntryPage"
         const val COLUMN_APP_STATE_VALUE = "appStateValue"
         const val COLUMN_APP_SERVICE_IDS = "appServiceIds"
         const val COLUMN_APP_CACHE_PATH = "appCachePath"
-        const val COLUMN_APP_AVAILABLE = "appAvailable"
 
         const val COLUMN_CERTIFICATE = "certificate"
 

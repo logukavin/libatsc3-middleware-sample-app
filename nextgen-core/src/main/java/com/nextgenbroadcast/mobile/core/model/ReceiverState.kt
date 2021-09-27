@@ -1,17 +1,13 @@
 package com.nextgenbroadcast.mobile.core.model
 
-import android.os.Parcelable
-import kotlinx.parcelize.Parcelize
-
-@Parcelize
 data class ReceiverState(
         val state: State,
         val configIndex: Int,
         val configCount: Int
-) : Parcelable {
+) {
 
     enum class State(
-            val code: Int
+        val code: Int
     ) {
         IDLE(0),        // source is not opened
         SCANNING(1),    // iterating over source configurations and collect SLT data

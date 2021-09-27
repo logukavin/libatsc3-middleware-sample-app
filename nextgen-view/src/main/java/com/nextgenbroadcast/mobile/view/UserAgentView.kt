@@ -31,13 +31,13 @@ class UserAgentView @JvmOverloads constructor(
         context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
 ) : WebView(context, attrs, defStyleAttr) {
 
-    private val ioScope = CoroutineScope(Dispatchers.IO)
-
     private var listener: IListener? = null
 
+    private var entryPointList: List<String> = emptyList()
     private var appEntryPoint: String? = null
     private var loadingRetryCount: Int = 0
-    private var reloadJob: Job? = null
+    private var reloadRunnable: Runnable? = null
+    private var loadingPage = false
 
     // content visibility hack
     private var _isContentVisible = MutableLiveData<Boolean>()
@@ -52,9 +52,10 @@ class UserAgentView @JvmOverloads constructor(
     var isContentVisible: LiveData<Boolean> = _isContentVisible.distinctUntilChanged()
 
     interface IListener {
-        fun onOpen()
-        fun onClose()
-        fun onLoadingError()
+        fun onOpened() {}
+        fun onClosed() {}
+        fun onLoadingError() {}
+        fun onLoadingSuccess() {}
     }
 
     fun setListener(listener: IListener) {
@@ -166,6 +167,14 @@ class UserAgentView @JvmOverloads constructor(
 
     private fun createWebViewClient() = object : WebViewClient() {
 
+        override fun onPageFinished(view: WebView, url: String) {
+            super.onPageFinished(view, url)
+
+            if (loadingPage && url == appEntryPoint) {
+                listener?.onLoadingSuccess()
+            }
+        }
+
         override fun onReceivedSslError(view: WebView, handler: SslErrorHandler, error: SslError) {
             LOG.d(TAG, "onReceivedSslError: $error")
 
@@ -185,24 +194,20 @@ class UserAgentView @JvmOverloads constructor(
             handler.cancel()
         }
 
-        override fun onReceivedError(view: WebView?, request: WebResourceRequest?, error: WebResourceError?) {
+        override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError?) {
             super.onReceivedError(view, request, error)
 
-            LOG.e(TAG, "onReceivedError request: ${request?.url}, errorCode: ${error?.errorCode}, description: ${error?.description}")
+            LOG.e(TAG, "onReceivedError request: ${request.url}, errorCode: ${error?.errorCode}, description: ${error?.description}")
 
-            request?.let {
-                onLoadingError(request.url)
-            }
+            onLoadingError(request.url)
         }
 
-        override fun onReceivedHttpError(view: WebView?, request: WebResourceRequest?, errorResponse: WebResourceResponse?) {
+        override fun onReceivedHttpError(view: WebView, request: WebResourceRequest, errorResponse: WebResourceResponse?) {
             super.onReceivedHttpError(view, request, errorResponse)
 
-            LOG.e(TAG, "onReceivedHttpError request: ${request?.url}, statusCode: ${errorResponse?.statusCode}, reason: ${errorResponse?.reasonPhrase}")
+            LOG.e(TAG, "onReceivedHttpError request: ${request.url}, statusCode: ${errorResponse?.statusCode}, reason: ${errorResponse?.reasonPhrase}")
 
-            request?.let {
-                onLoadingError(request.url)
-            }
+            onLoadingError(request.url)
         }
 
         override fun onReceivedClientCertRequest(view: WebView, request: ClientCertRequest) {
@@ -218,55 +223,86 @@ class UserAgentView @JvmOverloads constructor(
     }
 
     private fun onLoadingError(uri: Uri) {
-        if (reloadJob != null) return
+        if (reloadRunnable != null) return
 
-        if (loadingRetryCount < MAX_RETRY_COUNT) {
-            appEntryPoint?.let { entryPoint ->
-                if (uri.toString() == entryPoint) {
-                    loadUrl("about:blank")
+        val entryPoint = appEntryPoint
+        if (uri.toString() == entryPoint) {
+            loadingPage = false
 
-                    loadingRetryCount++
-                    reloadJob = ioScope.launch {
-                        delay(RETRY_DELAY_MILS * loadingRetryCount)
-                        withContext(Dispatchers.Main) {
-                            reloadJob = null
-                            loadUrl(entryPoint)
-                        }
-                    }
+            loadBlankPage()
+
+            if (loadingRetryCount < MAX_RETRY_COUNT) {
+                loadingRetryCount++
+
+                reloadRunnable = Runnable {
+                    reloadRunnable = null
+                    loadEntryPoint(entryPoint)
+                }.also {
+                    postDelayed(it, RETRY_DELAY_MILS * loadingRetryCount)
                 }
+            } else {
+                getNextEntryPointOrNull()?.run {
+                    loadingRetryCount = 0
+                    loadEntryPoint(this)
+                } ?: listener?.onLoadingError()
             }
         } else {
             listener?.onLoadingError()
         }
     }
 
-    fun loadBAContent(appEntryPoint: String) {
-        reset()
-        this.appEntryPoint = appEntryPoint
-        loadUrl(appEntryPoint)
+    fun load(entryPoint: String) {
+        loadFirstAvailable(listOf(entryPoint))
     }
 
-    fun unloadBAContent() {
+    fun loadFirstAvailable(entryPoints: List<String>) {
         reset()
-        loadUrl("about:blank")
+        entryPointList = entryPoints
+        getNextEntryPointOrNull()?.run {
+            loadEntryPoint(this)
+        }
+    }
+
+    fun unload() {
+        reset()
+        loadBlankPage()
     }
 
     fun actionExit() {
         sendKeyPress(KeyEvent.KEYCODE_DPAD_LEFT, 105)
 
-        listener?.onClose()
+        listener?.onClosed()
     }
 
     fun actionEnter() {
         sendKeyPress(KeyEvent.KEYCODE_DPAD_RIGHT, 106)
 
-        listener?.onOpen()
+        listener?.onOpened()
+    }
+
+    private fun loadBlankPage() {
+        loadUrl("about:blank")
+    }
+
+    private fun loadEntryPoint(entryPoint: String) {
+        appEntryPoint = entryPoint
+        loadingPage = true
+        loadUrl(entryPoint)
+    }
+
+    private fun getNextEntryPointOrNull() = with(entryPointList) {
+        val entryPoint = appEntryPoint
+        if (entryPoint != null) {
+            getOrNull(indexOf(entryPoint) + 1)
+        } else firstOrNull()
     }
 
     private fun reset() {
-        reloadJob?.cancel()
+        removeCallbacks(reloadRunnable)
+        reloadRunnable = null
         loadingRetryCount = 0
         appEntryPoint = null
+        entryPointList = emptyList()
     }
 
     private fun sendKeyPress(keyCode: Int, scanCode: Int) {
@@ -302,7 +338,7 @@ class UserAgentView @JvmOverloads constructor(
         val TAG: String = UserAgentView::class.java.simpleName
 
         private const val RETRY_DELAY_MILS = 500L
-        private const val MAX_RETRY_COUNT = 4
+        private const val MAX_RETRY_COUNT = 1
         private const val CAPTURE_PERIOD_MILS = 200L
         private const val CAPTURE_DELAY_MILS = CAPTURE_PERIOD_MILS + 100L
     }
