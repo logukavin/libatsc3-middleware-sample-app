@@ -37,5 +37,5 @@ interface IRPCGateway {
 
     fun getAlertChangingData(alertingTypes: List<String>): List<AlertingSignalingRpcResponse.Alert>
 
-    fun getSignalingInfo(): List<SignalingRpcResponse.SignalingInfo>
+    fun getSignalingInfo(names: List<String>): List<SignalingRpcResponse.SignalingInfo>
 }

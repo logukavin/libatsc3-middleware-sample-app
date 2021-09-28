@@ -5,7 +5,7 @@ data class SignalingRpcResponse(
 ) {
     data class SignalingInfo(
         var name: String,
-        var group: String,
+        var group: String?,
         var version: String,
         var table: String
     )

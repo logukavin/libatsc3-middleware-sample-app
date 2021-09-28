@@ -4,6 +4,7 @@ import com.nextgenbroadcast.mobile.core.model.MediaUrl
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.PhyFrequency
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
+import com.nextgenbroadcast.mobile.middleware.atsc3.ISignalingData
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.IAtsc3Source
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -25,4 +26,6 @@ internal interface IServiceController {
     fun getNearbyService(offset: Int): AVService?
     fun getCurrentService(): AVService?
     fun getCurrentRouteMediaUrl(): MediaUrl?
+
+    fun getSignalingData(names: List<String>): List<ISignalingData>
 }
