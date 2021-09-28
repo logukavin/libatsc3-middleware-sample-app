@@ -48,7 +48,7 @@ class ScoreboardSettingsFragment : Fragment() {
         binding.deviceIdsRecyclerIew.adapter = deviceIdsAdapter
 
         binding.selectAllCheckbox.setOnClickListener {
-            sharedViewModel.selectAll(binding.selectAllCheckbox.isChecked)
+            sharedViewModel.selectAllDevices(binding.selectAllCheckbox.isChecked)
         }
 
         sharedViewModel.deviceIdList.observe(viewLifecycleOwner) { devices ->
