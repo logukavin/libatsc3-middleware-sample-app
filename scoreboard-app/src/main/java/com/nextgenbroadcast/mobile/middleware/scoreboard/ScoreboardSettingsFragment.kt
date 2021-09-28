@@ -17,7 +17,6 @@ import androidx.recyclerview.widget.RecyclerView
 import com.nextgenbroadcast.mobile.middleware.scoreboard.databinding.DeviceIdItemViewBinding
 import com.nextgenbroadcast.mobile.middleware.scoreboard.databinding.FragmentSettingsBinding
 import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.DeviceScoreboardInfo
-import java.text.DecimalFormat
 
 class ScoreboardSettingsFragment : Fragment() {
     private val sharedViewModel by activityViewModels<SharedViewModel>()
@@ -51,7 +50,7 @@ class ScoreboardSettingsFragment : Fragment() {
             sharedViewModel.selectAllDevices(binding.selectAllCheckbox.isChecked)
         }
 
-        sharedViewModel.deviceIdList.observe(viewLifecycleOwner) { devices ->
+        sharedViewModel.deviceInfoList.observe(viewLifecycleOwner) { devices ->
             deviceIdsAdapter.setData(devices)
         }
 
