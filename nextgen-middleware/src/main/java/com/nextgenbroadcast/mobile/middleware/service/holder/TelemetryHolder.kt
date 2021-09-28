@@ -142,10 +142,17 @@ internal class TelemetryHolder(
         ).apply {
             //start() do not start Telemetry with application, use switch in Settings dialog or AWS command
         }.also { broker ->
-            val enabledReaderNames =
-                readPrefsMap(PREF_PHY_INFO_KEY).filterValues { it }.keys.toList()
-            if (enabledReaderNames.isNotEmpty()) {
-                broker.setReaderEnabled(true, enabledReaderNames)
+            // Enable telemetry readers that stored in preferences with enabled state or absent
+            val prefReadersMap = readPrefsMap(PREF_PHY_INFO_KEY)
+            val newReaders = broker.readerNames.subtract(prefReadersMap.keys).map { name ->
+                name to true
+            }
+            val readersToEnable = (prefReadersMap + newReaders).filterValues { enabled ->
+                enabled
+            }.keys.toList()
+
+            if (readersToEnable.isNotEmpty()) {
+                broker.setReaderEnabled(true, readersToEnable)
             }
 
             CoroutineScope(Dispatchers.Main).launch {
