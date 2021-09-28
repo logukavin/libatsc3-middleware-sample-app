@@ -5,6 +5,7 @@ import androidx.lifecycle.*
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.entity.TelemetryEvent
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.reader.LocationData
 import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.DeviceScoreboardInfo
+import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.LocationDataAndTime
 import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.TDataPoint
 import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.TelemetryDevice
 import com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry.TelemetryManager
@@ -17,7 +18,7 @@ class SharedViewModel : ViewModel() {
     private val _deviceList: MutableLiveData<List<TelemetryDevice>> = MutableLiveData(emptyList())
     private val _chartDevices = MutableLiveData<List<String>>(emptyList())
     private val _deviceFlowMap = MutableLiveData<Map<String, Flow<TDataPoint>>>(emptyMap())
-    private val _locationData = MutableLiveData<Map<String, LocationData>>(emptyMap())
+    private val _locationData = MutableLiveData<Map<String, LocationDataAndTime>>(emptyMap())
     val currentDeviceLiveData = MutableLiveData<LocationData?>(null)
 
     private val locationCalculationResult = FloatArray(1)
@@ -98,8 +99,8 @@ class SharedViewModel : ViewModel() {
         distanceMap: MutableMap<String, Float?>?,
         oldMyLocation: LocationData?,
         newMyLocation: LocationData,
-        newDevicesLocation: Map<String, LocationData>,
-        oldDevicesLocation: Map<String, LocationData>?
+        newDevicesLocation: Map<String, LocationDataAndTime>,
+        oldDevicesLocation: Map<String, LocationDataAndTime>?
     ): Map<String, Float?> {
         return if (distanceMap == null || oldMyLocation != newMyLocation) {
 
@@ -133,8 +134,8 @@ class SharedViewModel : ViewModel() {
     private fun calculateDevicesLocation(
         distanceMap: MutableMap<String, Float?>,
         newMyLocation: LocationData,
-        newDevicesLocation: Map<String, LocationData>,
-        oldDevicesLocation: Map<String, LocationData>?
+        newDevicesLocation: Map<String, LocationDataAndTime>,
+        oldDevicesLocation: Map<String, LocationDataAndTime>?
     ) {
         val diff = newDevicesLocation.toMutableMap()
         invalidateOldLocationDevices(distanceMap, diff)
@@ -142,7 +143,11 @@ class SharedViewModel : ViewModel() {
         oldDevicesLocation?.forEach { (id, locationData) ->
             // remove devices that has same location as in prev. calculation
             val newLocationData = diff[id]
-            if (newLocationData != null && !isLocationDataChangedSignificantly(newLocationData, locationData)) {
+            if (newLocationData != null && !isLocationDataChangedSignificantly(
+                    newLocationData.location,
+                    locationData.location
+                )
+            ) {
                 diff.remove(id)
             }
         }
@@ -159,11 +164,11 @@ class SharedViewModel : ViewModel() {
      */
     private fun invalidateOldLocationDevices(
         distanceMap: MutableMap<String, Float?>,
-        devicesLocationMap: MutableMap<String, LocationData>
+        devicesLocationMap: MutableMap<String, LocationDataAndTime>
     ) {
         devicesLocationMap
             .filter { (_, locationData) ->
-                System.currentTimeMillis() - locationData.timeStamp >= INVALIDATE_LOCATION_TIME_DIFF
+                System.currentTimeMillis() - locationData.timestamp >= INVALIDATE_LOCATION_TIME_DIFF
             }
             .map { it.key }
             .forEach { id ->
@@ -211,13 +216,13 @@ class SharedViewModel : ViewModel() {
 
     private fun calculateDistance(
         holder: MutableMap<String, Float?>,
-        devicesData: Map<String, LocationData>,
+        devicesData: Map<String, LocationDataAndTime>,
         currentLocation: LocationData
     ) {
-        devicesData.forEach { (id, location) ->
+        devicesData.forEach { (id, locationAndTime) ->
             Location.distanceBetween(
-                location.lat,
-                location.lng,
+                locationAndTime.location.lat,
+                locationAndTime.location.lng,
                 currentLocation.lat,
                 currentLocation.lng,
                 locationCalculationResult
@@ -231,8 +236,8 @@ class SharedViewModel : ViewModel() {
         if (payload !is LocationData) return
         val id = TelemetryManager.extractClientId(location.topic)
         _locationData.value = _locationData.value?.toMutableMap()?.apply {
-            put(id, payload)
-        } ?: mapOf(id to payload)
+            put(id, LocationDataAndTime(payload))
+        } ?: mapOf(id to LocationDataAndTime(payload))
     }
 
     fun setDeviceSelection(deviceId: String?) {
