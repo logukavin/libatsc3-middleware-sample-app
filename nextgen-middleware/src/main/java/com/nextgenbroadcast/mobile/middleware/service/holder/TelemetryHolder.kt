@@ -131,6 +131,7 @@ internal class TelemetryHolder(
                         SensorTelemetryReader(sensorManager, Sensor.TYPE_ROTATION_VECTOR),
                         GPSTelemetryReader(context),
                         RfPhyTelemetryReader(receiver.rfPhyMetricsFlow),
+                        L1DPhyTelemetryReader(receiver.l1dPhyInfoFlow, receiver.ntpClock),
                         ErrorTelemetryReader(receiver.errorFlow)
                 ),
                 listOf(
