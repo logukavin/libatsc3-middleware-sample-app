@@ -19,32 +19,28 @@ internal fun formatDistanceSpannableString(distance: Float?, context: Context): 
     val distanceText = formatDistance(distance, context)
     return SpannableString(
         context.getString(R.string.device_distance, distanceText)
-    ).apply {
-        setSpan(
-            StyleSpan(Typeface.BOLD),
-            length - distanceText.length,
-            length,
-            Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-        )
-    }
+    ).setBoldSpanFromTheEnd { length -> length - distanceText.length }
 }
 
 internal fun formatDistanceAndIdSpannableString(id: String, distance: Float?, context: Context): SpannableString {
     val distanceText = formatDistance(distance, context)
     return SpannableString(
         context.getString(R.string.device_id_and_distance, id, distanceText)
-    ).apply {
-        setSpan(
-            StyleSpan(Typeface.BOLD),
-            0,
-            id.length,
-            Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-        )
-        setSpan(
-            StyleSpan(Typeface.BOLD),
-            length - distanceText.length,
-            length,
-            Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-        )
-    }
+    )
+        .setBoldSpan(0, id.length)
+        .setBoldSpanFromTheEnd { length -> length - distanceText.length }
 }
+
+internal fun SpannableString.setBoldSpan(start: Int, end: Int): SpannableString = apply {
+    setSpan(
+        StyleSpan(Typeface.BOLD),
+        start,
+        end,
+        Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+    )
+}
+
+internal fun SpannableString.setBoldSpanFromTheEnd(startIndex: (Int) -> Int): SpannableString =
+    apply {
+        setBoldSpan(start = startIndex(length), length)
+    }
