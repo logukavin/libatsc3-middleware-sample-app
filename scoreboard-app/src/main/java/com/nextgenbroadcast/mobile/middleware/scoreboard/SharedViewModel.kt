@@ -8,6 +8,7 @@ import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.DeviceScoreboa
 import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.LocationDataAndTime
 import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.TDataPoint
 import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.TelemetryDevice
+import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.TelemetryEntity
 import com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry.TelemetryManager
 import kotlinx.coroutines.flow.Flow
 import java.util.concurrent.TimeUnit
@@ -20,6 +21,19 @@ class SharedViewModel : ViewModel() {
     private val _deviceFlowMap = MutableLiveData<Map<String, Flow<TDataPoint>>>(emptyMap())
     private val _locationData = MutableLiveData<Map<String, LocationDataAndTime>>(emptyMap())
     val currentDeviceLiveData = MutableLiveData<LocationData?>(null)
+    val telemetryCommands = MutableLiveData(
+        listOf(
+            TelemetryEntity("acceleration"),
+            TelemetryEntity("gyroscope"),
+            TelemetryEntity("motion"),
+            TelemetryEntity("step_detector"),
+            TelemetryEntity("step_counter"),
+            TelemetryEntity("rotation"),
+            TelemetryEntity(TelemetryEvent.EVENT_TOPIC_BATTERY),
+            TelemetryEntity(TelemetryEvent.EVENT_TOPIC_LOCATION),
+            TelemetryEntity(TelemetryEvent.EVENT_TOPIC_PHY)
+        )
+    )
 
     private val locationCalculationResult = FloatArray(1)
 
@@ -301,7 +315,7 @@ class SharedViewModel : ViewModel() {
         return _deviceFlowMap.value?.get(deviceId)
     }
 
-    fun selectAll(isChecked: Boolean) {
+    fun selectAllDevices(isChecked: Boolean) {
         val list = _chartDevices.value?.toMutableList() ?: mutableListOf()
         deviceIdList.value?.forEach { (device) ->
             if (isChecked) {
@@ -314,6 +328,24 @@ class SharedViewModel : ViewModel() {
             }
         }
         _chartDevices.value = list
+    }
+
+    fun selectCommand(position: Int, selected: Boolean) {
+        telemetryCommands.value = telemetryCommands.value?.toMutableList()?.apply {
+            set(position, get(position).copy(checked = selected))
+        }
+    }
+
+    fun restoreTelemetryCommands(data: String) {
+        val commands = data.split(",")
+        telemetryCommands.value = telemetryCommands.value?.toMutableList()?.apply {
+            commands.forEach { command ->
+                val index = indexOfFirst { it.name.contentEquals(command, true) }
+                if (index != -1) {
+                    set(index, get(index).copy(checked = true))
+                }
+            }
+        }
     }
 
     companion object {

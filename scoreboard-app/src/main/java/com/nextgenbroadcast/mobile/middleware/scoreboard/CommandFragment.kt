@@ -1,12 +1,11 @@
 package com.nextgenbroadcast.mobile.middleware.scoreboard
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
+import android.view.*
 import android.widget.EditText
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -72,8 +71,32 @@ class CommandFragment : Fragment(), View.OnClickListener {
             saveFileViewBinding.buttonWriteToFile.setOnClickListener(this@CommandFragment)
             telemetryViewBinding.buttonSetTelemetry.setOnClickListener(this@CommandFragment)
             baEntrypointBinding.buttonEntrypointApply.setOnClickListener(this@CommandFragment)
+
+            telemetryViewBinding.buttonMoreOptions.setOnClickListener {
+                TelemetryCommandsDialog
+                    .newInstance()
+                    .show(childFragmentManager, TelemetryCommandsDialog.TAG)
+            }
         }
 
+        childFragmentManager.setFragmentResultListener(
+            TelemetryCommandsDialog.TELEMETRY_RESULT_ITEM_CHECKED,
+            viewLifecycleOwner
+        ) { _, result ->
+            onPopupTelemetryItemChecked(result)
+        }
+
+    }
+
+    private fun onPopupTelemetryItemChecked(result: Bundle) {
+        val (name, isChecked) = TelemetryCommandsDialog.unpackResult(result)
+        var currentText = telemetryViewBinding.editTextTelemetryNames.text?.toString()
+        currentText = if (!isChecked) {
+            currentText?.replace("$name,", "")
+        } else {
+            "$name,$currentText"
+        }
+        telemetryViewBinding.editTextTelemetryNames.setText(currentText)
     }
 
     private fun saveViewStates() {
@@ -129,9 +152,13 @@ class CommandFragment : Fragment(), View.OnClickListener {
             saveFileViewBinding.editTextFileName.setText(getString(FILE_NAME_VALUE, ""))
             saveFileViewBinding.editTextWritingDuration.setText(getString(WRITING_DURATION_VALUE, ""))
 
-            telemetryViewBinding.checkboxTelemetryEnable.isChecked =
-                getBoolean(TELEMETRY_ENABLE_VALUE, false)
-            telemetryViewBinding.editTextTelemetryNames.setText(getString(TELEMETRY_NAMES_VALUE, ""))
+            telemetryViewBinding.checkboxTelemetryEnable.isChecked = getBoolean(TELEMETRY_ENABLE_VALUE, false)
+            getString(TELEMETRY_NAMES_VALUE, "").let { commands ->
+                if (!commands.isNullOrBlank()) {
+                    sharedViewModel.restoreTelemetryCommands(commands)
+                }
+                telemetryViewBinding.editTextTelemetryNames.setText(commands)
+            }
             telemetryViewBinding.editTextTelemetryDelay.setText(getString(TELEMETRY_DELAY, ""))
 
             baEntrypointBinding.editTextEntrypoint.setText(getString(BA_ENTRYPOINT_VALUE, ""))

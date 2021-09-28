@@ -60,4 +60,6 @@
     <string name="distance_format_km">%.3f km</string>
     <string name="distance_format_m">%.0f m</string>
     <string name="warning_access_background_location_permission">Location permission is necessary for correct work of the receiver</string>
+    <string name="telemetry_more_options">…</string>
+    <string name="dialog_telemetry_commands_title">Telemetry commands</string>
 </resources>
