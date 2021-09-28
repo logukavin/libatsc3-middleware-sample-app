@@ -49,6 +49,7 @@ internal class Atsc3Module(
     private val serviceLocationTable = ConcurrentHashMap<Int, Atsc3ServiceLocationTable>()
     private val serviceToSourceConfig = ConcurrentHashMap<Int, Int>()
     private val applicationPackageMap = ConcurrentHashMap<String, Atsc3Application>()
+    private val llsTableMap = ConcurrentHashMap<SignalingDataType, ISignalingData>()
     private val stateLock = ReentrantLock()
     private val configurationTimer = Timer()
     private val stateScope = CoroutineScope(Executors.newSingleThreadExecutor().asCoroutineDispatcher())
@@ -81,9 +82,6 @@ internal class Atsc3Module(
 
     @Volatile
     private var selectedServicePackage: Atsc3HeldPackage? = null
-
-    @Volatile
-    private var selectedServiceHeldXml: String? = null
 
     @Volatile
     private var phyDemodLock: Boolean = false
@@ -492,6 +490,7 @@ internal class Atsc3Module(
             clearService()
             serviceLocationTable.clear()
             serviceToSourceConfig.clear()
+            llsTableMap.clear()
 
             //TODO: temporary test solution
             if (tmpAdditionalServiceOpened) {
@@ -513,7 +512,7 @@ internal class Atsc3Module(
     private fun clearHeld() {
         selectedServiceHeld = null
         selectedServicePackage = null
-        selectedServiceHeldXml = null
+        llsTableMap.remove(SignalingDataType.HELD)
 
         /* it reconnects additional service on service selection that leads to ESG reloading - that's bad.
         But probably we need it when switching between services with different BSID. Lat's store BSID in ESG data instead
@@ -558,7 +557,7 @@ internal class Atsc3Module(
 
     override fun jni_getCacheDir(): File = cacheDir
 
-    override fun onSltTablePresent(slt_payload_xml: String) {
+    override fun onSltTablePresent(tableId: Int, tableVersion: Int, groupId: Int, slt_payload_xml: String) {
         val shouldSkip = isReconfiguring
 
         cancelSourceConfigTimeoutTask()
@@ -575,6 +574,13 @@ internal class Atsc3Module(
 
         val slt = LLSParserSLT().parseXML(slt_payload_xml)
         synchronized(this) {
+            llsTableMap[SignalingDataType.SLT] = Atsc3SLTData(
+                id = tableId,
+                version = tableVersion,
+                groupId = groupId,
+                xml = slt_payload_xml
+            )
+
             serviceLocationTable[slt.bsid] = slt
             serviceToSourceConfig[slt.bsid] = currentSourceConfiguration
         }
@@ -609,12 +615,15 @@ internal class Atsc3Module(
         log("onSlsHeldEmissionPresent, $serviceId, selectedServiceID: $selectedServiceId, HELD: $heldPayloadXML")
 
         if (serviceId == selectedServiceId) {
-            if (heldPayloadXML != selectedServiceHeldXml) {
+            if (heldPayloadXML != llsTableMap[SignalingDataType.HELD]?.xml) {
                 val held = HeldXmlParser().parseXML(heldPayloadXML)
                 val pkg = held?.findActivePackage()
                 val notify = synchronized(this) {
-                    if (heldPayloadXML != selectedServiceHeldXml) {
-                        selectedServiceHeldXml = heldPayloadXML
+                    if (heldPayloadXML != llsTableMap[SignalingDataType.HELD]?.xml) {
+                        llsTableMap[SignalingDataType.HELD] = Atsc3HELDData(
+                            version = 0,
+                            xml = heldPayloadXML
+                        )
                         selectedServiceHeld = held
 
                         if (held != null) {
@@ -787,6 +796,16 @@ internal class Atsc3Module(
             serialId = systemProperties.boot_serialno_str
         }
         return if (serialId.isNullOrBlank()) null else serialId
+    }
+
+    override fun getLLSTableByName(names: List<String>): List<ISignalingData> {
+        return if (names.contains(SignalingDataType.ALL.name)) {
+            llsTableMap.values.toList()
+        } else {
+            llsTableMap.values.filter {
+                names.contains(it.name)
+            }
+        }
     }
 
     private fun applyDefaultConfiguration(src: IAtsc3Source) {
