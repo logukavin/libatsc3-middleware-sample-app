@@ -489,29 +489,34 @@ class MainFragment : Fragment() {
             if (!requireActivity().isInPictureInPictureMode) {
                 setBAAvailability(true)
             }
-            if (!appData.isAppEquals(currentAppData)
+            val isAppEquals = appData.isAppEquals(currentAppData)
+            if (!isAppEquals
                 || appData.isBCastAvailable != currentAppData?.isBCastAvailable
                 || appData.isBBandAvailable != currentAppData?.isBBandAvailable
             ) {
-                loadBroadcasterApplication(appData)
+                loadBroadcasterApplication(appData, !isAppEquals)
             }
         } else {
             unloadBroadcasterApplication()
         }
     }
 
-    private fun loadBroadcasterApplication(appData: AppData) {
-        currentAppData = appData
+    private fun loadBroadcasterApplication(appData: AppData, forceReload: Boolean) {
         with(binding.userAgentWebView) {
-            serverCertificateHash = receiverContentResolver.queryServerCertificate() ?: emptyList()
-            loadFirstAvailable(mutableListOf<String?>().apply {
-                if (appData.isBCastAvailable) {
-                    add(appData.bCastEntryPageUrlFull)
-                }
-                if (appData.isBBandAvailable) {
-                    add(appData.bBandEntryPageUrl)
-                }
-            }.filterNotNull())
+            if (forceReload || !isContentLoaded) {
+                currentAppData = appData
+                serverCertificateHash = receiverContentResolver.queryServerCertificate() ?: emptyList()
+                loadFirstAvailable(
+                    mutableListOf<String>().apply {
+                        if (appData.isBCastAvailable) {
+                            appData.bCastEntryPageUrlFull?.let { add(it) }
+                        }
+                        if (appData.isBBandAvailable) {
+                            appData.bBandEntryPageUrl?.let { add(it) }
+                        }
+                    }
+                )
+            }
         }
     }
 
