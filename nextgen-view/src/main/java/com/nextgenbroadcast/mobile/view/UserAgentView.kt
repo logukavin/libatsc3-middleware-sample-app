@@ -31,13 +31,24 @@ class UserAgentView @JvmOverloads constructor(
         context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
 ) : WebView(context, attrs, defStyleAttr) {
 
+    interface IListener {
+        fun onOpened() {}
+        fun onClosed() {}
+        fun onLoadingError() {}
+        fun onLoadingSuccess() {}
+    }
+
+    private enum class State {
+        IDLE, LOADING, FINISHED
+    }
+
     private var listener: IListener? = null
 
     private var entryPointList: List<String> = emptyList()
     private var appEntryPoint: String? = null
     private var loadingRetryCount: Int = 0
     private var reloadRunnable: Runnable? = null
-    private var loadingPage = false
+    private var state = State.IDLE
 
     // content visibility hack
     private var _isContentVisible = MutableLiveData<Boolean>()
@@ -46,17 +57,12 @@ class UserAgentView @JvmOverloads constructor(
     private var layerCanvas: Canvas? = null
     private var lastCaptureTime: Long = 0
 
-    var serverCertificateHash: List<String> = emptyList()
+    val isContentLoaded: Boolean
+        get() = state == State.FINISHED
 
+    var serverCertificateHash: List<String> = emptyList()
     var captureContentVisibility = false
     var isContentVisible: LiveData<Boolean> = _isContentVisible.distinctUntilChanged()
-
-    interface IListener {
-        fun onOpened() {}
-        fun onClosed() {}
-        fun onLoadingError() {}
-        fun onLoadingSuccess() {}
-    }
 
     fun setListener(listener: IListener) {
         this.listener = listener
@@ -170,7 +176,8 @@ class UserAgentView @JvmOverloads constructor(
         override fun onPageFinished(view: WebView, url: String) {
             super.onPageFinished(view, url)
 
-            if (loadingPage && url == appEntryPoint) {
+            if (state == State.LOADING && url == appEntryPoint) {
+                state = State.FINISHED
                 listener?.onLoadingSuccess()
             }
         }
@@ -227,7 +234,7 @@ class UserAgentView @JvmOverloads constructor(
 
         val entryPoint = appEntryPoint
         if (uri.toString() == entryPoint) {
-            loadingPage = false
+            state = State.IDLE
 
             loadBlankPage()
 
@@ -282,11 +289,12 @@ class UserAgentView @JvmOverloads constructor(
 
     private fun loadBlankPage() {
         loadUrl("about:blank")
+        _isContentVisible.value = false
     }
 
     private fun loadEntryPoint(entryPoint: String) {
         appEntryPoint = entryPoint
-        loadingPage = true
+        state = State.LOADING
         loadUrl(entryPoint)
     }
 
