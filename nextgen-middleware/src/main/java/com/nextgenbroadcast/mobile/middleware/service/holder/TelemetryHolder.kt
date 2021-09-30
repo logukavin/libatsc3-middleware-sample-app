@@ -39,6 +39,7 @@ import com.nextgenbroadcast.mobile.middleware.dev.telemetry.writer.FileTelemetry
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.writer.VuzixPhyTelemetryWriter
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.control.WebTelemetryControl
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.reader.*
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.task.IsOnlineTelemetryTask
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.writer.WebTelemetryWriter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -290,6 +291,9 @@ internal class TelemetryHolder(
         }.also {
             awsIoThing = it
         }
+        thing.onConnectedCallback = {
+            telemetryBroker?.runTask(IsOnlineTelemetryTask())
+        }
 
         telemetryBroker?.addWriter(
             AWSIoTelemetryWriter(AWSIOT_EVENT_TOPIC_FORMAT, thing)
@@ -310,6 +314,7 @@ internal class TelemetryHolder(
                 thing.close()
             }
         }
+        awsIoThing?.onConnectedCallback = null
         awsIoThing = null
     }
 

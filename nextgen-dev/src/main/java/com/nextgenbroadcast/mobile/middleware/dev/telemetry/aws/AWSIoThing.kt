@@ -40,6 +40,8 @@ class AWSIoThing(
     @Volatile
     private var isClosed = false
 
+    var onConnectedCallback: (() -> Unit)? = null
+
     //jjustman-2021-05-06 - adding try/catch for 05-06 06:53:17.405 12729 18824 E AndroidRuntime: com.amazonaws.services.iot.client.AWSIotException: com.amazonaws.services.iot.client.core.AwsIotRetryableException: Client is not connected (32104)
     //                      this can occur if we are pushing events with a stale MQTT connection and have exceeded the AWSIot internal publishQueue.size() limited by client.getMaxOfflineQueueSize()
 
@@ -188,8 +190,8 @@ class AWSIoThing(
             }
             thingAwsIotClient = client
             connect(client)
-
             LOG.i(TAG, "AWS IoT Client connected!")
+            onConnectedCallback?.invoke()
         }
     }
 
