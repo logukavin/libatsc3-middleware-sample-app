@@ -85,6 +85,10 @@ class TelemetryManager(
         it.topic.endsWith("/$topic")
     }
 
+    fun getGlobalEventFlow(vararg topic: String) = getGlobalEventFlow()?.filter { event ->
+        topic.any { event.topic.endsWith("/$it") }
+    }
+
     fun start() {
         try {
             nsdManager.discoverServices(NsdConfig.SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, discoveryListener)
@@ -96,7 +100,7 @@ class TelemetryManager(
 
         deviceLocationJob = CoroutineScope(Dispatchers.IO).launch {
             try {
-                getGlobalEventFlow(AWSIOT_TOPIC_PING)?.collect { event ->
+                getGlobalEventFlow(AWSIOT_TOPIC_PING, AWSIOT_TOPIC_IS_ONLINE)?.collect { event ->
                     val clientId = extractClientId(event.topic)
 
                     awsDevices.add(clientId)
@@ -328,6 +332,7 @@ class TelemetryManager(
 
         private const val AWSIOT_TOPIC_ANY = "#"
         private const val AWSIOT_TOPIC_PING = TelemetryEvent.EVENT_TOPIC_PING
+        private const val AWSIOT_TOPIC_IS_ONLINE = TelemetryEvent.EVENT_TOPIC_IS_ONLINE
         private const val AWSIOT_TOPIC_PHY = TelemetryEvent.EVENT_TOPIC_PHY
 
         private val AWSIOT_PING_PERIOD = TimeUnit.MINUTES.toMillis(1)

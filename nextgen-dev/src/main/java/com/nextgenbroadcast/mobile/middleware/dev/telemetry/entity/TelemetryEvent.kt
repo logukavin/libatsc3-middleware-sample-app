@@ -15,5 +15,6 @@ data class TelemetryEvent(
         const val EVENT_TOPIC_WIFI = "wifi"
         const val EVENT_TOPIC_PING = "ping"
         const val EVENT_TOPIC_ERROR = "error"
+        const val EVENT_TOPIC_IS_ONLINE = "is_online"
     }
 }
