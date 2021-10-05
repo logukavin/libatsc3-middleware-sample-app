@@ -33,7 +33,7 @@ fun isClass(className: String) = try {
     false
 }
 
-private const val apkServiceGlobalIdPrefix = "apk:"
+private const val apkServiceGlobalIdPrefix = "apk://"
 
 fun getApkBaseServicePackage(serviceCategory: Int, globalServiceId: String): String? {
     return if(serviceCategory == SLTConstants.SERVICE_CATEGORY_ABS && globalServiceId.startsWith(apkServiceGlobalIdPrefix)) {
