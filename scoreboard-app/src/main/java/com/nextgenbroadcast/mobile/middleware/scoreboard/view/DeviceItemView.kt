@@ -15,6 +15,7 @@ class DeviceItemView @JvmOverloads constructor(
     lateinit var title: TextView
     lateinit var lostLabel: TextView
     lateinit var phyChart: PhyChart
+    lateinit var errorText: TextView
     var isChartSelected = false
 
     override fun onFinishInflate() {
@@ -23,6 +24,7 @@ class DeviceItemView @JvmOverloads constructor(
         title = findViewById(R.id.device_name_view)
         lostLabel = findViewById(R.id.device_lost_label)
         phyChart = findViewById(R.id.device_phy_chart)
+        errorText = findViewById(R.id.device_error)
     }
 
     fun observe(flow: Flow<TDataPoint>?) {

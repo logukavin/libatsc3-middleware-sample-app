@@ -3,6 +3,7 @@ package com.nextgenbroadcast.mobile.middleware.scoreboard
 import android.location.Location
 import androidx.lifecycle.*
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.entity.TelemetryEvent
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.reader.ErrorData
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.reader.LocationData
 import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.CommandTarget
 import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.DeviceScoreboardInfo
@@ -17,8 +18,8 @@ import kotlin.math.abs
 import kotlin.math.floor
 
 class SharedViewModel : ViewModel() {
-    private val _deviceList: MutableLiveData<List<TelemetryDevice>> = MutableLiveData(emptyList())
-    private val _chartDevices = MutableLiveData<List<String>>(emptyList())
+    private val _telemetryDeviceList: MutableLiveData<List<TelemetryDevice>> = MutableLiveData(emptyList())
+    private val _chartDeviceIdList = MutableLiveData<List<String>>(emptyList())
     private val _deviceFlowMap = MutableLiveData<Map<String, Flow<TDataPoint>>>(emptyMap())
     private val _locationData = MutableLiveData<Map<String, LocationDataAndTime>>(emptyMap())
     val currentDeviceLiveData = MutableLiveData<LocationData?>(null)
@@ -39,6 +40,7 @@ class SharedViewModel : ViewModel() {
     )
 
     private val locationCalculationResult = FloatArray(1)
+    private val errorData = MutableLiveData<MutableMap<String, ErrorData>>()
 
     private val _distanceLiveData: LiveData<Map<String, Float?>?> = currentDeviceLiveData
         .mapWithCallback(
@@ -72,37 +74,23 @@ class SharedViewModel : ViewModel() {
             }
         )
 
-    val devicesToAdd = _chartDevices.mapWith(_deviceFlowMap) { (devices, deviceToFlow) ->
+    val devicesToAdd = _chartDeviceIdList.mapWith(_deviceFlowMap) { (devices, deviceToFlow) ->
         devices?.subtract(deviceToFlow?.keys ?: emptyList())
     }.distinctUntilChanged()
 
-    val devicesToRemove = _chartDevices.mapWith(_deviceFlowMap) { (devices, deviceFlows) ->
+    val devicesToRemove = _chartDeviceIdList.mapWith(_deviceFlowMap) { (devices, deviceFlows) ->
         deviceFlows?.keys?.subtract(devices ?: emptyList())
     }.distinctUntilChanged()
 
-    val deviceInfoList: LiveData<List<DeviceScoreboardInfo>> =
-        _deviceList.mapWith(_deviceFlowMap, _distanceLiveData) { (list, flowMap, distanceMap) ->
-            list?.map { device ->
-                DeviceScoreboardInfo(
-                    device = device,
-                    selected = flowMap?.containsKey(device.id) ?: false,
-                    distance = distanceMap?.get(device.id)
-                )
-            } ?: emptyList()
-        }.distinctUntilChanged()
+    private val deviceInfoListMediator = MediatorLiveData<List<DeviceScoreboardInfo>>()
+    val deviceInfoList = deviceInfoListMediator.distinctUntilChanged()
 
-    val chartDevices = _chartDevices.mapWith(_deviceList) { (chartList, deviceList) ->
-        deviceList?.filter { chartList?.contains(it.id) ?: false }
+    val chartDeviceInfoList = _chartDeviceIdList.mapWith(deviceInfoList) { (chartList, deviceList) ->
+        deviceList?.filter { info -> chartList?.contains(info.device.id) ?: false }
     }.distinctUntilChanged()
 
-    val chartDevicesWithFlow = chartDevices.mapWith(_deviceFlowMap, _distanceLiveData) { (chartList, flowMap, distance) ->
-        chartList?.filter { flowMap?.containsKey(it.id) ?: false }?.map { device ->
-            DeviceScoreboardInfo(
-                device = device,
-                distance = distance?.get(device.id),
-                selected = true
-            )
-        }
+    val chartDeviceInfoWithFlowList = chartDeviceInfoList.mapWith(_deviceFlowMap) { (deviceList, flowMap) ->
+        deviceList?.filter { info -> flowMap?.containsKey(info.device.id) ?: false }
     }.distinctUntilChanged()
 
     val selectedDeviceId: MutableLiveData<String?> = MutableLiveData()
@@ -112,7 +100,42 @@ class SharedViewModel : ViewModel() {
         Pair(deviceWithFlowCount > 0, deviceWithFlowCount == deviceList.size)
     }.distinctUntilChanged()
 
+    private val deviceInfoMap = mutableMapOf<String, DeviceScoreboardInfo>()
+
     init {
+        deviceInfoListMediator.addSource(_telemetryDeviceList) { devices ->
+            devices.forEach { device ->
+                deviceInfoMap.compute(device.id) { _, deviceInfo ->
+                    deviceInfo?.copy(device = device) ?: DeviceScoreboardInfo(device = device, selected = false)
+                }
+            }
+            deviceInfoListMediator.value = deviceInfoMap.values.toList()
+        }
+        deviceInfoListMediator.addSource(_deviceFlowMap) { flowMap ->
+            deviceInfoMap.forEach { (id, deviceInfo) ->
+                deviceInfoMap.computeIfPresent(id) { _, _ ->
+                    deviceInfo.copy(selected = flowMap?.containsKey(id) ?: false)
+                }
+            }
+            deviceInfoListMediator.value = deviceInfoMap.values.toList()
+        }
+        deviceInfoListMediator.addSource(_distanceLiveData) { distanceMap ->
+            distanceMap?.forEach { (id, distance) ->
+                deviceInfoMap.computeIfPresent(id) { _, deviceInfo ->
+                    deviceInfo.copy(distance = distance)
+                }
+            }
+            deviceInfoListMediator.value = deviceInfoMap.values.toList()
+        }
+        deviceInfoListMediator.addSource(errorData){ errorMap ->
+            errorMap.forEach{ (id, error) ->
+                deviceInfoMap.computeIfPresent(id){ _, deviceInfo ->
+                    deviceInfo.copy(errorData = error)
+                }
+            }
+            deviceInfoListMediator.value = deviceInfoMap.values.toList()
+        }
+
         targetCommandLiveData.value = initialTargetSetup()
         targetCommandLiveData.addSource(deviceInfoList) { deviceInfoList ->
             targetCommandLiveData.value = mutableListOf(
@@ -292,26 +315,33 @@ class SharedViewModel : ViewModel() {
         } ?: mapOf(id to LocationDataAndTime(payload))
     }
 
+    fun addDeviceError(errorEvent: TelemetryEvent) {
+        val id = TelemetryManager.extractClientId(errorEvent.topic)
+        val errorMap = errorData.value ?: mutableMapOf()
+        errorMap[id] = errorEvent.payload as ErrorData
+        errorData.value = errorMap
+    }
+
     fun setDeviceSelection(deviceId: String?) {
         selectedDeviceId.value = deviceId
     }
 
     fun setDevicesList(deviceIds: List<TelemetryDevice>) {
-        _deviceList.value = deviceIds
+        _telemetryDeviceList.value = deviceIds
     }
 
     fun addDeviceChart(deviceId: String) {
-        val list = _chartDevices.value?.toMutableList() ?: mutableListOf()
+        val list = _chartDeviceIdList.value?.toMutableList() ?: mutableListOf()
         if (!list.contains(deviceId)) {
             list.add(deviceId)
-            _chartDevices.value = list
+            _chartDeviceIdList.value = list
         }
     }
 
     fun removeDeviceChart(deviceId: String) {
-        val list = _chartDevices.value?.toMutableList() ?: return
+        val list = _chartDeviceIdList.value?.toMutableList() ?: return
         list.remove(deviceId)
-        _chartDevices.value = list
+        _chartDeviceIdList.value = list
         synchronizeChartSelection(deviceId)
     }
 
@@ -354,7 +384,7 @@ class SharedViewModel : ViewModel() {
     }
 
     fun selectAllDevices(isChecked: Boolean) {
-        val list = _chartDevices.value?.toMutableList() ?: mutableListOf()
+        val list = _chartDeviceIdList.value?.toMutableList() ?: mutableListOf()
         deviceInfoList.value?.forEach { (device) ->
             if (isChecked) {
                 if (!list.contains(device.id)) {
@@ -365,7 +395,7 @@ class SharedViewModel : ViewModel() {
                 synchronizeChartSelection(device.id)
             }
         }
-        _chartDevices.value = list
+        _chartDeviceIdList.value = list
     }
 
     fun selectCommand(position: Int, selected: Boolean) {
@@ -389,6 +419,7 @@ class SharedViewModel : ViewModel() {
     companion object {
         private const val SKIP_SECONDS = 0.1
         private val INVALIDATE_LOCATION_TIME_DIFF = TimeUnit.MINUTES.toMillis(5)
+        private const val MAX_ERRORS_LIST_SIZE = 30
     }
 
 }

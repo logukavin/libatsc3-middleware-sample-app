@@ -12,21 +12,18 @@ import com.google.firebase.installations.FirebaseInstallations
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.entity.ClientTelemetryEvent
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.entity.TelemetryEvent
-import com.nextgenbroadcast.mobile.middleware.dev.telemetry.reader.LocationData
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.writer.VuzixPhyTelemetryWriter
 import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.TelemetryDevice
 import com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.*
-import java.text.SimpleDateFormat
 import java.util.*
 
 class ScoreboardService : Service() {
     private val deviceIds = MutableStateFlow<List<TelemetryDevice>>(emptyList())
     private val selectedDeviceId = MutableStateFlow<String?>(null)
     private val commandBackLogFlow = MutableSharedFlow<String>(1, 5, BufferOverflow.DROP_OLDEST)
-    private val dateFormat = SimpleDateFormat(COMMAND_DATE_FORMAT, Locale.US)
     private val serviceScope = CoroutineScope(Dispatchers.IO)
 
     private val socket: DatagramSocketWrapper by lazy {
@@ -137,7 +134,7 @@ class ScoreboardService : Service() {
             commandStr?.let {
                 telemetryManager.sendDeviceCommand(deviceList, commandStr)
 
-                commandBackLogFlow.tryEmit(commandStr.commandFormat("<<"))
+                commandBackLogFlow.tryEmit(commandStr.outCommandFormat())
             }
         }
     }
@@ -147,7 +144,7 @@ class ScoreboardService : Service() {
             intent.getStringExtra(COMMAND_EXTRAS)?.let { payload ->
                 telemetryManager.sendGlobalCommand(topic, payload)
 
-                commandBackLogFlow.tryEmit("(\"action\"=\"$topic\", \"payload\"=\"$payload\")".commandFormat("<<"))
+                commandBackLogFlow.tryEmit("(\"action\"=\"$topic\", \"payload\"=\"$payload\")".outCommandFormat())
             }
         }
     }
@@ -191,10 +188,6 @@ class ScoreboardService : Service() {
         }
     }
 
-    private fun String.commandFormat(prefix: String): String {
-        return "$prefix ${dateFormat.format(Date())} : $this"
-    }
-
     inner class ScoreboardBinding : Binder() {
 
         val deviceIdList = deviceIds.asStateFlow()
@@ -202,6 +195,12 @@ class ScoreboardService : Service() {
 
         val deviceLocationEventFlow by lazy {
             telemetryManager.getGlobalEventFlow(TelemetryEvent.EVENT_TOPIC_LOCATION)?.mapToLocationEvent()
+        }
+
+        val deviceErrorFlow by lazy {
+            telemetryManager.getGlobalEventFlow(TelemetryEvent.EVENT_TOPIC_ERROR)
+                ?.mapToErrorEvent()
+                ?.shareIn(serviceScope, SharingStarted.Lazily, 30)
         }
 
         @Volatile
@@ -232,7 +231,7 @@ class ScoreboardService : Service() {
 
         private fun getGlobalEventLogFlow(): Flow<String>? {
             return telemetryManager.getGlobalEventFlow()?.map { event ->
-                event.toString().commandFormat(">>")
+                event.toInCommandFormat()
             }
         }
 
@@ -264,7 +263,5 @@ class ScoreboardService : Service() {
         const val COMMAND_EXTRAS = "commands"
         const val DEVICES_EXTRAS = "devices_id_list"
         const val TOPIC = "topic"
-
-        const val COMMAND_DATE_FORMAT = "HH:mm:ss.SSS"
     }
 }

@@ -2,7 +2,6 @@ package com.nextgenbroadcast.mobile.middleware.scoreboard
 
 import android.content.Context
 import android.os.Bundle
-import android.text.SpannableString
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -41,7 +40,7 @@ class ScoreboardFragment : Fragment() {
         binding.chartList.adapter = deviceAdapter
         binding.chartList.addItemDecoration(DividerItemDecoration(context, DividerItemDecoration.VERTICAL))
 
-        sharedViewModel.chartDevicesWithFlow.observe(viewLifecycleOwner) { devices ->
+        sharedViewModel.chartDeviceInfoWithFlowList.observe(viewLifecycleOwner) { devices ->
             deviceAdapter.submitList(devices ?: emptyList())
         }
 
@@ -53,6 +52,10 @@ class ScoreboardFragment : Fragment() {
     private val selectChartListener = object : ISelectChartListener {
         override fun selectChart(chartId: String?) {
             sharedViewModel.selectedDeviceId.value = chartId
+        }
+
+        override fun showErrorList(deviceId: String) {
+            ConsoleActivity.startForDeviceFlow(requireContext(), ConsoleActivity.FlowType.ERROR, deviceId)
         }
     }
 
@@ -81,6 +84,7 @@ class ScoreboardFragment : Fragment() {
         override fun onBindViewHolder(holder: Holder, position: Int, payloads: MutableList<Any>) {
             (payloads.firstOrNull() as? DeviceScoreboardInfo)?.let { deviceModel ->
                 holder.updateLocationLabel(deviceModel)
+                holder.updateErrorText(deviceModel)
             } ?: super.onBindViewHolder(holder, position, payloads)
         }
 
@@ -95,12 +99,30 @@ class ScoreboardFragment : Fragment() {
                     setBackgroundColor(
                         context.getColor(if (isChartSelected) R.color.yellow_device_item_bg else R.color.white)
                     )
+
                     updateLocationLabel(deviceInfo)
                     lostLabel.isVisible = deviceInfo.device.isLost
 
-                    deviceView.setOnClickListener {
+                    updateErrorText(deviceInfo)
+
+                    lostLabel.isVisible = deviceInfo.device.isLost
+
+                    phyChart.setOnClickListener {
                         val selectedChartId = if (selectedChartId == deviceInfo.device.id) null else deviceInfo.device.id
                         selectChartListener.selectChart(selectedChartId)
+                    }
+                }
+            }
+
+            fun updateErrorText(deviceInfo: DeviceScoreboardInfo) = with(deviceView) {
+                val errorMessage = deviceInfo.errorData?.message
+                if (errorMessage.isNullOrBlank()) {
+                    errorText.isVisible = false
+                } else {
+                    errorText.isVisible = true
+                    errorText.text = errorMessage
+                    errorText.setOnClickListener {
+                        selectChartListener.showErrorList(deviceInfo.device.id)
                     }
                 }
             }
@@ -126,7 +148,7 @@ class ScoreboardFragment : Fragment() {
                 }
 
                 override fun getChangePayload(oldItem: DeviceScoreboardInfo, newItem: DeviceScoreboardInfo): Any? {
-                    return if (oldItem.distance != newItem.distance) {
+                    return if (oldItem.distance != newItem.distance || oldItem.errorData != newItem.errorData) {
                         newItem
                     } else null
                 }
@@ -136,6 +158,7 @@ class ScoreboardFragment : Fragment() {
 
     interface ISelectChartListener {
         fun selectChart(chartId: String?)
+        fun showErrorList(deviceId: String)
     }
 
     companion object {

@@ -11,9 +11,12 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.CheckBox
 import android.widget.TextView
+import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.RecyclerView
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.reader.ErrorData
 import com.nextgenbroadcast.mobile.middleware.scoreboard.databinding.DeviceIdItemViewBinding
 import com.nextgenbroadcast.mobile.middleware.scoreboard.databinding.FragmentSettingsBinding
 import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.DeviceScoreboardInfo
@@ -39,6 +42,10 @@ class ScoreboardSettingsFragment : Fragment() {
 
             override fun remoteDeviceChart(deviceId: String) {
                 sharedViewModel.removeDeviceChart(deviceId)
+            }
+
+            override fun showErrorList(deviceId: String) {
+                ConsoleActivity.startForDeviceFlow(requireContext(), ConsoleActivity.FlowType.ERROR, deviceId)
             }
         })
     }
@@ -86,7 +93,7 @@ class ScoreboardSettingsFragment : Fragment() {
         }
 
         override fun onBindViewHolder(holder: DeviceIdViewHolder, position: Int) {
-            val (device, checked, distance) = deviceIdList.getOrNull(position) ?: return
+            val (device, checked, distance, error) = deviceIdList.getOrNull(position) ?: return
             val context = holder.itemView.context
             with(holder) {
                 this.deviceId = device.id
@@ -115,6 +122,18 @@ class ScoreboardSettingsFragment : Fragment() {
                 }
 
                 deviceCheckBox.isChecked = checked
+
+                if (error==null ||error.message.isBlank()) {
+                    deviceContainer.setBackgroundResource(R.color.white)
+                    deviceError.isVisible = false
+                } else {
+                    deviceError.isVisible = true
+                    deviceError.text = error.message
+                    deviceContainer.setBackgroundResource(R.drawable.red_boarder_rect_shape)
+                    deviceError.setOnClickListener {
+                        deviceListener.showErrorList(device.id)
+                    }
+                }
             }
         }
 
@@ -130,6 +149,8 @@ class ScoreboardSettingsFragment : Fragment() {
             val deviceName: TextView = itemBinding.deviceIdTextView
             val deviceCheckBox: CheckBox = itemBinding.deviceIdChechBox
             val deviceDistance: TextView = itemBinding.deviceDistanceTextView
+            var deviceError: TextView = itemBinding.deviceError
+            var deviceContainer: ConstraintLayout = itemBinding.deviceItemContainer
         }
 
     }
@@ -137,6 +158,10 @@ class ScoreboardSettingsFragment : Fragment() {
     interface DeviceSelectListener {
         fun addDeviceChart(deviceId: String)
         fun remoteDeviceChart(deviceId: String)
+        fun showErrorList(deviceId: String)
     }
 
+    companion object {
+        private val TAG = ScoreboardSettingsFragment::class.java.simpleName
+    }
 }
