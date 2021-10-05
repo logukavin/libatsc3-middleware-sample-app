@@ -35,4 +35,15 @@
         android:background="@color/black"
         app:layout_constraintTop_toBottomOf="@+id/device_name_view" />
 
+    <TextView
+        android:id="@+id/device_error"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ellipsize="end"
+        android:maxLines="3"
+        android:textColor="@color/alert"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/device_phy_chart"
+        tools:text="Error message" />
+
 </com.nextgenbroadcast.mobile.middleware.scoreboard.view.DeviceItemView>

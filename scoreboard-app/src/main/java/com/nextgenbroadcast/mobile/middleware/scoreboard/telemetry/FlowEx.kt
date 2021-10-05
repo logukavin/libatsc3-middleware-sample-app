@@ -5,9 +5,7 @@ import com.google.gson.reflect.TypeToken
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.entity.ClientTelemetryEvent
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.entity.TelemetryEvent
-import com.nextgenbroadcast.mobile.middleware.dev.telemetry.reader.BatteryData
-import com.nextgenbroadcast.mobile.middleware.dev.telemetry.reader.LocationData
-import com.nextgenbroadcast.mobile.middleware.dev.telemetry.reader.RfPhyData
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.reader.*
 import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.TDataPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.onFailure
@@ -16,11 +14,17 @@ import kotlinx.coroutines.channels.ticker
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.selects.select
+import java.text.SimpleDateFormat
+import java.util.*
+
+const val COMMAND_DATE_FORMAT = "HH:mm:ss.SSS"
 
 private val gson = Gson()
 private val phyType = object : TypeToken<RfPhyData>() {}.type
 private val batteryType = object : TypeToken<BatteryData>() {}.type
 private val locationDataType = object : TypeToken<LocationData>() {}.type
+private val errorDataType = object : TypeToken<ErrorData>() {}.type
+private val dateFormat = SimpleDateFormat(COMMAND_DATE_FORMAT, Locale.US)
 
 fun Flow<ClientTelemetryEvent>.mapToEvent(): Flow<TelemetryEvent> = mapNotNull { event ->
     try {
@@ -56,6 +60,15 @@ fun Flow<ClientTelemetryEvent>.mapToLocationEvent(): Flow<TelemetryEvent> = mapN
         TelemetryEvent(event.topic, gson.fromJson<LocationData>(event.payload, locationDataType))
     } catch (e: Exception) {
         LOG.w("Flow.mapToLocationEvent", "Can't parse telemetry event payload to location", e)
+        null
+    }
+}
+
+fun Flow<ClientTelemetryEvent>.mapToErrorEvent(): Flow<TelemetryEvent> = mapNotNull { event ->
+    try {
+        TelemetryEvent(event.topic, gson.fromJson<ErrorData>(event.payload, errorDataType))
+    } catch (e: Exception){
+        LOG.w("Flow.mapToErrorEvent", "Can't parse telemetry event payload to ErrorData", e)
         null
     }
 }
@@ -98,3 +111,14 @@ fun Flow<TDataPoint>.sampleTelemetry(scope: CoroutineScope, tickDelayMillis: Lon
         }
     }
 }
+
+fun String.commandFormat(prefix: String): String {
+    return "$prefix ${dateFormat.format(Date())} : $this"
+}
+
+fun String.inCommandFormat() = commandFormat(">>")
+fun String.outCommandFormat() = commandFormat("<<")
+
+fun ClientTelemetryEvent.toInCommandFormat() = toString().inCommandFormat()
+
+fun TelemetryEvent.toInCommandFormat() = toString().inCommandFormat()

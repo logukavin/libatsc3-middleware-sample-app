@@ -156,6 +156,12 @@ class ScoreboardPagerActivity : FragmentActivity(), ServiceConnection {
                     }
                 }
 
+                launch {
+                    deviceErrorFlow?.collect{
+                        sharedViewModel.addDeviceError(it)
+                    }
+                }
+
             }
         }
     }
