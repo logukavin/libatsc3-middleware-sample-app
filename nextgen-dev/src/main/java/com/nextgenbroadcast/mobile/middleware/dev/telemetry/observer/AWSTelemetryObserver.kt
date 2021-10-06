@@ -1,7 +1,6 @@
 package com.nextgenbroadcast.mobile.middleware.dev.telemetry.observer
 
-import com.google.gson.Gson
-import com.google.gson.JsonObject
+import com.google.gson.JsonPrimitive
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.aws.AWSIoThing
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.entity.ClientTelemetryEvent
@@ -16,7 +15,6 @@ class AWSTelemetryObserver(
     private val topics: List<String>
 ) : ITelemetryObserver {
     private val eventTopic = eventTopicFormat.replace(AWSIoThing.AWSIOT_FORMAT_SERIAL, clientId)
-    private val gson = Gson()
 
     override suspend fun read(eventFlow: MutableSharedFlow<ClientTelemetryEvent>) {
         supervisorScope {
@@ -27,7 +25,7 @@ class AWSTelemetryObserver(
                             if (payload != null) {
                                 eventFlow.tryEmit(ClientTelemetryEvent(
                                     topic,
-                                    gson.fromJson(payload, JsonObject::class.java)
+                                    JsonPrimitive(payload)
                                 ))
                             }
                         }
