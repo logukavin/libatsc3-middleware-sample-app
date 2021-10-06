@@ -7,7 +7,6 @@ import com.jjoe64.graphview.GraphView
 import com.jjoe64.graphview.series.BaseSeries
 import com.jjoe64.graphview.series.DataPoint
 import com.nextgenbroadcast.mobile.core.LOG
-import com.nextgenbroadcast.mobile.middleware.dev.R
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -21,8 +20,6 @@ open class TemporalChartView @JvmOverloads constructor(
     private val timeZone = ZoneId.systemDefault()
 
     private var source: TemporalDataSource? = null
-
-    protected var beforeSourceSet: ((TemporalDataSource) -> Unit)? = null
 
     override fun onFinishInflate() {
         super.onFinishInflate()
@@ -49,9 +46,12 @@ open class TemporalChartView @JvmOverloads constructor(
         this.source = source
 
         removeAllSeries()
+        secondScale.removeAllSeries()
 
         if (source == null) return
-        beforeSourceSet?.invoke(source)
+
+        onBeforeSourceSet(source)
+
         source.getSeries().forEach { series ->
             addSeries(series)
         }
@@ -92,6 +92,8 @@ open class TemporalChartView @JvmOverloads constructor(
 
         source?.close()
     }
+
+    open fun onBeforeSourceSet(source: TemporalDataSource) {}
 
     abstract class TemporalDataSource(
         private val visiblePeriod: Long

@@ -46,11 +46,10 @@ class PhyChart @JvmOverloads constructor(
             textSize = resources.getDimension(R.dimen.chart_legend_text_size)
             textColor = labelTextColor
         }
+    }
 
-        setViewport(VISIBLE_PERIOD, 0.00, 100.00)
-        beforeSourceSet = {
-            setViewport(VISIBLE_PERIOD, it.getMinY(), it.getMaxY())
-        }
+    override fun onBeforeSourceSet(source: TemporalDataSource) {
+        setViewport(VISIBLE_PERIOD, source.getMinY(), source.getMaxY())
     }
 
     override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
