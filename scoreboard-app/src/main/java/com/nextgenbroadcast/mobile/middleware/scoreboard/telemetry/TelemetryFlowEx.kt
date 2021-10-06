@@ -1,23 +1,23 @@
 package com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry
 
 import com.google.gson.Gson
+import com.google.gson.JsonSyntaxException
 import com.google.gson.reflect.TypeToken
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.entity.ClientTelemetryEvent
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.entity.TelemetryEvent
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.entity.TelemetryPayload
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.reader.*
 import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.TDataPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.onFailure
 import kotlinx.coroutines.channels.onSuccess
 import kotlinx.coroutines.channels.ticker
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.mapNotNull
-import kotlinx.coroutines.flow.produceIn
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.selects.select
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.jvm.Throws
 
 const val COMMAND_DATE_FORMAT = "HH:mm:ss.SSS"
 
@@ -28,36 +28,50 @@ private val locationDataType = object : TypeToken<LocationData>() {}.type
 private val errorDataType = object : TypeToken<ErrorData>() {}.type
 private val dateFormat = SimpleDateFormat(COMMAND_DATE_FORMAT, Locale.US)
 
-fun ClientTelemetryEvent.isTopic(topic: String): Boolean {
-    return this.topic.endsWith("/$topic")
+fun ClientTelemetryEvent.getClientId(): String? {
+    val startIndex = topic.indexOf("_") + 1
+    val endIndex = topic.indexOf("/", startIndex)
+    return if (startIndex in 1 until endIndex) {
+        topic.substring(startIndex, endIndex)
+    } else null
 }
 
-fun Flow<ClientTelemetryEvent>.mapToEvent(): Flow<TelemetryEvent> = mapNotNull { event ->
-    try {
-        when {
-            event.isTopic(TelemetryEvent.EVENT_TOPIC_PHY) -> TelemetryEvent(
-                TelemetryEvent.EVENT_TOPIC_PHY,
-                gson.fromJson<RfPhyData>(event.payload, phyType)
-            )
-            event.isTopic(TelemetryEvent.EVENT_TOPIC_BATTERY) -> TelemetryEvent(
-                TelemetryEvent.EVENT_TOPIC_BATTERY,
-                gson.fromJson<BatteryData>(event.payload, batteryType)
-            )
-            else -> null
-        }
-    } catch (e: Exception) {
-        LOG.w("Flow.mapToDataPoint", "Can't parse telemetry event payload", e)
-        null
-    }
+fun ClientTelemetryEvent.getEventTopic(): String {
+    val index = topic.lastIndexOf("/")
+    return if (index > 0) {
+        topic.substring(index + 1)
+    } else topic
 }
 
-fun Flow<TelemetryEvent>.mapToDataPoint(): Flow<TDataPoint> = mapNotNull { event ->
+@Throws(JsonSyntaxException::class)
+fun ClientTelemetryEvent.toPhyEvent(eventTopic: String = getEventTopic()): TelemetryEvent {
+    return TelemetryEvent(eventTopic, gson.fromJson<RfPhyData>(payload, phyType))
+}
+
+@Throws(JsonSyntaxException::class)
+fun ClientTelemetryEvent.toBatteryEvent(eventTopic: String = getEventTopic()): TelemetryEvent {
+    return TelemetryEvent(eventTopic, gson.fromJson<BatteryData>(payload, batteryType))
+}
+
+@Throws(JsonSyntaxException::class)
+fun ClientTelemetryEvent.toLocationEvent(eventTopic: String = getEventTopic()): TelemetryEvent {
+    return TelemetryEvent(eventTopic, gson.fromJson<LocationData>(payload, locationDataType))
+}
+
+@Throws(JsonSyntaxException::class)
+fun ClientTelemetryEvent.toErrorEvent(eventTopic: String = getEventTopic()): TelemetryEvent {
+    return TelemetryEvent(eventTopic, gson.fromJson<ErrorData>(payload, errorDataType))
+}
+
+fun Flow<ClientTelemetryEvent>.mapToEvent(filter: String? = null): Flow<TelemetryEvent> = mapNotNull { event ->
     try {
-        if (event.topic == TelemetryEvent.EVENT_TOPIC_PHY) {
-            val payload = event.payload as RfPhyData
-            val payloadValue = payload.stat.snr1000_global.toDouble()
-            val timestamp = payload.timeStamp
-            TDataPoint(timestamp, payloadValue)
+        val eventTopic = event.getEventTopic()
+        if (filter == null || filter == eventTopic) {
+            when (eventTopic) {
+                TelemetryEvent.EVENT_TOPIC_PHY -> event.toPhyEvent(eventTopic)
+                TelemetryEvent.EVENT_TOPIC_BATTERY -> event.toBatteryEvent(eventTopic)
+                else -> null
+            }
         } else null
     } catch (e: Exception) {
         LOG.w("Flow.mapToDataPoint", "Can't parse telemetry event payload", e)
@@ -65,42 +79,22 @@ fun Flow<TelemetryEvent>.mapToDataPoint(): Flow<TDataPoint> = mapNotNull { event
     }
 }
 
-fun Flow<TelemetryEvent>.mapToDataPoint(selector: RfPhyData.() -> Double): Flow<TDataPoint> =
+fun <T: TelemetryPayload> Flow<TelemetryEvent>.mapToDataPoint(selector: T.() -> Double): Flow<TDataPoint> =
     mapNotNull { event ->
         try {
-            if (event.topic == TelemetryEvent.EVENT_TOPIC_PHY) {
-                val payload = event.payload as RfPhyData
-                val timestamp = payload.timeStamp
-                TDataPoint(timestamp, selector(payload))
-            } else null
+            (event.payload as? T)?.let { payload ->
+                TDataPoint(payload.timeStamp, selector(payload))
+            }
         } catch (e: Exception) {
             LOG.w("Flow.mapToDataPoint", "Can't parse telemetry event payload", e)
             null
         }
     }
 
-fun Flow<ClientTelemetryEvent>.mapToLocationEvent(): Flow<TelemetryEvent> = mapNotNull { event ->
-    try {
-        TelemetryEvent(event.topic, gson.fromJson<LocationData>(event.payload, locationDataType))
-    } catch (e: Exception) {
-        LOG.w("Flow.mapToLocationEvent", "Can't parse telemetry event payload to location", e)
-        null
-    }
-}
-
-fun Flow<ClientTelemetryEvent>.mapToErrorEvent(): Flow<TelemetryEvent> = mapNotNull { event ->
-    try {
-        TelemetryEvent(event.topic, gson.fromJson<ErrorData>(event.payload, errorDataType))
-    } catch (e: Exception){
-        LOG.w("Flow.mapToErrorEvent", "Can't parse telemetry event payload to ErrorData", e)
-        null
-    }
-}
-
 private val DONE = Any()
 private val NULL = Any()
 
-fun Flow<TDataPoint>.sampleTelemetry(scope: CoroutineScope, tickDelayMillis: Long, emptyDelayMillis: Long): Flow<TDataPoint> {
+fun Flow<TDataPoint>.sampleTelemetry(scope: CoroutineScope, tickDelayMillis: Long, emptyDelayMillis: Long, replay: Boolean = false): Flow<TDataPoint> {
     val values = produceIn(scope)
     return flow {
         var lastTime = 0L
@@ -112,14 +106,14 @@ fun Flow<TDataPoint>.sampleTelemetry(scope: CoroutineScope, tickDelayMillis: Lon
             select<Unit> {
                 values.onReceiveCatching { result ->
                     result
-                        .onSuccess {
-                            lastValue = it
-                            lastTime = it.timestamp
+                        .onSuccess { point ->
+                            lastValue = point
+                            lastTime = point.timestamp
                             lastDataSentAt = System.currentTimeMillis()
-                            emit(it)
+                            emit(point)
                         }
-                        .onFailure {
-                            it?.let { throw it }
+                        .onFailure { throwable ->
+                            throwable?.let { throw throwable }
                             ticker.cancel(/*ChildCancelledException()*/)
                             lastValue = DONE
                         }
@@ -129,6 +123,8 @@ fun Flow<TDataPoint>.sampleTelemetry(scope: CoroutineScope, tickDelayMillis: Lon
                     val timeDiff = System.currentTimeMillis() - lastDataSentAt
                     if (lastValue == null || timeDiff > emptyDelayMillis && lastTime > 0) {
                         emit(TDataPoint(lastTime + timeDiff, 0.0))
+                    } else if (replay) {
+                        emit((lastValue as TDataPoint).copy(timestamp = lastTime + timeDiff))
                     }
                 }
             }

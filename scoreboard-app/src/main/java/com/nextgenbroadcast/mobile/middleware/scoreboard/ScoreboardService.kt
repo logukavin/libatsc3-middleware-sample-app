@@ -12,6 +12,7 @@ import com.google.firebase.installations.FirebaseInstallations
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.entity.ClientTelemetryEvent
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.entity.TelemetryEvent
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.reader.RfPhyData
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.writer.VuzixPhyTelemetryWriter
 import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.TelemetryDevice
 import com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry.*
@@ -177,7 +178,9 @@ class ScoreboardService : Service() {
                                 .filter { event ->
                                     event.topic == TelemetryEvent.EVENT_TOPIC_PHY
                                 }
-                                .mapToDataPoint()
+                                .mapToDataPoint<RfPhyData> {
+                                    stat.snr1000_global.toDouble()
+                                }
                                 .collect { point ->
                                     socket.sendUdpMessage("${deviceId},${point.timestamp},${point.value}")
                                 }
@@ -194,12 +197,21 @@ class ScoreboardService : Service() {
         val selectedDeviceId = this@ScoreboardService.selectedDeviceId.asStateFlow()
 
         val deviceLocationEventFlow by lazy {
-            telemetryManager.getGlobalEventFlow(TelemetryEvent.EVENT_TOPIC_LOCATION)?.mapToLocationEvent()
+            telemetryManager.getGlobalEventFlow(TelemetryEvent.EVENT_TOPIC_LOCATION)
+                ?.mapNotNull { event ->
+                    event.getClientId()?.let { deviceId ->
+                        Pair(deviceId, event.toLocationEvent())
+                    }
+                }
         }
 
         val deviceErrorFlow by lazy {
             telemetryManager.getGlobalEventFlow(TelemetryEvent.EVENT_TOPIC_ERROR)
-                ?.mapToErrorEvent()
+                ?.mapNotNull { event ->
+                    event.getClientId()?.let { deviceId ->
+                        Pair(deviceId, event.toErrorEvent())
+                    }
+                }
                 ?.shareIn(serviceScope, SharingStarted.Lazily, 30)
         }
 
