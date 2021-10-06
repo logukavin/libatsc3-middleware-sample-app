@@ -1,6 +1,8 @@
 package com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry
 
 import com.google.gson.Gson
+import com.google.gson.JsonElement
+import com.google.gson.JsonPrimitive
 import com.google.gson.JsonSyntaxException
 import com.google.gson.reflect.TypeToken
 import com.nextgenbroadcast.mobile.core.LOG
@@ -15,6 +17,7 @@ import kotlinx.coroutines.channels.onSuccess
 import kotlinx.coroutines.channels.ticker
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.selects.select
+import java.lang.reflect.Type
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.jvm.Throws
@@ -22,10 +25,12 @@ import kotlin.jvm.Throws
 const val COMMAND_DATE_FORMAT = "HH:mm:ss.SSS"
 
 private val gson = Gson()
-private val phyType = object : TypeToken<RfPhyData>() {}.type
-private val batteryType = object : TypeToken<BatteryData>() {}.type
-private val locationDataType = object : TypeToken<LocationData>() {}.type
-private val errorDataType = object : TypeToken<ErrorData>() {}.type
+
+private val phyPayloadType = object : TypeToken<RfPhyData>() {}.type
+private val batteryPayloadType = object : TypeToken<BatteryData>() {}.type
+private val locationPayloadType = object : TypeToken<LocationData>() {}.type
+private val errorPayloadType = object : TypeToken<ErrorData>() {}.type
+
 private val dateFormat = SimpleDateFormat(COMMAND_DATE_FORMAT, Locale.US)
 
 fun ClientTelemetryEvent.getClientId(): String? {
@@ -44,23 +49,32 @@ fun ClientTelemetryEvent.getEventTopic(): String {
 }
 
 @Throws(JsonSyntaxException::class)
+fun <T> JsonElement.toEventPayload(typeOfT: Type): T {
+    return if (this is JsonPrimitive && isString) {
+        gson.fromJson(asString, typeOfT)
+    } else {
+        gson.fromJson(this, typeOfT)
+    }
+}
+
+@Throws(JsonSyntaxException::class)
 fun ClientTelemetryEvent.toPhyEvent(eventTopic: String = getEventTopic()): TelemetryEvent {
-    return TelemetryEvent(eventTopic, gson.fromJson<RfPhyData>(payload, phyType))
+    return TelemetryEvent(eventTopic, payload.toEventPayload<RfPhyData>(phyPayloadType))
 }
 
 @Throws(JsonSyntaxException::class)
 fun ClientTelemetryEvent.toBatteryEvent(eventTopic: String = getEventTopic()): TelemetryEvent {
-    return TelemetryEvent(eventTopic, gson.fromJson<BatteryData>(payload, batteryType))
+    return TelemetryEvent(eventTopic, payload.toEventPayload<BatteryData>(batteryPayloadType))
 }
 
 @Throws(JsonSyntaxException::class)
 fun ClientTelemetryEvent.toLocationEvent(eventTopic: String = getEventTopic()): TelemetryEvent {
-    return TelemetryEvent(eventTopic, gson.fromJson<LocationData>(payload, locationDataType))
+    return TelemetryEvent(eventTopic, payload.toEventPayload<LocationData>(locationPayloadType))
 }
 
 @Throws(JsonSyntaxException::class)
 fun ClientTelemetryEvent.toErrorEvent(eventTopic: String = getEventTopic()): TelemetryEvent {
-    return TelemetryEvent(eventTopic, gson.fromJson<ErrorData>(payload, errorDataType))
+    return TelemetryEvent(eventTopic, payload.toEventPayload<ErrorData>(errorPayloadType))
 }
 
 fun Flow<ClientTelemetryEvent>.mapToEvent(filter: String? = null): Flow<TelemetryEvent> = mapNotNull { event ->
