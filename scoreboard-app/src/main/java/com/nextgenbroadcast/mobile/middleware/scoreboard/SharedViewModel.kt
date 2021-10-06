@@ -6,7 +6,6 @@ import com.nextgenbroadcast.mobile.middleware.dev.telemetry.entity.TelemetryEven
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.reader.ErrorData
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.reader.LocationData
 import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.*
-import com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry.TelemetryManager
 import java.util.concurrent.TimeUnit
 import kotlin.math.abs
 import kotlin.math.floor
@@ -34,7 +33,7 @@ class SharedViewModel : ViewModel() {
     )
 
     private val locationCalculationResult = FloatArray(1)
-    private val errorData = MutableLiveData<MutableMap<String, ErrorData>>()
+    private val errorData = MutableLiveData<Map<String, ErrorData>>()
 
     private val _distanceLiveData: LiveData<Map<String, Float?>?> = currentDeviceLiveData
         .mapWithCallback(
@@ -308,20 +307,18 @@ class SharedViewModel : ViewModel() {
         }
     }
 
-    fun addDeviceLocation(location: TelemetryEvent) {
-        val payload = location.payload
-        if (payload !is LocationData) return
-        val id = TelemetryManager.extractClientId(location.topic)
+    fun addDeviceLocation(deviceId: String, event: TelemetryEvent) {
+        val payload = (event.payload as? LocationData) ?: return
         _locationData.value = _locationData.value?.toMutableMap()?.apply {
-            put(id, LocationDataAndTime(payload))
-        } ?: mapOf(id to LocationDataAndTime(payload))
+            put(deviceId, LocationDataAndTime(payload))
+        } ?: mapOf(deviceId to LocationDataAndTime(payload))
     }
 
-    fun addDeviceError(errorEvent: TelemetryEvent) {
-        val id = TelemetryManager.extractClientId(errorEvent.topic)
-        val errorMap = errorData.value ?: mutableMapOf()
-        errorMap[id] = errorEvent.payload as ErrorData
-        errorData.value = errorMap
+    fun addDeviceError(deviceId: String, event: TelemetryEvent) {
+        val payload = (event.payload as? ErrorData) ?: return
+        errorData.value = errorData.value?.toMutableMap()?.apply {
+            put(deviceId, payload)
+        } ?: mapOf(deviceId to payload)
     }
 
     fun setDeviceSelection(deviceId: String?) {

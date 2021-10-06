@@ -20,13 +20,11 @@ import androidx.lifecycle.lifecycleScope
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.reader.ErrorData
 import com.nextgenbroadcast.mobile.middleware.scoreboard.databinding.ActivityConsoleBinding
 import com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry.COMMAND_DATE_FORMAT
-import com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry.TelemetryManager
 import com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry.inCommandFormat
 import com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry.toInCommandFormat
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.launch
 
 class ConsoleActivity : AppCompatActivity() {
@@ -134,10 +132,10 @@ class ConsoleActivity : AppCompatActivity() {
                     binding.telemetryConsole.clear()
 
                     val flow = when(flowType) {
-                        FlowType.ERROR -> deviceErrorFlow?.filter { event ->
-                            deviceId == null || deviceId == TelemetryManager.extractClientId(event.topic)
-                        }?.map { event ->
-                            (event.payload as? ErrorData)?.message?.inCommandFormat() ?: event.toInCommandFormat()
+                        FlowType.ERROR -> deviceErrorFlow?.mapNotNull { (deviceId, event) ->
+                            if (this@ConsoleActivity.deviceId == null || this@ConsoleActivity.deviceId == deviceId) {
+                                (event.payload as? ErrorData)?.message?.inCommandFormat() ?: event.toInCommandFormat()
+                            } else null
                         }
 
                         FlowType.ALL,
