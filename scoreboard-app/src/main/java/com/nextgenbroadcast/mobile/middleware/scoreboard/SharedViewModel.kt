@@ -5,22 +5,16 @@ import androidx.lifecycle.*
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.entity.TelemetryEvent
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.reader.ErrorData
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.reader.LocationData
-import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.CommandTarget
-import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.DeviceScoreboardInfo
-import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.LocationDataAndTime
-import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.TDataPoint
-import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.TelemetryDevice
-import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.TelemetryEntity
+import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.*
 import com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry.TelemetryManager
-import kotlinx.coroutines.flow.Flow
 import java.util.concurrent.TimeUnit
 import kotlin.math.abs
 import kotlin.math.floor
 
 class SharedViewModel : ViewModel() {
+    private val _deviceFlowMap = MutableLiveData<Map<String, ChartData>>(emptyMap())
     private val _telemetryDeviceList: MutableLiveData<List<TelemetryDevice>> = MutableLiveData(emptyList())
     private val _chartDeviceIdList = MutableLiveData<List<String>>(emptyList())
-    private val _deviceFlowMap = MutableLiveData<Map<String, Flow<TDataPoint>>>(emptyMap())
     private val _locationData = MutableLiveData<Map<String, LocationDataAndTime>>(emptyMap())
     val currentDeviceLiveData = MutableLiveData<LocationData?>(null)
     val selectedCommandTarget = MutableLiveData<CommandTarget?>(null)
@@ -89,9 +83,17 @@ class SharedViewModel : ViewModel() {
         deviceList?.filter { info -> chartList?.contains(info.device.id) ?: false }
     }.distinctUntilChanged()
 
-    val chartDeviceInfoWithFlowList = chartDeviceInfoList.mapWith(_deviceFlowMap) { (deviceList, flowMap) ->
-        deviceList?.filter { info -> flowMap?.containsKey(info.device.id) ?: false }
-    }.distinctUntilChanged()
+    val chartDeviceInfoWithFlowList = chartDeviceInfoList.mapWith(_deviceFlowMap, _distanceLiveData) { (chartList, flowMap, distance) ->
+        chartList?.filter { flowMap?.containsKey(it.device.id) ?: false }?.map { deviceInfo ->
+            ChartGeneralInfo(
+                deviceId = deviceInfo.device.id,
+                isLost = deviceInfo.device.isLost,
+                distance = distance?.get(deviceInfo.device.id),
+                chartData = flowMap?.get(deviceInfo.device.id),
+                errorData = deviceInfo.errorData
+            )
+        }
+    }
 
     val selectedDeviceId: MutableLiveData<String?> = MutableLiveData()
 
@@ -351,17 +353,11 @@ class SharedViewModel : ViewModel() {
         }
     }
 
-    fun addFlows(list: List<Pair<String, Flow<TDataPoint>>>) {
+    fun addOrReplaceChartData(list: List<Pair<String, ChartData>>) {
         val map = _deviceFlowMap.value?.toMutableMap() ?: mutableMapOf()
         list.forEach { (deviceId, flow) ->
             map[deviceId] = flow
         }
-        _deviceFlowMap.postValue(map)
-    }
-
-    fun addFlow(deviceId: String, flow: Flow<TDataPoint>) {
-        val map = _deviceFlowMap.value?.toMutableMap() ?: mutableMapOf()
-        map[deviceId] = flow
         _deviceFlowMap.postValue(map)
     }
 
@@ -377,10 +373,6 @@ class SharedViewModel : ViewModel() {
         val map = _deviceFlowMap.value?.toMutableMap() ?: return
         map.remove(deviceId)
         _deviceFlowMap.postValue(map)
-    }
-
-    fun getDeviceFlow(deviceId: String): Flow<TDataPoint>? {
-        return _deviceFlowMap.value?.get(deviceId)
     }
 
     fun selectAllDevices(isChecked: Boolean) {

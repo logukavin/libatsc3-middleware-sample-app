@@ -5,6 +5,7 @@ import android.util.AttributeSet
 import android.widget.TextView
 import androidx.constraintlayout.widget.ConstraintLayout
 import com.nextgenbroadcast.mobile.middleware.scoreboard.R
+import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.ChartData
 import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.TDataPoint
 import kotlinx.coroutines.flow.Flow
 
@@ -17,6 +18,13 @@ class DeviceItemView @JvmOverloads constructor(
     lateinit var phyChart: PhyChart
     lateinit var errorText: TextView
     var isChartSelected = false
+    var isLegendVisible: Boolean
+        get() {
+            return phyChart.isLegendVisible
+        }
+        set(value) {
+            phyChart.isLegendVisible = value
+        }
 
     override fun onFinishInflate() {
         super.onFinishInflate()
@@ -32,6 +40,17 @@ class DeviceItemView @JvmOverloads constructor(
             flow?.let {
                 PhyChart.DataSource(it)
             }
+        )
+    }
+
+    fun observe(data: ChartData) = with(data) {
+        phyChart.setDataSource(
+            PhyChart.MultiDataSource(
+                primaryDataSources,
+                secondaryDataSources,
+                primaryChartConfiguration,
+                secondaryChartConfiguration
+            )
         )
     }
 

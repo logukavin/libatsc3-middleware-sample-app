@@ -11,8 +11,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.onFailure
 import kotlinx.coroutines.channels.onSuccess
 import kotlinx.coroutines.channels.ticker
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.mapNotNull
+import kotlinx.coroutines.flow.produceIn
 import kotlinx.coroutines.selects.select
 import java.text.SimpleDateFormat
 import java.util.*
@@ -26,14 +28,22 @@ private val locationDataType = object : TypeToken<LocationData>() {}.type
 private val errorDataType = object : TypeToken<ErrorData>() {}.type
 private val dateFormat = SimpleDateFormat(COMMAND_DATE_FORMAT, Locale.US)
 
+fun ClientTelemetryEvent.isTopic(topic: String): Boolean {
+    return this.topic.endsWith("/$topic")
+}
+
 fun Flow<ClientTelemetryEvent>.mapToEvent(): Flow<TelemetryEvent> = mapNotNull { event ->
     try {
-        when (event.topic) {
-            TelemetryEvent.EVENT_TOPIC_PHY -> gson.fromJson<RfPhyData>(event.payload, phyType)
-            TelemetryEvent.EVENT_TOPIC_BATTERY ->  gson.fromJson<BatteryData>(event.payload, batteryType)
+        when {
+            event.isTopic(TelemetryEvent.EVENT_TOPIC_PHY) -> TelemetryEvent(
+                TelemetryEvent.EVENT_TOPIC_PHY,
+                gson.fromJson<RfPhyData>(event.payload, phyType)
+            )
+            event.isTopic(TelemetryEvent.EVENT_TOPIC_BATTERY) -> TelemetryEvent(
+                TelemetryEvent.EVENT_TOPIC_BATTERY,
+                gson.fromJson<BatteryData>(event.payload, batteryType)
+            )
             else -> null
-        }?.let { payload ->
-            TelemetryEvent(event.topic, payload)
         }
     } catch (e: Exception) {
         LOG.w("Flow.mapToDataPoint", "Can't parse telemetry event payload", e)
@@ -54,6 +64,20 @@ fun Flow<TelemetryEvent>.mapToDataPoint(): Flow<TDataPoint> = mapNotNull { event
         null
     }
 }
+
+fun Flow<TelemetryEvent>.mapToDataPoint(selector: RfPhyData.() -> Double): Flow<TDataPoint> =
+    mapNotNull { event ->
+        try {
+            if (event.topic == TelemetryEvent.EVENT_TOPIC_PHY) {
+                val payload = event.payload as RfPhyData
+                val timestamp = payload.timeStamp
+                TDataPoint(timestamp, selector(payload))
+            } else null
+        } catch (e: Exception) {
+            LOG.w("Flow.mapToDataPoint", "Can't parse telemetry event payload", e)
+            null
+        }
+    }
 
 fun Flow<ClientTelemetryEvent>.mapToLocationEvent(): Flow<TelemetryEvent> = mapNotNull { event ->
     try {
