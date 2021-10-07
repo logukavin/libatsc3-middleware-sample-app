@@ -1,8 +1,6 @@
 package com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry
 
 import com.google.gson.Gson
-import com.google.gson.JsonElement
-import com.google.gson.JsonPrimitive
 import com.google.gson.JsonSyntaxException
 import com.google.gson.reflect.TypeToken
 import com.nextgenbroadcast.mobile.core.LOG
@@ -17,7 +15,6 @@ import kotlinx.coroutines.channels.onSuccess
 import kotlinx.coroutines.channels.ticker
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.selects.select
-import java.lang.reflect.Type
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.jvm.Throws
@@ -49,32 +46,23 @@ fun ClientTelemetryEvent.getEventTopic(): String {
 }
 
 @Throws(JsonSyntaxException::class)
-fun <T> JsonElement.toEventPayload(typeOfT: Type): T {
-    return if (this is JsonPrimitive && isString) {
-        gson.fromJson(asString, typeOfT)
-    } else {
-        gson.fromJson(this, typeOfT)
-    }
-}
-
-@Throws(JsonSyntaxException::class)
 fun ClientTelemetryEvent.toPhyEvent(eventTopic: String = getEventTopic()): TelemetryEvent {
-    return TelemetryEvent(eventTopic, payload.toEventPayload<RfPhyData>(phyPayloadType))
+    return TelemetryEvent(eventTopic, gson.fromJson<RfPhyData>(payload, phyPayloadType))
 }
 
 @Throws(JsonSyntaxException::class)
 fun ClientTelemetryEvent.toBatteryEvent(eventTopic: String = getEventTopic()): TelemetryEvent {
-    return TelemetryEvent(eventTopic, payload.toEventPayload<BatteryData>(batteryPayloadType))
+    return TelemetryEvent(eventTopic, gson.fromJson<BatteryData>(payload, batteryPayloadType))
 }
 
 @Throws(JsonSyntaxException::class)
 fun ClientTelemetryEvent.toLocationEvent(eventTopic: String = getEventTopic()): TelemetryEvent {
-    return TelemetryEvent(eventTopic, payload.toEventPayload<LocationData>(locationPayloadType))
+    return TelemetryEvent(eventTopic, gson.fromJson<LocationData>(payload, locationPayloadType))
 }
 
 @Throws(JsonSyntaxException::class)
 fun ClientTelemetryEvent.toErrorEvent(eventTopic: String = getEventTopic()): TelemetryEvent {
-    return TelemetryEvent(eventTopic, payload.toEventPayload<ErrorData>(errorPayloadType))
+    return TelemetryEvent(eventTopic, gson.fromJson<ErrorData>(payload, errorPayloadType))
 }
 
 fun Flow<ClientTelemetryEvent>.mapToEvent(filter: String? = null): Flow<TelemetryEvent> = mapNotNull { event ->

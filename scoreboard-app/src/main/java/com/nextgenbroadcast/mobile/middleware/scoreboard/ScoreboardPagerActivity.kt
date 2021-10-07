@@ -156,13 +156,13 @@ class ScoreboardPagerActivity : FragmentActivity(), ServiceConnection {
                 }
 
                 launch {
-                    deviceLocationEventFlow?.collect { (deviceId, event) ->
+                    getGlobalLocationEventFlow()?.collect { (deviceId, event) ->
                         sharedViewModel.addDeviceLocation(deviceId, event)
                     }
                 }
 
                 launch {
-                    deviceErrorFlow?.collect{ (deviceId, event) ->
+                    getGlobalErrorFlow()?.collect{ (deviceId, event) ->
                         sharedViewModel.addDeviceError(deviceId, event)
                     }
                 }

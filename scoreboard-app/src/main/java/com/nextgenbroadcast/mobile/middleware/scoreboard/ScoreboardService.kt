@@ -196,28 +196,6 @@ class ScoreboardService : Service() {
         val deviceIdList = deviceIds.asStateFlow()
         val selectedDeviceId = this@ScoreboardService.selectedDeviceId.asStateFlow()
 
-        val deviceLocationEventFlow by lazy {
-            telemetryManager.getGlobalEventFlow(TelemetryEvent.EVENT_TOPIC_LOCATION)
-                ?.mapNotNull { event ->
-                    event.getClientId()?.let { deviceId ->
-                        Pair(deviceId, event.toLocationEvent())
-                    }
-                }
-        }
-
-        val deviceErrorFlow by lazy {
-            telemetryManager.getGlobalEventFlow(TelemetryEvent.EVENT_TOPIC_ERROR)
-                ?.mapNotNull { event ->
-                    event.getClientId()?.let { deviceId ->
-                        Pair(deviceId, event.toErrorEvent())
-                    }
-                }
-                ?.shareIn(serviceScope, SharingStarted.Lazily, 30)
-        }
-
-        @Volatile
-        private var backLogFlow: SharedFlow<String>? = null
-
         fun connectDevice(deviceId: String): Flow<ClientTelemetryEvent>? {
             return telemetryManager.getDeviceById(deviceId)?.let { device ->
                 telemetryManager.getFlow(device) ?: let {
@@ -241,24 +219,33 @@ class ScoreboardService : Service() {
             return telemetryManager.getConnectedDevices().map { it.id }
         }
 
-        private fun getGlobalEventLogFlow(): Flow<String>? {
-            return telemetryManager.getGlobalEventFlow()?.map { event ->
-                event.toInCommandFormat()
+        @Synchronized
+        fun getBacklogFlow() = telemetryManager.getGlobalEventFlow()?.map { event ->
+            event.toInCommandFormat()
+        }?.let { globalFlow ->
+            flowOf(globalFlow, commandBackLogFlow).flattenMerge()
+        }
+
+        fun getGlobalLocationEventFlow() = telemetryManager.getGlobalEventFlow(
+            listOf(TelemetryEvent.EVENT_TOPIC_LOCATION)
+        )?.mapNotNull { event ->
+            event.getClientId()?.let { deviceId ->
+                Pair(deviceId, event.toLocationEvent())
             }
         }
 
-        @Synchronized
-        fun getBacklogFlow(): Flow<String>? {
-            val flow = backLogFlow
-            return flow ?: let {
-                getGlobalEventLogFlow()?.let { globalFlow ->
-                    flowOf(globalFlow, commandBackLogFlow)
-                        .flattenMerge()
-                        .shareIn(serviceScope, SharingStarted.Eagerly, 50)
-                }.also {
-                    backLogFlow = it
-                }
+        fun getGlobalErrorFlow() = telemetryManager.getGlobalEventFlow(
+            listOf(TelemetryEvent.EVENT_TOPIC_ERROR), 30
+        )?.mapNotNull { event ->
+            event.getClientId()?.let { deviceId ->
+                Pair(deviceId, event.toErrorEvent())
             }
+        }
+
+        fun getDeviceErrorFlow(deviceId: String) = telemetryManager.getGlobalEventFlow(
+            listOf(TelemetryEvent.EVENT_TOPIC_ERROR), 30, deviceId
+        )?.mapNotNull { event ->
+            event.toErrorEvent()
         }
     }
 

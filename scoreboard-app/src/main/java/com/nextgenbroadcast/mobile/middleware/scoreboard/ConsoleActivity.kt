@@ -24,6 +24,7 @@ import com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry.inCommandForm
 import com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry.toInCommandFormat
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.launch
 
@@ -131,11 +132,14 @@ class ConsoleActivity : AppCompatActivity() {
                 connectionJob = lifecycleScope.launch {
                     binding.telemetryConsole.clear()
 
-                    val flow = when(flowType) {
-                        FlowType.ERROR -> deviceErrorFlow?.mapNotNull { (deviceId, event) ->
-                            if (this@ConsoleActivity.deviceId == null || this@ConsoleActivity.deviceId == deviceId) {
-                                (event.payload as? ErrorData)?.message?.inCommandFormat() ?: event.toInCommandFormat()
-                            } else null
+                    val flow = when (flowType) {
+                        FlowType.ERROR -> {
+                            val flow = deviceId?.let { getDeviceErrorFlow(it) }
+                                ?: getGlobalErrorFlow()?.map { (_, event) -> event }
+                            flow?.mapNotNull { event ->
+                                (event.payload as? ErrorData)?.message?.inCommandFormat()
+                                    ?: event.toInCommandFormat()
+                            }
                         }
 
                         FlowType.ALL,
