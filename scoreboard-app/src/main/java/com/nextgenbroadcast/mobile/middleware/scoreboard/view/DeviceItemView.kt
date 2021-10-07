@@ -18,13 +18,6 @@ class DeviceItemView @JvmOverloads constructor(
     lateinit var phyChart: PhyChart
     lateinit var errorText: TextView
     var isChartSelected = false
-    var isLegendVisible: Boolean
-        get() {
-            return phyChart.isLegendVisible
-        }
-        set(value) {
-            phyChart.isLegendVisible = value
-        }
 
     override fun onFinishInflate() {
         super.onFinishInflate()
@@ -33,14 +26,6 @@ class DeviceItemView @JvmOverloads constructor(
         lostLabel = findViewById(R.id.device_lost_label)
         phyChart = findViewById(R.id.device_phy_chart)
         errorText = findViewById(R.id.device_error)
-    }
-
-    fun observe(flow: Flow<TDataPoint>?) {
-        phyChart.setDataSource(
-            flow?.let {
-                PhyChart.DataSource(it)
-            }
-        )
     }
 
     fun observe(data: ChartData) = with(data) {

@@ -161,9 +161,9 @@ class ScoreboardFragment : Fragment() {
 
                 override fun areContentsTheSame(oldItem: ChartGeneralInfo, newItem: ChartGeneralInfo): Boolean {
                     return oldItem.distance == newItem.distance
-                        && oldItem.chartData?.primaryDataSources?.map { it.topic } == newItem.chartData?.primaryDataSources?.map { it.topic }
-                        && oldItem.chartData?.secondaryDataSources?.map { it.topic } == newItem.chartData?.secondaryDataSources?.map { it.topic }
-                        && oldItem.errorData == newItem.errorData
+                            && oldItem.errorData == newItem.errorData
+                            && oldItem.chartData?.primaryDataSources?.map { it.topic } == newItem.chartData?.primaryDataSources?.map { it.topic }
+                            && oldItem.chartData?.secondaryDataSources?.map { it.topic } == newItem.chartData?.secondaryDataSources?.map { it.topic }
                 }
 
                 override fun getChangePayload(oldItem: ChartGeneralInfo, newItem: ChartGeneralInfo): Any? {

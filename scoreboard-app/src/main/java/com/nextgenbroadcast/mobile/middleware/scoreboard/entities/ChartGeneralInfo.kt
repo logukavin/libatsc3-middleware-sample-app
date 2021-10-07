@@ -11,6 +11,6 @@ data class ChartGeneralInfo(
 )
 
 data class ChartConfiguration(
-    val minYValue: Double,
-    val maxYValue: Double
+    val minValue: Double,
+    val maxValue: Double
 )

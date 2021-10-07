@@ -13,17 +13,12 @@ import com.nextgenbroadcast.mobile.middleware.dev.telemetry.TelemetryClient2
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.aws.AWSIoThing
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.entity.ClientTelemetryEvent
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.entity.TelemetryEvent
-import com.nextgenbroadcast.mobile.middleware.dev.telemetry.observer.AWSTelemetryObserver
-import com.nextgenbroadcast.mobile.middleware.dev.telemetry.observer.ITelemetryObserver
-import com.nextgenbroadcast.mobile.middleware.dev.telemetry.observer.WebTelemetryObserver
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.observer.*
 import com.nextgenbroadcast.mobile.middleware.scoreboard.BuildConfig
 import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.TelemetryDevice
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.BufferOverflow
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.*
 import okio.internal.commonToUtf8String
 import java.io.IOException
 import java.util.*
@@ -42,7 +37,6 @@ class TelemetryManager(
     private val scope = CoroutineScope(Dispatchers.Main)
     private val timer = Timer()
     private val telemetryClient = TelemetryClient2(100)
-    private val globalDeviceObserver: AWSTelemetryObserver
     private val awsIoThing: AWSIoThing
 
     private val nsdServices = mutableMapOf<String, NsdServiceInfo?>()
@@ -63,30 +57,39 @@ class TelemetryManager(
         ) { keyPassword ->
             CertificateStore.getManagerCert(context, keyPassword)
                 ?: throw IOException("Failed to read certificate from resources")
-        }.apply {
-            globalDeviceObserver = AWSTelemetryObserver(
-                AWSIOT_EVENT_TOPIC_FORMAT,
-                this,
-                AWSIOT_CLIENT_ID_ANY,
-                AWSIOT_TOPIC_ANY
-            ).also {
-                telemetryClient.addObserver(it, MutableSharedFlow(
-                    replay = 1,
-                    extraBufferCapacity = 10,
-                    onBufferOverflow = BufferOverflow.DROP_OLDEST
-                ))
-            }
         }
     }
 
-    fun getGlobalEventFlow() = telemetryClient.getFlow(globalDeviceObserver)
+    fun getGlobalEventFlow() = addAutocompleteObserver(
+        observer = AWSLoggingObserver(
+            AWSIOT_EVENT_TOPIC_FORMAT,
+            awsIoThing,
+            AWSIOT_CLIENT_ID_ANY,
+            listOf(AWSIOT_TOPIC_ANY)
+        ),
+        replay = 50
+    )
 
-    fun getGlobalEventFlow(topic: String) = getGlobalEventFlow()?.filter {
-        it.topic.endsWith("/$topic")
-    }
+    fun getGlobalEventFlow(topics: List<String>, replay: Int = 0, deviceId: String = AWSIOT_CLIENT_ID_ANY) = addAutocompleteObserver(
+        observer = AWSTelemetryObserver(
+            AWSIOT_EVENT_TOPIC_FORMAT,
+            awsIoThing,
+            deviceId,
+            topics
+        ),
+        replay = replay
+    )
 
-    fun getGlobalEventFlow(vararg topic: String) = getGlobalEventFlow()?.filter { event ->
-        topic.any { event.topic.endsWith("/$it") }
+    private fun addAutocompleteObserver(observer: ITelemetryObserver, replay: Int = 1, buffer: Int = 10): Flow<ClientTelemetryEvent>? {
+        telemetryClient.addObserver(observer, MutableSharedFlow(
+            replay = replay,
+            extraBufferCapacity = buffer,
+            onBufferOverflow = BufferOverflow.DROP_OLDEST
+        ))
+
+        return telemetryClient.getFlow(observer)?.onCompletion {
+            telemetryClient.removeObserver(observer)
+        }
     }
 
     fun start() {
@@ -100,15 +103,14 @@ class TelemetryManager(
 
         deviceLocationJob = CoroutineScope(Dispatchers.IO).launch {
             try {
-                getGlobalEventFlow(AWSIOT_TOPIC_PING, AWSIOT_TOPIC_IS_ONLINE)?.collect { event ->
-                    val clientId = extractClientId(event.topic)
-
-                    awsDevices.add(clientId)
-
-                    addDevice(
-                        deviceId = clientId,
-                        availableOnAWS = true
-                    )
+                getGlobalEventFlow(listOf(AWSIOT_TOPIC_PING, AWSIOT_TOPIC_IS_ONLINE))?.collect { event ->
+                    event.getClientId()?.let { clientId ->
+                        awsDevices.add(clientId)
+                        addDevice(
+                            deviceId = clientId,
+                            availableOnAWS = true
+                        )
+                    }
                 }
             } catch (e: Exception) {
                 LOG.d(TAG, "Failed to observe devices on AWS", e)
@@ -170,10 +172,22 @@ class TelemetryManager(
     }
 
     fun connectDevice(device: TelemetryDevice): Boolean {
+        val topics = listOf(
+            TelemetryEvent.EVENT_TOPIC_PHY,
+            TelemetryEvent.EVENT_TOPIC_BATTERY
+        )
         val observer = when {
-            device.availableOnNSD -> WebTelemetryObserver(device.host, device.port, listOf(AWSIOT_TOPIC_PHY))
-            device.availableOnAWS -> AWSTelemetryObserver(AWSIOT_EVENT_TOPIC_FORMAT, awsIoThing,
-                AWSIOT_CLIENT_ID_FORMAT.replace(AWSIoThing.AWSIOT_FORMAT_SERIAL, device.id), AWSIOT_TOPIC_PHY)
+            device.availableOnNSD -> WebTelemetryObserver(
+                device.host,
+                device.port,
+                topics
+            )
+            device.availableOnAWS -> AWSTelemetryObserver(
+                AWSIOT_EVENT_TOPIC_FORMAT,
+                awsIoThing,
+                AWSIOT_CLIENT_ID_FORMAT.replace(AWSIoThing.AWSIOT_FORMAT_SERIAL, device.id),
+                topics
+            )
             else -> null
         } ?: return false
 
@@ -314,12 +328,6 @@ class TelemetryManager(
     companion object {
         val TAG: String = TelemetryManager::class.java.simpleName
 
-        fun extractClientId(topic: String): String {
-            val startIndex = topic.indexOf("_") + 1
-            val endIndex = topic.indexOf("/", startIndex)
-            return topic.substring(startIndex, endIndex)
-        }
-
         private const val IoT_PREFERENCE = "${BuildConfig.APPLICATION_ID}.awsiot"
 
         private const val AWSIOT_MANAGER_TEMPLATE_NAME = "ATSC3MobileManagerProvisioning"
@@ -333,7 +341,6 @@ class TelemetryManager(
         private const val AWSIOT_TOPIC_ANY = "#"
         private const val AWSIOT_TOPIC_PING = TelemetryEvent.EVENT_TOPIC_PING
         private const val AWSIOT_TOPIC_IS_ONLINE = TelemetryEvent.EVENT_TOPIC_IS_ONLINE
-        private const val AWSIOT_TOPIC_PHY = TelemetryEvent.EVENT_TOPIC_PHY
 
         private val AWSIOT_PING_PERIOD = TimeUnit.MINUTES.toMillis(1)
     }
