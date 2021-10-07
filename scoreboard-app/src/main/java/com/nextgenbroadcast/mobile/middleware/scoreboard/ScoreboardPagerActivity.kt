@@ -12,16 +12,26 @@ import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
+import com.jjoe64.graphview.series.BaseSeries
+import com.jjoe64.graphview.series.DataPoint
+import com.jjoe64.graphview.series.LineGraphSeries
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.entity.ClientTelemetryEvent
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.entity.TelemetryEvent
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.reader.GPSTelemetryReader
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.reader.LocationData
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.reader.RfPhyData
 import com.nextgenbroadcast.mobile.middleware.scoreboard.databinding.ActivityScoreboardBinding
+import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.ChartConfiguration
+import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.ChartData
+import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.ChartDataSource
 import com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry.mapToDataPoint
 import com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry.mapToEvent
 import com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry.sampleTelemetry
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import java.util.concurrent.TimeUnit
+import kotlin.math.max
+import kotlin.math.min
 
 class ScoreboardPagerActivity : FragmentActivity(), ServiceConnection {
     private val sharedViewModel: SharedViewModel by viewModels()
@@ -71,14 +81,32 @@ class ScoreboardPagerActivity : FragmentActivity(), ServiceConnection {
             val binder = serviceBinder ?: return@observe
             devices?.mapNotNull { deviceId ->
                 binder.connectDevice(deviceId)?.let { flow ->
-                    deviceId to flow
-                        .mapToEvent()
-                        .mapToDataPoint()
-                        .sampleTelemetry(lifecycleScope, TELEMETRY_SAMPLE_DELAY, TELEMETRY_AUTOFILL_DELAY)
-                        .shareIn(lifecycleScope, SharingStarted.Lazily, 100)
+                    deviceId to ChartData(
+                        // config for SNR
+                        secondaryChartConfiguration = ChartConfiguration(
+                            minYValue = SNR_MIN_VALUE,
+                            maxYValue = SNR_MAX_VALUE
+                        ),
+                        secondaryDataSources = listOf(
+                            flow.toChartDataSource(
+                                topic = "PHY",
+                                color = 0xFFFF0000.toInt()
+                            ) {
+                                stat.snr1000_global.toDouble()
+                            }
+                        ),
+                        primaryDataSources = listOf(
+                            flow.toChartDataSource(
+                                topic = "rssi_1000",
+                                color = 0xFF00FF00.toInt()
+                            ) {
+                                stat.rssi_1000.toDouble()
+                            }
+                        )
+                    )
                 }
             }?.let {
-                sharedViewModel.addFlows(it)
+                sharedViewModel.addOrReplaceChartData(it)
             }
         }
 
@@ -100,6 +128,23 @@ class ScoreboardPagerActivity : FragmentActivity(), ServiceConnection {
             binding.viewPager.setCurrentItem(1, false)
         }
     }
+
+    private fun Flow<ClientTelemetryEvent>.toChartDataSource(
+        topic: String,
+        color: Int,
+        title: String = topic,
+        selector: RfPhyData.() -> Double
+    ): ChartDataSource = ChartDataSource(
+        topic = topic,
+        seriesConfig = seriesConfigFactory(
+            color = color,
+            title = title
+        ),
+        data = mapToEvent()
+            .mapToDataPoint(selector)
+            .sampleTelemetry(lifecycleScope, TELEMETRY_SAMPLE_DELAY, TELEMETRY_AUTOFILL_DELAY)
+            .shareIn(lifecycleScope, SharingStarted.Lazily, 100)
+    )
 
     override fun onStart() {
         super.onStart()
@@ -194,12 +239,14 @@ class ScoreboardPagerActivity : FragmentActivity(), ServiceConnection {
         }
     }
 
-    private fun getTabName(position: Int): CharSequence = getString(when (Pages.getOrNull(position)) {
-        Pages.Commands -> R.string.command_tab_title
-        Pages.Devices -> R.string.devices_tab_title
-        Pages.Charts -> R.string.chart_tab_title
-        null -> throw IllegalArgumentException("Wrong Fragment index: $position")
-    })
+    private fun getTabName(position: Int): CharSequence = getString(
+        when (Pages.getOrNull(position)) {
+            Pages.Commands -> R.string.command_tab_title
+            Pages.Devices -> R.string.devices_tab_title
+            Pages.Charts -> R.string.chart_tab_title
+            null -> throw IllegalArgumentException("Wrong Fragment index: $position")
+        }
+    )
 
     private enum class Pages {
         Commands, Devices, Charts;
@@ -229,5 +276,19 @@ class ScoreboardPagerActivity : FragmentActivity(), ServiceConnection {
 
         private val TELEMETRY_SAMPLE_DELAY = TimeUnit.SECONDS.toMillis(1)
         private val TELEMETRY_AUTOFILL_DELAY = TimeUnit.SECONDS.toMillis(5)
+
+        internal const val SNR_MAX_VALUE = 30.0
+        internal const val SNR_MIN_VALUE = 0.0
+
+        internal fun normalizeValue(value: Double, minValue: Double, maxValue: Double): Double {
+            return min(max(minValue, value / 1000), maxValue)
+        }
+
+        internal fun seriesConfigFactory(color: Int, title: String): BaseSeries<DataPoint> {
+            return LineGraphSeries<DataPoint>().apply {
+                this.color = color
+                this.title = title
+            }
+        }
     }
 }

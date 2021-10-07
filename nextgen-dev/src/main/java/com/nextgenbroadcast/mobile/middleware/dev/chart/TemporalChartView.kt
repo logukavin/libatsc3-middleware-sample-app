@@ -7,6 +7,7 @@ import com.jjoe64.graphview.GraphView
 import com.jjoe64.graphview.series.BaseSeries
 import com.jjoe64.graphview.series.DataPoint
 import com.nextgenbroadcast.mobile.core.LOG
+import com.nextgenbroadcast.mobile.middleware.dev.R
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -20,6 +21,8 @@ open class TemporalChartView @JvmOverloads constructor(
     private val timeZone = ZoneId.systemDefault()
 
     private var source: TemporalDataSource? = null
+
+    protected var beforeSourceSet: ((TemporalDataSource) -> Unit)? = null
 
     override fun onFinishInflate() {
         super.onFinishInflate()
@@ -48,9 +51,18 @@ open class TemporalChartView @JvmOverloads constructor(
         removeAllSeries()
 
         if (source == null) return
+        beforeSourceSet?.invoke(source)
+        source.getSeries().forEach { series ->
+            addSeries(series)
+        }
 
-        source.getSeries().forEach {
-            addSeries(it)
+        val secondarySeries = source.getSecondarySeries()
+        if (secondarySeries.isNotEmpty()) {
+            secondarySeries.forEach { series ->
+                secondScale.addSeries(series)
+            }
+            secondScale.setMinY(source.getSecondaryMinY())
+            secondScale.setMaxY(source.getSecondaryMaxY())
         }
 
         if (isAttachedToWindow) {
@@ -133,6 +145,12 @@ open class TemporalChartView @JvmOverloads constructor(
         override fun close(reset: Boolean) {
             eventCounter = 0
         }
+
+        open fun getSecondarySeries(): List<BaseSeries<DataPoint>> = emptyList()
+        open fun getMinY(): Double = 0.0
+        open fun getMaxY(): Double = 100.0
+        open fun getSecondaryMinY(): Double = 0.0
+        open fun getSecondaryMaxY(): Double = 100.0
 
         companion object {
             val TAG: String = TemporalDataSource::class.java.simpleName
