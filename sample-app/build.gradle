@@ -54,6 +54,8 @@ android {
         //resValue("bool", "telemetryEnabled", "true")
         // disable AEAT test notifications
         //resValue("bool", "testAlertsEnabled", "false")
+        // enables SL-HDR1 video processing
+        resValue("bool", "slhdr1Enabled", "true")
     }
 
     signingConfigs {
@@ -168,7 +170,7 @@ def coroutinesVersion = rootProject.ext.coroutinesVersion
 def exoplayerVersion = rootProject.ext.exoplayerVersion
 
 dependencies {
-    implementation fileTree(dir: 'libs', include: ['*.jar'])
+    implementation fileTree(dir: 'libs', include: ['*.jar', '**/*.aar'])
 
     implementation project(":nextgen-core")
     implementation project(":nextgen-view")
