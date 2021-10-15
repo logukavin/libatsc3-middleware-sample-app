@@ -28,9 +28,7 @@
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="@+id/phy_chart"
-                app:resize_mode="fit"
-                app:use_controller="false"/>
+                app:layout_constraintTop_toTopOf="@+id/phy_chart"/>
 
             <TextView
                 android:id="@+id/state_description"

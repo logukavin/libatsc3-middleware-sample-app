@@ -21,6 +21,7 @@ import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.setFragmentResultListener
+import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.nextgenbroadcast.mobile.core.atsc3.PhyInfoConstants
 import com.nextgenbroadcast.mobile.core.model.*
@@ -361,7 +362,7 @@ class MainFragment : Fragment() {
     private fun showPopupSettingsMenu(v: View) {
         PopupMenu(context, v).apply {
             inflate(R.menu.settings_menu)
-            if (binding.receiverPlayer.player == null) {
+            if (binding.receiverPlayer.isActive) {
                 menu.findItem(R.id.menu_select_tracks)?.isEnabled = false
             }
             setOnMenuItemClickListener { item ->
@@ -405,11 +406,13 @@ class MainFragment : Fragment() {
     }
 
     private fun openSelectTracksDialog() {
-        val trackSelection = binding.receiverPlayer.getTrackSelector()
-        val currentTrackSelection = binding.receiverPlayer.player.currentTrackSelections
+        val trackSelection = binding.receiverPlayer.getTrackSelector() as? DefaultTrackSelector
+        val currentTrackSelection = binding.receiverPlayer.getCurrentTrackSelections()
         if (!isShowingTrackSelectionDialog
+                && currentTrackSelection != null
                 && trackSelection != null
-                && TrackSelectionDialog.willHaveContent(trackSelection)) {
+                && TrackSelectionDialog.willHaveContent(trackSelection)
+        ) {
             isShowingTrackSelectionDialog = true
             val trackSelectionDialog = TrackSelectionDialog.createForTrackSelector(
                     getString(R.string.track_selection_title),
