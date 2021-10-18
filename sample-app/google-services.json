@@ -15,13 +15,21 @@
       },
       "oauth_client": [
         {
+          "client_id": "577477544292-72tr5lhjr9trahum5k1cs8ssns26au29.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.nextgenbroadcast.mobile.middleware.sample",
+            "certificate_hash": "7735ac89177ca143e3cfb3ca52c03b2134c71bd4"
+          }
+        },
+        {
           "client_id": "577477544292-jdpjhv8h14uk3hg4dg1cv9p137aacgg3.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyCEV-LMBzLBTQVBXgU2qz6dyT4p05cceRA"
+          "current_key": "AIzaSyAqDZeCAWc67RhOiSU4b7IkFrwEdDfN5YA"
         }
       ],
       "services": {
@@ -50,7 +58,7 @@
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyCEV-LMBzLBTQVBXgU2qz6dyT4p05cceRA"
+          "current_key": "AIzaSyAqDZeCAWc67RhOiSU4b7IkFrwEdDfN5YA"
         }
       ],
       "services": {
@@ -79,7 +87,7 @@
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyCEV-LMBzLBTQVBXgU2qz6dyT4p05cceRA"
+          "current_key": "AIzaSyAqDZeCAWc67RhOiSU4b7IkFrwEdDfN5YA"
         }
       ],
       "services": {
