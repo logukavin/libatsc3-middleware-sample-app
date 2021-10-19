@@ -32,13 +32,15 @@ public final class MMTConstants {
             + Integer.BYTES     /* audio type - see Atom.java - Util.getIntegerCodeForString("ac-4");*/
             + Integer.BYTES     /* audio packet_id */
             + Integer.BYTES     /* audio channel count */
-            + Integer.BYTES;    /* audio sample rate */
+            + Integer.BYTES     /* audio sample rate */
+            + Integer.BYTES;    /* audio language length */
 
     public static final int CC_TRACK_HEADER_SIZE =
             Integer.BYTES       /* header size */
             + Byte.BYTES        /* track type*/
             + Integer.BYTES     /* text packet_id */
-            + Integer.BYTES;    /* text type - see Atom.java - Util.getIntegerCodeForString("ac-4"); */
+            + Integer.BYTES     /* text type - see Atom.java - Util.getIntegerCodeForString("ac-4"); */
+            + Integer.BYTES;    /* text language length */
 
     public static final byte[] mmtSignature = "#!MMT\n".getBytes(StandardCharsets.UTF_8);
 
