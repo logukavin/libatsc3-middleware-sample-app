@@ -364,7 +364,7 @@ public class MMTFragmentWriter {
     }
 
     private boolean isAudioSample(int packet_id) {
-        return MmtPacketIdContext.selected_audio_packet_id == packet_id && audioConfigurationMap.containsKey(packet_id);
+        return audioConfigurationMap.containsKey(packet_id);
     }
 
 
