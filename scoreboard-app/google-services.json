@@ -7,7 +7,7 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:151290155424:android:6706cdcf2ab40677ba14c5",
+        "mobilesdk_app_id": "1:151290155424:android:c5282cb0466baf78ba14c5",
         "android_client_info": {
           "package_name": "com.nextgenbroadcast.mobile.middleware.scoreboard"
         }
