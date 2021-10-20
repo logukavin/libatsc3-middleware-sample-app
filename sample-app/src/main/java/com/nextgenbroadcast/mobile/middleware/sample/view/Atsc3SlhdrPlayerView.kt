@@ -26,7 +26,7 @@ class Atsc3SlhdrPlayerView @JvmOverloads constructor(
     }
 
     override fun play(atsc3Player: Atsc3MediaPlayer, mediaUri: Uri, mimeType: String?) {
-        val renderersFactory = SlhdrRenderersFactory(context, getRendererConnectNtf())
+        val renderersFactory = SlhdrRenderersFactory(context, rendererConnectNtf)
             .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF)
         atsc3Player.play(renderersFactory, mediaUri, mimeType)
     }
