@@ -243,7 +243,7 @@ class ScoreboardService : Service() {
         }
 
         fun getDeviceErrorFlow(deviceId: String) = telemetryManager.getGlobalEventFlow(
-            listOf(TelemetryEvent.EVENT_TOPIC_ERROR), 30, deviceId
+            listOf(TelemetryEvent.EVENT_TOPIC_ERROR), 30, TelemetryManager.formatDeviceId(deviceId)
         )?.mapNotNull { event ->
             event.toErrorEvent()
         }
