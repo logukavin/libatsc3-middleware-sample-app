@@ -7,8 +7,7 @@
             type="com.nextgenbroadcast.mobile.middleware.sample.lifecycle.ViewViewModel" />
     </data>
 
-    <androidx.constraintlayout.widget.ConstraintLayout
-        xmlns:android="http://schemas.android.com/apk/res/android"
+    <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
         xmlns:app="http://schemas.android.com/apk/res-auto"
         android:layout_width="match_parent"
         android:layout_height="match_parent">
@@ -18,20 +17,20 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:background="@color/white"
-            app:tabTextAppearance="@style/TabLayoutItemTextAppearance"
-            app:tabMode="auto"
-            app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:tabMode="auto"
+            app:tabTextAppearance="@style/TabLayoutItemTextAppearance" />
 
-        <androidx.viewpager2.widget.ViewPager2
+        <androidx.viewpager.widget.ViewPager
             android:id="@+id/view_pager"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            app:layout_constraintHeight_min="@dimen/dialog_min_height"
-            app:layout_constraintHeight_max="@dimen/dialog_min_height"
-            app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHeight_max="@dimen/dialog_min_height"
+            app:layout_constraintHeight_min="@dimen/dialog_min_height"
+            app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/tab_layout" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>

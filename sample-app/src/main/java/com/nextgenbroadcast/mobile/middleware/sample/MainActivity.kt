@@ -225,7 +225,7 @@ class MainActivity : BaseActivity() {
                             it.startsWith(ReceiverTelemetry.TELEMETRY_SENSORS)
                         }.values.distinct()
                         sensorTelemetryEnabled.value = distSensorValues.isNotEmpty() && (distSensorValues.size > 1 || distSensorValues.first())
-                        locationTelemetryEnabled.value = enableMap[ReceiverTelemetry.TELEMETRY_LOCATION]
+                        sensorsEnableList.value = enableMap
                     }
                 }
 
@@ -238,6 +238,24 @@ class MainActivity : BaseActivity() {
                 launch {
                     for (event in viewViewModel.logChangingChannel) {
                         controllerPresenter.setAtsc3LogEnabledByName(event.first, event.second)
+                    }
+                }
+
+                launch {
+                    controllerPresenter.telemetryDelay.collect { sensorFrequencyMap ->
+                        sensorsFrequencyList.value = sensorFrequencyMap
+                    }
+                }
+
+                launch {
+                    for (event in viewViewModel.eventSensorFrequencyChannel){
+                        controllerPresenter.setTelemetryUpdateDelay(event.first, event.second)
+                    }
+                }
+
+                launch {
+                    for (event in viewViewModel.eventSensorEnableChannel){
+                        controllerPresenter.setTelemetryEnabled(event.first, event.second)
                     }
                 }
             }
@@ -276,31 +294,6 @@ class MainActivity : BaseActivity() {
                     setIfChanged(actualValue, enableTelemetry) { enabled ->
                         controllerPresenter.setTelemetryEnabled(enabled)
                     }
-                }
-            }
-
-            sensorTelemetryEnabled.observe(this@MainActivity) { sensorEnabled ->
-                if (sensorEnabled != null) {
-                    val actualValue = controllerPresenter.telemetryEnabled.value.distinctValue(ReceiverTelemetry.TELEMETRY_SENSORS)
-                    // switch must be On if if one of sensors is active. We allow only switching off partially active sensors
-                    setIfChanged(actualValue, sensorEnabled) { enabled ->
-                        controllerPresenter.setTelemetryEnabled(ReceiverTelemetry.TELEMETRY_SENSORS, enabled)
-                    }
-                }
-            }
-            sensorFrequencyType.observe(this@MainActivity) { frequencyType ->
-                if (frequencyType != null) {
-                    controllerPresenter.setTelemetryUpdateDelay(ReceiverTelemetry.TELEMETRY_SENSORS, frequencyType.delayMils)
-                }
-            }
-            locationTelemetryEnabled.observe(this@MainActivity) { sensorEnabled ->
-                if (sensorEnabled != null) {
-                    controllerPresenter.setTelemetryEnabled(ReceiverTelemetry.TELEMETRY_LOCATION, sensorEnabled)
-                }
-            }
-            locationFrequencyType.observe(this@MainActivity) { frequencyType ->
-                if (frequencyType != null) {
-                    controllerPresenter.setTelemetryUpdateDelay(ReceiverTelemetry.TELEMETRY_LOCATION, frequencyType.delay())
                 }
             }
 
