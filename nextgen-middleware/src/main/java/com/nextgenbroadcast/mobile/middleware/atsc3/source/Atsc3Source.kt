@@ -59,6 +59,8 @@ abstract class Atsc3Source : IAtsc3Source {
 
         const val DEVICE_TYPE_AUTO = 0 // use for SaankhyaPHYAndroid.DEVICE_TYPE_MARKONE
         const val DEVICE_TYPE_KAILASH = SaankhyaPHYAndroid.DEVICE_TYPE_FX3_KAILASH
+        const val DEVICE_TYPE_KAILASH_3 = SaankhyaPHYAndroid.DEVICE_TYPE_FX3_KAILASH_3; //aka SL_SILISA_DONGLE
+
         const val DEVICE_TYPE_YOGA = SaankhyaPHYAndroid.DEVICE_TYPE_FX3_YOGA
 
         fun getSaankhyaFX3DeviceType(vendorId: Int, productId: Int, manufacturer: String?): Int {
