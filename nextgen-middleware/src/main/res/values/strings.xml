@@ -17,6 +17,7 @@
     <string name="watch_tv">Watch TV</string>
     <string name="device_type_selection_title">Select dongle type</string>
     <string name="device_type_action_kailash">KAILASH</string>
+    <string name="device_type_action_kailash_3">KAILASH_3</string>
     <string name="device_type_action_yoga">YOGA</string>
     <string name="tv_application_selection_title">Select TV application</string>
     <string name="dismiss">Dismiss</string>
