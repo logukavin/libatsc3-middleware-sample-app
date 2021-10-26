@@ -26,6 +26,8 @@ import java.security.cert.Certificate
 import java.security.cert.CertificateException
 import java.security.cert.CertificateFactory
 import kotlin.math.max
+import android.os.Build
+
 
 class UserAgentView @JvmOverloads constructor(
         context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
@@ -103,9 +105,29 @@ class UserAgentView @JvmOverloads constructor(
     private fun getAtsc3UserAgent(): String {
         val defaultUserAgent = WebSettings.getDefaultUserAgent(context)
         val atsc3Date = "${Atsc3Config.A300_YEAR}-${Atsc3Config.A300_MONTH}"
-        val capabilities = String.format("%04X", Atsc3Config.CAPABILITIES)
-        return "ATSC3/$atsc3Date ($capabilities) $defaultUserAgent"
+        val familyName = context.packageName
+        var softwareVersion = ""
+        val vendorName = Build.MANUFACTURER
+        val modelName = Build.MODEL
+        val hardware = Build.HARDWARE
+        val capabilities = capabilities(Atsc3Config.CAPABILITIES.map { String.format("%04X", it) }.toMutableList())
+
+        runCatching {
+            val pInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+            softwareVersion = pInfo.versionName
+        }
+
+        return "ATSC3/$atsc3Date ($capabilities; $vendorName; $$modelName; $softwareVersion; $familyName; $hardware) $defaultUserAgent"
     }
+
+    private fun capabilities(capabilities: MutableList<String>): String {
+        if (capabilities.size == 0) return ""
+        if (capabilities.size == 1) return capabilities.first()
+        val lastCapability = capabilities.last()
+        capabilities.removeAt(capabilities.size - 1)
+        return capabilities(capabilities) + " $lastCapability &"
+    }
+
 
     private fun isCaptureEmpty(): Boolean {
         return layerBitmap?.let { layerBmp ->
@@ -186,7 +208,7 @@ class UserAgentView @JvmOverloads constructor(
             LOG.d(TAG, "onReceivedSslError: $error")
 
             if (error.primaryError == SslError.SSL_IDMISMATCH || error.primaryError == SslError.SSL_UNTRUSTED) {
-                val cert = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                val cert = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     error.certificate.x509Certificate
                 } else {
                     getX509Certificate(error.certificate)
