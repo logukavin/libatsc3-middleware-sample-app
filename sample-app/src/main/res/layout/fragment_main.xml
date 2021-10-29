@@ -98,16 +98,29 @@
                 android:layout_marginLeft="10dp"
                 android:layout_marginRight="10dp"
                 android:background="@color/semi_transparent"
-                android:fontFamily="monospace"
                 android:paddingStart="10dp"
                 android:paddingEnd="10dp"
                 android:text="@{viewModel.debugData}"
-                android:textColor="@color/white"
-                android:textSize="8sp"
                 android:visibility="@{viewModel.showDebugInfo &amp;&amp; viewModel.showPhyInfo ? View.VISIBLE : View.GONE}"
                 app:layout_constraintEnd_toStartOf="@+id/settings_button"
                 app:layout_constraintStart_toStartOf="@+id/receiver_player"
                 app:layout_constraintTop_toBottomOf="@+id/atsc3_data_log" />
+
+            <TextView
+                android:id="@+id/cellular_status"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="10dp"
+                android:background="@color/semi_transparent"
+                android:paddingStart="10dp"
+                android:paddingEnd="10dp"
+                android:textColor="@color/white"
+                android:textSize="10sp"
+                android:text="@{viewModel.cellularState}"
+                android:visibility="@{viewModel.showDebugInfo ? View.VISIBLE : View.GONE}"
+                app:layout_constraintEnd_toStartOf="@+id/settings_button"
+                app:layout_constraintStart_toStartOf="@+id/receiver_player"
+                app:layout_constraintTop_toBottomOf="@+id/phy_data_log"/>
 
             <com.nextgenbroadcast.mobile.middleware.sample.view.PhyChartView
                 android:id="@+id/phy_chart"
@@ -115,7 +128,7 @@
                 android:layout_height="@dimen/phy_chart_height"
                 android:background="@color/semi_transparent"
                 android:visibility="@{viewModel.showPhyChart ? View.VISIBLE : View.GONE }"
-                app:layout_constraintTop_toBottomOf="@+id/phy_data_log" />
+                app:layout_constraintTop_toBottomOf="@+id/cellular_status" />
 
             <androidx.appcompat.widget.AppCompatImageButton
                 android:id="@+id/settings_button"

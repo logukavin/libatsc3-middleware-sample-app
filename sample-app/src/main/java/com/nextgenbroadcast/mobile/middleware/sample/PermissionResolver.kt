@@ -138,7 +138,8 @@ class PermissionResolver(
         private const val PERMISSION_REQUEST_SECOND = 1001
 
         private val necessaryPermissions = listOf(
-            Manifest.permission.WRITE_EXTERNAL_STORAGE
+            Manifest.permission.WRITE_EXTERNAL_STORAGE,
+            Manifest.permission.READ_PHONE_STATE,
         )
 
         private val optionalPermissions = listOf(

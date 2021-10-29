@@ -9,6 +9,7 @@ import android.media.MediaMetadata
 import android.media.session.MediaController
 import android.media.session.MediaSession
 import android.media.session.PlaybackState
+import android.os.Build
 import android.os.Bundle
 import android.support.v4.media.MediaBrowserCompat
 import android.util.Log
@@ -46,6 +47,10 @@ class MainActivity : BaseActivity() {
 
     private val permissionResolver: PermissionResolver by lazy {
         PermissionResolver(this)
+    }
+
+    private val mobileInternetDetector: MobileInternetDetector by lazy {
+        MobileInternetDetector(this)
     }
 
     private lateinit var appUpdateManager: AppUpdateManager
@@ -127,6 +132,7 @@ class MainActivity : BaseActivity() {
         //make sure we can read from device pcap files and get location
         if (permissionResolver.checkSelfPermission()) {
             bindService()
+            mobileInternetDetector.register()
         }
     }
 
@@ -149,6 +155,7 @@ class MainActivity : BaseActivity() {
         mediaController?.unregisterCallback(mediaControllerCallback)
 
         unbindService()
+        mobileInternetDetector.unregister()
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
@@ -254,8 +261,14 @@ class MainActivity : BaseActivity() {
                 }
 
                 launch {
-                    for (event in viewViewModel.eventSensorEnableChannel){
+                    for (event in viewViewModel.eventSensorEnableChannel) {
                         controllerPresenter.setTelemetryEnabled(event.first, event.second)
+                    }
+                }
+
+                launch {
+                    mobileInternetDetector.state.collect { status ->
+                        viewViewModel.cellularState.value = status
                     }
                 }
             }
