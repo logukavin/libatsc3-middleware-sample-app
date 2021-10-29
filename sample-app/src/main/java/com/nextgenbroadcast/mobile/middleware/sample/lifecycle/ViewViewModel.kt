@@ -1,6 +1,7 @@
 package com.nextgenbroadcast.mobile.middleware.sample.lifecycle
 
 import android.app.Application
+import android.net.NetworkCapabilities
 import android.net.Uri
 import android.text.Html
 import androidx.lifecycle.*
@@ -15,6 +16,7 @@ import com.nextgenbroadcast.mobile.middleware.sample.model.LogInfo
 import com.nextgenbroadcast.mobile.middleware.sample.model.LogInfo.Group
 import com.nextgenbroadcast.mobile.middleware.sample.model.LogInfo.Record
 import com.nextgenbroadcast.mobile.middleware.sample.settings.SensorState
+import com.nextgenbroadcast.mobile.middleware.sample.asString
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 
@@ -28,9 +30,20 @@ class ViewViewModel(
     val mediaUri = MutableLiveData<Uri?>()
     val appData = MutableLiveData<AppData>(null)
     val receiverState = MutableLiveData(ReceiverState.idle())
+    val cellularState = MutableLiveData<CellularNetworkState>()
+    val networkCapabilitiesState = MutableLiveData<NetworkCapabilities>()
 
-    val appDataLog = appData.mapWith(mediaUri) { (data, uri) ->
-        formatLog(data, uri?.toString())
+    private val cellularInfo = cellularState.mapWith(networkCapabilitiesState) { (cellular, capabilities) ->
+        application.getString(
+            R.string.debug_cellular_info,
+            "<b>${cellular?.asString() ?: "-"}</b>",
+            "<b>${capabilities?.linkUpstreamBandwidthKbps ?: ""}</b>",
+            "<b>${capabilities?.linkDownstreamBandwidthKbps ?: ""}</b>"
+        )
+    }
+
+    val appDataLog = appData.mapWith(mediaUri, cellularInfo) { (data, uri, cellularInfo) ->
+        formatLog(data, uri?.toString(), cellularInfo)
     }
 
     val stateDescription = receiverState.map { receiverState ->
@@ -61,7 +74,6 @@ class ViewViewModel(
     val showPhyChart = MutableLiveData<Boolean>()
 
     val debugData = MutableLiveData<CharSequence>()
-    val cellularState = MutableLiveData<CellularNetworkState>()
 
     val defaultService = services.distinctUntilChanged().map { list ->
         list.firstOrNull { it.default } ?: list.firstOrNull()
@@ -150,9 +162,8 @@ class ViewViewModel(
         logChangingChannel.send(name to enabled)
     }
 
-    private fun formatLog(data: AppData?, rpmMediaUri: String?): CharSequence {
-        val contextId =
-            data?.contextId?.let { id -> "<b>Context ID:</b> $id" } ?: "<b>NO Context ID</b>"
+    private fun formatLog(data: AppData?, rpmMediaUri: String?, cellularInfo: String?): CharSequence {
+        val contextId = data?.contextId?.let { id -> "<b>Context ID:</b> $id" } ?: "<b>NO Context ID</b>"
         val entryPoint = data?.let {
             listOfNotNull(
                 data.bBandEntryPageUrl?.let { url -> "<b>BB:</b> $url" },
@@ -163,8 +174,9 @@ class ViewViewModel(
         val cachePath = data?.cachePath?.let { path -> "<b>App Path:</b> $path" }
             ?: "<b>NO Application available</b>"
         val mediaUrl = rpmMediaUri?.let { uri -> "<b>Media:</b> $uri" } ?: "<b>NO Media Url</b>"
+        val cellular = cellularInfo ?: "<b>NO Cellular data</b>"
         return Html.fromHtml(
-            "> $contextId<br>> $entryPoint<br>> $cachePath<br>> $mediaUrl",
+            "> $contextId<br>> $entryPoint<br>> $cachePath<br>> $mediaUrl<br>> $cellular",
             Html.FROM_HTML_MODE_LEGACY
         )
     }

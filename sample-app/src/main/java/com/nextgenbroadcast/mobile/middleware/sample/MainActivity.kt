@@ -271,6 +271,12 @@ class MainActivity : BaseActivity() {
                         viewViewModel.cellularState.value = status
                     }
                 }
+
+                launch {
+                    mobileInternetDetector.networkCapabilities.collect { capabilities ->
+                        viewViewModel.networkCapabilitiesState.value = capabilities
+                    }
+                }
             }
 
             showDebugInfo.observe(this@MainActivity) { showDebugInfo ->
