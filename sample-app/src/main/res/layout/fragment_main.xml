@@ -101,6 +101,8 @@
                 android:paddingStart="10dp"
                 android:paddingEnd="10dp"
                 android:text="@{viewModel.debugData}"
+                android:textColor="@color/white"
+                android:textSize="8sp"
                 android:visibility="@{viewModel.showDebugInfo &amp;&amp; viewModel.showPhyInfo ? View.VISIBLE : View.GONE}"
                 app:layout_constraintEnd_toStartOf="@+id/settings_button"
                 app:layout_constraintStart_toStartOf="@+id/receiver_player"
