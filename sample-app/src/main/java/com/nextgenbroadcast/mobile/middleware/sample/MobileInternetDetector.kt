@@ -1,34 +1,35 @@
 package com.nextgenbroadcast.mobile.middleware.sample
 
 import android.content.Context
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
 import android.os.Build
 import android.telephony.PhoneStateListener
 import android.telephony.PhoneStateListener.*
 import android.telephony.TelephonyDisplayInfo
 import android.telephony.TelephonyManager
-import android.text.Html
-import android.text.SpannableString
 import android.util.Log
-import android.widget.TextView
 import androidx.annotation.RequiresApi
-import androidx.databinding.BindingAdapter
 import com.nextgenbroadcast.mobile.middleware.sample.MobileInternetDetector.CellularNetworkState.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
-class MobileInternetDetector(
-    private val context: Context,
-    var detectLoss: Boolean = true,
-) {
+class MobileInternetDetector(private val context: Context) {
 
     private val mState: MutableStateFlow<CellularNetworkState> = MutableStateFlow(IDLE)
+    private val mNetworkCapabilities: MutableStateFlow<NetworkCapabilities?> = MutableStateFlow(null)
 
     private val telephonyManager: TelephonyManager by lazy {
         context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
     }
+    private val connectivityManager: ConnectivityManager by lazy {
+        context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+    }
 
     val state: StateFlow<CellularNetworkState> = mState
+    val networkCapabilities: StateFlow<NetworkCapabilities?> = mNetworkCapabilities
 
     var registered: Boolean = false
         private set
@@ -51,8 +52,6 @@ class MobileInternetDetector(
                     Log.d(TAG, "onDataConnectionStateChanged: $lastCellularNetworkState")
                     mState.value = lastCellularNetworkState
                 }
-
-                if (!detectLoss) return
                 if (state == TelephonyManager.DATA_CONNECTED) {
                     mState.value = lastCellularNetworkState
                 } else {
@@ -62,19 +61,33 @@ class MobileInternetDetector(
         }
     }
 
-    fun register() = synchronized(this) {
-        if (registered) return@synchronized
+    private val networkCallback: ConnectivityManager.NetworkCallback by lazy {
+        object : ConnectivityManager.NetworkCallback() {
+            override fun onCapabilitiesChanged(network: Network, networkCapabilities: NetworkCapabilities) {
+                Log.d(TAG, "linkDownstreamBandwidthKbps: ${networkCapabilities.linkDownstreamBandwidthKbps}")
+                Log.d(TAG, "linkUpstreamBandwidthKbps: ${networkCapabilities.linkUpstreamBandwidthKbps}")
+                mNetworkCapabilities.value = networkCapabilities
+            }
+        }
+    }
+
+    @Synchronized
+    fun register() {
+        if (registered) return
         registered = true
         var events = LISTEN_DATA_CONNECTION_STATE
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             events = events or LISTEN_DISPLAY_INFO_CHANGED
         }
         telephonyManager.listen(internetPhoneStateListener, events)
+        connectivityManager.registerDefaultNetworkCallback(networkCallback)
     }
 
-    fun unregister() = synchronized(this) {
-        if (!registered) return@synchronized
+    @Synchronized
+    fun unregister() {
+        if (!registered) return
         telephonyManager.listen(internetPhoneStateListener, LISTEN_NONE)
+        connectivityManager.unregisterNetworkCallback(networkCallback)
         registered = false
     }
 
@@ -139,20 +152,15 @@ class MobileInternetDetector(
 
 }
 
-@BindingAdapter("android:text")
-fun TextView.setText(cellularNetworkState: MobileInternetDetector.CellularNetworkState?) {
-    text = Html.fromHtml(
-        context.getString(R.string.debug_info_cellular_status, "<b>" + when (cellularNetworkState) {
-            IDLE -> "NOT CONNECTED"
-            TWO_G -> "G"
-            THREE_G -> "3G"
-            LTE -> "4G"
-            LTE_ADVANCED_PRO -> "5Ge"
-            NR -> "5G"
-            NR_NSA -> "5G NR"
-            NR_NSA_MMWAVE -> "5G+/5G"
-            else -> "UNDEFINED"
-        } + "</b>"),
-        Html.FROM_HTML_MODE_LEGACY
-    )
+fun MobileInternetDetector.CellularNetworkState.asString() = when (this) {
+    IDLE -> "NOT CONNECTED"
+    TWO_G -> "G"
+    THREE_G -> "3G"
+    LTE -> "4G"
+    LTE_ADVANCED_PRO -> "5Ge"
+    NR -> "5G"
+    NR_NSA -> "5G NR"
+    NR_NSA_MMWAVE -> "5G+/5G"
+    else -> "UNDEFINED"
 }
+
