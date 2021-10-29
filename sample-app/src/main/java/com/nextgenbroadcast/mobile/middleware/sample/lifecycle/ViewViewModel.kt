@@ -8,6 +8,7 @@ import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.model.bCastEntryPageUrlFull
+import com.nextgenbroadcast.mobile.middleware.sample.MobileInternetDetector.CellularNetworkState
 import com.nextgenbroadcast.mobile.middleware.sample.R
 import com.nextgenbroadcast.mobile.middleware.sample.core.mapWith
 import com.nextgenbroadcast.mobile.middleware.sample.model.LogInfo
@@ -60,6 +61,7 @@ class ViewViewModel(
     val showPhyChart = MutableLiveData<Boolean>()
 
     val debugData = MutableLiveData<CharSequence>()
+    val cellularState = MutableLiveData<CellularNetworkState>()
 
     val defaultService = services.distinctUntilChanged().map { list ->
         list.firstOrNull { it.default } ?: list.firstOrNull()

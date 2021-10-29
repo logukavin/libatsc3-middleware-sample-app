@@ -10,6 +10,8 @@
 
     <!-- required to disable DND in case of AEA received  -->
     <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
+    <!-- required to detect internet type -->
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
 
 <!-- jjustman-2020-12-16- todo - remove me?   <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />-->
     <uses-feature android:glEsVersion="0x00030002" android:required="true" />
