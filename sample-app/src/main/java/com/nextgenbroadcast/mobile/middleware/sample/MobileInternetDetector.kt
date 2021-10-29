@@ -16,10 +16,13 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
-class MobileInternetDetector(private val context: Context) {
+class MobileInternetDetector(
+    private val context: Context,
+) {
 
     private val mState: MutableStateFlow<CellularNetworkState> = MutableStateFlow(IDLE)
-    private val mNetworkCapabilities: MutableStateFlow<NetworkCapabilities?> = MutableStateFlow(null)
+    private val mNetworkCapabilities: MutableStateFlow<NetworkCapabilities?> =
+        MutableStateFlow(null)
 
     private val telephonyManager: TelephonyManager by lazy {
         context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
