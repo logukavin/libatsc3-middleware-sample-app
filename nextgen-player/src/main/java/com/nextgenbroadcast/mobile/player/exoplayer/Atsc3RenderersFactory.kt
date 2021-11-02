@@ -2,7 +2,6 @@ package com.nextgenbroadcast.mobile.player.exoplayer
 
 import android.content.Context
 import android.os.Handler
-import com.google.android.exoplayer2.DefaultRenderersFactory
 import com.google.android.exoplayer2.Renderer
 import com.google.android.exoplayer2.RenderersFactory
 import com.google.android.exoplayer2.audio.AudioRendererEventListener
@@ -18,11 +17,10 @@ class Atsc3RenderersFactory(
     context: Context,
     mimeType: String? = null
 ) : RenderersFactory {
-    val factory = if (mimeType == MMTConstants.MIME_MMT_VIDEO || mimeType == MMTConstants.MIME_MMT_AUDIO) {
+    private val factory = if (mimeType == MMTConstants.MIME_MMT_VIDEO || mimeType == MMTConstants.MIME_MMT_AUDIO) {
         MMTRenderersFactory(context)
     } else {
-        //jjustman-2021-09-08 - TODO - refactor DefaultRenderersFactory out into RouteDASHRenderersFactory for AC-4 and MPEGH support
-        DefaultRenderersFactory(context)
+        RouteDASHRenderersFactory(context)
     }
 
     override fun createRenderers(eventHandler: Handler, videoRendererEventListener: VideoRendererEventListener, audioRendererEventListener: AudioRendererEventListener, textRendererOutput: TextOutput, metadataRendererOutput: MetadataOutput, drmSessionManager: DrmSessionManager<FrameworkMediaCrypto>?): Array<Renderer> {
