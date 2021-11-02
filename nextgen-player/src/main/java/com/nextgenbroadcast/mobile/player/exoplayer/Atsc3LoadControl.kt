@@ -11,7 +11,7 @@ import com.nextgenbroadcast.mobile.player.MMTConstants
 class Atsc3LoadControl(
     mimeType: String? = null
 ) : LoadControl {
-    val loadControl = if (mimeType == MMTConstants.MIME_MMT_VIDEO || mimeType == MMTConstants.MIME_MMT_AUDIO) {
+    private val loadControl = if (mimeType == MMTConstants.MIME_MMT_VIDEO || mimeType == MMTConstants.MIME_MMT_AUDIO) {
         MMTLoadControl()
     } else {
         RouteDASHLoadControl()
