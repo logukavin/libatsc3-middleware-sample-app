@@ -622,7 +622,7 @@ internal class Atsc3Module(
                 val notify = synchronized(this) {
                     if (heldPayloadXML != llsTableMap[SignalingDataType.HELD]?.xml) {
                         llsTableMap[SignalingDataType.HELD] = Atsc3HELDData(
-                            version = 0,
+                            version = 0, //TODO: get version from NDK layer
                             xml = heldPayloadXML
                         )
                         selectedServiceHeld = held
