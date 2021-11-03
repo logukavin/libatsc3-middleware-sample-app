@@ -32,6 +32,10 @@ import org.ngbp.libatsc3.middleware.android.mmt.MfuByteBufferFragment;
 import org.ngbp.libatsc3.middleware.android.mmt.MmtPacketIdContext;
 import org.ngbp.libatsc3.middleware.android.mmt.MpuMetadata_HEVC_NAL_Payload;
 import org.ngbp.libatsc3.middleware.android.mmt.models.MMTAudioDecoderConfigurationRecord;
+import org.ngbp.libatsc3.middleware.mmt.pb.MmtAudioProperties;
+import org.ngbp.libatsc3.middleware.mmt.pb.MmtCaptionProperties;
+import org.ngbp.libatsc3.middleware.mmt.pb.MmtMpTable;
+import org.ngbp.libatsc3.middleware.mmt.pb.MmtVideoProperties;
 
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -321,6 +325,34 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
         }
         descriptors.forEach(descriptor -> {
             descriptor.pushAudioDecoderConfigurationRecord(mmtAudioDecoderConfigurationRecord);
+        });
+    }
+
+    @Override
+    public void onVideoStreamProperties(MmtVideoProperties.MmtVideoPropertiesDescriptor properties) {
+        descriptors.forEach(descriptor -> {
+            descriptor.pushVideoStreamProperties(properties);
+        });
+    }
+
+    @Override
+    public void onCaptionAssetProperties(MmtCaptionProperties.MmtCaptionPropertiesDescriptor properties) {
+        descriptors.forEach(descriptor -> {
+            descriptor.pushCaptionAssetProperties(properties);
+        });
+    }
+
+    @Override
+    public void onAudioStreamProperties(MmtAudioProperties.MmtAudioPropertiesDescriptor properties) {
+        descriptors.forEach(descriptor -> {
+            descriptor.pushAudioStreamProperties(properties);
+        });
+    }
+
+    @Override
+    public void onMpTableComplete(MmtMpTable.MmtAssetTable assetTable) {
+        descriptors.forEach(descriptor -> {
+            descriptor.pushAssetMappingTable(assetTable);
         });
     }
 

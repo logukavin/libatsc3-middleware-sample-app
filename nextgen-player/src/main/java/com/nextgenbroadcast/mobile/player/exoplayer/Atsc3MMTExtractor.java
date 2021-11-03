@@ -18,6 +18,7 @@ import com.nextgenbroadcast.mobile.player.MMTConstants;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 public class Atsc3MMTExtractor implements Extractor {
@@ -224,9 +225,11 @@ public class Atsc3MMTExtractor implements Extractor {
                         int packetId = buffer.getInt();
                         int audioChannelCount = buffer.getInt();
                         int audioSampleRate = buffer.getInt();
+                        int languageLength = buffer.getInt();
+                        String language = readString(buffer, languageLength);
 
                         Format audioFormat = MMTMediaTrackUtils.createAudioFormat(Integer.toString(packetId),
-                                audioType, audioChannelCount, audioSampleRate, 0, null);
+                                audioType, audioChannelCount, audioSampleRate, 0, language);
 
                         if (audioFormat != null) {
                             Log.d(TAG, String.format("maybeOutputFormat: TRACK_TYPE_AUDIO: created audioFormat for packet_id: %d, (int)audioType: %d, audioFormat: %s", packetId, audioType, audioFormat));
@@ -243,8 +246,10 @@ public class Atsc3MMTExtractor implements Extractor {
                     case MMTConstants.TRACK_TYPE_TEXT: {
                         int textType = buffer.getInt();
                         int packetId = buffer.getInt();
+                        int languageLength = buffer.getInt();
+                        String language = readString(buffer, languageLength);
 
-                        TrackOutput textOutput = MMTMediaTrackUtils.createTextOutput(extractorOutput, packetId, textType, "us");
+                        TrackOutput textOutput = MMTMediaTrackUtils.createTextOutput(extractorOutput, packetId, textType, language);
                         if (textOutput != null) {
                             tracks.put(packetId, new MmtTrack(textOutput));
                         }
@@ -255,6 +260,16 @@ public class Atsc3MMTExtractor implements Extractor {
 
             extractorOutput.endTracks();
         }
+    }
+
+    private String readString(ByteBuffer buffer, int length) {
+        if (length > 0 && length <= buffer.remaining()) {
+            byte[] data = new byte[length];
+            buffer.get(data, 0, length);
+            return new String(data, StandardCharsets.UTF_8);
+        }
+
+        return null;
     }
 
     private void maybeOutputSeekMap() {
