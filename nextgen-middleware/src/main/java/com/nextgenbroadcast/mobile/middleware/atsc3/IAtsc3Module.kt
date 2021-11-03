@@ -28,5 +28,7 @@ interface IAtsc3Module {
     fun getVersionInfo(): Map<String, String?>
     fun getSerialNum(): String?
 
+    fun getLLSTableByName(names: List<String>): List<ISignalingData>
+
     fun getNtpClock(): INtpClock?
 }
