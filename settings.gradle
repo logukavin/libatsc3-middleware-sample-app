@@ -31,7 +31,7 @@ if (props.getProperty('org.gradle.project.use_local_src_libatsc3_folder') && pro
     include ':atsc3_phy_virtual'
     project(':atsc3_phy_virtual').projectDir = new File(rootProject.projectDir, libatsc3RootFolder + '/android/atsc3_phy_virtual')
 
-    if (props.getProperty('org.gradle.project.phy_saankhya_enabled') && props.getProperty('org.gradle.project.phy_saankhya_enabled').toString().toBoolean()) {
+    if ((props.getProperty('org.gradle.project.phy_saankhya_enabled') && props.getProperty('org.gradle.project.phy_saankhya_enabled').toString().toBoolean()) || props.getProperty('org.gradle.project.abi_x86_enabled').toBoolean()) {
         include ':atsc3_phy_saankhya'
         project(':atsc3_phy_saankhya').projectDir = new File(rootProject.projectDir, libatsc3RootFolder + '/android/atsc3_phy_saankhya')
     }
