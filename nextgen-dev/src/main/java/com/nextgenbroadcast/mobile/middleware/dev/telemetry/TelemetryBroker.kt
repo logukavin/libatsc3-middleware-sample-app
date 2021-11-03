@@ -41,6 +41,11 @@ class TelemetryBroker(
             readers.map { it.name to it.delayMils }.toMap()
     )
 
+    val readerNames: List<String>
+        get() = readers.map { reader ->
+            reader.name
+        }
+
     val readersEnabled = _readersEnabled.asStateFlow()
     val readersDelay = _readersDelay.asStateFlow()
 

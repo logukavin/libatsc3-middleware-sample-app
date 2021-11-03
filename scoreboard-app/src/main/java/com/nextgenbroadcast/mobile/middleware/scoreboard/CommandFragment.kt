@@ -7,12 +7,16 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.AdapterView
+import android.view.*
 import android.widget.EditText
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import com.nextgenbroadcast.mobile.middleware.scoreboard.adapter.CommandTargetArrayAdapter
 import com.nextgenbroadcast.mobile.middleware.scoreboard.databinding.*
+import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.CommandTarget
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 
@@ -20,6 +24,9 @@ class CommandFragment : Fragment(), View.OnClickListener {
     private val sharedViewModel: SharedViewModel by activityViewModels()
     private val sharedPreferences: SharedPreferences by lazy {
         requireContext().getSharedPreferences("command_preferences", Context.MODE_PRIVATE)
+    }
+    private val commandTargetAdapter by lazy {
+        CommandTargetArrayAdapter(requireContext(), mutableListOf())
     }
     private lateinit var binding: FragmentCommandBinding
     private lateinit var tuneBinding: CommandTuneViewBinding
@@ -72,13 +79,60 @@ class CommandFragment : Fragment(), View.OnClickListener {
             saveFileViewBinding.buttonWriteToFile.setOnClickListener(this@CommandFragment)
             telemetryViewBinding.buttonSetTelemetry.setOnClickListener(this@CommandFragment)
             baEntrypointBinding.buttonEntrypointApply.setOnClickListener(this@CommandFragment)
+
+            spinnerGlobalCommand.adapter = commandTargetAdapter
+            spinnerGlobalCommand.onItemSelectedListener =
+                object : AdapterView.OnItemSelectedListener {
+                    override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                        (parent?.getItemAtPosition(position) as? CommandTarget)?.let { target ->
+                            sharedViewModel.selectedCommandTarget.value = target
+                        }
+                    }
+
+                    override fun onNothingSelected(parent: AdapterView<*>?) = Unit
+                }
+
+        }
+
+        sharedViewModel.targetCommandLiveData.observe(viewLifecycleOwner) {
+            commandTargetAdapter.changeItems(it)
+        }
+
+        sharedViewModel.selectedCommandTarget.observe(viewLifecycleOwner) { command ->
+            binding.spinnerGlobalCommand.setSelection(
+                command?.let { commandTargetAdapter.indexOf(command).takeIf { it != -1 } } ?: 0,
+                false
+            )
+            telemetryViewBinding.buttonMoreOptions.setOnClickListener {
+                TelemetryCommandsDialog
+                    .newInstance()
+                    .show(childFragmentManager, TelemetryCommandsDialog.TAG)
+            }
+        }
+
+        childFragmentManager.setFragmentResultListener(
+            TelemetryCommandsDialog.TELEMETRY_RESULT_ITEM_CHECKED,
+            viewLifecycleOwner
+        ) { _, result ->
+            onPopupTelemetryItemChecked(result)
         }
 
     }
 
+    private fun onPopupTelemetryItemChecked(result: Bundle) {
+        val (name, isChecked) = TelemetryCommandsDialog.unpackResult(result)
+        var currentText = telemetryViewBinding.editTextTelemetryNames.text?.toString()
+        currentText = if (!isChecked) {
+            currentText?.replace("$name,", "")
+        } else {
+            "$name,$currentText"
+        }
+        telemetryViewBinding.editTextTelemetryNames.setText(currentText)
+    }
+
     private fun saveViewStates() {
         sharedPreferences.edit().apply {
-            putBoolean(CHECK_BOX_GLOBAL_COMMAND_VALUE, binding.checkboxGlobalCommand.isChecked)
+            putBoolean(CHECK_BOX_GLOBAL_COMMAND_VALUE, sharedViewModel.selectedCommandTarget.value is CommandTarget.Broadcast)
 
             putString(TUNE_VALUE, tuneBinding.editTextTune.string())
 
@@ -109,8 +163,9 @@ class CommandFragment : Fragment(), View.OnClickListener {
 
     private fun initialSavedViewStates() {
         with(sharedPreferences) {
-            binding.checkboxGlobalCommand.isChecked =
-                getBoolean(CHECK_BOX_GLOBAL_COMMAND_VALUE, false)
+            sharedViewModel.selectedCommandTarget.value = if (getBoolean(CHECK_BOX_GLOBAL_COMMAND_VALUE, false)) {
+                CommandTarget.Broadcast
+            } else null
 
             tuneBinding.editTextTune.setText(getString(TUNE_VALUE, ""))
 
@@ -129,9 +184,13 @@ class CommandFragment : Fragment(), View.OnClickListener {
             saveFileViewBinding.editTextFileName.setText(getString(FILE_NAME_VALUE, ""))
             saveFileViewBinding.editTextWritingDuration.setText(getString(WRITING_DURATION_VALUE, ""))
 
-            telemetryViewBinding.checkboxTelemetryEnable.isChecked =
-                getBoolean(TELEMETRY_ENABLE_VALUE, false)
-            telemetryViewBinding.editTextTelemetryNames.setText(getString(TELEMETRY_NAMES_VALUE, ""))
+            telemetryViewBinding.checkboxTelemetryEnable.isChecked = getBoolean(TELEMETRY_ENABLE_VALUE, false)
+            getString(TELEMETRY_NAMES_VALUE, "").let { commands ->
+                if (!commands.isNullOrBlank()) {
+                    sharedViewModel.restoreTelemetryCommands(commands)
+                }
+                telemetryViewBinding.editTextTelemetryNames.setText(commands)
+            }
             telemetryViewBinding.editTextTelemetryDelay.setText(getString(TELEMETRY_DELAY, ""))
 
             baEntrypointBinding.editTextEntrypoint.setText(getString(BA_ENTRYPOINT_VALUE, ""))
@@ -146,7 +205,7 @@ class CommandFragment : Fragment(), View.OnClickListener {
     }
 
     override fun onClick(view: View) {
-        if (!binding.checkboxGlobalCommand.isChecked && sharedViewModel.chartDevicesWithFlow.value.isNullOrEmpty()) {
+        if ((sharedViewModel.selectedCommandTarget.value as? CommandTarget.SelectedDevices)?.deviceIdList?.isEmpty() == true) {
             showToast(getString(R.string.no_selected_devices))
             return
         }
@@ -234,12 +293,11 @@ class CommandFragment : Fragment(), View.OnClickListener {
         }.show()
     }
 
-    private fun getDevicesCount(): Int {
-        return if (binding.checkboxGlobalCommand.isChecked) {
-            sharedViewModel.deviceIdList.value?.size ?: 0
-        } else {
-            sharedViewModel.chartDevicesWithFlow.value?.size ?: 0
-        }
+    private fun getDevicesCount(): Int = when (val target = sharedViewModel.selectedCommandTarget.value){
+        CommandTarget.Broadcast -> sharedViewModel.deviceInfoList.value?.size ?: 0
+        is CommandTarget.Device -> 1
+        is CommandTarget.SelectedDevices -> target.deviceIdList.size
+        null -> 0
     }
 
     private fun sendRebootDeviceCommand() {
@@ -307,7 +365,8 @@ class CommandFragment : Fragment(), View.OnClickListener {
     }
 
     private fun sendCommand(command: String, arguments: JSONObject?) {
-        if (binding.checkboxGlobalCommand.isChecked) {
+        val target = sharedViewModel.selectedCommandTarget.value
+        if (target is CommandTarget.Broadcast) {
             showWarningDialog(R.string.you_send_command_to_all_devices) {
                 Intent(context, ScoreboardService::class.java).apply {
                     action = ScoreboardService.ACTION_GLOBAL_COMMANDS
@@ -318,25 +377,22 @@ class CommandFragment : Fragment(), View.OnClickListener {
                     sendToService(this)
                 }
             }
-        } else {
-            val devices = sharedViewModel.chartDevicesWithFlow.value?.map { deviceInfo ->
-                deviceInfo.device.id
-            } ?: return
-
-            Intent(context, ScoreboardService::class.java).apply {
-                action = ScoreboardService.ACTION_COMMANDS
-                val jsonObject = JSONObject().apply {
-                    put(ACTION, command)
-                    put(CONTROL_ARGUMENTS, arguments)
-                }
-
-                putExtra(ScoreboardService.COMMAND_EXTRAS, jsonObject.toString())
-                putStringArrayListExtra(ScoreboardService.DEVICES_EXTRAS, arrayListOf(*devices.toTypedArray()))
-            }.run {
-                sendToService(this)
-            }
+            return
         }
 
+        val deviceIds = target?.ids() ?: return
+        Intent(context, ScoreboardService::class.java).apply {
+            action = ScoreboardService.ACTION_COMMANDS
+            val jsonObject = JSONObject().apply {
+                put(ACTION, command)
+                put(CONTROL_ARGUMENTS, arguments)
+            }
+
+            putExtra(ScoreboardService.COMMAND_EXTRAS, jsonObject.toString())
+            putStringArrayListExtra(ScoreboardService.DEVICES_EXTRAS, arrayListOf(*deviceIds.toTypedArray()))
+        }.run {
+            sendToService(this)
+        }
     }
 
     private fun sendToService(intent: Intent) {

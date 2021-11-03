@@ -26,8 +26,8 @@ class ErrorTelemetryReader(
     companion object {
         const val NAME = ReceiverTelemetry.TELEMETRY_ERROR
     }
-
-    internal data class ErrorData(
-        val message: String
-    ) : TelemetryPayload()
 }
+
+data class ErrorData(
+    val message: String
+) : TelemetryPayload()

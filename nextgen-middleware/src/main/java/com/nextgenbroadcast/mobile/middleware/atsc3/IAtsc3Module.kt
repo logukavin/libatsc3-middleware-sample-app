@@ -1,12 +1,15 @@
 package com.nextgenbroadcast.mobile.middleware.atsc3
 
+import com.nextgenbroadcast.mobile.core.atsc3.INtpClock
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.Atsc3ServiceLocationTable
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.IAtsc3Source
 import kotlinx.coroutines.flow.SharedFlow
+import org.ngbp.libatsc3.middleware.android.phy.models.L1D_timePhyInformation
 import org.ngbp.libatsc3.middleware.android.phy.models.RfPhyStatistics
 
 interface IAtsc3Module {
     val rfPhyMetricsFlow: SharedFlow<RfPhyStatistics>
+    val l1dPhyInfoFlow: SharedFlow<L1D_timePhyInformation>
 
     fun setListener(listener: Atsc3ModuleListener?)
 
@@ -26,4 +29,6 @@ interface IAtsc3Module {
     fun getSerialNum(): String?
 
     fun getLLSTableByName(names: List<String>): List<ISignalingData>
+
+    fun getNtpClock(): INtpClock?
 }
