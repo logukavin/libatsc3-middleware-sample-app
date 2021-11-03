@@ -46,11 +46,23 @@ open class TemporalChartView @JvmOverloads constructor(
         this.source = source
 
         removeAllSeries()
+        secondScale.removeAllSeries()
 
         if (source == null) return
 
-        source.getSeries().forEach {
-            addSeries(it)
+        onBeforeSourceSet(source)
+
+        source.getSeries().forEach { series ->
+            addSeries(series)
+        }
+
+        val secondarySeries = source.getSecondarySeries()
+        if (secondarySeries.isNotEmpty()) {
+            secondarySeries.forEach { series ->
+                secondScale.addSeries(series)
+            }
+            secondScale.setMinY(source.getSecondaryMinY())
+            secondScale.setMaxY(source.getSecondaryMaxY())
         }
 
         if (isAttachedToWindow) {
@@ -80,6 +92,8 @@ open class TemporalChartView @JvmOverloads constructor(
 
         source?.close()
     }
+
+    open fun onBeforeSourceSet(source: TemporalDataSource) {}
 
     abstract class TemporalDataSource(
         private val visiblePeriod: Long
@@ -133,6 +147,12 @@ open class TemporalChartView @JvmOverloads constructor(
         override fun close(reset: Boolean) {
             eventCounter = 0
         }
+
+        open fun getSecondarySeries(): List<BaseSeries<DataPoint>> = emptyList()
+        open fun getMinY(): Double = 0.0
+        open fun getMaxY(): Double = 100.0
+        open fun getSecondaryMinY(): Double = 0.0
+        open fun getSecondaryMaxY(): Double = 100.0
 
         companion object {
             val TAG: String = TemporalDataSource::class.java.simpleName

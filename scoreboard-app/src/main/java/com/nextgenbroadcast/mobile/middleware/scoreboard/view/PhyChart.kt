@@ -3,15 +3,16 @@ package com.nextgenbroadcast.mobile.middleware.scoreboard.view
 import android.content.Context
 import android.util.AttributeSet
 import androidx.core.content.ContextCompat
+import com.jjoe64.graphview.LegendRenderer
+import com.jjoe64.graphview.series.BaseSeries
 import com.jjoe64.graphview.series.DataPoint
-import com.jjoe64.graphview.series.LineGraphSeries
 import com.nextgenbroadcast.mobile.middleware.dev.chart.TemporalChartView
 import com.nextgenbroadcast.mobile.middleware.scoreboard.R
-import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.TDataPoint
+import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.ChartConfiguration
+import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.ChartDataSource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
@@ -25,55 +26,100 @@ class PhyChart @JvmOverloads constructor(
     override fun onFinishInflate() {
         super.onFinishInflate()
 
-        title = resources.getString(R.string.chart_phy_snr_title)
-        val textColor = ContextCompat.getColor(context, R.color.white)
+        title = resources.getString(R.string.chart_title)
+        val labelTextColor = ContextCompat.getColor(context, R.color.white)
 
-        titleColor = textColor
+        titleColor = labelTextColor
         with(gridLabelRenderer) {
             gridColor = ContextCompat.getColor(context, R.color.chart_grid_color)
-            verticalLabelsColor = textColor
-            horizontalLabelsColor = textColor
+            verticalLabelsColor = labelTextColor
+            horizontalLabelsColor = labelTextColor
+            verticalLabelsSecondScaleColor = labelTextColor
             textSize = resources.getDimension(R.dimen.chart_label_text_size)
             numVerticalLabels = 4
         }
 
-        setViewport(VISIBLE_PERIOD, SNR_MIN_VALUE, SNR_MAX_VALUE)
+        with(legendRenderer) {
+            isVisible = true
+            align = LegendRenderer.LegendAlign.MIDDLE // position will be corrected in onLayout()
+            width = resources.getDimensionPixelSize(R.dimen.chart_legend_width)
+            textSize = resources.getDimension(R.dimen.chart_legend_text_size)
+            textColor = labelTextColor
+        }
     }
 
-    class DataSource(
-        private val flow: Flow<TDataPoint>,
+    override fun onBeforeSourceSet(source: TemporalDataSource) {
+        setViewport(VISIBLE_PERIOD, source.getMinY(), source.getMaxY())
+    }
+
+    override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
+        super.onLayout(changed, left, top, right, bottom)
+
+        legendRenderer.margin = right - legendRenderer.width - resources.getDimensionPixelSize(R.dimen.chart_legend_offset)
+    }
+
+    class MultiDataSource(
+        private val primarySources: List<ChartDataSource>,
+        private val secondarySources: List<ChartDataSource>,
+        private val primaryChartConfiguration: ChartConfiguration,
+        private val secondaryChartConfiguration: ChartConfiguration
     ) : TemporalDataSource(VISIBLE_PERIOD) {
-        private var graphSeries = LineGraphSeries<DataPoint>()
+
         private var sourceJob: Job? = null
 
         override fun open() {
             super.open()
-
             sourceJob = CoroutineScope(Dispatchers.Main).launch {
-                flow.collect { (time, value) ->
-                    addValue(graphSeries, min(max(SNR_MIN_VALUE, value / 1000), SNR_MAX_VALUE), time)
+                addValueToChart(primarySources, primaryChartConfiguration) +
+                    addValueToChart(secondarySources, secondaryChartConfiguration)
+            }
+        }
+
+        private fun CoroutineScope.addValueToChart(
+            sources: List<ChartDataSource>,
+            config: ChartConfiguration
+        ) = sources.map { dataSource ->
+            launch {
+                dataSource.data.collect { (time, value) ->
+                    addValue(
+                        dataSource.series,
+                        normalizeValue(value, config),
+                        time
+                    )
                 }
             }
         }
 
         override fun close(reset: Boolean) {
             super.close(reset)
-
             sourceJob?.cancel()
             sourceJob = null
-
             if (reset) {
-                graphSeries.resetData(emptyArray())
+                (primarySources + secondarySources).forEach { source ->
+                    source.series.resetData(emptyArray())
+                }
             }
         }
 
-        override fun getSeries() = listOf(graphSeries)
+        override fun getSeries(): List<BaseSeries<DataPoint>> = primarySources.map { source ->
+            source.series
+        }
+
+        override fun getSecondarySeries(): List<BaseSeries<DataPoint>> = secondarySources.map { source ->
+            source.series
+        }
+
+        override fun getSecondaryMinY() = secondaryChartConfiguration.minValue
+        override fun getSecondaryMaxY() = secondaryChartConfiguration.maxValue
+        override fun getMaxY(): Double = primaryChartConfiguration.maxValue
+        override fun getMinY(): Double = primaryChartConfiguration.minValue
+
+        private fun normalizeValue(value: Double, config: ChartConfiguration): Double {
+            return min(max(config.minValue, value), config.maxValue)
+        }
     }
 
     companion object {
-        private const val SNR_MAX_VALUE = 30.0
-        private const val SNR_MIN_VALUE = 0.0
-
         private val VISIBLE_PERIOD = TimeUnit.MINUTES.toMillis(5)
     }
 }

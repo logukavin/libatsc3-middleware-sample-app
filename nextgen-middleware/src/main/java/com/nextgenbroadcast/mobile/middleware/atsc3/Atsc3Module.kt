@@ -1,11 +1,11 @@
 package com.nextgenbroadcast.mobile.middleware.atsc3
 
 import android.util.Log
-import com.lyft.kronos.KronosClock
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.core.atsc3.PhyInfoConstants
 import com.nextgenbroadcast.mobile.core.model.MediaUrl
 import com.nextgenbroadcast.mobile.core.MiddlewareConfig
+import com.nextgenbroadcast.mobile.core.atsc3.INtpClock
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.Atsc3ServiceLocationTable
 import com.nextgenbroadcast.mobile.core.atsc3.SLTConstants
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.alerts.LLSParserAEAT
@@ -40,7 +40,7 @@ import kotlin.math.max
 
 internal class Atsc3Module(
         private val cacheDir: File,
-        private val kronosClock: KronosClock
+        private val ntpClock: INtpClock?
 ) : IAtsc3Module, IAtsc3NdkApplicationBridgeCallbacks, IAtsc3NdkPHYBridgeCallbacks {
 
     private val atsc3NdkApplicationBridge = Atsc3NdkApplicationBridge(this)
@@ -95,7 +95,8 @@ internal class Atsc3Module(
     @Volatile
     private var nextSourceConfigTuneTimeoutTask: TimerTask? = null
 
-    override val rfPhyMetricsFlow = MutableSharedFlow<RfPhyStatistics>(3, 0, BufferOverflow.DROP_OLDEST)
+    override val rfPhyMetricsFlow = MutableSharedFlow<RfPhyStatistics>(0, 3, BufferOverflow.DROP_OLDEST)
+    override val l1dPhyInfoFlow = MutableSharedFlow<L1D_timePhyInformation>(0, 3, BufferOverflow.DROP_OLDEST)
 
     override fun setListener(listener: Atsc3ModuleListener?) {
         if (this.listener != null) throw IllegalStateException("Atsc3Module listener already initialized")
@@ -745,12 +746,14 @@ internal class Atsc3Module(
     override fun pushL1d_TimeInfo(l1dTimeInfo: L1D_timePhyInformation) {
         if (USE_DEV_STATISTIC) {
             val anchorNtpTimestamp = l1dTimeInfo.toStringFromAnchorNtpTimestamp(
-                kronosClock.getCurrentNtpTimeMs() ?: -1
+                ntpClock?.getCurrentNtpTimeMs() ?: -1
             )
             PHYStatistics.PHYL1dTimingStatistics = "SFN: $anchorNtpTimestamp".also {
                 log(it)
             }
         }
+
+        l1dPhyInfoFlow.tryEmit(l1dTimeInfo)
     }
 
     //////////////////////////////////////////////////////////////
@@ -807,6 +810,8 @@ internal class Atsc3Module(
             }
         }
     }
+
+    override fun getNtpClock() = ntpClock
 
     private fun applyDefaultConfiguration(src: IAtsc3Source) {
         val srcConfigs = src.getAllConfigs().map { it.toString() }
@@ -883,6 +888,7 @@ internal class Atsc3Module(
         const val SCHEME_MMT = "mmt://"
 
         private const val USE_PERSISTED_CONFIGURATION = true
-        private val USE_DEV_STATISTIC = MiddlewareConfig.DEV_TOOLS
+
+        val USE_DEV_STATISTIC = MiddlewareConfig.DEV_TOOLS
     }
 }

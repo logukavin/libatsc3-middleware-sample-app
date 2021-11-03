@@ -3,24 +3,37 @@ package com.nextgenbroadcast.mobile.middleware.scoreboard
 import android.location.Location
 import androidx.lifecycle.*
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.entity.TelemetryEvent
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.reader.ErrorData
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.reader.LocationData
-import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.DeviceScoreboardInfo
-import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.TDataPoint
-import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.TelemetryDevice
-import com.nextgenbroadcast.mobile.middleware.scoreboard.telemetry.TelemetryManager
-import kotlinx.coroutines.flow.Flow
+import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.*
 import java.util.concurrent.TimeUnit
 import kotlin.math.abs
 import kotlin.math.floor
 
 class SharedViewModel : ViewModel() {
-    private val _deviceList: MutableLiveData<List<TelemetryDevice>> = MutableLiveData(emptyList())
-    private val _chartDevices = MutableLiveData<List<String>>(emptyList())
-    private val _deviceFlowMap = MutableLiveData<Map<String, Flow<TDataPoint>>>(emptyMap())
-    private val _locationData = MutableLiveData<Map<String, LocationData>>(emptyMap())
+    private val _deviceFlowMap = MutableLiveData<Map<String, ChartData>>(emptyMap())
+    private val _telemetryDeviceList: MutableLiveData<List<TelemetryDevice>> = MutableLiveData(emptyList())
+    private val _chartDeviceIdList = MutableLiveData<List<String>>(emptyList())
+    private val _locationData = MutableLiveData<Map<String, LocationDataAndTime>>(emptyMap())
     val currentDeviceLiveData = MutableLiveData<LocationData?>(null)
+    val selectedCommandTarget = MutableLiveData<CommandTarget?>(null)
+    val targetCommandLiveData: MediatorLiveData<List<CommandTarget>> = MediatorLiveData()
+    val telemetryCommands = MutableLiveData(
+        listOf(
+            TelemetryEntity("acceleration"),
+            TelemetryEntity("gyroscope"),
+            TelemetryEntity("motion"),
+            TelemetryEntity("step_detector"),
+            TelemetryEntity("step_counter"),
+            TelemetryEntity("rotation"),
+            TelemetryEntity(TelemetryEvent.EVENT_TOPIC_BATTERY),
+            TelemetryEntity(TelemetryEvent.EVENT_TOPIC_LOCATION),
+            TelemetryEntity(TelemetryEvent.EVENT_TOPIC_PHY)
+        )
+    )
 
     private val locationCalculationResult = FloatArray(1)
+    private val errorData = MutableLiveData<Map<String, ErrorData>>()
 
     private val _distanceLiveData: LiveData<Map<String, Float?>?> = currentDeviceLiveData
         .mapWithCallback(
@@ -54,52 +67,116 @@ class SharedViewModel : ViewModel() {
             }
         )
 
-    val devicesToAdd = _chartDevices.mapWith(_deviceFlowMap) { (devices, deviceToFlow) ->
+    val devicesToAdd = _chartDeviceIdList.mapWith(_deviceFlowMap) { (devices, deviceToFlow) ->
         devices?.subtract(deviceToFlow?.keys ?: emptyList())
     }.distinctUntilChanged()
 
-    val devicesToRemove = _chartDevices.mapWith(_deviceFlowMap) { (devices, deviceFlows) ->
+    val devicesToRemove = _chartDeviceIdList.mapWith(_deviceFlowMap) { (devices, deviceFlows) ->
         deviceFlows?.keys?.subtract(devices ?: emptyList())
     }.distinctUntilChanged()
 
-    val deviceIdList: LiveData<List<DeviceScoreboardInfo>> =
-        _deviceList.mapWith(_deviceFlowMap, _distanceLiveData) { (list, flowMap, distanceMap) ->
-            list?.map { device ->
-                DeviceScoreboardInfo(
-                    device = device,
-                    selected = flowMap?.containsKey(device.id) ?: false,
-                    distance = distanceMap?.get(device.id)
-                )
-            } ?: emptyList()
-        }.distinctUntilChanged()
+    private val deviceInfoListMediator = MediatorLiveData<List<DeviceScoreboardInfo>>()
+    val deviceInfoList = deviceInfoListMediator.distinctUntilChanged()
 
-    val chartDevices = _chartDevices.mapWith(_deviceList) { (chartList, deviceList) ->
-        deviceList?.filter { chartList?.contains(it.id) ?: false }
+    val chartDeviceInfoList = _chartDeviceIdList.mapWith(deviceInfoList) { (chartList, deviceList) ->
+        deviceList?.filter { info -> chartList?.contains(info.device.id) ?: false }
     }.distinctUntilChanged()
 
-    val chartDevicesWithFlow = chartDevices.mapWith(_deviceFlowMap, _distanceLiveData) { (chartList, flowMap, distance) ->
-        chartList?.filter { flowMap?.containsKey(it.id) ?: false }?.map { device ->
-            DeviceScoreboardInfo(
-                device = device,
-                distance = distance?.get(device.id),
-                selected = true
+    val chartDeviceInfoWithFlowList = chartDeviceInfoList.mapWith(_deviceFlowMap, _distanceLiveData) { (chartList, flowMap, distance) ->
+        chartList?.filter { flowMap?.containsKey(it.device.id) ?: false }?.map { deviceInfo ->
+            ChartGeneralInfo(
+                deviceId = deviceInfo.device.id,
+                isLost = deviceInfo.device.isLost,
+                distance = distance?.get(deviceInfo.device.id),
+                chartData = flowMap?.get(deviceInfo.device.id),
+                errorData = deviceInfo.errorData
             )
         }
-    }.distinctUntilChanged()
+    }
 
     val selectedDeviceId: MutableLiveData<String?> = MutableLiveData()
 
-    val selectionState: LiveData<Pair<Boolean, Boolean>> = deviceIdList.map { deviceList ->
+    val selectionState: LiveData<Pair<Boolean, Boolean>> = deviceInfoList.map { deviceList ->
         val deviceWithFlowCount = deviceList.filter { (_, hasFlow) -> hasFlow }.size
         Pair(deviceWithFlowCount > 0, deviceWithFlowCount == deviceList.size)
     }.distinctUntilChanged()
+
+    private val deviceInfoMap = mutableMapOf<String, DeviceScoreboardInfo>()
+
+    init {
+        deviceInfoListMediator.addSource(_telemetryDeviceList) { devices ->
+            devices.forEach { device ->
+                deviceInfoMap.compute(device.id) { _, deviceInfo ->
+                    deviceInfo?.copy(device = device) ?: DeviceScoreboardInfo(device = device, selected = false)
+                }
+            }
+            deviceInfoListMediator.value = deviceInfoMap.values.toList()
+        }
+        deviceInfoListMediator.addSource(_deviceFlowMap) { flowMap ->
+            deviceInfoMap.forEach { (id, deviceInfo) ->
+                deviceInfoMap.computeIfPresent(id) { _, _ ->
+                    deviceInfo.copy(selected = flowMap?.containsKey(id) ?: false)
+                }
+            }
+            deviceInfoListMediator.value = deviceInfoMap.values.toList()
+        }
+        deviceInfoListMediator.addSource(_distanceLiveData) { distanceMap ->
+            distanceMap?.forEach { (id, distance) ->
+                deviceInfoMap.computeIfPresent(id) { _, deviceInfo ->
+                    deviceInfo.copy(distance = distance)
+                }
+            }
+            deviceInfoListMediator.value = deviceInfoMap.values.toList()
+        }
+        deviceInfoListMediator.addSource(errorData){ errorMap ->
+            errorMap.forEach{ (id, error) ->
+                deviceInfoMap.computeIfPresent(id){ _, deviceInfo ->
+                    deviceInfo.copy(errorData = error)
+                }
+            }
+            deviceInfoListMediator.value = deviceInfoMap.values.toList()
+        }
+
+        targetCommandLiveData.value = initialTargetSetup()
+        targetCommandLiveData.addSource(deviceInfoList) { deviceInfoList ->
+            targetCommandLiveData.value = mutableListOf(
+                CommandTarget.SelectedDevices(
+                    deviceIdList = deviceInfoList
+                        .filter { it.selected }
+                        .map { it.device.id }
+                ),
+                CommandTarget.Broadcast
+            ).apply {
+                deviceInfoList.map { deviceInfo ->
+                    CommandTarget.Device(deviceInfo.device.id)
+                }.let { commands ->
+                    addAll(commands)
+                }
+            }.also {
+                // update value in case devices has been selected
+                if (selectedCommandTarget.value is CommandTarget.SelectedDevices) {
+                    selectedCommandTarget.value = it.first()
+                }
+            }
+        }
+    }
+
+    private fun initialTargetSetup(): List<CommandTarget> = listOf(
+        CommandTarget.SelectedDevices(
+            deviceIdList = deviceInfoList.value
+                ?.filter { it.selected }
+                ?.map { it.device.id }
+                ?: emptyList()
+        ),
+        CommandTarget.Broadcast
+    )
 
     private fun calculateDistance(
         distanceMap: MutableMap<String, Float?>?,
         oldMyLocation: LocationData?,
         newMyLocation: LocationData,
-        newDevicesLocation: Map<String, LocationData>,
-        oldDevicesLocation: Map<String, LocationData>?
+        newDevicesLocation: Map<String, LocationDataAndTime>,
+        oldDevicesLocation: Map<String, LocationDataAndTime>?
     ): Map<String, Float?> {
         return if (distanceMap == null || oldMyLocation != newMyLocation) {
 
@@ -133,8 +210,8 @@ class SharedViewModel : ViewModel() {
     private fun calculateDevicesLocation(
         distanceMap: MutableMap<String, Float?>,
         newMyLocation: LocationData,
-        newDevicesLocation: Map<String, LocationData>,
-        oldDevicesLocation: Map<String, LocationData>?
+        newDevicesLocation: Map<String, LocationDataAndTime>,
+        oldDevicesLocation: Map<String, LocationDataAndTime>?
     ) {
         val diff = newDevicesLocation.toMutableMap()
         invalidateOldLocationDevices(distanceMap, diff)
@@ -142,7 +219,11 @@ class SharedViewModel : ViewModel() {
         oldDevicesLocation?.forEach { (id, locationData) ->
             // remove devices that has same location as in prev. calculation
             val newLocationData = diff[id]
-            if (newLocationData != null && !isLocationDataChangedSignificantly(newLocationData, locationData)) {
+            if (newLocationData != null && !isLocationDataChangedSignificantly(
+                    newLocationData.location,
+                    locationData.location
+                )
+            ) {
                 diff.remove(id)
             }
         }
@@ -159,11 +240,11 @@ class SharedViewModel : ViewModel() {
      */
     private fun invalidateOldLocationDevices(
         distanceMap: MutableMap<String, Float?>,
-        devicesLocationMap: MutableMap<String, LocationData>
+        devicesLocationMap: MutableMap<String, LocationDataAndTime>
     ) {
         devicesLocationMap
             .filter { (_, locationData) ->
-                System.currentTimeMillis() - locationData.timeStamp >= INVALIDATE_LOCATION_TIME_DIFF
+                System.currentTimeMillis() - locationData.timestamp >= INVALIDATE_LOCATION_TIME_DIFF
             }
             .map { it.key }
             .forEach { id ->
@@ -211,13 +292,13 @@ class SharedViewModel : ViewModel() {
 
     private fun calculateDistance(
         holder: MutableMap<String, Float?>,
-        devicesData: Map<String, LocationData>,
+        devicesData: Map<String, LocationDataAndTime>,
         currentLocation: LocationData
     ) {
-        devicesData.forEach { (id, location) ->
+        devicesData.forEach { (id, locationAndTime) ->
             Location.distanceBetween(
-                location.lat,
-                location.lng,
+                locationAndTime.location.lat,
+                locationAndTime.location.lng,
                 currentLocation.lat,
                 currentLocation.lng,
                 locationCalculationResult
@@ -226,13 +307,18 @@ class SharedViewModel : ViewModel() {
         }
     }
 
-    fun addDeviceLocation(location: TelemetryEvent) {
-        val payload = location.payload
-        if (payload !is LocationData) return
-        val id = TelemetryManager.extractClientId(location.topic)
+    fun addDeviceLocation(deviceId: String, event: TelemetryEvent) {
+        val payload = (event.payload as? LocationData) ?: return
         _locationData.value = _locationData.value?.toMutableMap()?.apply {
-            put(id, payload)
-        } ?: mapOf(id to payload)
+            put(deviceId, LocationDataAndTime(payload))
+        } ?: mapOf(deviceId to LocationDataAndTime(payload))
+    }
+
+    fun addDeviceError(deviceId: String, event: TelemetryEvent) {
+        val payload = (event.payload as? ErrorData) ?: return
+        errorData.value = errorData.value?.toMutableMap()?.apply {
+            put(deviceId, payload)
+        } ?: mapOf(deviceId to payload)
     }
 
     fun setDeviceSelection(deviceId: String?) {
@@ -240,21 +326,21 @@ class SharedViewModel : ViewModel() {
     }
 
     fun setDevicesList(deviceIds: List<TelemetryDevice>) {
-        _deviceList.value = deviceIds
+        _telemetryDeviceList.value = deviceIds
     }
 
     fun addDeviceChart(deviceId: String) {
-        val list = _chartDevices.value?.toMutableList() ?: mutableListOf()
+        val list = _chartDeviceIdList.value?.toMutableList() ?: mutableListOf()
         if (!list.contains(deviceId)) {
             list.add(deviceId)
-            _chartDevices.value = list
+            _chartDeviceIdList.value = list
         }
     }
 
     fun removeDeviceChart(deviceId: String) {
-        val list = _chartDevices.value?.toMutableList() ?: return
+        val list = _chartDeviceIdList.value?.toMutableList() ?: return
         list.remove(deviceId)
-        _chartDevices.value = list
+        _chartDeviceIdList.value = list
         synchronizeChartSelection(deviceId)
     }
 
@@ -264,17 +350,11 @@ class SharedViewModel : ViewModel() {
         }
     }
 
-    fun addFlows(list: List<Pair<String, Flow<TDataPoint>>>) {
+    fun addOrReplaceChartData(list: List<Pair<String, ChartData>>) {
         val map = _deviceFlowMap.value?.toMutableMap() ?: mutableMapOf()
         list.forEach { (deviceId, flow) ->
             map[deviceId] = flow
         }
-        _deviceFlowMap.postValue(map)
-    }
-
-    fun addFlow(deviceId: String, flow: Flow<TDataPoint>) {
-        val map = _deviceFlowMap.value?.toMutableMap() ?: mutableMapOf()
-        map[deviceId] = flow
         _deviceFlowMap.postValue(map)
     }
 
@@ -292,13 +372,9 @@ class SharedViewModel : ViewModel() {
         _deviceFlowMap.postValue(map)
     }
 
-    fun getDeviceFlow(deviceId: String): Flow<TDataPoint>? {
-        return _deviceFlowMap.value?.get(deviceId)
-    }
-
-    fun selectAll(isChecked: Boolean) {
-        val list = _chartDevices.value?.toMutableList() ?: mutableListOf()
-        deviceIdList.value?.forEach { (device) ->
+    fun selectAllDevices(isChecked: Boolean) {
+        val list = _chartDeviceIdList.value?.toMutableList() ?: mutableListOf()
+        deviceInfoList.value?.forEach { (device) ->
             if (isChecked) {
                 if (!list.contains(device.id)) {
                     list.add(device.id)
@@ -308,12 +384,31 @@ class SharedViewModel : ViewModel() {
                 synchronizeChartSelection(device.id)
             }
         }
-        _chartDevices.value = list
+        _chartDeviceIdList.value = list
+    }
+
+    fun selectCommand(position: Int, selected: Boolean) {
+        telemetryCommands.value = telemetryCommands.value?.toMutableList()?.apply {
+            set(position, get(position).copy(checked = selected))
+        }
+    }
+
+    fun restoreTelemetryCommands(data: String) {
+        val commands = data.split(",")
+        telemetryCommands.value = telemetryCommands.value?.toMutableList()?.apply {
+            commands.forEach { command ->
+                val index = indexOfFirst { it.name.contentEquals(command, true) }
+                if (index != -1) {
+                    set(index, get(index).copy(checked = true))
+                }
+            }
+        }
     }
 
     companion object {
         private const val SKIP_SECONDS = 0.1
         private val INVALIDATE_LOCATION_TIME_DIFF = TimeUnit.MINUTES.toMillis(5)
+        private const val MAX_ERRORS_LIST_SIZE = 30
     }
 
 }

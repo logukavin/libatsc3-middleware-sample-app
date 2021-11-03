@@ -2,7 +2,6 @@ package com.nextgenbroadcast.mobile.middleware.scoreboard
 
 import android.content.Context
 import android.os.Bundle
-import android.text.SpannableString
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -10,12 +9,10 @@ import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.*
+import com.nextgenbroadcast.mobile.middleware.scoreboard.ScoreboardFragment.DeviceListAdapter.ISelectChartListener
 import com.nextgenbroadcast.mobile.middleware.scoreboard.databinding.FragmentScoreboardBinding
-import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.DeviceScoreboardInfo
-import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.TDataPoint
-import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.TelemetryDevice
+import com.nextgenbroadcast.mobile.middleware.scoreboard.entities.ChartGeneralInfo
 import com.nextgenbroadcast.mobile.middleware.scoreboard.view.DeviceItemView
-import kotlinx.coroutines.flow.*
 
 class ScoreboardFragment : Fragment() {
     private val sharedViewModel by activityViewModels<SharedViewModel>()
@@ -31,9 +28,7 @@ class ScoreboardFragment : Fragment() {
     override fun onAttach(context: Context) {
         super.onAttach(context)
 
-        deviceAdapter = DeviceListAdapter(layoutInflater, selectChartListener) { device ->
-            sharedViewModel.getDeviceFlow(device.id)
-        }
+        deviceAdapter = DeviceListAdapter(layoutInflater, selectChartListener)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -41,7 +36,7 @@ class ScoreboardFragment : Fragment() {
         binding.chartList.adapter = deviceAdapter
         binding.chartList.addItemDecoration(DividerItemDecoration(context, DividerItemDecoration.VERTICAL))
 
-        sharedViewModel.chartDevicesWithFlow.observe(viewLifecycleOwner) { devices ->
+        sharedViewModel.chartDeviceInfoWithFlowList.observe(viewLifecycleOwner) { devices ->
             deviceAdapter.submitList(devices ?: emptyList())
         }
 
@@ -54,19 +49,22 @@ class ScoreboardFragment : Fragment() {
         override fun selectChart(chartId: String?) {
             sharedViewModel.selectedDeviceId.value = chartId
         }
+
+        override fun showErrorList(deviceId: String) {
+            ConsoleActivity.startForDeviceFlow(requireContext(), ConsoleActivity.FlowType.ERROR, deviceId)
+        }
     }
 
     class DeviceListAdapter(
         private val inflater: LayoutInflater,
-        private val selectChartListener: ISelectChartListener,
-        private val getFlowForDevice: (TelemetryDevice) -> Flow<TDataPoint>?
-    ) : ListAdapter<DeviceScoreboardInfo, DeviceListAdapter.Holder>(DIFF_CALLBACK) {
+        private val selectChartListener: ISelectChartListener
+    ) : ListAdapter<ChartGeneralInfo, DeviceListAdapter.Holder>(DIFF_CALLBACK) {
 
         private var selectedChartId: String? = null
 
         fun updateChartSelection(chartId: String?) {
             selectedChartId = chartId
-            notifyItemRangeChanged(0, itemCount, Any())
+            notifyItemRangeChanged(0, itemCount, Payload.UpdateBackground)
         }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): Holder {
@@ -79,8 +77,14 @@ class ScoreboardFragment : Fragment() {
         }
 
         override fun onBindViewHolder(holder: Holder, position: Int, payloads: MutableList<Any>) {
-            (payloads.firstOrNull() as? DeviceScoreboardInfo)?.let { deviceModel ->
-                holder.updateLocationLabel(deviceModel)
+            (payloads.firstOrNull() as? List<Payload>)?.let { payloads ->
+                payloads.forEach { payload ->
+                    when (payload) {
+                        is Payload.DistanceChanged -> holder.updateLocationLabel(payload.newModel)
+                        is Payload.UpdateError -> holder.updateErrorText(payload.newModel)
+                        Payload.UpdateBackground -> holder.updateBackground(getItem(position))
+                    }
+                }
             } ?: super.onBindViewHolder(holder, position, payloads)
         }
 
@@ -88,54 +92,96 @@ class ScoreboardFragment : Fragment() {
             private val deviceView: DeviceItemView
         ) : RecyclerView.ViewHolder(deviceView) {
 
-            fun bind(deviceInfo: DeviceScoreboardInfo) {
+            fun bind(chartGeneralInfo: ChartGeneralInfo) {
                 with(deviceView) {
-                    observe(getFlowForDevice(deviceInfo.device))
-                    isChartSelected = selectedChartId.equals(deviceInfo.device.id)
-                    setBackgroundColor(
-                        context.getColor(if (isChartSelected) R.color.yellow_device_item_bg else R.color.white)
-                    )
-                    updateLocationLabel(deviceInfo)
-                    lostLabel.isVisible = deviceInfo.device.isLost
+                    chartGeneralInfo.chartData?.let { data ->
+                        observe(data)
+                    }
+
+                    updateLocationLabel(chartGeneralInfo)
+                    updateBackground(chartGeneralInfo)
+                    updateErrorText(chartGeneralInfo)
+
+                    lostLabel.isVisible = chartGeneralInfo.isLost
 
                     deviceView.setOnClickListener {
-                        val selectedChartId = if (selectedChartId == deviceInfo.device.id) null else deviceInfo.device.id
+                        val selectedChartId =
+                            if (selectedChartId == chartGeneralInfo.deviceId) null else chartGeneralInfo.deviceId
                         selectChartListener.selectChart(selectedChartId)
                     }
                 }
             }
 
-            fun updateLocationLabel(model: DeviceScoreboardInfo) = with(deviceView) {
+            fun updateErrorText(deviceInfo: ChartGeneralInfo) = with(deviceView) {
+                val errorMessage = deviceInfo.errorData?.message
+                if (errorMessage.isNullOrBlank()) {
+                    errorText.isVisible = false
+                } else {
+                    errorText.isVisible = true
+                    errorText.text = errorMessage
+                    errorText.setOnClickListener {
+                        selectChartListener.showErrorList(deviceInfo.deviceId)
+                    }
+                }
+            }
+
+            fun updateLocationLabel(model: ChartGeneralInfo) = with(deviceView) {
                 title.text = formatDistanceAndIdSpannableString(
-                    id = model.device.id,
+                    id = model.deviceId,
                     distance = model.distance,
                     context = context
                 )
             }
 
+            fun updateBackground(model: ChartGeneralInfo) = with(deviceView) {
+                isChartSelected = selectedChartId.equals(model.deviceId)
+                setBackgroundColor(
+                    context.getColor(if (isChartSelected) R.color.yellow_device_item_bg else R.color.white)
+                )
+            }
+
+        }
+
+        sealed class Payload {
+            data class DistanceChanged(val newModel: ChartGeneralInfo) : Payload()
+            data class UpdateError(val newModel: ChartGeneralInfo) : Payload()
+            object UpdateBackground : Payload()
+        }
+
+        interface ISelectChartListener {
+            fun selectChart(chartId: String?)
+            fun showErrorList(deviceId: String)
         }
 
         companion object {
-            val DIFF_CALLBACK = object : DiffUtil.ItemCallback<DeviceScoreboardInfo>() {
-                override fun areItemsTheSame(oldItem: DeviceScoreboardInfo, newItem: DeviceScoreboardInfo): Boolean {
-                    return oldItem.device.id == newItem.device.id
+            val DIFF_CALLBACK = object : DiffUtil.ItemCallback<ChartGeneralInfo>() {
+                override fun areItemsTheSame(oldItem: ChartGeneralInfo, newItem: ChartGeneralInfo): Boolean {
+                    return oldItem.deviceId == newItem.deviceId
                 }
 
-                override fun areContentsTheSame(oldItem: DeviceScoreboardInfo, newItem: DeviceScoreboardInfo): Boolean {
-                    return oldItem == newItem
+                override fun areContentsTheSame(oldItem: ChartGeneralInfo, newItem: ChartGeneralInfo): Boolean {
+                    return oldItem.distance == newItem.distance
+                            && oldItem.errorData == newItem.errorData
+                            && oldItem.chartData?.primaryDataSources?.map { it.topic } == newItem.chartData?.primaryDataSources?.map { it.topic }
+                            && oldItem.chartData?.secondaryDataSources?.map { it.topic } == newItem.chartData?.secondaryDataSources?.map { it.topic }
                 }
 
-                override fun getChangePayload(oldItem: DeviceScoreboardInfo, newItem: DeviceScoreboardInfo): Any? {
-                    return if (oldItem.distance != newItem.distance) {
-                        newItem
-                    } else null
+                override fun getChangePayload(oldItem: ChartGeneralInfo, newItem: ChartGeneralInfo): Any? {
+                    val distanceDiff = oldItem.distance != newItem.distance
+                    val errorDiff = oldItem.errorData != newItem.errorData
+                    return when {
+                        distanceDiff && errorDiff -> listOf(
+                            Payload.DistanceChanged(newItem),
+                            Payload.UpdateError(newItem)
+                        )
+                        distanceDiff -> listOf(Payload.DistanceChanged(newItem))
+                        errorDiff -> listOf(Payload.UpdateError(newItem))
+                        else -> null
+                    }
                 }
+
             }
         }
-    }
-
-    interface ISelectChartListener {
-        fun selectChart(chartId: String?)
     }
 
     companion object {

@@ -12,6 +12,12 @@
         android:inputType="text"
         android:maxLines="1" />
 
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/button_more_options"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/telemetry_more_options" />
+
     <androidx.appcompat.widget.AppCompatCheckBox
         android:id="@+id/checkbox_telemetry_enable"
         android:layout_width="wrap_content"
@@ -49,11 +55,19 @@
         app:flow_verticalGap="@dimen/command_layout_padding" />
 
     <androidx.constraintlayout.helper.widget.Flow
+        android:id="@+id/buttons_flow"
+        android:layout_width="wrap_content"
+        android:layout_height="0dp"
+        android:orientation="vertical"
+        app:constraint_referenced_ids="button_more_options, button_set_telemetry"
+        app:flow_horizontalGap="@dimen/command_layout_padding" />
+
+    <androidx.constraintlayout.helper.widget.Flow
         android:id="@+id/command_telemetry_flow"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        app:constraint_referenced_ids="command_telemetry_input_flow,button_set_telemetry"
+        app:constraint_referenced_ids="command_telemetry_input_flow,buttons_flow"
         app:flow_horizontalGap="@dimen/command_layout_padding" />
 
 </merge>

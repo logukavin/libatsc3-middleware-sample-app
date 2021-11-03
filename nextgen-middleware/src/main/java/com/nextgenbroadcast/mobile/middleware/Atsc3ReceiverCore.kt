@@ -2,6 +2,7 @@ package com.nextgenbroadcast.mobile.middleware
 
 import android.net.Uri
 import com.nextgenbroadcast.mobile.core.asReadOnly
+import com.nextgenbroadcast.mobile.core.atsc3.INtpClock
 import com.nextgenbroadcast.mobile.core.model.*
 import com.nextgenbroadcast.mobile.middleware.analytics.IAtsc3Analytics
 import com.nextgenbroadcast.mobile.middleware.atsc3.IAtsc3Module
@@ -36,6 +37,10 @@ internal class Atsc3ReceiverCore(
     // event flows
     val errorFlow = serviceController.errorFlow.asReadOnly()
     val rfPhyMetricsFlow = atsc3Module.rfPhyMetricsFlow.asReadOnly()
+    val l1dPhyInfoFlow = atsc3Module.l1dPhyInfoFlow.asReadOnly()
+
+    val ntpClock: INtpClock?
+        get() = atsc3Module.getNtpClock()
 
     fun createWebGateway(): IWebGateway {
         return WebGatewayImpl(repository, settings)

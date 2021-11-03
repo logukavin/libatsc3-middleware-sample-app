@@ -39,6 +39,7 @@ import com.nextgenbroadcast.mobile.middleware.dev.telemetry.writer.FileTelemetry
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.writer.VuzixPhyTelemetryWriter
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.control.WebTelemetryControl
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.reader.*
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.task.IsOnlineTelemetryTask
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.writer.WebTelemetryWriter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -131,6 +132,7 @@ internal class TelemetryHolder(
                         SensorTelemetryReader(sensorManager, Sensor.TYPE_ROTATION_VECTOR),
                         GPSTelemetryReader(context),
                         RfPhyTelemetryReader(receiver.rfPhyMetricsFlow),
+                        L1DPhyTelemetryReader(receiver.l1dPhyInfoFlow, receiver.ntpClock),
                         ErrorTelemetryReader(receiver.errorFlow)
                 ),
                 listOf(
@@ -141,10 +143,17 @@ internal class TelemetryHolder(
         ).apply {
             //start() do not start Telemetry with application, use switch in Settings dialog or AWS command
         }.also { broker ->
-            val enabledReaderNames =
-                readPrefsMap(PREF_PHY_INFO_KEY).filterValues { it }.keys.toList()
-            if (enabledReaderNames.isNotEmpty()) {
-                broker.setReaderEnabled(true, enabledReaderNames)
+            // Enable telemetry readers that stored in preferences with enabled state or absent
+            val prefReadersMap = readPrefsMap(PREF_PHY_INFO_KEY)
+            val newReaders = broker.readerNames.subtract(prefReadersMap.keys).map { name ->
+                name to true
+            }
+            val readersToEnable = (prefReadersMap + newReaders).filterValues { enabled ->
+                enabled
+            }.keys.toList()
+
+            if (readersToEnable.isNotEmpty()) {
+                broker.setReaderEnabled(true, readersToEnable)
             }
 
             CoroutineScope(Dispatchers.Main).launch {
@@ -282,6 +291,9 @@ internal class TelemetryHolder(
         }.also {
             awsIoThing = it
         }
+        thing.onConnectedCallback = {
+            telemetryBroker?.runTask(IsOnlineTelemetryTask())
+        }
 
         telemetryBroker?.addWriter(
             AWSIoTelemetryWriter(AWSIOT_EVENT_TOPIC_FORMAT, thing)
@@ -302,6 +314,7 @@ internal class TelemetryHolder(
                 thing.close()
             }
         }
+        awsIoThing?.onConnectedCallback = null
         awsIoThing = null
     }
 
