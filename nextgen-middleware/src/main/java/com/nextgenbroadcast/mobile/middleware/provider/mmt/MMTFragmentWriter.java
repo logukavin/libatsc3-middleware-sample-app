@@ -10,10 +10,15 @@ import com.nextgenbroadcast.mobile.player.MMTConstants;
 import org.ngbp.libatsc3.middleware.android.mmt.MmtPacketIdContext;
 import org.ngbp.libatsc3.middleware.android.mmt.MpuMetadata_HEVC_NAL_Payload;
 import org.ngbp.libatsc3.middleware.android.mmt.models.MMTAudioDecoderConfigurationRecord;
+import org.ngbp.libatsc3.middleware.mmt.pb.MmtAudioProperties;
+import org.ngbp.libatsc3.middleware.mmt.pb.MmtCaptionProperties;
+import org.ngbp.libatsc3.middleware.mmt.pb.MmtMpTable;
+import org.ngbp.libatsc3.middleware.mmt.pb.MmtVideoProperties;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 
 public class MMTFragmentWriter {
     public static final String TAG = MMTFragmentWriter.class.getSimpleName();
@@ -23,7 +28,10 @@ public class MMTFragmentWriter {
     private static final byte RING_BUFFER_PAGE_FRAGMENT = 2;
     private static final int FRAGMENT_PACKET_HEADER = Integer.BYTES /* packet_id */ + Integer.BYTES /* sample_number */ + Long.BYTES /* mpu_presentation_time_uS_from_SI */ + 7 /* reserved */;
 
+    public static final String AC_4_ID = MMTAudioDecoderConfigurationRecord.AC_4_ID;
     private static final int AC_4_CODE = getIntegerCodeForString(MMTAudioDecoderConfigurationRecord.AC_4_ID);
+
+    private static final int TRACK_HEADER_BUFFER_SIZE_DEFAULT = 512;
 
     //ac-4 sync frame header
     private final byte[] ac4header = {(byte) 0xAC, 0x40, (byte) 0xFF, (byte) 0xFF, 0x00, 0x00, 0x00};
@@ -36,6 +44,12 @@ public class MMTFragmentWriter {
     private final Atsc3RingBuffer ringBuffer;
     private final ByteBuffer fragmentBuffer = ByteBuffer.allocate(1024 * 1024);
     private final ArrayMap<Integer, MMTAudioDecoderConfigurationRecord> audioConfigurationMap = new ArrayMap<>();
+
+    private final ArrayMap<Integer, MmtMpTable.MmtAssetRow> assetMapping = new ArrayMap<>();
+
+    private final ArrayMap<String, MmtVideoProperties.MmtVideoPropertiesAsset> videoAssetMap = new ArrayMap<>();
+    private final ArrayMap<String, MmtAudioProperties.MmtAudioPropertiesAsset> audioAssetMap = new ArrayMap<>();
+    private final ArrayMap<String, MmtCaptionProperties.MmtCaptionPropertiesAsset> captionAssetMap = new ArrayMap<>();
 
     private ByteBuffer InitMpuMetadata_HEVC_NAL_Payload = null;
     private ByteBuffer headerBuffer;
@@ -87,8 +101,7 @@ public class MMTFragmentWriter {
                 }
             }
 
-            //TODO: we need better criteria
-            if (audioConfigurationMap.isEmpty()) {
+            if (assetMapping.isEmpty()) {
                 return 0;
             }
 
@@ -112,69 +125,121 @@ public class MMTFragmentWriter {
     }
 
     private ByteBuffer createFileHeader() {
-        byte videoTrackCount = (byte) (audioOnly ? 0 : 1);
-        byte audioTrackCount = (byte) audioConfigurationMap.size();
-        byte textTrackCount = (byte) (audioOnly ? 0 : 1);
+        final byte[] EMPTY_ARRAY = new byte[0];
 
         int mpuMetadataSize = getMpuMetadataSize();
-        int videoHeaderSize = MMTConstants.VIDEO_TRACK_HEADER_SIZE * videoTrackCount + mpuMetadataSize;
-        int audioHeaderSize = MMTConstants.AUDIO_TRACK_HEADER_SIZE * audioTrackCount;
-        int textHeaderSize = MMTConstants.CC_TRACK_HEADER_SIZE * textTrackCount;
-        int headerSize = MMTConstants.HEADER_SIZE + videoHeaderSize + audioHeaderSize + textHeaderSize;
 
-        ByteBuffer fileHeaderBuffer = ByteBuffer.allocate(MMTConstants.mmtSignature.length + headerSize);
+        ByteBuffer audioHeaderBuffer = ByteBuffer.allocate(TRACK_HEADER_BUFFER_SIZE_DEFAULT);
+        ByteBuffer videoHeaderBuffer = ByteBuffer.allocate(audioOnly ? 0 : TRACK_HEADER_BUFFER_SIZE_DEFAULT);
+        ByteBuffer captionHeaderBuffer = ByteBuffer.allocate(audioOnly ? 0 : TRACK_HEADER_BUFFER_SIZE_DEFAULT);
 
-        // Read identification header
-        fileHeaderBuffer.put(MMTConstants.mmtSignature);
+        for (MmtMpTable.MmtAssetRow asset : assetMapping.values()) {
+            int packetId = asset.getPacketId();
 
-        // write stream Header data
-        fileHeaderBuffer.putInt(headerSize);
+            if (isAudioSample(packetId)) {
+                int audioFormat = getIntegerCodeForString(asset.getType());
+                MMTAudioDecoderConfigurationRecord info = audioConfigurationMap.get(packetId);
+                MmtAudioProperties.MmtAudioPropertiesAsset properties = audioAssetMap.get(asset.getId());
 
-        if (videoTrackCount > 0) {
-            int videoFormat = getIntegerCodeForString("hev1");
+                byte[] languageBytes = EMPTY_ARRAY;
+                //TODO: implement multi-language support
+                if (properties != null && properties.getPresentationCount() > 0) {
+                    MmtAudioProperties.MmtAudioPropertiesPresentation presentation = properties.getPresentation(0);
+                    if (presentation.getLanguageCount() > 0) {
+                        languageBytes = presentation.getLanguage(0).getBytes(StandardCharsets.UTF_8);
+                    }
+                }
 
-            // write initial MFU Metadata
-            InitMpuMetadata_HEVC_NAL_Payload.rewind();
-
-            fileHeaderBuffer
-                    .putInt(MMTConstants.VIDEO_TRACK_HEADER_SIZE + mpuMetadataSize)
-                    .put((byte) MMTConstants.TRACK_TYPE_VIDEO)
-                    .putInt(videoFormat)
-                    .putInt(MmtPacketIdContext.video_packet_id) //TODO: replace MmtPacketIdContext.video_packet_id
-                    .putInt(getVideoWidth())
-                    .putInt(getVideoHeight())
-                    .putFloat(getVideoFrameRate())
-                    .putInt(mpuMetadataSize)
-                    .put(InitMpuMetadata_HEVC_NAL_Payload);
-        }
-
-        if (audioTrackCount > 0) {
-            for (MMTAudioDecoderConfigurationRecord info : audioConfigurationMap.values()) {
-                //jjustman-2021-09-08 - set audioFormat from our asset_type fourcc code
-                int audioFormat = getIntegerCodeForString(info.asset_type);
-
-                fileHeaderBuffer
-                        .putInt(MMTConstants.AUDIO_TRACK_HEADER_SIZE)
+                int headerSize = MMTConstants.AUDIO_TRACK_HEADER_SIZE + languageBytes.length;
+                audioHeaderBuffer = ensureBufferSize(audioHeaderBuffer, headerSize);
+                audioHeaderBuffer
+                        .putInt(headerSize)
                         .put((byte) MMTConstants.TRACK_TYPE_AUDIO)
                         .putInt(audioFormat)
-                        .putInt(info.packet_id)
-                        .putInt(info.channel_count)
-                        .putInt(info.sample_rate);
+                        .putInt(packetId)
+                        .putInt(info != null ? info.channel_count : 0)
+                        .putInt(info != null ? info.sample_rate : 0)
+                        .putInt(languageBytes.length);
+                if (languageBytes.length > 0) {
+                    audioHeaderBuffer.put(languageBytes);
+                }
+            } else if (!audioOnly) {
+                if (isVideoSample(packetId)) {
+                    int videoFormat = getIntegerCodeForString(asset.getType());
+
+                    // write initial MFU Metadata
+                    InitMpuMetadata_HEVC_NAL_Payload.rewind();
+
+                    int headerSize = MMTConstants.VIDEO_TRACK_HEADER_SIZE + mpuMetadataSize;
+                    videoHeaderBuffer = ensureBufferSize(videoHeaderBuffer, headerSize);
+                    videoHeaderBuffer
+                            .putInt(headerSize)
+                            .put((byte) MMTConstants.TRACK_TYPE_VIDEO)
+                            .putInt(videoFormat)
+                            .putInt(packetId)
+                            .putInt(getVideoWidth()) //TODO: get from asset
+                            .putInt(getVideoHeight()) //TODO: get from asset
+                            .putFloat(getVideoFrameRate()) //TODO: get from asset
+                            .putInt(mpuMetadataSize)
+                            .put(InitMpuMetadata_HEVC_NAL_Payload);
+                } else if (isTextSample(packetId)) {
+                    int ttmlFormat = getIntegerCodeForString(asset.getType());
+                    MmtCaptionProperties.MmtCaptionPropertiesAsset properties = captionAssetMap.get(asset.getId());
+
+                    byte[] languageBytes = EMPTY_ARRAY;
+                    if (properties != null) {
+                        languageBytes = properties.getLanguage().getBytes(StandardCharsets.UTF_8);
+                    }
+
+                    int headerSize = MMTConstants.CC_TRACK_HEADER_SIZE;
+                    captionHeaderBuffer = ensureBufferSize(captionHeaderBuffer, headerSize);
+                    captionHeaderBuffer
+                            .putInt(headerSize)
+                            .put((byte) MMTConstants.TRACK_TYPE_TEXT)
+                            .putInt(ttmlFormat)
+                            .putInt(packetId)
+                            .putInt(languageBytes.length);
+                    if (languageBytes.length > 0) {
+                        captionHeaderBuffer.put(languageBytes);
+                    }
+                }
             }
         }
 
-        if (textTrackCount > 0) {
-            int ttmlFormat = getIntegerCodeForString("stpp");
+        audioAssetMap.clear();
+        videoAssetMap.clear();
+        captionAssetMap.clear();
 
-            fileHeaderBuffer
-                    .putInt(MMTConstants.CC_TRACK_HEADER_SIZE)
-                    .put((byte) MMTConstants.TRACK_TYPE_TEXT)
-                    .putInt(ttmlFormat)
-                    .putInt(MmtPacketIdContext.stpp_packet_id); //TODO: replace MmtPacketIdContext.stpp_packet_id
-        }
+        audioHeaderBuffer.limit(audioHeaderBuffer.position());
+        audioHeaderBuffer.rewind();
+        videoHeaderBuffer.limit(videoHeaderBuffer.position());
+        videoHeaderBuffer.rewind();
+        captionHeaderBuffer.limit(captionHeaderBuffer.position());
+        captionHeaderBuffer.rewind();
 
+        int headerSize = MMTConstants.HEADER_SIZE
+                + audioHeaderBuffer.limit()
+                + videoHeaderBuffer.limit()
+                + captionHeaderBuffer.limit();
+
+        ByteBuffer fileHeaderBuffer = ByteBuffer.allocate(MMTConstants.mmtSignature.length + headerSize);
+        fileHeaderBuffer.put(MMTConstants.mmtSignature);
+        fileHeaderBuffer.putInt(headerSize);
+        fileHeaderBuffer.put(audioHeaderBuffer);
+        fileHeaderBuffer.put(videoHeaderBuffer);
+        fileHeaderBuffer.put(captionHeaderBuffer);
         fileHeaderBuffer.rewind();
+
         return fileHeaderBuffer;
+    }
+
+    private ByteBuffer ensureBufferSize(ByteBuffer buff, int size) {
+        if (buff.remaining() < size) {
+            ByteBuffer newBuff = ByteBuffer.allocate(buff.capacity() + TRACK_HEADER_BUFFER_SIZE_DEFAULT);
+            newBuff.put(buff.array(), 0, buff.position());
+            return newBuff;
+        }
+        return buff;
     }
 
     // write empty fragment to buffer to check stream is still alive
@@ -276,10 +341,10 @@ public class MMTFragmentWriter {
             int headerDiff = Atsc3RingBuffer.RING_BUFFER_PAGE_HEADER_SIZE - MMTConstants.SIZE_SAMPLE_HEADER;
 
             if (sampleType == MMTConstants.TRACK_TYPE_AUDIO) {
-                MMTAudioDecoderConfigurationRecord mmtAudioDecoderConfigurationRecord = audioConfigurationMap.get(packet_id);
+                MmtMpTable.MmtAssetRow asset = assetMapping.get(packet_id);
 
                 //check if our packet_id flow is ac-4, and prepend sync frame header as needed
-                if (mmtAudioDecoderConfigurationRecord != null && getIntegerCodeForString(mmtAudioDecoderConfigurationRecord.asset_type) == AC_4_CODE) {
+                if (asset != null && AC_4_ID.equals(asset.getType())) {
                     headerDiff -= ac4header.length;
 
                     ac4header[4] = (byte) (pageSize >> 16 & 0xFF);
@@ -302,10 +367,10 @@ public class MMTFragmentWriter {
 
             int sampleRemaining = pageSize + MMTConstants.SIZE_SAMPLE_HEADER + headerDiff;
 
-            if(false) {
-                Log.d(TAG, String.format("readFragment: sampleType: %d, packetId: %d, sampleNumber: %d, presentationTimeUs: %d, isKey: %s, fragmentBuffer.position: %d, len: %d",
-                        sampleType, packet_id, sample_number, computedPresentationTimestampUs, isKeySample(sample_number), headerDiff, sampleRemaining));
-            }
+//            if(false) {
+//                Log.d(TAG, String.format("readFragment: sampleType: %d, packetId: %d, sampleNumber: %d, presentationTimeUs: %d, isKey: %s, fragmentBuffer.position: %d, len: %d",
+//                        sampleType, packet_id, sample_number, computedPresentationTimestampUs, isKeySample(sample_number), headerDiff, sampleRemaining));
+//            }
 
             int limit = Math.max(sampleRemaining, 0);
             buffer.limit(limit);
@@ -364,9 +429,8 @@ public class MMTFragmentWriter {
     }
 
     private boolean isAudioSample(int packet_id) {
-        return MmtPacketIdContext.selected_audio_packet_id == packet_id && audioConfigurationMap.containsKey(packet_id);
+        return audioConfigurationMap.containsKey(packet_id);
     }
-
 
     private boolean isTextSample(int packet_id) {
         return MmtPacketIdContext.stpp_packet_id == packet_id;
@@ -387,63 +451,63 @@ public class MMTFragmentWriter {
 
     //jjustman-2021-09-02 - TODO: fix isAudioSample() to only check -> audioConfigurationMap.containsKey(packet_id); its checking if MmtPacketIdContext.selected_audio_packet_id == packet_id
 
-    private long getPresentationTimestampUs_no_anchor(int packet_id, int sample_number, long mpu_presentation_time_uS_from_SI) {
-        long mpuPresentationTimestampDeltaUs = 0;
-
-        if (mpu_presentation_time_uS_from_SI > 0) {
-            long mfu_presentation_time_uS_computed = 0;
-            long extracted_sample_duration_us;
-            if (isVideoSample(packet_id)) {
-                if (MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us > 0) {
-                    mfu_presentation_time_uS_computed = mpu_presentation_time_uS_from_SI + (sample_number - 1) * MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us;
-                    Log.d(TAG, String.format("getPresentationTimestampUs: Video: packet_id: %d, sampleNumber: %d, mpu_presentation_time_uS_from_SI: %d, extracted_sample_duration_us: %d",
-                            packet_id, sample_number, mpu_presentation_time_uS_from_SI, MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us));
-                }
-            } else if (isAudioSample(packet_id)) {
-                if ((extracted_sample_duration_us = MmtPacketIdContext.getAudioPacketStatistic(packet_id).extracted_sample_duration_us) > 0) {
-                    mfu_presentation_time_uS_computed = mpu_presentation_time_uS_from_SI + (sample_number - 1) * extracted_sample_duration_us;
-                    Log.d(TAG, String.format("getPresentationTimestampUs: Audio: packet_id: %d, sample_number: %d, mpu_presentation_time_uS_from_SI: %d, extracted_sample_duration_us: %d",
-                            packet_id, sample_number, mpu_presentation_time_uS_from_SI, MmtPacketIdContext.getAudioPacketStatistic(packet_id).extracted_sample_duration_us));
-
-                }
-            } else if (isTextSample(packet_id)) {
-                if (MmtPacketIdContext.stpp_packet_statistics.extracted_sample_duration_us > 0) {
-                    mfu_presentation_time_uS_computed = mpu_presentation_time_uS_from_SI + (sample_number - 1) * MmtPacketIdContext.stpp_packet_statistics.extracted_sample_duration_us;
-                    Log.d(TAG, String.format("getPresentationTimestampUs: Stpp: packet_id: %d, sample_number: %d, mpu_presentation_time_uS_from_SI: %d, extracted_sample_duration_us: %d",
-                            packet_id, sample_number, mpu_presentation_time_uS_from_SI, MmtPacketIdContext.stpp_packet_statistics.extracted_sample_duration_us));
-
-                }
-            }
-
-            if(mfu_presentation_time_uS_computed == 0) {
-                Log.w(TAG, String.format("getPresentationTimestampUs: mfu_presentation_time_uS_computed is 0! packet_id: %d, sample_number: %d, mfu_presentation_time_uS_computed: %d, mpu_presentation_time_uS_from_SI: %d, extracted_sample_duration_us: %d",
-                        packet_id, sample_number, mfu_presentation_time_uS_computed, mpu_presentation_time_uS_from_SI, MmtPacketIdContext.stpp_packet_statistics.extracted_sample_duration_us));
-            }
-
-            if (mfu_presentation_time_uS_computed > 0) {
-                //todo: jjustman-2021-09-01 - also convert video and stpp to Map for anchor timestampUs
-                if (isVideoSample(packet_id)) {
-                    if (videoMfuPresentationTimestampUs == Long.MAX_VALUE) {
-                        videoMfuPresentationTimestampUs = mfu_presentation_time_uS_computed;
-                    }
-                    mpuPresentationTimestampDeltaUs = mfu_presentation_time_uS_computed - videoMfuPresentationTimestampUs;
-                } else if (isAudioSample(packet_id)) {
-                    if (!audioMfuPresentationTimestampMap.containsKey(packet_id)) {
-                        audioMfuPresentationTimestampMap.put(packet_id, mfu_presentation_time_uS_computed);
-                    }
-                    mpuPresentationTimestampDeltaUs = mfu_presentation_time_uS_computed - audioMfuPresentationTimestampMap.get(packet_id);
-                } else if (isTextSample(packet_id)) {
-                    if (stppMfuPresentationTimestampUs == Long.MAX_VALUE) {
-                        stppMfuPresentationTimestampUs = mfu_presentation_time_uS_computed;
-                    }
-                    mpuPresentationTimestampDeltaUs = mfu_presentation_time_uS_computed - stppMfuPresentationTimestampUs;
-                }
-                return mpuPresentationTimestampDeltaUs;
-            }
-        }
-
-        return 0;
-    }
+//    private long getPresentationTimestampUs_no_anchor(int packet_id, int sample_number, long mpu_presentation_time_uS_from_SI) {
+//        long mpuPresentationTimestampDeltaUs = 0;
+//
+//        if (mpu_presentation_time_uS_from_SI > 0) {
+//            long mfu_presentation_time_uS_computed = 0;
+//            long extracted_sample_duration_us;
+//            if (isVideoSample(packet_id)) {
+//                if (MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us > 0) {
+//                    mfu_presentation_time_uS_computed = mpu_presentation_time_uS_from_SI + (sample_number - 1) * MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us;
+//                    Log.d(TAG, String.format("getPresentationTimestampUs: Video: packet_id: %d, sampleNumber: %d, mpu_presentation_time_uS_from_SI: %d, extracted_sample_duration_us: %d",
+//                            packet_id, sample_number, mpu_presentation_time_uS_from_SI, MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us));
+//                }
+//            } else if (isAudioSample(packet_id)) {
+//                if ((extracted_sample_duration_us = MmtPacketIdContext.getAudioPacketStatistic(packet_id).extracted_sample_duration_us) > 0) {
+//                    mfu_presentation_time_uS_computed = mpu_presentation_time_uS_from_SI + (sample_number - 1) * extracted_sample_duration_us;
+//                    Log.d(TAG, String.format("getPresentationTimestampUs: Audio: packet_id: %d, sample_number: %d, mpu_presentation_time_uS_from_SI: %d, extracted_sample_duration_us: %d",
+//                            packet_id, sample_number, mpu_presentation_time_uS_from_SI, MmtPacketIdContext.getAudioPacketStatistic(packet_id).extracted_sample_duration_us));
+//
+//                }
+//            } else if (isTextSample(packet_id)) {
+//                if (MmtPacketIdContext.stpp_packet_statistics.extracted_sample_duration_us > 0) {
+//                    mfu_presentation_time_uS_computed = mpu_presentation_time_uS_from_SI + (sample_number - 1) * MmtPacketIdContext.stpp_packet_statistics.extracted_sample_duration_us;
+//                    Log.d(TAG, String.format("getPresentationTimestampUs: Stpp: packet_id: %d, sample_number: %d, mpu_presentation_time_uS_from_SI: %d, extracted_sample_duration_us: %d",
+//                            packet_id, sample_number, mpu_presentation_time_uS_from_SI, MmtPacketIdContext.stpp_packet_statistics.extracted_sample_duration_us));
+//
+//                }
+//            }
+//
+//            if(mfu_presentation_time_uS_computed == 0) {
+//                Log.w(TAG, String.format("getPresentationTimestampUs: mfu_presentation_time_uS_computed is 0! packet_id: %d, sample_number: %d, mfu_presentation_time_uS_computed: %d, mpu_presentation_time_uS_from_SI: %d, extracted_sample_duration_us: %d",
+//                        packet_id, sample_number, mfu_presentation_time_uS_computed, mpu_presentation_time_uS_from_SI, MmtPacketIdContext.stpp_packet_statistics.extracted_sample_duration_us));
+//            }
+//
+//            if (mfu_presentation_time_uS_computed > 0) {
+//                //todo: jjustman-2021-09-01 - also convert video and stpp to Map for anchor timestampUs
+//                if (isVideoSample(packet_id)) {
+//                    if (videoMfuPresentationTimestampUs == Long.MAX_VALUE) {
+//                        videoMfuPresentationTimestampUs = mfu_presentation_time_uS_computed;
+//                    }
+//                    mpuPresentationTimestampDeltaUs = mfu_presentation_time_uS_computed - videoMfuPresentationTimestampUs;
+//                } else if (isAudioSample(packet_id)) {
+//                    if (!audioMfuPresentationTimestampMap.containsKey(packet_id)) {
+//                        audioMfuPresentationTimestampMap.put(packet_id, mfu_presentation_time_uS_computed);
+//                    }
+//                    mpuPresentationTimestampDeltaUs = mfu_presentation_time_uS_computed - audioMfuPresentationTimestampMap.get(packet_id);
+//                } else if (isTextSample(packet_id)) {
+//                    if (stppMfuPresentationTimestampUs == Long.MAX_VALUE) {
+//                        stppMfuPresentationTimestampUs = mfu_presentation_time_uS_computed;
+//                    }
+//                    mpuPresentationTimestampDeltaUs = mfu_presentation_time_uS_computed - stppMfuPresentationTimestampUs;
+//                }
+//                return mpuPresentationTimestampDeltaUs;
+//            }
+//        }
+//
+//        return 0;
+//    }
 
     //jjustman-2020-12-22 - TODO: handle when mfu_presentation_time_uS_computed - push last value?
     private long getPresentationTimestampUs(int packet_id, int sample_number, long mpu_presentation_time_uS_from_SI) {
@@ -451,7 +515,7 @@ public class MMTFragmentWriter {
             long mfu_presentation_time_uS_computed = 0;
             long extracted_sample_duration_us;
 
-            long track_anchor_timestamp_us = 0;
+//            long track_anchor_timestamp_us = 0;
             if (isVideoSample(packet_id)) {
                 if (MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us > 0) {
                     mfu_presentation_time_uS_computed = mpu_presentation_time_uS_from_SI + (sample_number - 1) * MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us;
@@ -474,20 +538,19 @@ public class MMTFragmentWriter {
                         MMTClockAnchor.SystemClockAnchor = System.currentTimeMillis() + MMTClockAnchor.SYSTEM_CLOCK_ANCHOR_PTS_OFFSET_MS;
 
                     }
-                    track_anchor_timestamp_us = videoMfuPresentationTimestampUs;
+//                    track_anchor_timestamp_us = videoMfuPresentationTimestampUs;
                 } else if (isAudioSample(packet_id)) {
                     if (!audioMfuPresentationTimestampMap.containsKey(packet_id)) {
                         audioMfuPresentationTimestampMap.put(packet_id, mfu_presentation_time_uS_computed);
                     }
-                    track_anchor_timestamp_us = audioMfuPresentationTimestampMap.get(packet_id);
-
+//                    track_anchor_timestamp_us = audioMfuPresentationTimestampMap.get(packet_id);
                 } else if (isTextSample(packet_id)) {
                     if (stppMfuPresentationTimestampUs == Long.MAX_VALUE) {
                         stppMfuPresentationTimestampUs = mfu_presentation_time_uS_computed;
                     }
-                    track_anchor_timestamp_us = stppMfuPresentationTimestampUs;
-
+//                    track_anchor_timestamp_us = stppMfuPresentationTimestampUs;
                 }
+
                 long anchorMfuPresentationTimestampUs = getMinNonZeroMfuPresentationTimestampForAnchor(packet_id);
                 long mpuPresentationTimestampDeltaUs = mfu_presentation_time_uS_computed - anchorMfuPresentationTimestampUs;
 
@@ -519,17 +582,17 @@ public class MMTFragmentWriter {
             minNonZeroMfuPresentationTimestampForAnchor = stppMfuPresentationTimestampUs;
         }
 
-        if (MMTClockAnchor.SystemClockAnchor == 0) {
-            //MMTClockAnchor.SystemClockAnchor = System.currentTimeMillis() + MMTClockAnchor.SYSTEM_CLOCK_ANCHOR_PTS_OFFSET_MS;
-        }
+//        if (MMTClockAnchor.SystemClockAnchor == 0) {
+//            //MMTClockAnchor.SystemClockAnchor = System.currentTimeMillis() + MMTClockAnchor.SYSTEM_CLOCK_ANCHOR_PTS_OFFSET_MS;
+//        }
 
-        if((MMTClockAnchor.MfuClockAnchor == 0) || (minNonZeroMfuPresentationTimestampForAnchor < MMTClockAnchor.MfuClockAnchor)) {
+//        if((MMTClockAnchor.MfuClockAnchor == 0) || (minNonZeroMfuPresentationTimestampForAnchor < MMTClockAnchor.MfuClockAnchor)) {
 //            MMTClockAnchor.MfuClockAnchor = minNonZeroMfuPresentationTimestampForAnchor;
 //            long lastSystemClockAnchor = MMTClockAnchor.SystemClockAnchor;
 //            MMTClockAnchor.SystemClockAnchor = System.currentTimeMillis() + MMTClockAnchor.SYSTEM_CLOCK_ANCHOR_PTS_OFFSET_MS;
 //            Log.i(TAG, String.format("old systemClockAnchor: %d, new systemClockAnchor: %d, diff: %d", lastSystemClockAnchor, MMTClockAnchor.SystemClockAnchor, (lastSystemClockAnchor - MMTClockAnchor.SystemClockAnchor)));
 //
-        }
+//        }
 
         return minNonZeroMfuPresentationTimestampForAnchor;
     }
@@ -546,6 +609,46 @@ public class MMTFragmentWriter {
 
     public void pushAudioDecoderConfigurationRecord(MMTAudioDecoderConfigurationRecord mmtAudioDecoderConfigurationRecord) {
         audioConfigurationMap.put(mmtAudioDecoderConfigurationRecord.packet_id, mmtAudioDecoderConfigurationRecord);
+    }
+
+    public void pushVideoStreamProperties(MmtVideoProperties.MmtVideoPropertiesDescriptor descriptor) {
+        if (sendFileHeader) {
+            for (MmtVideoProperties.MmtVideoPropertiesAsset asset : descriptor.getAssetList()) {
+                videoAssetMap.put(asset.getId(), asset);
+            }
+        }
+    }
+
+    public void pushAudioStreamProperties(MmtAudioProperties.MmtAudioPropertiesDescriptor descriptor) {
+        if (sendFileHeader) {
+            for (MmtAudioProperties.MmtAudioPropertiesAsset asset : descriptor.getAssetList()) {
+                audioAssetMap.put(asset.getId(), asset);
+            }
+        }
+    }
+
+    public void pushCaptionAssetProperties(MmtCaptionProperties.MmtCaptionPropertiesDescriptor descriptor) {
+        if (sendFileHeader) {
+            for (MmtCaptionProperties.MmtCaptionPropertiesAsset asset : descriptor.getAssetList()) {
+                captionAssetMap.put(asset.getId(), asset);
+            }
+        }
+    }
+
+    public void pushAssetMappingTable(MmtMpTable.MmtAssetTable assets) {
+        if (assetMapping.isEmpty()) {
+            // Check is all known
+            for (MmtMpTable.MmtAssetRow asset : assets.getAssetList()) {
+                int packetId = asset.getPacketId();
+                if (!isVideoSample(packetId) && !isAudioSample(packetId) && !isTextSample(packetId)) {
+                    return;
+                }
+            }
+
+            for (MmtMpTable.MmtAssetRow asset : assets.getAssetList()) {
+                assetMapping.put(asset.getPacketId(), asset);
+            }
+        }
     }
 
     /**
