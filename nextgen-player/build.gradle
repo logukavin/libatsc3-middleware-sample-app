@@ -64,11 +64,15 @@ dependencies {
         implementation project(':exoplayer-library-dash')
         implementation project(':exoplayer-extension-daa')
         implementation project(':exoplayer-extension-mmt')
+        implementation project(':exoplayer-extension-mpegh')
+
     } else {
         implementation "com.google.android.exoplayer:exoplayer-core:$exoplayerVersion"
         implementation "com.google.android.exoplayer:exoplayer-dash:$exoplayerVersion"
         implementation "com.google.android.exoplayer:exoplayer-daa:$exoplayerVersion"
         implementation "com.google.android.exoplayer:exoplayer-mmt:$exoplayerVersion"
+        implementation "com.google.android.exoplayer:exoplayer-mpegh:$exoplayerVersion"
+
     }
 
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:$coroutinesVersion"
