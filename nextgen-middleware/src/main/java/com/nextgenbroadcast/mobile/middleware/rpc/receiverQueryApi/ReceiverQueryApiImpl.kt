@@ -57,4 +57,11 @@ class ReceiverQueryApiImpl(
     override fun queryServiceGuideURLs(service: String?): ServiceGuideUrlsRpcResponse {
         return ServiceGuideUrlsRpcResponse(gateway.getServiceGuideUrls(service))
     }
+
+    override fun querySignaling(names: List<String>): SignalingRpcResponse {
+        return SignalingRpcResponse(
+            gateway.getSignalingInfo(names)
+        )
+    }
+
 }

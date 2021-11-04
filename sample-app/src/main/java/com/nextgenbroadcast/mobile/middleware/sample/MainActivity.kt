@@ -9,6 +9,7 @@ import android.media.MediaMetadata
 import android.media.session.MediaController
 import android.media.session.MediaSession
 import android.media.session.PlaybackState
+import android.os.Build
 import android.os.Bundle
 import android.support.v4.media.MediaBrowserCompat
 import android.util.Log
@@ -46,6 +47,10 @@ class MainActivity : BaseActivity() {
 
     private val permissionResolver: PermissionResolver by lazy {
         PermissionResolver(this)
+    }
+
+    private val mobileInternetDetector: MobileInternetDetector by lazy {
+        MobileInternetDetector(this)
     }
 
     private lateinit var appUpdateManager: AppUpdateManager
@@ -127,6 +132,7 @@ class MainActivity : BaseActivity() {
         //make sure we can read from device pcap files and get location
         if (permissionResolver.checkSelfPermission()) {
             bindService()
+            mobileInternetDetector.register()
         }
     }
 
@@ -149,6 +155,7 @@ class MainActivity : BaseActivity() {
         mediaController?.unregisterCallback(mediaControllerCallback)
 
         unbindService()
+        mobileInternetDetector.unregister()
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
@@ -225,7 +232,7 @@ class MainActivity : BaseActivity() {
                             it.startsWith(ReceiverTelemetry.TELEMETRY_SENSORS)
                         }.values.distinct()
                         sensorTelemetryEnabled.value = distSensorValues.isNotEmpty() && (distSensorValues.size > 1 || distSensorValues.first())
-                        locationTelemetryEnabled.value = enableMap[ReceiverTelemetry.TELEMETRY_LOCATION]
+                        sensorsEnableList.value = enableMap
                     }
                 }
 
@@ -238,6 +245,36 @@ class MainActivity : BaseActivity() {
                 launch {
                     for (event in viewViewModel.logChangingChannel) {
                         controllerPresenter.setAtsc3LogEnabledByName(event.first, event.second)
+                    }
+                }
+
+                launch {
+                    controllerPresenter.telemetryDelay.collect { sensorFrequencyMap ->
+                        sensorsFrequencyList.value = sensorFrequencyMap
+                    }
+                }
+
+                launch {
+                    for (event in viewViewModel.eventSensorFrequencyChannel){
+                        controllerPresenter.setTelemetryUpdateDelay(event.first, event.second)
+                    }
+                }
+
+                launch {
+                    for (event in viewViewModel.eventSensorEnableChannel) {
+                        controllerPresenter.setTelemetryEnabled(event.first, event.second)
+                    }
+                }
+
+                launch {
+                    mobileInternetDetector.state.collect { status ->
+                        viewViewModel.cellularState.value = status
+                    }
+                }
+
+                launch {
+                    mobileInternetDetector.networkCapabilities.collect { capabilities ->
+                        viewViewModel.networkCapabilitiesState.value = capabilities
                     }
                 }
             }
@@ -276,31 +313,6 @@ class MainActivity : BaseActivity() {
                     setIfChanged(actualValue, enableTelemetry) { enabled ->
                         controllerPresenter.setTelemetryEnabled(enabled)
                     }
-                }
-            }
-
-            sensorTelemetryEnabled.observe(this@MainActivity) { sensorEnabled ->
-                if (sensorEnabled != null) {
-                    val actualValue = controllerPresenter.telemetryEnabled.value.distinctValue(ReceiverTelemetry.TELEMETRY_SENSORS)
-                    // switch must be On if if one of sensors is active. We allow only switching off partially active sensors
-                    setIfChanged(actualValue, sensorEnabled) { enabled ->
-                        controllerPresenter.setTelemetryEnabled(ReceiverTelemetry.TELEMETRY_SENSORS, enabled)
-                    }
-                }
-            }
-            sensorFrequencyType.observe(this@MainActivity) { frequencyType ->
-                if (frequencyType != null) {
-                    controllerPresenter.setTelemetryUpdateDelay(ReceiverTelemetry.TELEMETRY_SENSORS, frequencyType.delayMils)
-                }
-            }
-            locationTelemetryEnabled.observe(this@MainActivity) { sensorEnabled ->
-                if (sensorEnabled != null) {
-                    controllerPresenter.setTelemetryEnabled(ReceiverTelemetry.TELEMETRY_LOCATION, sensorEnabled)
-                }
-            }
-            locationFrequencyType.observe(this@MainActivity) { frequencyType ->
-                if (frequencyType != null) {
-                    controllerPresenter.setTelemetryUpdateDelay(ReceiverTelemetry.TELEMETRY_LOCATION, frequencyType.delay())
                 }
             }
 

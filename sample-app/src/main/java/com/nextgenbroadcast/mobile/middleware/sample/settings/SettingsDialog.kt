@@ -7,8 +7,6 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.*
-import androidx.viewpager2.adapter.FragmentStateAdapter
-import com.google.android.material.tabs.TabLayoutMediator
 import com.nextgenbroadcast.mobile.middleware.sample.R
 import com.nextgenbroadcast.mobile.middleware.sample.databinding.DialogSettingsBinding
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.ViewViewModel
@@ -44,10 +42,10 @@ class SettingsDialog : DialogFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
         binding.viewPager.adapter = pagerAdapter
-        TabLayoutMediator(binding.tabLayout, binding.viewPager) { tab, position ->
-            tab.text = pagerAdapter.getTabName(position)
-        }.attach()
+        binding.tabLayout.setupWithViewPager(binding.viewPager)
+
         setChildFragmentResultListener(REQUEST_KEY_SCAN_RANGE, ::setFragmentResultAndDismiss)
         setChildFragmentResultListener(REQUEST_KEY_FREQUENCY, ::setFragmentResultAndDismiss)
         setChildFragmentResultListener(REQUEST_KEY_APPLY_CONFIG) { _, _ -> showReloadAppDialog() }
@@ -97,20 +95,14 @@ class SettingsDialog : DialogFragment() {
 
     }
 
-    private inner class SettingsPagerAdapter : FragmentStateAdapter(this) {
-
-        override fun getItemCount(): Int = SettingsPage.values().size
-
-        fun getTabName(position: Int): String = when (SettingsPage.getOrNull(position)) {
-            Tune -> getString(R.string.settings_tab_tune)
-            UI -> getString(R.string.settings_tab_ui)
-            Telemetry -> getString(R.string.settings_tab_telemetry)
-            Logs -> getString(R.string.settings_tab_logs)
-            Config -> getString(R.string.settings_tab_config)
-            null -> throw IllegalArgumentException("Unknown position $position")
+    // ViewPager2 has problem with Spinner selection inside ScrollView, for this reason used ViewPager with FragmentPagerAdapter
+    private inner class SettingsPagerAdapter :
+        FragmentPagerAdapter(childFragmentManager, BEHAVIOR_RESUME_ONLY_CURRENT_FRAGMENT) {
+        override fun getCount(): Int {
+            return SettingsPage.values().size
         }
 
-        override fun createFragment(position: Int): Fragment = when (SettingsPage.getOrNull(position)) {
+        override fun getItem(position: Int): Fragment = when (SettingsPage.getOrNull(position)) {
             Tune -> TuneSettingsFragment().apply { arguments = this@SettingsDialog.arguments }
             UI -> UISettingsFragment()
             Telemetry -> TelemetrySettingsFragment()
@@ -121,6 +113,14 @@ class SettingsDialog : DialogFragment() {
             )
         }
 
+        override fun getPageTitle(position: Int): String = when (SettingsPage.getOrNull(position)) {
+            Tune -> getString(R.string.settings_tab_tune)
+            UI -> getString(R.string.settings_tab_ui)
+            Telemetry -> getString(R.string.settings_tab_telemetry)
+            Logs -> getString(R.string.settings_tab_logs)
+            Config -> getString(R.string.settings_tab_config)
+            null -> throw IllegalArgumentException("Unknown position $position")
+        }
     }
 
     companion object {
