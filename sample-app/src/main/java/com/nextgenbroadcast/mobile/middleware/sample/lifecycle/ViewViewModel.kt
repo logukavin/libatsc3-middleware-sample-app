@@ -176,7 +176,7 @@ class ViewViewModel(
         val mediaUrl = rpmMediaUri?.let { uri -> "<b>Media:</b> $uri" } ?: "<b>NO Media Url</b>"
         val cellular = cellularInfo ?: "<b>NO Cellular data</b>"
         return Html.fromHtml(
-            "> $contextId<br>> $entryPoint<br>> $cachePath<br>> $mediaUrl<br>> $cellular",
+            "> $contextId<br>> $entryPoint<br>> $cachePath<br>> $mediaUrl", // <br>> $cellular
             Html.FROM_HTML_MODE_LEGACY
         )
     }
