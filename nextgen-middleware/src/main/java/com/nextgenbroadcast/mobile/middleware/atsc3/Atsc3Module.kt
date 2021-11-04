@@ -783,6 +783,8 @@ internal class Atsc3Module(
                 if (src is UsbPhyAtsc3Source) {
                     val deviceType = when (src.type) {
                         Atsc3Source.DEVICE_TYPE_KAILASH -> "KAILASH"
+                        Atsc3Source.DEVICE_TYPE_KAILASH_3 -> "KAILASH_3"
+
                         Atsc3Source.DEVICE_TYPE_YOGA -> "YOGA"
                         Atsc3Source.DEVICE_TYPE_AUTO -> "MARKONE"
                         else -> src.type.toString()

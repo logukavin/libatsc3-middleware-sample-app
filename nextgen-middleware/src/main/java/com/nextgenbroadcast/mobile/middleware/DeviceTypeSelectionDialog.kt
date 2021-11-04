@@ -31,8 +31,9 @@ class DeviceTypeSelectionDialog : AppCompatActivity() {
         val typeOverload: Int? = if (MiddlewareConfig.DEV_TOOLS) {
             DevConfig.get(applicationContext).phyType?.let { type ->
                 when {
-                    "YOGA".equals(type, true) -> Atsc3Source.DEVICE_TYPE_YOGA
                     "KAILASH".equals(type, true) -> Atsc3Source.DEVICE_TYPE_KAILASH
+                    "KAILASH_3".equals(type, true) -> Atsc3Source.DEVICE_TYPE_KAILASH_3
+                    "YOGA".equals(type, true) -> Atsc3Source.DEVICE_TYPE_YOGA
                     else -> null
                 }
             }
@@ -52,6 +53,10 @@ class DeviceTypeSelectionDialog : AppCompatActivity() {
 
         findViewById<View>(R.id.kailash_type_btn).setOnClickListener {
             Atsc3ForegroundService.startForDevice(this, device, Atsc3Source.DEVICE_TYPE_KAILASH)
+            finish()
+        }
+        findViewById<View>(R.id.kailash_3_type_btn).setOnClickListener {
+            Atsc3ForegroundService.startForDevice(this, device, Atsc3Source.DEVICE_TYPE_KAILASH_3)
             finish()
         }
 
