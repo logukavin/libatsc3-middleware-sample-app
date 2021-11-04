@@ -8,72 +8,36 @@
             type="com.nextgenbroadcast.mobile.middleware.sample.lifecycle.ViewViewModel" />
     </data>
 
-    <ScrollView
+    <androidx.appcompat.widget.LinearLayoutCompat
+        android:id="@+id/telemetrySettingsContainer"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:fillViewport="true">
+        android:orientation="vertical"
+        android:paddingStart="8dp"
+        android:paddingBottom="8dp"
+        android:paddingTop="@dimen/dialog_content_padding"
+        android:paddingEnd="8dp">
 
-        <androidx.constraintlayout.widget.ConstraintLayout
+        <androidx.appcompat.widget.SwitchCompat
+            android:id="@+id/switchCollectTelemetry"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@color/white"
+            android:checked="@={viewModel.enableTelemetry}"
+            android:paddingBottom="8dp"
+            android:text="@string/settings_enable_telemetry"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/telemetry_settings_recycler_view"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:padding="@dimen/dialog_content_padding">
+            android:background="@drawable/telemetry_recycler_view_background"
+            android:padding="2dp"
+            app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+            app:layout_constraintTop_toBottomOf="@+id/switchCollectTelemetry" />
 
-            <androidx.appcompat.widget.SwitchCompat
-                android:id="@+id/switchCollectTelemetry"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:checked="@={viewModel.enableTelemetry}"
-                android:text="@string/settings_enable_telemetry"
-                app:layout_constraintLeft_toLeftOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
+    </androidx.appcompat.widget.LinearLayoutCompat>
 
-            <androidx.appcompat.widget.SwitchCompat
-                android:id="@+id/switchSensorsTelemetry"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="@dimen/settings_margin_level_2"
-                android:layout_marginTop="15dp"
-                android:checked="@={viewModel.sensorTelemetryEnabled}"
-                android:enabled="@{viewModel.enableTelemetry}"
-                android:text="@string/settings_enable_sensor_telemetry"
-                app:layout_constraintLeft_toLeftOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/switchCollectTelemetry" />
-
-            <Spinner
-                android:id="@+id/spinnerSensorsFrequency"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="@dimen/settings_margin_level_2"
-                android:enabled="@{viewModel.enableTelemetry &amp;&amp; viewModel.sensorTelemetryEnabled}"
-                android:spinnerMode="dropdown"
-                app:layout_constraintBottom_toBottomOf="@+id/switchSensorsTelemetry"
-                app:layout_constraintLeft_toRightOf="@+id/switchSensorsTelemetry"
-                app:layout_constraintTop_toTopOf="@+id/switchSensorsTelemetry" />
-
-            <androidx.appcompat.widget.SwitchCompat
-                android:id="@+id/switchLocationTelemetry"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="@dimen/settings_margin_level_2"
-                android:layout_marginTop="15dp"
-                android:checked="@={viewModel.locationTelemetryEnabled}"
-                android:enabled="@{viewModel.enableTelemetry}"
-                android:text="@string/settings_enable_location_telemetry"
-                app:layout_constraintLeft_toLeftOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/switchSensorsTelemetry" />
-
-            <Spinner
-                android:id="@+id/spinnerLocationFrequency"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="@dimen/settings_margin_level_2"
-                android:enabled="@{viewModel.enableTelemetry &amp;&amp; viewModel.locationTelemetryEnabled}"
-                android:spinnerMode="dropdown"
-                app:layout_constraintBottom_toBottomOf="@+id/switchLocationTelemetry"
-                app:layout_constraintLeft_toRightOf="@+id/switchLocationTelemetry"
-                app:layout_constraintTop_toTopOf="@+id/switchLocationTelemetry" />
-
-        </androidx.constraintlayout.widget.ConstraintLayout>
-
-    </ScrollView>
 </layout>

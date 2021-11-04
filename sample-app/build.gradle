@@ -145,6 +145,14 @@ android {
         pickFirst 'lib/armeabi-v7a/libssl.so'
         pickFirst 'lib/armeabi-v7a/libc++_shared.so'
 
+        pickFirst 'lib/x86/libcrypto.so'
+        pickFirst 'lib/x86/libssl.so'
+        pickFirst 'lib/x86/libc++_shared.so'
+
+        pickFirst 'lib/x86_64/libcrypto.so'
+        pickFirst 'lib/x86_64/libssl.so'
+        pickFirst 'lib/x86_64/libc++_shared.so'
+
     }
 
     applicationVariants.all { variant ->

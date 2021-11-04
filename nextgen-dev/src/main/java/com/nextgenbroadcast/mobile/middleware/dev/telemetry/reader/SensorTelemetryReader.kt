@@ -15,8 +15,8 @@ import kotlinx.coroutines.flow.*
 import java.util.concurrent.TimeUnit
 
 class SensorTelemetryReader(
-        private val sensorManager: SensorManager,
-        private val sensorType: Int
+    private val sensorManager: SensorManager,
+    private val sensorType: Int
 ) : ITelemetryReader {
     private val emptyFloatArray = FloatArray(0)
 
@@ -30,17 +30,17 @@ class SensorTelemetryReader(
             val listener = object : SensorEventListener {
                 override fun onSensorChanged(event: SensorEvent) {
                     safeSend(SensorData(
-                            sensorName = event.sensor.name,
-                            values = event.values,
-                            accuracy = event.accuracy
+                        sensorName = event.sensor.name,
+                        values = event.values,
+                        accuracy = event.accuracy
                     ))
                 }
 
                 override fun onAccuracyChanged(sensor: Sensor, accuracy: Int) {
                     safeSend(SensorData(
-                            sensorName = sensor.name,
-                            values = emptyFloatArray,
-                            accuracy = accuracy
+                        sensorName = sensor.name,
+                        values = emptyFloatArray,
+                        accuracy = accuracy
                     ))
                 }
 
@@ -59,10 +59,10 @@ class SensorTelemetryReader(
                 sensorManager.unregisterListener(listener)
             }
         }.buffer(Channel.CONFLATED) // To avoid send blocking
-                .sample(delayMils) // To control emission frequency
-                .collect { data ->
-                    eventFlow.emit(TelemetryEvent(TelemetryEvent.EVENT_TOPIC_SENSORS, data))
-                }
+            .sample(delayMils) // To control emission frequency
+            .collect { data ->
+                eventFlow.emit(TelemetryEvent(TelemetryEvent.EVENT_TOPIC_SENSORS, data))
+            }
     }
 
     companion object {
@@ -93,11 +93,25 @@ class SensorTelemetryReader(
             return "$NAME:$sensorType"
         }
 
+        fun getSensorNameBySensorType(sensorType: Int): String? {
+            return when (sensorType) {
+                Sensor.TYPE_LINEAR_ACCELERATION -> SENSOR_LINEAR_ACCELERATION
+                Sensor.TYPE_GYROSCOPE -> SENSOR_GYROSCOPE
+                Sensor.TYPE_SIGNIFICANT_MOTION -> SENSOR_SIGNIFICANT_MOTION
+                Sensor.TYPE_STEP_DETECTOR -> SENSOR_STEP_DETECTOR
+                Sensor.TYPE_STEP_COUNTER -> SENSOR_STEP_COUNTER
+                Sensor.TYPE_ROTATION_VECTOR -> SENSOR_ROTATION_VECTOR
+                else -> {
+                    return null
+                }
+            }
+        }
+
     }
 }
 
 enum class SensorFrequencyType(
-        val delayMils: Long
+    val delayMils: Long
 ) {
     FASTEST(250),
     HIGH(1000),
@@ -106,9 +120,9 @@ enum class SensorFrequencyType(
 }
 
 private data class SensorData(
-        val sensorName: String,
-        val values: FloatArray,
-        val accuracy: Int
+    val sensorName: String,
+    val values: FloatArray,
+    val accuracy: Int
 ) : TelemetryPayload() {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

@@ -185,7 +185,7 @@ class TelemetryManager(
             device.availableOnAWS -> AWSTelemetryObserver(
                 AWSIOT_EVENT_TOPIC_FORMAT,
                 awsIoThing,
-                AWSIOT_CLIENT_ID_FORMAT.replace(AWSIoThing.AWSIOT_FORMAT_SERIAL, device.id),
+                formatDeviceId(device.id),
                 topics
             )
             else -> null
@@ -343,5 +343,8 @@ class TelemetryManager(
         private const val AWSIOT_TOPIC_IS_ONLINE = TelemetryEvent.EVENT_TOPIC_IS_ONLINE
 
         private val AWSIOT_PING_PERIOD = TimeUnit.MINUTES.toMillis(1)
+
+        fun formatDeviceId(deviceId: String) =
+            AWSIOT_CLIENT_ID_FORMAT.replace(AWSIoThing.AWSIOT_FORMAT_SERIAL, deviceId)
     }
 }

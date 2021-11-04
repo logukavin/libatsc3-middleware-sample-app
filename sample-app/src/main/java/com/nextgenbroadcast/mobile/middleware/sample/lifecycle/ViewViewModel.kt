@@ -1,6 +1,7 @@
 package com.nextgenbroadcast.mobile.middleware.sample.lifecycle
 
 import android.app.Application
+import android.net.NetworkCapabilities
 import android.net.Uri
 import android.text.Html
 import androidx.lifecycle.*
@@ -8,13 +9,14 @@ import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.model.bCastEntryPageUrlFull
-import com.nextgenbroadcast.mobile.middleware.dev.telemetry.reader.LocationFrequencyType
-import com.nextgenbroadcast.mobile.middleware.dev.telemetry.reader.SensorFrequencyType
+import com.nextgenbroadcast.mobile.middleware.sample.MobileInternetDetector.CellularNetworkState
 import com.nextgenbroadcast.mobile.middleware.sample.R
 import com.nextgenbroadcast.mobile.middleware.sample.core.mapWith
 import com.nextgenbroadcast.mobile.middleware.sample.model.LogInfo
 import com.nextgenbroadcast.mobile.middleware.sample.model.LogInfo.Group
 import com.nextgenbroadcast.mobile.middleware.sample.model.LogInfo.Record
+import com.nextgenbroadcast.mobile.middleware.sample.settings.SensorState
+import com.nextgenbroadcast.mobile.middleware.sample.asString
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 
@@ -28,9 +30,20 @@ class ViewViewModel(
     val mediaUri = MutableLiveData<Uri?>()
     val appData = MutableLiveData<AppData>(null)
     val receiverState = MutableLiveData(ReceiverState.idle())
+    val cellularState = MutableLiveData<CellularNetworkState>()
+    val networkCapabilitiesState = MutableLiveData<NetworkCapabilities>()
 
-    val appDataLog = appData.mapWith(mediaUri) { (data, uri) ->
-        formatLog(data, uri?.toString())
+    private val cellularInfo = cellularState.mapWith(networkCapabilitiesState) { (cellular, capabilities) ->
+        application.getString(
+            R.string.debug_cellular_info,
+            "<b>${cellular?.asString() ?: "-"}</b>",
+            "<b>${capabilities?.linkUpstreamBandwidthKbps ?: ""}</b>",
+            "<b>${capabilities?.linkDownstreamBandwidthKbps ?: ""}</b>"
+        )
+    }
+
+    val appDataLog = appData.mapWith(mediaUri, cellularInfo) { (data, uri, cellularInfo) ->
+        formatLog(data, uri?.toString(), cellularInfo)
     }
 
     val stateDescription = receiverState.map { receiverState ->
@@ -69,11 +82,17 @@ class ViewViewModel(
     // must be cleared on unBind
     val enableTelemetry = MutableLiveData(false)
     val sensorTelemetryEnabled = MutableLiveData(true)
-    val sensorFrequencyType = MutableLiveData(SensorFrequencyType.MEDIUM)
-    val locationTelemetryEnabled = MutableLiveData(true)
-    val locationFrequencyType = MutableLiveData(LocationFrequencyType.MEDIUM)
     val logsInfo = MutableLiveData<Map<String, Boolean>>()
     val logChangingChannel = Channel<Pair<String, Boolean>>()
+    val sensorsEnableList = MutableLiveData<Map<String, Boolean>>(mapOf())
+    val sensorsFrequencyList = MutableLiveData<Map<String, Long>>()
+    val eventSensorEnableChannel = Channel<Pair<String, Boolean>>()
+    val eventSensorFrequencyChannel = Channel<Pair<String, Long>>()
+    val sensorLiveData = sensorsEnableList.mapWith(sensorsFrequencyList){ (sensorEnable, sensorDelay) ->
+        sensorEnable?.map {
+            SensorState(it.key, it.value, sensorDelay?.get(it.key))
+        }
+    }
 
     val groupedLogsInfo: LiveData<List<LogInfo>>
         get() = logsInfo.map(::groupLogs)
@@ -133,17 +152,17 @@ class ViewViewModel(
     fun clearSubscriptions(owner: LifecycleOwner) {
         enableTelemetry.removeObservers(owner)
         sensorTelemetryEnabled.removeObservers(owner)
-        sensorFrequencyType.removeObservers(owner)
-        locationTelemetryEnabled.removeObservers(owner)
-        locationFrequencyType.removeObservers(owner)
         logsInfo.removeObservers(owner)
+        sensorsEnableList.removeObservers(owner)
+        sensorsFrequencyList.removeObservers(owner)
+        sensorLiveData.removeObservers(owner)
     }
 
     fun changeLogFlagStatus(name: String, enabled: Boolean) = viewModelScope.launch {
         logChangingChannel.send(name to enabled)
     }
 
-    private fun formatLog(data: AppData?, rpmMediaUri: String?): CharSequence {
+    private fun formatLog(data: AppData?, rpmMediaUri: String?, cellularInfo: String?): CharSequence {
         val contextId = data?.contextId?.let { id -> "<b>Context ID:</b> $id" } ?: "<b>NO Context ID</b>"
         val entryPoint = data?.let {
             listOfNotNull(
@@ -152,11 +171,25 @@ class ViewViewModel(
             ).takeIf { it.isNotEmpty() }
                 ?.joinToString(prefix = "<b>App </b>")
         } ?: "<b>NO Entry Point</b>"
-        val cachePath = data?.cachePath?.let { path -> "<b>App Path:</b> $path" } ?: "<b>NO Application available</b>"
+        val cachePath = data?.cachePath?.let { path -> "<b>App Path:</b> $path" }
+            ?: "<b>NO Application available</b>"
         val mediaUrl = rpmMediaUri?.let { uri -> "<b>Media:</b> $uri" } ?: "<b>NO Media Url</b>"
+        val cellular = cellularInfo ?: "<b>NO Cellular data</b>"
         return Html.fromHtml(
-            "> $contextId<br>> $entryPoint<br>> $cachePath<br>> $mediaUrl",
+            "> $contextId<br>> $entryPoint<br>> $cachePath<br>> $mediaUrl", // <br>> $cellular
             Html.FROM_HTML_MODE_LEGACY
         )
+    }
+
+    fun sendEventSensorChangeFrequency(sensorFrequencyState: Pair<String, Long>) {
+        viewModelScope.launch {
+            eventSensorFrequencyChannel.send(sensorFrequencyState)
+        }
+    }
+
+    fun sendEventSensorChangeEnableState(sensorEnableState: Pair<String, Boolean>) {
+        viewModelScope.launch {
+            eventSensorEnableChannel.send(sensorEnableState)
+        }
     }
 }

@@ -7,11 +7,8 @@ import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.PhyFrequency
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.middleware.analytics.IAtsc3Analytics
-import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3ModuleListener
-import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3ModuleState
-import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3Profile
-import com.nextgenbroadcast.mobile.middleware.atsc3.IAtsc3Module
 import com.nextgenbroadcast.mobile.core.atsc3.SLTConstants
+import com.nextgenbroadcast.mobile.middleware.atsc3.*
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.alerts.AeaTable
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.held.Atsc3HeldPackage
@@ -309,6 +306,10 @@ internal class ServiceControllerImpl(
 
     override fun getCurrentRouteMediaUrl(): MediaUrl? {
         return repository.routeMediaUrl.value
+    }
+
+    override fun getSignalingData(names: List<String>): List<ISignalingData> {
+        return atsc3Module.getLLSTableByName(names)
     }
 
     private fun resetMediaUrl() {

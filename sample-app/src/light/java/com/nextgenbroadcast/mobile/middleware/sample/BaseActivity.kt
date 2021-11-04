@@ -6,8 +6,8 @@ import android.support.v4.media.MediaBrowserCompat
 import android.support.v4.media.session.MediaControllerCompat
 import androidx.appcompat.app.AppCompatActivity
 import com.nextgenbroadcast.mobile.core.LOG
-import com.nextgenbroadcast.mobile.middleware.dev.presentation.IControllerPresenter
-import com.nextgenbroadcast.mobile.middleware.dev.service.binder.IServiceBinder
+import com.nextgenbroadcast.mobile.core.dev.service.binder.IServiceBinder
+import com.nextgenbroadcast.mobile.core.dev.service.presentation.IControllerPresenter
 
 abstract class BaseActivity : AppCompatActivity() {
     private lateinit var mediaBrowser: MediaBrowserCompat

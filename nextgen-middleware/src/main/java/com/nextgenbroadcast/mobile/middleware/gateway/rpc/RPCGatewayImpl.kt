@@ -3,6 +3,7 @@ package com.nextgenbroadcast.mobile.middleware.gateway.rpc
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
+import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3LLSTable
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.alerts.AeaTable
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3ApplicationFile
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.SGUrl
@@ -15,6 +16,7 @@ import com.nextgenbroadcast.mobile.middleware.rpc.notification.NotificationType
 import com.nextgenbroadcast.mobile.middleware.rpc.notification.RPCNotificationHelper
 import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.AlertingSignalingRpcResponse
 import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.ServiceGuideUrlsRpcResponse
+import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.SignalingRpcResponse
 import com.nextgenbroadcast.mobile.middleware.server.ServerUtils
 import com.nextgenbroadcast.mobile.middleware.server.ws.MiddlewareWebSocket
 import kotlinx.coroutines.*
@@ -214,7 +216,20 @@ internal class RPCGatewayImpl(
         return if (alertingTypes.isEmpty()) {
             rpcAlertList
         } else {
-            alertingTypes.flatMap { type -> rpcAlertList.filter { type == it.alertingType }}
+            alertingTypes.flatMap { type ->
+                rpcAlertList.filter { type == it.alertingType }
+            }
+        }
+    }
+
+    override fun getSignalingInfo(names: List<String>): List<SignalingRpcResponse.SignalingInfo> {
+        return serviceController.getSignalingData(names).map { data ->
+            SignalingRpcResponse.SignalingInfo(
+                name = data.name,
+                group = (data as? Atsc3LLSTable)?.groupId?.toString(),
+                version = data.version.toString(),
+                table = data.xml
+            )
         }
     }
 

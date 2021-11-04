@@ -32,6 +32,8 @@ android {
         ndk {
             if (project.hasProperty('org.gradle.project.debugging_hwasan_enabled') && project.property('org.gradle.project.debugging_hwasan_enabled').toString().toBoolean()) {
                 abiFilters 'arm64-v8a'
+            } else if (project.getProperty('org.gradle.project.abi_x86_enabled').toBoolean()) {
+                abiFilters 'arm64-v8a', 'armeabi-v7a', 'x86', 'x86_64'
             } else {
                 abiFilters 'arm64-v8a', 'armeabi-v7a' //, 'armeabi-v7a' //, 'arm64-v8a' //'', 'x86_64',
             }
@@ -69,6 +71,17 @@ android {
 
         debug {
             jniDebuggable = true
+        }
+    }
+
+    sourceSets {
+        main {
+            java {
+                // Add stub implementation of SaankhyaPHYAndroid if atsc3_phy_saankhya dependency switched off
+                if (!project.getProperty('org.gradle.project.phy_saankhya_enabled').toBoolean()) {
+                    srcDirs 'src/main/saankhya'
+                }
+            }
         }
     }
 
@@ -208,6 +221,9 @@ dependencies {
 
     //jjustman-2021-08-31 - hack for ntp local clock
     implementation "com.lyft.kronos:kronos-android:$kronosVersion"
+
+    // atsc3 bridge media mmt
+    implementation 'com.google.protobuf:protobuf-javalite:3.18.0'
 
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.3'
