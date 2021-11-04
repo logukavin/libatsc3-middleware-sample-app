@@ -29,7 +29,7 @@ public class MMTFragmentWriter {
     private final byte[] ac4header = {(byte) 0xAC, 0x40, (byte) 0xFF, (byte) 0xFF, 0x00, 0x00, 0x00};
 
     // SIZE_SAMPLE_HEADER
-    private final byte[] emptyFragmentHeader = {(byte) MMTConstants.TRACK_TYPE_EMPTY, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    private final byte[] emptyFragmentHeader = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
     private final Boolean audioOnly;
     private final int serviceId;
@@ -47,6 +47,7 @@ public class MMTFragmentWriter {
     private volatile boolean isActive = true;
     private boolean sendFileHeader = true;
     private boolean firstKeyFrameReceived = false;
+    private boolean slHdr1Present = false;
 
     private long mpuWaitingStartTime;
 
@@ -177,19 +178,27 @@ public class MMTFragmentWriter {
         return fileHeaderBuffer;
     }
 
-    // write empty fragment to buffer to check stream is still alive
-    private void testOutStream(FileOutputStream out) throws IOException {
+    private void writeEmptyFragment(FileOutputStream out, int fragmentType) throws IOException {
+        emptyFragmentHeader[0] = (byte) fragmentType;
         out.write(emptyFragmentHeader,0 , emptyFragmentHeader.length);
         out.flush();
     }
 
     private int writeQueue(FileOutputStream out) throws IOException {
-        testOutStream(out);
+        // write empty fragment to buffer to check stream is still alive
+        writeEmptyFragment(out, MMTConstants.TRACK_TYPE_EMPTY);
 
         int bytesRead = 0;
         while (isActive) {
             if (fragmentBuffer.remaining() == 0) {
                 readFragment(fragmentBuffer);
+            }
+
+            if (slHdr1Present) {
+                writeEmptyFragment(out, MMTConstants.TRACK_TYPE_SL_HDR1);
+                // reset flag to prevent repeated sending
+                slHdr1Present = false;
+                break;
             }
 
             // read the sample buffer
@@ -546,6 +555,12 @@ public class MMTFragmentWriter {
 
     public void pushAudioDecoderConfigurationRecord(MMTAudioDecoderConfigurationRecord mmtAudioDecoderConfigurationRecord) {
         audioConfigurationMap.put(mmtAudioDecoderConfigurationRecord.packet_id, mmtAudioDecoderConfigurationRecord);
+    }
+
+    public void notifySlHdr1Present() {
+        if (!firstKeyFrameReceived) {
+            slHdr1Present = true;
+        }
     }
 
     /**

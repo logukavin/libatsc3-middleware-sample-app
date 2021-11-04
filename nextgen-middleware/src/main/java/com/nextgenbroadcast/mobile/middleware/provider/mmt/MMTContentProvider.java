@@ -66,6 +66,8 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
     };
 
     private final CopyOnWriteArrayList<MMTFragmentWriter> descriptors = new CopyOnWriteArrayList<>();
+    //TODO: used as temporary solution and must be refactored
+    private final CopyOnWriteArrayList<Integer> slHdr1Services = new CopyOnWriteArrayList<>();
 
     private Executor threadPoolExecutor;
     private Atsc3ReceiverCore receiver;
@@ -179,6 +181,11 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
                 });
 
                 descriptors.add(writer);
+
+                //TODO: used as temporary solution and must be refactored
+                if (slHdr1Services.contains(serviceId)) {
+                    writer.notifySlHdr1Present();
+                }
 
                 // reset with first descriptor only
                 if (descriptors.size() == 1) {
@@ -321,6 +328,14 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
         }
         descriptors.forEach(descriptor -> {
             descriptor.pushAudioDecoderConfigurationRecord(mmtAudioDecoderConfigurationRecord);
+        });
+    }
+
+    @Override
+    public void notifySlHdr1Present(int service_id, int packet_id) {
+        slHdr1Services.add(service_id);
+        descriptors.forEach(descriptor -> {
+            descriptor.notifySlHdr1Present();
         });
     }
 
