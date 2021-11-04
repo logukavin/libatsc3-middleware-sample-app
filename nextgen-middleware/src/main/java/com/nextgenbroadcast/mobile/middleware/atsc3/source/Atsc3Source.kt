@@ -61,18 +61,17 @@ abstract class Atsc3Source : IAtsc3Source {
         const val DEVICE_TYPE_KAILASH = SaankhyaPHYAndroid.DEVICE_TYPE_FX3_KAILASH
         const val DEVICE_TYPE_YOGA = SaankhyaPHYAndroid.DEVICE_TYPE_FX3_YOGA
 
+        //jjustman-2021-11-04 - hack-ish workaround for KAILASH/KAILASH_3/YOGA configuration persistance
+        // after fx3 preboot download is completed, until we have proper productID's in the target fx3 firmware images
+
+        const val DEVICE_TYPE_USE_FROM_LAST_DOWNLOAD_BOOTLOADER_FIRMWARE = SaankhyaPHYAndroid.DEVICE_TYPE_USE_FROM_LAST_DOWNLOAD_BOOTLOADER_FIRMWARE;
+
         fun getSaankhyaFX3DeviceType(vendorId: Int, productId: Int, manufacturer: String?): Int {
             if (vendorId == SaankhyaPHYAndroid.CYPRESS_VENDOR_ID) {
                 if (productId == SaankhyaPHYAndroid.FX3_PREBOOT_PRODUCT_ID) {
                     return DEVICE_TYPE_PREBOOT
                 } else if (productId == SaankhyaPHYAndroid.KAILASH_OR_YOGA_PRODUCT_ID) {
-                    return if(manufacturer == SaankhyaPHYAndroid.KAILASH_FIRMWARE_MFG_NAME_JJ) {
-                        DEVICE_TYPE_KAILASH
-                    } else {
-                        //jjustman-2021-04-29 - fall thru for BB dongle here
-                        //TODO: update BB FX3 firmware with mProductName identifier for YOGA
-                        DEVICE_TYPE_YOGA
-                    }
+                    return DEVICE_TYPE_USE_FROM_LAST_DOWNLOAD_BOOTLOADER_FIRMWARE;
                 }
             }
 
