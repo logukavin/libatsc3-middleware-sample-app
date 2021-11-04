@@ -19,6 +19,7 @@ import com.google.android.exoplayer2.upstream.DefaultLoadErrorHandlingPolicy
 import com.google.android.exoplayer2.util.Util
 import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTMediaSource
 import com.nextgenbroadcast.mobile.core.exception.ServiceNotFoundException
+import com.nextgenbroadcast.mobile.core.exception.SlHdr1DetectedException
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.player.exoplayer.Atsc3LoadControl
 import com.nextgenbroadcast.mobile.player.exoplayer.Atsc3MMTExtractor
@@ -35,6 +36,8 @@ class Atsc3MediaPlayer(
         fun onPlayerStateChanged(state: PlaybackState) {}
         fun onPlayerError(error: Exception) {}
         fun onPlaybackSpeedChanged(speed: Float) {}
+
+        fun onSlHdr1Present() {}
     }
 
     private val audioManager: AudioManager by lazy {
@@ -60,6 +63,7 @@ class Atsc3MediaPlayer(
         get() = _trackSelector
 
     var resetWhenLostAudioFocus: Boolean = true
+    var slHdr1Compatible: Boolean = false
 
     private var playWhenReady: Boolean = true
         set(value) {
@@ -234,7 +238,7 @@ class Atsc3MediaPlayer(
             MMTMediaSource.Factory({
                 ContentDataSource(context)
             }, {
-                arrayOf(Atsc3MMTExtractor())
+                arrayOf(Atsc3MMTExtractor(slHdr1Compatible))
             }).apply {
                 setLoadErrorHandlingPolicy(createMMTLoadErrorHandlingPolicy())
             }.createMediaSource(mediaUri)
@@ -316,19 +320,23 @@ class Atsc3MediaPlayer(
                     return C.TIME_UNSET
                 }
 
+                if (isMMTExtractorSlHdr1DetectedException(exception)) {
+                    listener?.onSlHdr1Present()
+                    // important to recreate Extractor with SL-HDR1 support
+                    return C.TIME_UNSET
+                }
+
                 return super.getRetryDelayMsFor(dataType, loadDurationMs, exception, errorCount)
             }
         }
     }
 
     private fun isContentDataSourceServiceNotFoundException(exception: Throwable?): Boolean {
-        if (exception is ContentDataSource.ContentDataSourceException) {
-            if (exception.cause is ServiceNotFoundException) {
-                return true
-            }
-        }
+        return (exception is ContentDataSource.ContentDataSourceException) && (exception.cause is ServiceNotFoundException)
+    }
 
-        return false
+    private fun isMMTExtractorSlHdr1DetectedException(exception: Throwable?): Boolean {
+        return (exception is SlHdr1DetectedException)
     }
 
     private fun playbackState(playbackState: Int, playWhenReady: Boolean): PlaybackState? {

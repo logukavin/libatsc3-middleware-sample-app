@@ -1,17 +1,13 @@
 package com.nextgenbroadcast.mobile.middleware.sample.view
 
 import android.content.Context
-import android.net.Uri
 import android.util.AttributeSet
 import android.view.LayoutInflater
 import android.view.ViewGroup
-import com.google.android.exoplayer2.DefaultRenderersFactory
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.middleware.sample.R
-import com.nextgenbroadcast.mobile.player.Atsc3MediaPlayer
 import com.philips.jhdr.ISlhdrOperatingModeNtf
 import com.philips.jhdr.SlhdrPlayerView
-import com.philips.jhdr.SlhdrRenderersFactory
 
 class Atsc3SlhdrPlayerView @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null
@@ -23,12 +19,6 @@ class Atsc3SlhdrPlayerView @JvmOverloads constructor(
         if (isInEditMode) return
 
         setSlhdrModeNtf(this)
-    }
-
-    override fun play(atsc3Player: Atsc3MediaPlayer, mediaUri: Uri, mimeType: String?) {
-        val renderersFactory = SlhdrRenderersFactory(context, rendererConnectNtf)
-            .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF)
-        atsc3Player.play(renderersFactory, mediaUri, mimeType)
     }
 
     override fun OnProcessingModeChanged(SlhdrMode: Int, OutputMode: Int, SplitScreenMode: Int) {

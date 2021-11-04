@@ -3,9 +3,11 @@ package com.nextgenbroadcast.mobile.middleware.sample.view
 import android.content.Context
 import android.net.Uri
 import android.util.AttributeSet
+import android.util.Log
 import android.view.Display
 import android.view.WindowManager
 import android.widget.FrameLayout
+import com.google.android.exoplayer2.DefaultRenderersFactory
 import com.google.android.exoplayer2.Player
 import com.google.android.exoplayer2.trackselection.TrackSelectionArray
 import com.google.android.exoplayer2.trackselection.TrackSelector
@@ -15,16 +17,20 @@ import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.middleware.sample.R
 import com.nextgenbroadcast.mobile.player.Atsc3MediaPlayer
 import com.nextgenbroadcast.mobile.player.MMTConstants
+import com.philips.jhdr.SlhdrRenderersFactory
 
 typealias OnPlaybackChangeListener = (state: PlaybackState, position: Long, rate: Float) -> Unit
 
 class ReceiverPlayerView @JvmOverloads constructor(
-        context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
+    context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
 ) : FrameLayout(context, attrs, defStyleAttr) {
 
     private val atsc3Player = Atsc3MediaPlayer(context).apply {
         resetWhenLostAudioFocus = false
     }
+
+    private lateinit var exoPlayerView: Atsc3ExoPlayerView
+    private lateinit var hdrPlayerView: Atsc3SlhdrPlayerView
 
     private var hasHdr10Display = false
     private var slhdr1Enabled = false
@@ -34,8 +40,14 @@ class ReceiverPlayerView @JvmOverloads constructor(
 
     private var playerView: Atsc3PlayerView? = null
 
+    private val supportSlHdr1: Boolean
+        get() = hasHdr10Display && slhdr1Enabled
+
     val isActive: Boolean
         get() = playerView != null
+
+    // required for USE_DISPLAY_ADAPTATION_HACK
+    private var displayTargetAdaptation: Int = 100
 
     override fun onFinishInflate() {
         super.onFinishInflate()
@@ -72,7 +84,19 @@ class ReceiverPlayerView @JvmOverloads constructor(
             override fun onPlaybackSpeedChanged(speed: Float) {
                 // will be updated with position in timer
             }
+
+            override fun onSlHdr1Present() {
+                post {
+                    preparePlayerView(supportSlHdr1)
+                }
+            }
         })
+
+        exoPlayerView = Atsc3ExoPlayerView.inflate(context, this)
+        if (supportSlHdr1) {
+            hdrPlayerView = Atsc3SlhdrPlayerView.inflate(context, this)
+            displayTargetAdaptation = hdrPlayerView.displayAdaptation
+        }
     }
 
     fun setOnPlaybackChangeListener(listener: OnPlaybackChangeListener) {
@@ -93,26 +117,69 @@ class ReceiverPlayerView @JvmOverloads constructor(
             return
         }
 
-        val oldPlayerView = playerView
-        playerView = if (hasHdr10Display && slhdr1Enabled) {
-            (oldPlayerView as? Atsc3SlhdrPlayerView) ?: Atsc3SlhdrPlayerView.inflate(context, this)
+        preparePlayerView(false)
+        if (supportSlHdr1) {
+            val renderersFactory = SlhdrRenderersFactory(context, hdrPlayerView.rendererConnectNtf)
+                .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF)
+            atsc3Player.play(renderersFactory, mediaUri, mimeType)
         } else {
-            (oldPlayerView as? Atsc3ExoPlayerView) ?: Atsc3ExoPlayerView.inflate(context, this)
-        }.also { view ->
-            if (oldPlayerView != view) {
-                removeAllViews()
-                addView(view)
-            }
-            view.play(atsc3Player, mediaUri, mimeType)
-            view.setPlayer(
-                atsc3Player.player?.also {
-                    it.addListener(object : Player.EventListener {
-                        override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
-                            updateBufferingState(playbackState == Player.STATE_BUFFERING)
-                        }
-                    })
+            atsc3Player.play(mediaUri, mimeType)
+        }
+        atsc3Player.player?.also { player ->
+            player.addListener(object : Player.EventListener {
+                override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
+                    updateBufferingState(playbackState == Player.STATE_BUFFERING)
                 }
-            )
+            })
+        }
+    }
+
+    private fun preparePlayerView(slHdr1Compatible: Boolean) {
+        // if slHdr1Compatible is false Player will throw an SlHdr1DetectedException exception is SL-HDR1 video present
+        atsc3Player.slHdr1Compatible = slHdr1Compatible || !supportSlHdr1
+        if (slHdr1Compatible) {
+            if (USE_DISPLAY_ADAPTATION_HACK) {
+                if (playerView != hdrPlayerView) {
+                    removeAllViews()
+                    addView(hdrPlayerView)
+                    playerView = hdrPlayerView
+                }
+                hdrPlayerView.displayAdaptation = displayTargetAdaptation
+                hdrPlayerView.gammaOutputForSdr = false
+            } else {
+                if (playerView != hdrPlayerView) {
+                    // unused surface must be removed for the view stack using otherwise one will block the other
+                    removeAllViews()
+                    addView(hdrPlayerView)
+                    //instead switchTargetView()
+                    playerView = hdrPlayerView.apply {
+                        player = atsc3Player.player
+                        exoPlayerView.player = null
+                    }
+                }
+            }
+        } else {
+            if (USE_DISPLAY_ADAPTATION_HACK && supportSlHdr1) {
+                if (playerView != hdrPlayerView) {
+                    removeAllViews()
+                    addView(hdrPlayerView)
+                    playerView = hdrPlayerView
+                }
+                hdrPlayerView.displayAdaptation = 100
+                hdrPlayerView.gammaOutputForSdr = true
+            } else {
+                if (playerView != exoPlayerView) {
+                    // unused surface must be removed for the view stack using otherwise one will block the other
+                    removeAllViews()
+                    addView(exoPlayerView)
+                    playerView = exoPlayerView.apply {
+                        player = atsc3Player.player
+                        if (supportSlHdr1) {
+                            hdrPlayerView.player = null
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -192,6 +259,8 @@ class ReceiverPlayerView @JvmOverloads constructor(
         val TAG: String = ReceiverPlayerView::class.java.simpleName
 
         private const val MEDIA_TIME_UPDATE_DELAY = 500L
+
+        private const val USE_DISPLAY_ADAPTATION_HACK = false
 
         fun deviceHasHdr10Display(ctx: Context): Boolean {
             val windowManager = ctx.getSystemService(Context.WINDOW_SERVICE) as WindowManager
