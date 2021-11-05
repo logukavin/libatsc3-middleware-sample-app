@@ -56,5 +56,28 @@ public class RouteDASHRenderersFactory extends DefaultRenderersFactory {
             // The extension is present, but instantiation failed.
             throw new RuntimeException("Error instantiating DAA extension", e);
         }
+
+        //jjustman-2021-09-08 - first impl for mpegh simple decoder
+        try {
+            // Full class names used for constructor args so the LINT rule triggers if any of them move.
+            // LINT.IfChange
+            Class<?> clazz = Class.forName("de.fraunhofer.iis.mpegh.LibMpeghAudioRenderer");
+            Constructor<?> constructor =
+                    clazz.getConstructor(
+                            android.os.Handler.class,
+                            com.google.android.exoplayer2.audio.AudioRendererEventListener.class,
+                            com.google.android.exoplayer2.audio.AudioProcessor[].class);
+
+            Renderer renderer =
+                    (Renderer) constructor.newInstance(eventHandler, eventListener, audioProcessors);
+            out.add(extensionRendererIndex++, renderer);
+            Log.i(TAG, "Loaded LibMpeghAudioRenderer");
+        } catch (ClassNotFoundException e) {
+            // Expected if the app was built without the extension.
+            Log.i(TAG, "Error instantiating LibMpeghAudioRenderer, ex:"+e);
+        } catch (Exception e) {
+            // The extension is present, but instantiation failed.
+            throw new RuntimeException("Error instantiating mpegh extension", e);
+        }
     }
 }
