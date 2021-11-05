@@ -3,7 +3,6 @@ package com.nextgenbroadcast.mobile.middleware.sample.view
 import android.content.Context
 import android.net.Uri
 import android.util.AttributeSet
-import android.util.Log
 import android.view.Display
 import android.view.WindowManager
 import android.widget.FrameLayout
@@ -14,10 +13,10 @@ import com.google.android.exoplayer2.trackselection.TrackSelector
 import com.google.android.exoplayer2.ui.PlayerView
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
+import com.nextgenbroadcast.mobile.middleware.sample.MiddlewareSlhdrRenderersFactory
 import com.nextgenbroadcast.mobile.middleware.sample.R
 import com.nextgenbroadcast.mobile.player.Atsc3MediaPlayer
 import com.nextgenbroadcast.mobile.player.MMTConstants
-import com.philips.jhdr.SlhdrRenderersFactory
 
 typealias OnPlaybackChangeListener = (state: PlaybackState, position: Long, rate: Float) -> Unit
 
@@ -119,8 +118,8 @@ class ReceiverPlayerView @JvmOverloads constructor(
 
         preparePlayerView(false)
         if (supportSlHdr1) {
-            val renderersFactory = SlhdrRenderersFactory(context, hdrPlayerView.rendererConnectNtf)
-                .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF)
+            val renderersFactory = MiddlewareSlhdrRenderersFactory(context, hdrPlayerView.rendererConnectNtf)
+                .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
             atsc3Player.play(renderersFactory, mediaUri, mimeType)
         } else {
             atsc3Player.play(mediaUri, mimeType)
