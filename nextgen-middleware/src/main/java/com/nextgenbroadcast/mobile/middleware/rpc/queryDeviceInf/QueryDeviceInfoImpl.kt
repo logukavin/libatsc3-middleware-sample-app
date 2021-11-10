@@ -2,12 +2,15 @@ package com.nextgenbroadcast.mobile.middleware.rpc.queryDeviceInf
 
 import android.annotation.SuppressLint
 import android.os.Build
-import com.nextgenbroadcast.mobile.middleware.gateway.rpc.IRPCGateway
 import com.nextgenbroadcast.mobile.middleware.rpc.KeyCode
 import com.nextgenbroadcast.mobile.middleware.rpc.queryDeviceInf.model.DeviceInfo
+import com.nextgenbroadcast.mobile.middleware.server.IApplicationSession
 import java.text.SimpleDateFormat
 
-class QueryDeviceInfoImpl(val gateway: IRPCGateway) : IQueryDeviceInfo {
+class QueryDeviceInfoImpl(
+    private val session: IApplicationSession
+) : IQueryDeviceInfo {
+
     @SuppressLint("SimpleDateFormat")
     override fun queryDeviceInfo(deviceInfoParams: List<String>?): DeviceInfo {
         return DeviceInfo()
@@ -26,8 +29,8 @@ class QueryDeviceInfoImpl(val gateway: IRPCGateway) : IQueryDeviceInfo {
                     numberOfTuners = 1,
                     yearOfMfr = SimpleDateFormat("yyyy").format(Build.TIME).toInt()
                 )
-                deviceId = gateway.deviceId
-                advertisingId = gateway.advertisingId
+                deviceId = session.getParam(IApplicationSession.Params.DeviceId)
+                advertisingId = session.getParam(IApplicationSession.Params.AdvertisingId)
             }
     }
 }

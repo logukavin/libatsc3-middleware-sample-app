@@ -2,6 +2,8 @@ package com.nextgenbroadcast.mobile.middleware.rpc.notification.model
 
 import com.nextgenbroadcast.mobile.middleware.rpc.notification.NotificationType
 
-data class RmpMediaTimeChangeNotification(
-        var currentTime: String
-): RPCNotification(NotificationType.RMP_MEDIA_TIME_CHANGE)
+class RmpMediaTimeChangeNotification(
+        mediaTimeMills: Double
+) : RPCNotification(NotificationType.RMP_MEDIA_TIME_CHANGE) {
+        var currentTime: String = String.format("%.3f", mediaTimeMills / 1000)
+}
