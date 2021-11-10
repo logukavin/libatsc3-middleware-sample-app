@@ -112,7 +112,7 @@ class SocketServerTest : ServerTest() {
 }
 
 abstract class RPCGatewayAdapter : IRPCGateway {
-    override fun updateRMPPosition(scaleFactor: Double, xPos: Double, yPos: Double) {
+    override fun requestRMPPosition(scaleFactor: Double, xPos: Double, yPos: Double) {
         TODO("Not yet implemented")
     }
 
@@ -149,7 +149,7 @@ abstract class RPCGatewayAdapter : IRPCGateway {
         return false
     }
 
-    override fun getAlertChangingData(alertingTypes: List<String>): List<AlertingSignalingRpcResponse.Alert> {
+    override fun getAEATChangingList(alertingTypes: List<String>): List<AlertingSignalingRpcResponse.Alert> {
         TODO("Not yet implemented")
     }
 }

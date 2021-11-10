@@ -1,15 +1,15 @@
 package com.nextgenbroadcast.mobile.middleware.rpc.cacheRequest
 
-import com.nextgenbroadcast.mobile.middleware.gateway.rpc.IRPCGateway
 import com.nextgenbroadcast.mobile.middleware.rpc.cacheRequest.model.CacheRequest
 import com.nextgenbroadcast.mobile.middleware.rpc.cacheRequest.model.QueryCacheUsage
+import com.nextgenbroadcast.mobile.middleware.server.IApplicationSession
 
 class CacheRequestImpl(
-        private val gateway: IRPCGateway
+    private val session: IApplicationSession
 ) : ICacheRequest {
 
     override fun cacheRequest(sourceURL: String?, targetURL: String?, URLs: List<String>, filters: List<String>?): CacheRequest {
-        val cached = gateway.requestFileCache(sourceURL, targetURL, URLs, filters)
+        val cached = session.requestFileCache(sourceURL, targetURL, URLs, filters)
         return CacheRequest(cached)
     }
 

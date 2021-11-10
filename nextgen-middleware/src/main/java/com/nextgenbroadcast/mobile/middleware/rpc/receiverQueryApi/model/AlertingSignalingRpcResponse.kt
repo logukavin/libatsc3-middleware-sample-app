@@ -10,7 +10,7 @@ data class AlertingSignalingRpcResponse(
             var alertingType: String? = null,
             var alertingFragment: String? = null,
             var receiveTime: String? = null,
-            var filteredEventList: MutableList<FilteredEventList?>? = null
+            var filteredEventList: List<FilteredEventList?>? = null
     ) {
         data class FilteredEventList(
                 var aeaId: String? = null
