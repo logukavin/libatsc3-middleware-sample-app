@@ -34,6 +34,7 @@ abstract class AbstractApplicationSession(
             IApplicationSession.Params.MediaUrl -> rpcGateway.mediaUrl
             IApplicationSession.Params.AppBaseUrl -> rpcGateway.currentAppBaseUrl
             IApplicationSession.Params.PlaybackState -> rpcGateway.playbackState.state.toString()
+            IApplicationSession.Params.PlaybackTime -> rpcGateway.playbackTime.toString()
         }
     }
 
@@ -128,7 +129,7 @@ abstract class AbstractApplicationSession(
     private fun onMediaTimeChanged(mediaTime: Long) {
         if (mediaTime <= 0) return
         if (isSubscribedNotification(NotificationType.RMP_MEDIA_TIME_CHANGE)) {
-            notify(NotificationType.RMP_MEDIA_TIME_CHANGE, mediaTime.toDouble())
+            notify(NotificationType.RMP_MEDIA_TIME_CHANGE, mediaTime.toDouble() / 1000)
         }
     }
 
