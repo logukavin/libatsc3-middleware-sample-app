@@ -1,11 +1,12 @@
 package com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi
 
-import com.nextgenbroadcast.mobile.middleware.gateway.rpc.IRPCGateway
+import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3LLSTable
 import com.nextgenbroadcast.mobile.middleware.rpc.RpcException
 import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.*
+import com.nextgenbroadcast.mobile.middleware.server.IApplicationSession
 
 class ReceiverQueryApiImpl(
-        private val gateway: IRPCGateway
+    private val session: IApplicationSession
 ) : IReceiverQueryApi {
 
     override fun queryContentAdvisoryRating(): RatingLevelRpcResponse {
@@ -18,17 +19,16 @@ class ReceiverQueryApiImpl(
 
     override fun queryServiceID(): ServiceRpcResponse {
         return ServiceRpcResponse().apply {
-            this.service = gateway.queryServiceId
+            this.service = session.getParam(IApplicationSession.Params.ServiceId)
         }
     }
 
     override fun queryLanguagePreferences(): LanguagesRpcResponse {
+        val language = session.getParam(IApplicationSession.Params.Language)
         return LanguagesRpcResponse().apply {
-            gateway.language.let { language ->
-                preferredAudioLang = language
-                preferredCaptionSubtitleLang = language
-                preferredUiLang = language
-            }
+            preferredAudioLang = language
+            preferredCaptionSubtitleLang = language
+            preferredUiLang = language
         }
     }
 
@@ -41,26 +41,48 @@ class ReceiverQueryApiImpl(
     }
 
     override fun queryMPDUrl(): MPDUrlRpcResponse {
-        return MPDUrlRpcResponse(gateway.mediaUrl)
+        return MPDUrlRpcResponse(session.getParam(IApplicationSession.Params.MediaUrl))
     }
 
     override fun queryReceiverWebServerURI(): BaseURIRpcResponse {
-        return gateway.currentAppBaseUrl?.let {
+        return session.getParam(IApplicationSession.Params.MediaUrl)?.let {
             BaseURIRpcResponse(it)
         } ?: throw RpcException()
     }
 
     override fun queryAlertingSignaling(alertingTypes: List<String>): AlertingSignalingRpcResponse {
-        return AlertingSignalingRpcResponse(gateway.getAlertChangingData(alertingTypes))
+        val aeatList = if (alertingTypes.contains(AlertingSignalingRpcResponse.Alert.AEAT)) {
+            session.getAEATChangingList()
+        } else emptyList()
+        return AlertingSignalingRpcResponse(
+            listOf(AlertingSignalingRpcResponse.Alert(AlertingSignalingRpcResponse.Alert.AEAT,
+                aeatList.joinToString(separator = "", prefix = "<AEAT>", postfix = "</AEAT>") { it }))
+        )
     }
 
     override fun queryServiceGuideURLs(service: String?): ServiceGuideUrlsRpcResponse {
-        return ServiceGuideUrlsRpcResponse(gateway.getServiceGuideUrls(service))
+        return ServiceGuideUrlsRpcResponse(
+            session.getServiceGuideUrls(service).map { sgUrl ->
+                ServiceGuideUrlsRpcResponse.Url(
+                    sgUrl.sgType.toString(),
+                    sgUrl.sgPath,
+                    sgUrl.service,
+                    sgUrl.content
+                )
+            }
+        )
     }
 
     override fun querySignaling(names: List<String>): SignalingRpcResponse {
         return SignalingRpcResponse(
-            gateway.getSignalingInfo(names)
+            session.getSignalingInfo(names).map { data ->
+                SignalingRpcResponse.SignalingInfo(
+                    name = data.name,
+                    group = (data as? Atsc3LLSTable)?.groupId?.toString(),
+                    version = data.version.toString(),
+                    table = data.xml
+                )
+            }
         )
     }
 

@@ -1,13 +1,13 @@
 package com.nextgenbroadcast.mobile.middleware.rpc.rmpContentSynchronization
 
-import com.nextgenbroadcast.mobile.middleware.gateway.rpc.IRPCGateway
 import com.nextgenbroadcast.mobile.middleware.rpc.rmpContentSynchronization.model.RmpMediaTime
 import com.nextgenbroadcast.mobile.middleware.rpc.rmpContentSynchronization.model.RmpPlaybackRate
 import com.nextgenbroadcast.mobile.middleware.rpc.rmpContentSynchronization.model.RmpPlaybackState
 import com.nextgenbroadcast.mobile.middleware.rpc.rmpContentSynchronization.model.RmpWallClockTime
+import com.nextgenbroadcast.mobile.middleware.server.IApplicationSession
 
 class RMPContentSynchronizationImpl(
-        private val gateway: IRPCGateway
+    private val session: IApplicationSession
 ) : IRMPContentSynchronization {
     override fun queryRMPMediaTime(): RmpMediaTime {
         return RmpMediaTime()
@@ -18,7 +18,9 @@ class RMPContentSynchronizationImpl(
     }
 
     override fun queryRMPPlaybackState(): RmpPlaybackState {
-        return RmpPlaybackState(gateway.playbackState.state)
+        return RmpPlaybackState(
+            session.getParam(IApplicationSession.Params.PlaybackState)?.toIntOrNull() ?: 2 /* IDLE */
+        )
     }
 
     override fun queryRMPPlaybackRate(): RmpPlaybackRate {

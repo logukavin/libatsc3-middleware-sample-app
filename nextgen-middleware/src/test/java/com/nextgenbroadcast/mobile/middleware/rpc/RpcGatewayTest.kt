@@ -140,7 +140,7 @@ class RpcGatewayTest {
         val xPos = 2.0
         val yPos = 3.0
 
-        rpcGateway.updateRMPPosition(scaleFactor, xPos, yPos)
+        rpcGateway.requestRMPPosition(scaleFactor, xPos, yPos)
 
         verify(viewController).updateRMPPosition(scaleFactor, xPos, yPos)
     }
