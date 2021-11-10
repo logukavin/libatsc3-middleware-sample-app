@@ -3,7 +3,7 @@ package com.nextgenbroadcast.mobile.middleware.gateway.rpc
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.AppData
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
-import com.nextgenbroadcast.mobile.middleware.atsc3.Atsc3LLSTable
+import com.nextgenbroadcast.mobile.middleware.atsc3.ISignalingData
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.alerts.AeaTable
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3ApplicationFile
 import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.SGUrl
@@ -13,12 +13,8 @@ import com.nextgenbroadcast.mobile.middleware.controller.view.IViewController
 import com.nextgenbroadcast.mobile.middleware.repository.IRepository
 import com.nextgenbroadcast.mobile.middleware.settings.IMiddlewareSettings
 import com.nextgenbroadcast.mobile.middleware.rpc.notification.NotificationType
-import com.nextgenbroadcast.mobile.middleware.rpc.notification.RPCNotificationHelper
-import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.AlertingSignalingRpcResponse
-import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.ServiceGuideUrlsRpcResponse
-import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.SignalingRpcResponse
+import com.nextgenbroadcast.mobile.middleware.server.IApplicationSession
 import com.nextgenbroadcast.mobile.middleware.server.ServerUtils
-import com.nextgenbroadcast.mobile.middleware.server.ws.MiddlewareWebSocket
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
@@ -33,12 +29,10 @@ internal class RPCGatewayImpl(
     private val stateScope: CoroutineScope = CoroutineScope(Dispatchers.Default),
     private val ioScope: CoroutineScope = CoroutineScope(Dispatchers.IO)
 ) : IRPCGateway {
-    private val rpcNotifier = RPCNotificationHelper(this::sendNotification)
     private val serviceGuideUrls = HashSet<SGUrl>()
     private val appFiles = mutableListOf<Atsc3ApplicationFile>()
 
-    private val sessions: CopyOnWriteArrayList<MiddlewareWebSocket> = CopyOnWriteArrayList()
-    private val subscribedNotifications: MutableSet<NotificationType> = mutableSetOf()
+    private val sessions = CopyOnWriteArrayList<IApplicationSession>()
     private var mergedAlerts: List<AeaTable> = emptyList()
 
     private val selectedService = repository.selectedService
@@ -53,13 +47,11 @@ internal class RPCGatewayImpl(
     override var currentAppBaseUrl: String? = null
     override val playbackState: PlaybackState
         get() = viewController.rmpState.value
-    private val rmpPlaybackTime: Long
+    override val playbackTime: Long
         get() = viewController.rmpMediaTime.value
 
     private var currentAppContextId: String? = null
     private var currentServiceId: String? = null
-
-    private var mediaTimeUpdateJob: Job? = null
 
     init {
         stateScope.launch {
@@ -111,32 +103,22 @@ internal class RPCGatewayImpl(
             repository.alertsForNotify.collect { list ->
                 if (list.isNotEmpty()) {
                     val result = list.subtract(mergedAlerts).toList()
-                    onAlertingChanged(result.mapToRpcAlertList())
+                    onAlertingChanged(result)
                     mergedAlerts = list
                 }
             }
         }
     }
 
-    private fun closeAllSessionsAndUnsubscribeNotifications() {
-        sessions.onEach {
-            it.disconnect(ioScope)
-        }.clear()
-
-        unsubscribeNotifications(subscribedNotifications)
+    override fun registerSession(session: IApplicationSession) {
+        sessions.add(session)
     }
 
-    override fun onSocketOpened(socket: MiddlewareWebSocket) {
-        closeAllSessionsAndUnsubscribeNotifications()
-
-        sessions.add(socket)
+    override fun unregisterSession(session: IApplicationSession) {
+        sessions.remove(session)
     }
 
-    override fun onSocketClosed(socket: MiddlewareWebSocket) {
-        sessions.remove(socket)
-    }
-
-    override fun updateRMPPosition(scaleFactor: Double, xPos: Double, yPos: Double) {
+    override fun requestRMPPosition(scaleFactor: Double, xPos: Double, yPos: Double) {
         viewController.requestPlayerLayout(scaleFactor, xPos, yPos)
     }
 
@@ -150,40 +132,16 @@ internal class RPCGatewayImpl(
         viewController.requestPlayerState(PlaybackState.IDLE)
     }
 
-    override fun subscribeNotifications(notifications: Set<NotificationType>): Set<NotificationType> {
-        val available = getAvailableNotifications(notifications)
-        subscribedNotifications.addAll(available)
-
-        if (available.contains(NotificationType.RMP_MEDIA_TIME_CHANGE)) {
-            if (playbackState == PlaybackState.PLAYING) {
-                startMediaTimeUpdateJob()
-            }
-        }
-
-        return available
-    }
-
-    override fun unsubscribeNotifications(notifications: Set<NotificationType>): Set<NotificationType> {
-        val available = getAvailableNotifications(notifications)
-        subscribedNotifications.removeAll(available)
-
-        if (available.contains(NotificationType.RMP_MEDIA_TIME_CHANGE)) {
-            cancelMediaTimeUpdateJob()
-        }
-
-        return available
-    }
-
-    private fun getAvailableNotifications(requested: Set<NotificationType>): Set<NotificationType> {
+    override fun filterAvailableNotifications(requested: Set<NotificationType>): Set<NotificationType> {
         val available = SUPPORTED_NOTIFICATIONS.toMutableSet()
         available.retainAll(requested)
         return available
     }
 
-    override fun sendNotification(message: String) {
+    private fun sendNotification(type: NotificationType, payload: Any) {
         ioScope.launch {
-            sessions.forEach { socket ->
-                socket.sendMessage(message)
+            sessions.forEach { session ->
+                session.notify(type, payload)
             }
         }
     }
@@ -194,13 +152,14 @@ internal class RPCGatewayImpl(
         } ?: false
     }
 
-    override fun getServiceGuideUrls(service: String?): List<ServiceGuideUrlsRpcResponse.Url> {
-        val urls: Collection<SGUrl> = if (service != null) {
+    override fun getServiceGuideUrls(service: String?): List<SGUrl> {
+        return if (service != null) {
             serviceGuideUrls.filter { url -> url.service == service }
         } else {
             serviceGuideUrls
+        }.map {
+            it.copy(sgPath = ServerUtils.createUrl(it.sgPath, settings))
         }
-        return mapServiceGuideUrls(urls, false)
     }
 
     override fun requestServiceChange(globalServiceId: String): Boolean {
@@ -211,26 +170,14 @@ internal class RPCGatewayImpl(
         } ?: false
     }
 
-    override fun getAlertChangingData(alertingTypes: List<String>): List<AlertingSignalingRpcResponse.Alert> {
-        val rpcAlertList = repository.alertsForNotify.value.mapToRpcAlertList()
-        return if (alertingTypes.isEmpty()) {
-            rpcAlertList
-        } else {
-            alertingTypes.flatMap { type ->
-                rpcAlertList.filter { type == it.alertingType }
-            }
+    override fun getAEATChangingList(): List<String> {
+        return repository.alertsForNotify.value.map { aeat ->
+            aeat.xml
         }
     }
 
-    override fun getSignalingInfo(names: List<String>): List<SignalingRpcResponse.SignalingInfo> {
-        return serviceController.getSignalingData(names).map { data ->
-            SignalingRpcResponse.SignalingInfo(
-                name = data.name,
-                group = (data as? Atsc3LLSTable)?.groupId?.toString(),
-                version = data.version.toString(),
-                table = data.xml
-            )
-        }
+    override fun getSignalingInfo(names: List<String>): List<ISignalingData> {
+        return serviceController.getSignalingData(names)
     }
 
     /**
@@ -250,20 +197,22 @@ internal class RPCGatewayImpl(
         }
     }
 
+    private fun hasActiveSessions() = sessions.isNotEmpty()
+
     private fun onApplicationServiceChanged(serviceId: String) {
-        if (subscribedNotifications.contains(NotificationType.SERVICE_CHANGE)) {
-            rpcNotifier.notifyServiceChange(serviceId)
+        if (hasActiveSessions()) {
+            sendNotification(NotificationType.SERVICE_CHANGE, serviceId)
         }
     }
 
     private fun onApplicationContentChanged(files: Collection<Atsc3ApplicationFile>) {
-        if (subscribedNotifications.contains(NotificationType.CONTENT_CHANGE)) {
+        if (hasActiveSessions()) {
             val changedFiles = files.subtract(appFiles).map {
                 it.contentLocation
             }
 
             if (changedFiles.isNotEmpty()) {
-                rpcNotifier.notifyContentChange(changedFiles)
+                sendNotification(NotificationType.CONTENT_CHANGE, changedFiles)
             }
         }
 
@@ -272,80 +221,32 @@ internal class RPCGatewayImpl(
     }
 
     private fun onServiceGuidUrls(urls: List<SGUrl>) {
-        if (subscribedNotifications.contains(NotificationType.SERVICE_GUIDE_CHANGE)) {
-            val diff = urls.subtract(serviceGuideUrls)
+        if (hasActiveSessions()) {
+            val diff = urls.subtract(serviceGuideUrls).map { sgUrl ->
+                sgUrl.sgType.toString() to ServerUtils.createUrl(sgUrl.sgPath, settings)
+            }
             if (diff.isNotEmpty()) {
-                rpcNotifier.notifyServiceGuideChange(mapServiceGuideUrls(diff, true))
+                sendNotification(NotificationType.SERVICE_GUIDE_CHANGE, diff)
             }
         }
     }
 
     private fun onRMPPlaybackStateChanged(playbackState: PlaybackState) {
-        if (subscribedNotifications.contains(NotificationType.RMP_PLAYBACK_STATE_CHANGE)) {
-            rpcNotifier.notifyRmpPlaybackStateChange(playbackState)
-        }
-
-        if (playbackState == PlaybackState.PLAYING) {
-            startMediaTimeUpdateJob()
-        } else {
-            cancelMediaTimeUpdateJob()
+        if (hasActiveSessions()) {
+            sendNotification(NotificationType.RMP_PLAYBACK_STATE_CHANGE, playbackState)
         }
     }
 
     private fun onRMPPlaybackRateChanged(playbackRate: Float) {
-        if (subscribedNotifications.contains(NotificationType.RMP_PLAYBACK_RATE_CHANGE)) {
-            rpcNotifier.notifyRmpPlaybackRateChange(playbackRate)
+        if (hasActiveSessions()) {
+            sendNotification(NotificationType.RMP_PLAYBACK_RATE_CHANGE, playbackRate)
         }
     }
 
-    private fun onMediaTimeChanged(mediaTime: Long) {
-        if (subscribedNotifications.contains(NotificationType.RMP_MEDIA_TIME_CHANGE)) {
-            rpcNotifier.notifyRmpMediaTimeChange(mediaTime)
+    private fun onAlertingChanged(alertList: List<AeaTable>) {
+        if (hasActiveSessions()) {
+            sendNotification(NotificationType.ALERT_CHANGE, alertList.map { it.xml })
         }
-    }
-
-    private fun onAlertingChanged(alertList: List<AlertingSignalingRpcResponse.Alert>) {
-        if (subscribedNotifications.contains(NotificationType.ALERT_CHANGE)) {
-            rpcNotifier.notifyAlertingChange(alertList)
-        }
-    }
-
-    private fun startMediaTimeUpdateJob() {
-        cancelMediaTimeUpdateJob()
-
-        if (!subscribedNotifications.contains(NotificationType.RMP_MEDIA_TIME_CHANGE)) return
-
-        mediaTimeUpdateJob = CoroutineScope(Dispatchers.IO).launch {
-            while (isActive) {
-                onMediaTimeChanged(rmpPlaybackTime)
-
-                delay(MEDIA_TIME_UPDATE_DELAY)
-            }
-            mediaTimeUpdateJob = null
-        }
-    }
-
-    private fun cancelMediaTimeUpdateJob() {
-        mediaTimeUpdateJob?.let {
-            it.cancel()
-            mediaTimeUpdateJob = null
-        }
-    }
-
-    private fun mapServiceGuideUrls(sgUrls: Collection<SGUrl>, skipContent: Boolean): List<ServiceGuideUrlsRpcResponse.Url> {
-        return sgUrls.map { sgUrl ->
-            ServiceGuideUrlsRpcResponse.Url(
-                    sgUrl.sgType.toString(),
-                    ServerUtils.createUrl(sgUrl.sgPath, settings),
-                    if (skipContent) null else sgUrl.service,
-                    if (skipContent) null else sgUrl.content
-            )
-        }
-    }
-
-    private fun List<AeaTable>.mapToRpcAlertList() = map {
-        AlertingSignalingRpcResponse.Alert(AlertingSignalingRpcResponse.Alert.AEAT,
-            joinToString(separator = "", prefix = "<AEAT>", postfix = "</AEAT>") { it.xml })
     }
 
     companion object {
@@ -358,7 +259,5 @@ internal class RPCGatewayImpl(
                 NotificationType.CONTENT_CHANGE,
                 NotificationType.ALERT_CHANGE
         )
-
-        private const val MEDIA_TIME_UPDATE_DELAY = 500L
     }
 }
