@@ -1,11 +1,13 @@
 package com.nextgenbroadcast.mobile.core.model
 
 enum class PlaybackState(
-        val state: Int
+    val state: Int
 ) {
+    IDLE(-1),
     PLAYING(0),
     PAUSED(1),
-    IDLE(2);
+    ENDED(2),
+    ENCRYPTED(3);
 
     companion object {
         fun valueOf(state: Int): PlaybackState? {
