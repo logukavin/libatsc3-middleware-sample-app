@@ -5,7 +5,7 @@ import com.nextgenbroadcast.mobile.middleware.rpc.notification.NotificationType
 
 interface IApplicationSession : IApplicationInterface {
     enum class Params {
-        DeviceId, AdvertisingId, ServiceId, Language, MediaUrl, AppBaseUrl, PlaybackState
+        DeviceId, AdvertisingId, ServiceId, Language, MediaUrl, AppBaseUrl, PlaybackState, PlaybackTime
     }
 
     fun notify(type: NotificationType, payload: Any)
