@@ -2,13 +2,15 @@ package com.nextgenbroadcast.mobile.middleware.server.web
 
 import android.util.Log
 import com.nextgenbroadcast.mobile.core.LOG
-import com.nextgenbroadcast.mobile.middleware.server.cert.IUserAgentSSLContext
 import com.nextgenbroadcast.mobile.core.md5
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import com.nextgenbroadcast.mobile.middleware.gateway.rpc.IRPCGateway
 import com.nextgenbroadcast.mobile.middleware.gateway.web.ConnectionType
 import com.nextgenbroadcast.mobile.middleware.gateway.web.IWebGateway
+import com.nextgenbroadcast.mobile.middleware.server.ServerConstants.APPLICATION_INFO_PATH
 import com.nextgenbroadcast.mobile.middleware.server.ServerConstants.ATSC_CMD_PATH
+import com.nextgenbroadcast.mobile.middleware.server.ServerConstants.PORT_HTTP_SERVLETS
+import com.nextgenbroadcast.mobile.middleware.server.cert.IUserAgentSSLContext
 import com.nextgenbroadcast.mobile.middleware.server.cert.UserAgentSSLContext
 import com.nextgenbroadcast.mobile.middleware.server.ws.MiddlewareWebSocket
 import kotlinx.coroutines.*
@@ -29,6 +31,7 @@ import org.eclipse.jetty.websocket.servlet.ServletUpgradeRequest
 import org.eclipse.jetty.websocket.servlet.WebSocketCreator
 import org.eclipse.jetty.websocket.servlet.WebSocketServletFactory
 import java.io.IOException
+import java.net.HttpURLConnection.HTTP_OK
 import java.security.GeneralSecurityException
 import java.util.*
 import java.util.concurrent.Executors
@@ -113,6 +116,7 @@ internal class MiddlewareWebServer (
         webGateway?.let { gateway ->
             server.connectors = gateway.hostName.let { hostName ->
                 ArrayList<Connector>().apply {
+                    add(getServerConnector(ConnectionType.HTTP, server, hostName, PORT_HTTP_SERVLETS))
                     add(getServerConnector(ConnectionType.HTTP, server, hostName, gateway.httpPort))
                     add(getServerConnector(ConnectionType.WS, server, hostName, gateway.wsPort))
 
@@ -253,6 +257,9 @@ internal class MiddlewareWebServer (
                         }
                     })
                 }
+
+                add(initServletsHandler())
+
             }.toTypedArray()
 
             with(server) {
@@ -262,6 +269,23 @@ internal class MiddlewareWebServer (
             }
 
             return MiddlewareWebServer(server, webGateway, stateScope)
+        }
+
+        private fun initServletsHandler(): Handler {
+            val appToAppEndpoint = "http://test.app.endpoint"
+            val webSocketEndpoint = "http://test.socket.endpoint"
+            val applicationInfoServletHandler = ServletContextHandler()
+            applicationInfoServletHandler.contextPath = "/"
+            val applicationInfoServlet = object : HttpServlet() {
+                override fun doGet(req: HttpServletRequest, resp: HttpServletResponse) {
+                    resp.status = HTTP_OK
+                    resp.writer.println(ApplicationInfoResponse(X_ATSC_App2AppURL = appToAppEndpoint, X_ATSC_WSURL = webSocketEndpoint).getXML())
+                }
+            }
+
+            applicationInfoServletHandler.addServlet(ServletHolder(applicationInfoServlet), APPLICATION_INFO_PATH)
+
+            return applicationInfoServletHandler
         }
     }
 
