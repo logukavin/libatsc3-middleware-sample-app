@@ -1,6 +1,8 @@
 package com.nextgenbroadcast.mobile.middleware.sample.view
 
+import android.content.ContentResolver
 import android.content.Context
+import android.database.ContentObserver
 import android.net.Uri
 import android.util.AttributeSet
 import android.view.Display
@@ -26,6 +28,22 @@ class ReceiverPlayerView @JvmOverloads constructor(
 
     private val atsc3Player = Atsc3MediaPlayer(context).apply {
         resetWhenLostAudioFocus = false
+    }
+
+    private val slHdr1Observer: ContentObserver by lazy {
+        object : ContentObserver(handler) {
+            override fun onChange(selfChange: Boolean) {
+                post {
+                    preparePlayerView(supportSlHdr1)
+                }
+            }
+        }
+    }
+
+    private val slHdr1PresentUri: Uri by lazy {
+        Uri.Builder().scheme(ContentResolver.SCHEME_CONTENT)
+            .authority(context.getString(R.string.nextgenMMTContentProvider))
+            .encodedPath(ROUTE_CONTENT_SL_HDR1_PRESENT).build()
     }
 
     private lateinit var exoPlayerView: Atsc3ExoPlayerView
@@ -83,12 +101,6 @@ class ReceiverPlayerView @JvmOverloads constructor(
             override fun onPlaybackSpeedChanged(speed: Float) {
                 // will be updated with position in timer
             }
-
-            override fun onSlHdr1Present() {
-                post {
-                    preparePlayerView(supportSlHdr1)
-                }
-            }
         })
 
         exoPlayerView = Atsc3ExoPlayerView.inflate(context, this)
@@ -134,8 +146,6 @@ class ReceiverPlayerView @JvmOverloads constructor(
     }
 
     private fun preparePlayerView(slHdr1Compatible: Boolean) {
-        // if slHdr1Compatible is false Player will throw an SlHdr1DetectedException exception is SL-HDR1 video present
-        atsc3Player.slHdr1Compatible = slHdr1Compatible || !supportSlHdr1
         if (slHdr1Compatible) {
             if (USE_DISPLAY_ADAPTATION_HACK) {
                 if (playerView != hdrPlayerView) {
@@ -217,10 +227,22 @@ class ReceiverPlayerView @JvmOverloads constructor(
         }
     }
 
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+
+        if (supportSlHdr1) {
+            context.contentResolver.registerContentObserver(slHdr1PresentUri, false, slHdr1Observer)
+        }
+    }
+
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
 
         removeCallbacks(enableBufferingProgress)
+
+        if (supportSlHdr1) {
+            context.contentResolver.unregisterContentObserver(slHdr1Observer)
+        }
     }
 
     //TODO: replace with custom implementation in Atsc3Player
@@ -260,6 +282,8 @@ class ReceiverPlayerView @JvmOverloads constructor(
         private const val MEDIA_TIME_UPDATE_DELAY = 500L
 
         private const val USE_DISPLAY_ADAPTATION_HACK = false
+
+        private const val ROUTE_CONTENT_SL_HDR1_PRESENT = "routeSlHdr1Present"
 
         fun deviceHasHdr10Display(ctx: Context): Boolean {
             val windowManager = ctx.getSystemService(Context.WINDOW_SERVICE) as WindowManager

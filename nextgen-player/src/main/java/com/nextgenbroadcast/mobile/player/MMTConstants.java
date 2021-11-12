@@ -44,7 +44,6 @@ public final class MMTConstants {
 
     public static final byte[] mmtSignature = "#!MMT\n".getBytes(StandardCharsets.UTF_8);
 
-    public static final int TRACK_TYPE_SL_HDR1 = -3;
     public static final int TRACK_TYPE_EMPTY = -2;
     public static final int TRACK_TYPE_UNKNOWN = -1;
     public static final int TRACK_TYPE_AUDIO = 1;

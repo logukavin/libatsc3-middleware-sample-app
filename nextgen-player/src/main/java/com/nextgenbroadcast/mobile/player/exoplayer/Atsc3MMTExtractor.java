@@ -14,7 +14,6 @@ import com.google.android.exoplayer2.extractor.SeekMap;
 import com.google.android.exoplayer2.extractor.TrackOutput;
 import com.google.android.exoplayer2.util.ParsableByteArray;
 import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTMediaTrackUtils;
-import com.nextgenbroadcast.mobile.core.exception.SlHdr1DetectedException;
 import com.nextgenbroadcast.mobile.player.MMTConstants;
 
 import java.io.IOException;
@@ -32,8 +31,6 @@ public class Atsc3MMTExtractor implements Extractor {
 
     private ExtractorOutput extractorOutput;
 
-    private final boolean slHdr1Compatible;
-
     private int currentSampleBytesRemaining;
     private int currentSampleSize;
     private int currentSampleId;
@@ -46,8 +43,7 @@ public class Atsc3MMTExtractor implements Extractor {
     private final ParsableByteArray sampleBuffer = new ParsableByteArray(DEFAULT_SAMPLE_BUFFER_SIZE);
     private final SparseArray<MmtTrack> tracks = new SparseArray<>();
 
-    public Atsc3MMTExtractor(boolean slHdr1Compatible) {
-        this.slHdr1Compatible = slHdr1Compatible;
+    public Atsc3MMTExtractor() {
         sampleBuffer.setPosition(sampleBuffer.limit());
     }
 
@@ -144,10 +140,6 @@ public class Atsc3MMTExtractor implements Extractor {
                     sampleBuffer.skipBytes(skipped);
                 }
                 currentSampleBytesRemaining -= skipped;
-            }
-
-            if (!slHdr1Compatible && currentSampleType == MMTConstants.TRACK_TYPE_SL_HDR1) {
-                throw new SlHdr1DetectedException("SL-HDR1 present in incompatible playback");
             }
 
             if(((ReadSample_TrackIsNull_counter++) % 1000) == 0) {
