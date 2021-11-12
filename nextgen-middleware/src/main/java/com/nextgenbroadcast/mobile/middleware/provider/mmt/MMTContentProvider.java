@@ -19,6 +19,10 @@ import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTClockAnchor;
 import com.nextgenbroadcast.mobile.core.LOG;
 import com.nextgenbroadcast.mobile.core.exception.ServiceNotFoundException;
 import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverStandalone;
+
+import static com.nextgenbroadcast.mobile.middleware.provider.ContentProviderUtils.*;
+
+import com.nextgenbroadcast.mobile.middleware.R;
 import com.nextgenbroadcast.mobile.player.MMTConstants;
 import com.nextgenbroadcast.mobile.core.model.AVService;
 import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverCore;
@@ -81,8 +85,16 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
 
     private final ByteBuffer fragmentBuffer = ByteBuffer.allocateDirect(RING_BUFFER_SIZE);
 
+    private Context appContext;
+    private Uri slHdr1PresentUri;
+
     @Override
     public boolean onCreate() {
+        appContext = requireAppContextOrNull(this);
+        if (appContext == null) return false;
+
+        slHdr1PresentUri = getUriForPath(appContext, ROUTE_CONTENT_SL_HDR1_PRESENT);
+
         MmtPacketIdContext.Initialize();
 
         threadPoolExecutor = new ThreadPoolExecutor(
@@ -188,7 +200,7 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
 
                 //TODO: used as temporary solution and must be refactored
                 if (slHdr1Services.contains(serviceId)) {
-                    writer.notifySlHdr1Present();
+                    notifySlHdr1Present();
                 }
 
                 // reset with first descriptor only
@@ -366,9 +378,16 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
     @Override
     public void notifySlHdr1Present(int service_id, int packet_id) {
         slHdr1Services.add(service_id);
-        descriptors.forEach(descriptor -> {
-            descriptor.notifySlHdr1Present();
-        });
+
+        notifySlHdr1Present();
+    }
+
+    private void notifySlHdr1Present() {
+        appContext.getContentResolver().notifyChange(slHdr1PresentUri, null);
+    }
+
+    private Uri getUriForPath(Context context, String path) {
+        return getReceiverUriForPath(context.getString(R.string.nextgenMMTContentProvider), path);
     }
 
     //TODO: do we need this?

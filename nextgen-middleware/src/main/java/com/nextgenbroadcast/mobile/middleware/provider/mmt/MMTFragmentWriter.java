@@ -1,7 +1,6 @@
 package com.nextgenbroadcast.mobile.middleware.provider.mmt;
 
 import android.util.ArrayMap;
-import android.util.Log;
 
 import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTClockAnchor;
 import com.nextgenbroadcast.mobile.middleware.atsc3.buffer.Atsc3RingBuffer;
@@ -61,7 +60,6 @@ public class MMTFragmentWriter {
     private volatile boolean isActive = true;
     private boolean sendFileHeader = true;
     private boolean firstKeyFrameReceived = false;
-    private boolean slHdr1Present = false;
 
     private long mpuWaitingStartTime;
 
@@ -257,13 +255,6 @@ public class MMTFragmentWriter {
         while (isActive) {
             if (fragmentBuffer.remaining() == 0) {
                 readFragment(fragmentBuffer);
-            }
-
-            if (slHdr1Present) {
-                writeEmptyFragment(out, MMTConstants.TRACK_TYPE_SL_HDR1);
-                // reset flag to prevent repeated sending
-                slHdr1Present = false;
-                break;
             }
 
             // read the sample buffer
@@ -657,12 +648,6 @@ public class MMTFragmentWriter {
             for (MmtMpTable.MmtAssetRow asset : assets.getAssetList()) {
                 assetMapping.put(asset.getPacketId(), asset);
             }
-        }
-    }
-
-    public void notifySlHdr1Present() {
-        if (!firstKeyFrameReceived) {
-            slHdr1Present = true;
         }
     }
 
