@@ -362,7 +362,7 @@ class MainFragment : Fragment() {
     private fun showPopupSettingsMenu(v: View) {
         PopupMenu(context, v).apply {
             inflate(R.menu.settings_menu)
-            if (binding.receiverPlayer.isActive) {
+            if (!binding.receiverPlayer.isActive) {
                 menu.findItem(R.id.menu_select_tracks)?.isEnabled = false
             }
             setOnMenuItemClickListener { item ->
