@@ -13,8 +13,8 @@ import com.google.android.exoplayer2.trackselection.TrackSelector
 import com.google.android.exoplayer2.ui.PlayerView
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
-import com.nextgenbroadcast.mobile.middleware.sample.MiddlewareSlhdrRenderersFactory
 import com.nextgenbroadcast.mobile.middleware.sample.R
+import com.nextgenbroadcast.mobile.middleware.sample.exoplayer.MiddlewareSlhdrRenderersFactory
 import com.nextgenbroadcast.mobile.player.Atsc3MediaPlayer
 import com.nextgenbroadcast.mobile.player.MMTConstants
 

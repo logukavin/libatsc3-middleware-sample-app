@@ -5,7 +5,6 @@ import android.util.AttributeSet
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import com.nextgenbroadcast.mobile.core.LOG
-import com.nextgenbroadcast.mobile.middleware.sample.MiddlewareSlhdrRenderersFactory
 import com.nextgenbroadcast.mobile.middleware.sample.R
 import com.philips.jhdr.ISlhdrOperatingModeNtf
 import com.philips.jhdr.SlhdrPlayerView
