@@ -9,7 +9,7 @@ import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.middleware.gateway.rpc.IRPCGateway
 import com.nextgenbroadcast.mobile.middleware.rpc.notification.NotificationType
 import com.nextgenbroadcast.mobile.middleware.rpc.processor.IRPCProcessor
-import com.nextgenbroadcast.mobile.middleware.rpc.processor.RPCProcessor
+import com.nextgenbroadcast.mobile.middleware.rpc.processor.CommandRPCProcessor
 import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.AlertingSignalingRpcResponse
 import com.nextgenbroadcast.mobile.middleware.rpc.receiverQueryApi.model.ServiceGuideUrlsRpcResponse
 import com.nextgenbroadcast.mobile.middleware.server.ws.MiddlewareWebSocket
@@ -29,7 +29,7 @@ class RPCProcessorTest {
 
     @Before
     fun initRPCProcessor() {
-        processor = RPCProcessor(object : IRPCGateway {
+        processor = CommandRPCProcessor(object : IRPCGateway {
             override val deviceId: String
                 get() = ""
             override val advertisingId: String
@@ -43,7 +43,7 @@ class RPCProcessorTest {
             override val playbackState: PlaybackState
                 get() = PlaybackState.IDLE
 
-            override fun updateRMPPosition(scaleFactor: Double, xPos: Double, yPos: Double) {
+            override fun requestRMPPosition(scaleFactor: Double, xPos: Double, yPos: Double) {
 
             }
 
@@ -87,7 +87,7 @@ class RPCProcessorTest {
                 TODO("Not yet implemented")
             }
 
-            override fun getAlertChangingData(alertingTypes: List<String>): List<AlertingSignalingRpcResponse.Alert> {
+            override fun getAEATChangingList(alertingTypes: List<String>): List<AlertingSignalingRpcResponse.Alert> {
                 TODO("Not yet implemented")
             }
         })
