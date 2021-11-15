@@ -12,6 +12,7 @@ class ApplicationInfoServlet : HttpServlet() {
 
     override fun doGet(req: HttpServletRequest, resp: HttpServletResponse) {
         resp.status = HttpURLConnection.HTTP_OK
+        resp.contentType = "text/xml"
         resp.writer.println(getXML("ATSC", false, "running", "", "", ""))
     }
 
