@@ -12,7 +12,7 @@ interface IRMPContentSynchronization {
     @JsonRpcMethod("org.atsc.query.rmpMediaTime")
     fun queryRMPMediaTime(): RmpMediaTime
 
-    @JsonRpcMethod("org.atsc.query.rmpMediaTime")
+    @JsonRpcMethod("org.atsc.query.rmpWallClockTime")
     fun queryRMPWallClock(): RmpWallClockTime
 
     @JsonRpcMethod("org.atsc.query.rmpPlaybackState")
