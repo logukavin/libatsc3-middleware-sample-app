@@ -7,11 +7,11 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Applicatio
 import com.nextgenbroadcast.mobile.middleware.gateway.rpc.IRPCGateway
 import com.nextgenbroadcast.mobile.middleware.gateway.web.ConnectionType
 import com.nextgenbroadcast.mobile.middleware.gateway.web.IWebGateway
-import com.nextgenbroadcast.mobile.middleware.server.ServerConstants.APPLICATION_INFO_PATH
+import com.nextgenbroadcast.mobile.middleware.server.companionServer.CompanionServerConstants.APPLICATION_INFO_PATH
 import com.nextgenbroadcast.mobile.middleware.server.ServerConstants.ATSC_CMD_PATH
-import com.nextgenbroadcast.mobile.middleware.server.ServerConstants.PORT_HTTP_SERVLETS
 import com.nextgenbroadcast.mobile.middleware.server.cert.IUserAgentSSLContext
 import com.nextgenbroadcast.mobile.middleware.server.cert.UserAgentSSLContext
+import com.nextgenbroadcast.mobile.middleware.server.companionServer.servlets.ApplicationInfoServlet
 import com.nextgenbroadcast.mobile.middleware.server.ws.MiddlewareWebSocket
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collect
@@ -31,20 +31,22 @@ import org.eclipse.jetty.websocket.servlet.ServletUpgradeRequest
 import org.eclipse.jetty.websocket.servlet.WebSocketCreator
 import org.eclipse.jetty.websocket.servlet.WebSocketServletFactory
 import java.io.IOException
-import java.net.HttpURLConnection.HTTP_OK
 import java.security.GeneralSecurityException
 import java.util.*
 import java.util.concurrent.Executors
 import javax.servlet.http.HttpServlet
 import javax.servlet.http.HttpServletRequest
 import javax.servlet.http.HttpServletResponse
+import kotlin.collections.ArrayList
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
-internal class MiddlewareWebServer (
-        private val server: Server,
-        private val webGateway: IWebGateway?,
-        private val stateScope: CoroutineScope?
+internal class MiddlewareWebServer(
+    private val server: Server,
+    private val webGateway: IWebGateway?,
+    private val companionServerHost: String?,
+    private val companionServerPort: Int?,
+    private val stateScope: CoroutineScope?
 ) : IMiddlewareWebServer, AutoCloseable {
 
     private val availResources = arrayListOf<AppResource>()
@@ -113,10 +115,17 @@ internal class MiddlewareWebServer (
 
     @Throws(MiddlewareWebServerError::class)
     suspend fun start(generatedSSLContext: IUserAgentSSLContext?) {
+        val serverConnectors = mutableListOf<Connector>()
+
+        if (companionServerHost != null && companionServerPort != null) {
+            serverConnectors.apply {
+                add(getServerConnector(ConnectionType.HTTP, server, companionServerHost, companionServerPort))
+            }
+        }
+
         webGateway?.let { gateway ->
-            server.connectors = gateway.hostName.let { hostName ->
-                ArrayList<Connector>().apply {
-                    add(getServerConnector(ConnectionType.HTTP, server, hostName, PORT_HTTP_SERVLETS))
+            gateway.hostName.let { hostName ->
+                serverConnectors.apply {
                     add(getServerConnector(ConnectionType.HTTP, server, hostName, gateway.httpPort))
                     add(getServerConnector(ConnectionType.WS, server, hostName, gateway.wsPort))
 
@@ -130,9 +139,11 @@ internal class MiddlewareWebServer (
                         add(getSecureServerConnector(ConnectionType.HTTPS, server, hostName, gateway.httpsPort, sslContextFactory))
                         add(getSecureServerConnector(ConnectionType.WSS, server, hostName, gateway.wssPort, sslContextFactory))
                     }
-                }.toTypedArray()
+                }
             }
         }
+
+        server.connectors = serverConnectors.toTypedArray()
 
         retry(RETRY_COUNT, "Can't start web server") {
             server.start()
@@ -237,12 +248,19 @@ internal class MiddlewareWebServer (
         private var stateScope: CoroutineScope? = null
         private var rpcGateway: IRPCGateway? = null
         private var webGateway: IWebGateway? = null
+        private var companionServerHost: String? = null
+        private var companionServerPort: Int? = null
 
         fun stateScope(value: CoroutineScope) = apply { stateScope = value }
 
         fun rpcGateway(value: IRPCGateway) = apply { rpcGateway = value }
 
         fun webGateway(value: IWebGateway) = apply { webGateway = value }
+
+        fun companionServer(serverHost:String, serverPort: Int) = apply{
+            companionServerHost = serverHost
+            companionServerPort = serverPort
+        }
 
         fun build(): MiddlewareWebServer {
             val server = Server()
@@ -258,7 +276,9 @@ internal class MiddlewareWebServer (
                     })
                 }
 
-                add(initServletsHandler())
+                if(companionServerHost != null && companionServerPort != null) {
+                    add(initServletsHandler())
+                }
 
             }.toTypedArray()
 
@@ -268,22 +288,15 @@ internal class MiddlewareWebServer (
                 }
             }
 
-            return MiddlewareWebServer(server, webGateway, stateScope)
+            return MiddlewareWebServer(server, webGateway, companionServerHost, companionServerPort, stateScope)
         }
 
         private fun initServletsHandler(): Handler {
-            val appToAppEndpoint = "http://test.app.endpoint"
-            val webSocketEndpoint = "http://test.socket.endpoint"
-            val applicationInfoServletHandler = ServletContextHandler()
-            applicationInfoServletHandler.contextPath = "/"
-            val applicationInfoServlet = object : HttpServlet() {
-                override fun doGet(req: HttpServletRequest, resp: HttpServletResponse) {
-                    resp.status = HTTP_OK
-                    resp.writer.println(ApplicationInfoResponse(X_ATSC_App2AppURL = appToAppEndpoint, X_ATSC_WSURL = webSocketEndpoint).getXML())
-                }
+            val applicationInfoServletHandler = ServletContextHandler().apply {
+                contextPath = "/"
             }
 
-            applicationInfoServletHandler.addServlet(ServletHolder(applicationInfoServlet), APPLICATION_INFO_PATH)
+            applicationInfoServletHandler.addServlet(ServletHolder(ApplicationInfoServlet()), APPLICATION_INFO_PATH)
 
             return applicationInfoServletHandler
         }
