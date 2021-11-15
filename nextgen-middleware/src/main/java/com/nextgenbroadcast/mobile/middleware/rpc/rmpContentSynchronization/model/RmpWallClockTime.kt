@@ -3,5 +3,5 @@ package com.nextgenbroadcast.mobile.middleware.rpc.rmpContentSynchronization.mod
 import com.nextgenbroadcast.mobile.middleware.rpc.RpcResponse
 
 data class RmpWallClockTime(
-        var wallClock: String? = null
+    val wallClock: String
 ) : RpcResponse()

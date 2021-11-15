@@ -3,5 +3,5 @@ package com.nextgenbroadcast.mobile.middleware.rpc.rmpContentSynchronization.mod
 import com.nextgenbroadcast.mobile.middleware.rpc.RpcResponse
 
 data class RmpPlaybackRate(
-        var playbackRate: Int? = null
+    val playbackRate: Float
 ) : RpcResponse()

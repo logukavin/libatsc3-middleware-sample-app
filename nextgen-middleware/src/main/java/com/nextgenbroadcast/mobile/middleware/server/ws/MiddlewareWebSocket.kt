@@ -1,21 +1,16 @@
 package com.nextgenbroadcast.mobile.middleware.server.ws
 
 import android.util.Log
-import com.nextgenbroadcast.mobile.middleware.gateway.rpc.IRPCGateway
-import com.nextgenbroadcast.mobile.middleware.rpc.processor.RPCProcessor
-import kotlinx.coroutines.CoroutineScope
+import com.nextgenbroadcast.mobile.middleware.rpc.processor.IRPCProcessor
+import com.nextgenbroadcast.mobile.middleware.server.MiddlewareApplicationSession
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import org.eclipse.jetty.websocket.api.Session
 import org.eclipse.jetty.websocket.api.WebSocketAdapter
 
 class MiddlewareWebSocket(
-        private val rpcGateway: IRPCGateway
+        private val appSession: MiddlewareApplicationSession,
+        private val rpcProcessor: IRPCProcessor
 ) : WebSocketAdapter() {
-
-    private val rpcProcessor = RPCProcessor(rpcGateway)
-
-    private var outbound: Session? = null
 
     override fun onWebSocketText(message: String?) {
         super.onWebSocketText(message)
@@ -32,18 +27,14 @@ class MiddlewareWebSocket(
         super.onWebSocketClose(statusCode, reason)
         Log.d("WSServer: ", "onWebSocketClose reason: $reason , statusCode: $statusCode")
 
-        rpcGateway.onSocketClosed(this)
-
-        outbound = null
+        appSession.finishSession()
     }
 
     override fun onWebSocketConnect(session: Session) {
         super.onWebSocketConnect(session)
         Log.d("WSServer: ", "onWebSocketConnect: " + session.localAddress)
 
-        outbound = session
-
-        rpcGateway.onSocketOpened(this)
+        appSession.startSession(this)
     }
 
     override fun onWebSocketError(cause: Throwable) {
@@ -54,7 +45,7 @@ class MiddlewareWebSocket(
     }
 
     fun sendMessage(message: String) {
-        if (outbound?.isOpen == true) {
+        if (isConnected) {
             Log.d("WSServer: ", "--> onWebSocketText: $message")
 
             session.remote.sendString(message, null)
@@ -62,21 +53,13 @@ class MiddlewareWebSocket(
     }
 
     suspend fun disconnect() {
-        outbound?.let { session ->
-            if (!session.isOpen) return
+        if (!isConnected) return
 
-            session.close()
+        session.close()
 
-            delay(500)
+        delay(500)
 
-            if (session.isOpen) {
-                disconnect()
-            }
-        }
-    }
-
-    fun disconnect(scope: CoroutineScope) {
-        scope.launch {
+        if (isConnected) {
             disconnect()
         }
     }
