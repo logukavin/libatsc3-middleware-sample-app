@@ -1,24 +1,24 @@
 package com.nextgenbroadcast.mobile.middleware.rpc.requestReceiverActions
 
-import com.nextgenbroadcast.mobile.middleware.gateway.rpc.IRPCGateway
 import com.nextgenbroadcast.mobile.middleware.rpc.RpcErrorCode
 import com.nextgenbroadcast.mobile.middleware.rpc.RpcException
 import com.nextgenbroadcast.mobile.middleware.rpc.RpcResponse
 import com.nextgenbroadcast.mobile.middleware.rpc.requestReceiverActions.model.AudioVolume
+import com.nextgenbroadcast.mobile.middleware.server.IApplicationSession
 
 class ReceiverActionImpl(
-        private val gateway: IRPCGateway
+    private val session: IApplicationSession
 ) : IReceiverAction {
 
     override fun acquireService(svcToAcquire: String): RpcResponse {
-        val result = gateway.requestServiceChange(svcToAcquire)
+        val result = session.requestServiceChange(svcToAcquire)
         if (!result) throw RpcException(RpcErrorCode.SERVICE_NOT_FOUND)
         //throw RpcException(RpcErrorCode.SERVICE_NOT_AUTHORIZED)
         return RpcResponse()
     }
 
     override fun videoScalingAndPositioning(scaleFactor: java.lang.Double, xPos: java.lang.Double, yPos: java.lang.Double): RpcResponse {
-        gateway.updateRMPPosition(scaleFactor.toDouble(), xPos.toDouble(), yPos.toDouble())
+        session.requestRMPPosition(scaleFactor.toDouble(), xPos.toDouble(), yPos.toDouble())
         return RpcResponse()
     }
 
@@ -30,13 +30,13 @@ class ReceiverActionImpl(
 
         when (operation) {
             "startRmp" -> {
-                gateway.requestMediaPlay(rmpUrl, convertSecToMilliSec(rmpSyncTime))
+                session.requestMediaPlay(rmpUrl, convertSecToMilliSec(rmpSyncTime))
             }
             "stopRmp" -> {
-                gateway.requestMediaStop(delay = convertSecToMilliSec(rmpSyncTime))
+                session.requestMediaStop(delay = convertSecToMilliSec(rmpSyncTime))
             }
             "resumeService" -> {
-                gateway.requestMediaPlay(delay = convertSecToMilliSec(rmpSyncTime))
+                session.requestMediaPlay(delay = convertSecToMilliSec(rmpSyncTime))
             }
         }
 
