@@ -16,7 +16,7 @@ import com.google.android.exoplayer2.ui.PlayerView
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.middleware.sample.R
-import com.nextgenbroadcast.mobile.middleware.sample.exoplayer.MiddlewareSlhdrRenderersFactory
+import com.nextgenbroadcast.mobile.middleware.sample.exoplayer.SlhdrAtsc3RenderersFactory
 import com.nextgenbroadcast.mobile.player.Atsc3MediaPlayer
 import com.nextgenbroadcast.mobile.player.MMTConstants
 
@@ -128,10 +128,10 @@ class ReceiverPlayerView @JvmOverloads constructor(
             return
         }
 
+        // Create SDR player by default. It will be switched to SL-HDR if ContentProvider send appropriate event
         preparePlayerView(false)
         if (supportSlHdr1) {
-            val renderersFactory = MiddlewareSlhdrRenderersFactory(context, hdrPlayerView.rendererConnectNtf)
-                .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
+            val renderersFactory = SlhdrAtsc3RenderersFactory(context, hdrPlayerView.rendererConnectNtf, mimeType)
             atsc3Player.play(renderersFactory, mediaUri, mimeType)
         } else {
             atsc3Player.play(mediaUri, mimeType)
