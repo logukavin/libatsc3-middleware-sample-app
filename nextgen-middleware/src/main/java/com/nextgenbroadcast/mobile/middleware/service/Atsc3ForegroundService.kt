@@ -16,6 +16,10 @@ import com.nextgenbroadcast.mobile.core.MiddlewareConfig
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
+import com.nextgenbroadcast.mobile.core.ssdp.SSDPManager
+import com.nextgenbroadcast.mobile.core.ssdp.SSDPRole
+import com.nextgenbroadcast.mobile.core.ssdp.SSDPRole.PRIMARY_DEVICE
+import com.nextgenbroadcast.mobile.core.ssdp.SSDPTransportFactory
 import com.nextgenbroadcast.mobile.middleware.*
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.alerts.AeaTable
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.Atsc3Source
@@ -71,6 +75,9 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     private val initializer = ArrayList<WeakReference<IServiceInitializer>>()
     private var isInitialized = false
 
+    // SSDP
+    private lateinit var ssdpManager: SSDPManager
+
     private var deviceReceiver: Atsc3DeviceReceiver? = null
 
     override fun onCreate() {
@@ -102,6 +109,14 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         }
 
         atsc3Receiver.setRouteList(srtListHolder.getFullSrtList())
+
+        ssdpManager = SSDPManager(
+            role = PRIMARY_DEVICE,
+            ssdpTransportFactory = SSDPTransportFactory(deviceId = atsc3Receiver.settings.deviceId)
+        ).also {
+            // TODO provide proper location
+            it.start(location = "com.nextgenbroadcast.mobile.middleware.service")
+        }
 
         startStateObservation()
 
@@ -213,6 +228,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         media.close()
         webServer.close()
         atsc3Receiver.deInitialize()
+        ssdpManager.shutdown()
         serviceScope.cancel()
         if (MiddlewareConfig.DEV_TOOLS) {
             telemetryHolder.close()
