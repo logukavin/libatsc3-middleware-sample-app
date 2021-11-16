@@ -2,7 +2,6 @@ package com.nextgenbroadcast.mobile.middleware.server.web
 
 import android.util.Log
 import com.nextgenbroadcast.mobile.core.LOG
-import com.nextgenbroadcast.mobile.middleware.server.cert.IUserAgentSSLContext
 import com.nextgenbroadcast.mobile.core.md5
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import com.nextgenbroadcast.mobile.middleware.gateway.rpc.IRPCGateway
@@ -10,11 +9,14 @@ import com.nextgenbroadcast.mobile.middleware.gateway.web.ConnectionType
 import com.nextgenbroadcast.mobile.middleware.gateway.web.IWebGateway
 import com.nextgenbroadcast.mobile.middleware.rpc.processor.CommandRPCProcessor
 import com.nextgenbroadcast.mobile.middleware.rpc.processor.CompanionRPCProcessor
+import com.nextgenbroadcast.mobile.middleware.server.CompanionServerConstants.APPLICATION_INFO_PATH
+import com.nextgenbroadcast.mobile.middleware.server.CompanionServerConstants.DEVICE_DESCRIPTION_PATH
 import com.nextgenbroadcast.mobile.middleware.server.MiddlewareApplicationSession
 import com.nextgenbroadcast.mobile.middleware.server.ServerConstants
-import com.nextgenbroadcast.mobile.middleware.server.CompanionServerConstants.APPLICATION_INFO_PATH
+import com.nextgenbroadcast.mobile.middleware.server.cert.IUserAgentSSLContext
 import com.nextgenbroadcast.mobile.middleware.server.cert.UserAgentSSLContext
 import com.nextgenbroadcast.mobile.middleware.server.servlets.CDApplicationInfoServlet
+import com.nextgenbroadcast.mobile.middleware.server.servlets.DeviceDescriptionServlet
 import com.nextgenbroadcast.mobile.middleware.server.ws.MiddlewareWebSocket
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collect
@@ -298,6 +300,7 @@ internal class MiddlewareWebServer(
             val applicationInfoServletHandler = ServletContextHandler().apply {
                 contextPath = "/"
                 addServlet(ServletHolder(CDApplicationInfoServlet()), APPLICATION_INFO_PATH)
+                addServlet(ServletHolder(DeviceDescriptionServlet("testApplicationUrl")), DEVICE_DESCRIPTION_PATH)
             }
 
             return applicationInfoServletHandler
