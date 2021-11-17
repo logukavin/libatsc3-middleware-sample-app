@@ -6,28 +6,27 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
 public class Atsc3RingBuffer {
-    /*
-        typedef struct {
-            // page header
-            int8_t  page_lock;
-            int32_t page_num;
-            int32_t payload_length;
-            // payload header
-            int8_t  type;
-            int32_t service_id;
-            int32_t packet_id;
-            int32_t sample_number;
-            int64_t presentationUs;
-            // reserved for feature use
-            int8_t  reserved[7];
-        } RingBufferPageHeader;
-
-     */
-
     public static final String TAG = Atsc3RingBuffer.class.getSimpleName();
 
-    public static final int RING_BUFFER_PAGE_HEADER_SIZE = 37; // sizeof(RingBufferPageHeader)
-    public static final int RING_BUFFER_PAYLOAD_HEADER_OFFSET = Byte.BYTES /* page lock */ + Integer.BYTES /* page number */ + Integer.BYTES /* payload length */;
+    public static final int RESULT_FAILED = -1;
+    public static final int RESULT_RETRY = -2;
+
+    public static final byte RING_BUFFER_PAGE_INIT = 1;
+    public static final byte RING_BUFFER_PAGE_FRAGMENT = 2;
+
+    // check RingBufferPageHeader
+    public static final int RING_BUFFER_PAGE_HEADER_SIZE =
+            Byte.BYTES /* page lock */
+                    + Integer.BYTES /* page number */
+                    + Integer.BYTES /* segment number */
+                    + Integer.BYTES /* payload length */
+                    + Byte.BYTES /* page type */
+                    + Integer.BYTES /* header length */;
+
+    private static final int RING_BUFFER_FRAGMENT_HEADER_OFFSET =
+            RING_BUFFER_PAGE_HEADER_SIZE
+                    - Byte.BYTES /* page type */
+                    - Integer.BYTES /* header length */;
 
     private final int pageSize;
     private final byte[] data = new byte[Long.BYTES];
@@ -47,15 +46,42 @@ public class Atsc3RingBuffer {
     }
 
     public int readNextPage(ByteBuffer outBuffer) {
-        outBuffer.clear();
-        int pageSize = readNextPage(0, outBuffer.capacity(), outBuffer.array(), zeroBuffer);
+        int position = outBuffer.position();
+        int pageSize = readNextPage(position, outBuffer.limit(), outBuffer.array(), zeroBuffer);
         if (pageSize > 0) {
-            outBuffer.position(RING_BUFFER_PAYLOAD_HEADER_OFFSET);
+            outBuffer.position(position + RING_BUFFER_FRAGMENT_HEADER_OFFSET);
+            pageSize -= RING_BUFFER_FRAGMENT_HEADER_OFFSET;
         }
         return pageSize;
     }
 
+    /**
+     * Reads one or several pages to get full Fragment data from Ring Buffer.
+     * @param offset - start offset in outBuffer
+     * @param readLength - maximum amount of bytes to read to outBuffer
+     * @param outBuffer - buffer where to read bytes
+     * @param tailBuffer - optional. if page data bigger then readLength then tailBuffer buffer will be used to store extra data or all page will be skiped.
+     * @return actual amount of bytes was stored in outBuffer
+     */
     public int readNextPage(int offset, int readLength, byte[] outBuffer, ByteBuffer tailBuffer) {
+        /*
+            Ring Buffer page structure:
+            +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+            +   Page Header   +   Fragment Header   +                     Payload                     +
+            +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+            Page Header:
+                int8  page_lock; - indicate page lock state
+                int32 page_num; - page sequence number
+                int8  segment_num; - page segment number, starts from 0
+                int32 payload_length; - payload size in bytes
+                int8  page_type; - ring buffer page type
+                int32 header_length; - fragment header size in bytes
+
+            Fragment Header:
+                int8[] * Protobuf object bytes - fragment header Protobuf bytes
+         */
+
         // Go to the head if we at the end of buffer
         if (buffer.remaining() < pageSize) {
             buffer.position(0);
@@ -64,29 +90,46 @@ public class Atsc3RingBuffer {
         int ringPosition = buffer.position();
         int saveRingPosition = ringPosition;
 
+        //----------------------------------- Read Page Header ------------------------------------
+
         // Peek page lock state and sequence number
         boolean earlyIsLocked = buffer.get() != 0;
         int earlyPageNum = getInt(buffer);
         if (earlyIsLocked || earlyPageNum <= currentPageNumber) {
             buffer.position(ringPosition);
-            return -1;
+            return RESULT_FAILED;
         }
 
-        // calculate payload size
-        int earlyBufferLen = getInt(buffer);
-        int fullPacketSize = RING_BUFFER_PAGE_HEADER_SIZE + earlyBufferLen;
-        int bytesRemaining = fullPacketSize;
-        int packetPageCount = (int) Math.ceil((float) fullPacketSize / pageSize);
+        int segmentNum = getInt(buffer);
 
-        // skip page if payload bigger than out buffer
+        // calculate payload size
+        int earlyPayloadLen = getInt(buffer);
+        skip(Byte.BYTES); // skip page type
+        int earlyHeaderSize = getInt(buffer);
+        int fullHeaderSize = RING_BUFFER_PAGE_HEADER_SIZE + earlyHeaderSize;
+        int fullPacketSize = fullHeaderSize + earlyPayloadLen;
+        int bytesRemaining = fullPacketSize;
+        int maxPagePayloadSize = pageSize - fullHeaderSize;
+        int packetPageCount = (int) Math.ceil((float) earlyPayloadLen / maxPagePayloadSize);
+
+        // skip if page is not the first page of sequence
+        if (segmentNum != 0) {
+            LOG.d(TAG, "Skip first page with wrong segment number: " + segmentNum + ", pages in sequence: " + packetPageCount);
+            skip(ringPosition, packetPageCount, segmentNum);
+            return RESULT_RETRY;
+        }
+
+        // skip if payload bigger than out buffer
         if (bytesRemaining > readLength + tailBuffer.capacity()) {
             LOG.d(TAG, "Skip extra large fragment: " + bytesRemaining);
-            buffer.position(ringPosition + pageSize * packetPageCount);
-            return -2;
+            skip(ringPosition, pageSize * packetPageCount);
+            return RESULT_RETRY;
         }
 
         tailBuffer.clear();
         int outBufferBytesRemaining = readLength;
+
+        //--------------------------------- Read Fragment Payload ---------------------------------
 
         // read payload from page
         buffer.position(ringPosition);
@@ -103,8 +146,9 @@ public class Atsc3RingBuffer {
         bytesRemaining -= bytesToRead;
 
         // If payload is bigger then one page then read all related pages or skip all pages if something went wrong
-        int segmentNum = 1;
         while (bytesRemaining > 0) {
+            segmentNum++;
+
             // Position to next page
             buffer.position(ringPosition + pageSize);
             if (buffer.remaining() < pageSize) {
@@ -120,34 +164,35 @@ public class Atsc3RingBuffer {
             while ((segmentIsLocked = (buffer.get() != 0)) && (retryCount > 0)) {
                 buffer.position(buffer.position() - 1);
                 retryCount--;
+                Thread.yield();
             }
 
             int segmentPageNum = getInt(buffer);
             if (segmentIsLocked || earlyPageNum != segmentPageNum) {
-                int bytesToSkip = pageSize * (packetPageCount - segmentNum);
-                if (buffer.remaining() < bytesToSkip) {
-                    buffer.position(bytesToSkip - (buffer.limit() - ringPosition));
+                LOG.d(TAG, "Skip page in sequence with wrong page number or locked, is locked: " + segmentIsLocked);
+                if (segmentIsLocked) {
+                    skip(ringPosition, packetPageCount, segmentNum);
                 } else {
-                    buffer.position(ringPosition + bytesToSkip);
+                    skip(ringPosition, pageSize);
                 }
-
                 tailBuffer.limit(0);
-                return -1;
+                return RESULT_FAILED;
             }
 
             // Check next page segment number
-            byte nextSegmentNum = buffer.get(ringPosition + RING_BUFFER_PAGE_HEADER_SIZE  - 7 /* reserved part 7 bytes */);
-            if (segmentNum != nextSegmentNum) {
-                buffer.position(ringPosition + pageSize * (packetPageCount - segmentNum));
+            int currentSegmentNum = getInt(buffer);
+            if (segmentNum != currentSegmentNum) {
+                LOG.d(TAG, "Skip page in sequence with wrong segment number: " + currentSegmentNum + ", expected: " + segmentNum + ", pages in sequence: " + packetPageCount);
+                skip(ringPosition, packetPageCount, segmentNum);
                 tailBuffer.limit(0);
-                return -1;
+                return RESULT_FAILED;
             }
 
-            // Skip next page header
-            buffer.position(ringPosition + RING_BUFFER_PAGE_HEADER_SIZE);
-            int pageBytesToRead = Math.min(bytesRemaining, pageSize - RING_BUFFER_PAGE_HEADER_SIZE);
+            // Skip current page header
+            skip(ringPosition, fullHeaderSize);
 
-            // Read payload from next page payload
+            // Read current page payload
+            int pageBytesToRead = Math.min(bytesRemaining, maxPagePayloadSize);
             if (outBufferBytesRemaining > 0) {
                 int outBytesToRead = Math.min(outBufferBytesRemaining, pageBytesToRead);
                 buffer.get(outBuffer, offset + fullPacketSize - bytesRemaining, outBytesToRead);
@@ -159,18 +204,24 @@ public class Atsc3RingBuffer {
                 buffer.get(tailBuffer.array(), fullPacketSize - bytesRemaining - readLength, pageBytesToRead);
             }
 
-            segmentNum++;
             bytesRemaining -= pageBytesToRead;
         }
+
+        //------------------------------------ Prepare Result ------------------------------------
 
         // Check page lock state and page sequence number
         // Skip page if it's locked or page number differs from peeked out earlier
         int outPosition = offset;
         boolean isLocked = outBuffer[outPosition] != 0;
-        outPosition++;
+        outPosition++; /* lock */
         int currentPageNum = getInt(outPosition, outBuffer);
-        outPosition += Integer.BYTES;
+        outPosition += Integer.BYTES; /* page num */
+        outPosition += Integer.BYTES; /* segment num */
         int payloadLength = getInt(outPosition, outBuffer);
+        outPosition += Integer.BYTES; /* payload length */
+        outPosition += Byte.BYTES; /* page_type */
+        int payloadHeaderSize = getInt(outPosition, outBuffer);
+
         if (!isLocked && currentPageNum == earlyPageNum) {
             lastPageNumber = currentPageNumber;
             lastBufferPosition = saveRingPosition;
@@ -179,12 +230,32 @@ public class Atsc3RingBuffer {
 
             tailBuffer.limit(fullPacketSize > readLength ? fullPacketSize - readLength : 0);
 
-            return payloadLength + RING_BUFFER_PAGE_HEADER_SIZE;
+            return RING_BUFFER_PAGE_HEADER_SIZE + payloadHeaderSize + payloadLength;
         } else {
             buffer.position(ringPosition);
             tailBuffer.limit(0);
 
-            return -1;
+            return RESULT_FAILED;
+        }
+    }
+
+    private void skip(int bytesToSkip) {
+        skip(buffer.position(), bytesToSkip);
+    }
+
+    private void skip(int ringPosition, int packetPageCount, int currentSegmentNum) {
+        if (currentSegmentNum > 0 && currentSegmentNum < packetPageCount) {
+            skip(ringPosition, pageSize * (packetPageCount - currentSegmentNum));
+        } else {
+            skip(ringPosition, pageSize);
+        }
+    }
+
+    private void skip(int ringPosition, int bytesToSkip) {
+        if (buffer.remaining() < bytesToSkip) {
+            buffer.position(bytesToSkip - (buffer.limit() - ringPosition));
+        } else {
+            buffer.position(ringPosition + bytesToSkip);
         }
     }
 
