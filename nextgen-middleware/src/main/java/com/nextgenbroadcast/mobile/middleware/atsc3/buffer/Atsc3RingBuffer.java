@@ -25,7 +25,6 @@ public class Atsc3RingBuffer {
 
     private static final int RING_BUFFER_FRAGMENT_HEADER_OFFSET =
             RING_BUFFER_PAGE_HEADER_SIZE
-                    - Byte.BYTES /* page type */
                     - Integer.BYTES /* header length */;
 
     private final int pageSize;
@@ -45,9 +44,9 @@ public class Atsc3RingBuffer {
         invertByteOrder = buffer.order() != ByteOrder.nativeOrder();
     }
 
-    public int readNextPage(ByteBuffer outBuffer) {
+    public int readNextPage(byte type, ByteBuffer outBuffer) {
         int position = outBuffer.position();
-        int pageSize = readNextPage(position, outBuffer.limit(), outBuffer.array(), zeroBuffer);
+        int pageSize = readNextPage(type, position, outBuffer.limit(), outBuffer.array(), zeroBuffer);
         if (pageSize > 0) {
             outBuffer.position(position + RING_BUFFER_FRAGMENT_HEADER_OFFSET);
             pageSize -= RING_BUFFER_FRAGMENT_HEADER_OFFSET;
@@ -63,7 +62,7 @@ public class Atsc3RingBuffer {
      * @param tailBuffer - optional. if page data bigger then readLength then tailBuffer buffer will be used to store extra data or all page will be skiped.
      * @return actual amount of bytes was stored in outBuffer
      */
-    public int readNextPage(int offset, int readLength, byte[] outBuffer, ByteBuffer tailBuffer) {
+    public int readNextPage(byte type, int offset, int readLength, byte[] outBuffer, ByteBuffer tailBuffer) {
         /*
             Ring Buffer page structure:
             +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -101,20 +100,30 @@ public class Atsc3RingBuffer {
         }
 
         int segmentNum = getInt(buffer);
+        int earlyPayloadLen = getInt(buffer);
+
+        // skip if page is not the first page in sequence
+        if (segmentNum != 0) {
+            int maxPagePayloadSize = pageSize - RING_BUFFER_PAGE_HEADER_SIZE;
+            int minPageCount = (int) Math.ceil((float) earlyPayloadLen / maxPagePayloadSize);
+            LOG.d(TAG, "Skip first page with wrong segment number: " + segmentNum + ", approximate pages in sequence: " + minPageCount);
+            skip(ringPosition, minPageCount, segmentNum);
+            return RESULT_RETRY;
+        }
+
+        byte earlyPageType = buffer.get();
+        int earlyHeaderSize = getInt(buffer);
 
         // calculate payload size
-        int earlyPayloadLen = getInt(buffer);
-        skip(Byte.BYTES); // skip page type
-        int earlyHeaderSize = getInt(buffer);
         int fullHeaderSize = RING_BUFFER_PAGE_HEADER_SIZE + earlyHeaderSize;
         int fullPacketSize = fullHeaderSize + earlyPayloadLen;
         int bytesRemaining = fullPacketSize;
-        int maxPagePayloadSize = pageSize - fullHeaderSize;
-        int packetPageCount = (int) Math.ceil((float) earlyPayloadLen / maxPagePayloadSize);
+        int firstPagePayloadSize = pageSize - fullHeaderSize;
+        int nextPagePayloadSize = pageSize - RING_BUFFER_PAGE_HEADER_SIZE;
+        int packetPageCount = 1 + (int) Math.ceil((float) (earlyPayloadLen - firstPagePayloadSize) / nextPagePayloadSize);
 
         // skip if page is not the first page of sequence
-        if (segmentNum != 0) {
-            LOG.d(TAG, "Skip first page with wrong segment number: " + segmentNum + ", pages in sequence: " + packetPageCount);
+        if (earlyPageType != type) {
             skip(ringPosition, packetPageCount, segmentNum);
             return RESULT_RETRY;
         }
@@ -189,10 +198,10 @@ public class Atsc3RingBuffer {
             }
 
             // Skip current page header
-            skip(ringPosition, fullHeaderSize);
+            skip(ringPosition, RING_BUFFER_PAGE_HEADER_SIZE);
 
             // Read current page payload
-            int pageBytesToRead = Math.min(bytesRemaining, maxPagePayloadSize);
+            int pageBytesToRead = Math.min(bytesRemaining, nextPagePayloadSize);
             if (outBufferBytesRemaining > 0) {
                 int outBytesToRead = Math.min(outBufferBytesRemaining, pageBytesToRead);
                 buffer.get(outBuffer, offset + fullPacketSize - bytesRemaining, outBytesToRead);
@@ -244,7 +253,7 @@ public class Atsc3RingBuffer {
     }
 
     private void skip(int ringPosition, int packetPageCount, int currentSegmentNum) {
-        if (currentSegmentNum > 0 && currentSegmentNum < packetPageCount) {
+        if (currentSegmentNum >= 0 && currentSegmentNum < packetPageCount) {
             skip(ringPosition, pageSize * (packetPageCount - currentSegmentNum));
         } else {
             skip(ringPosition, pageSize);

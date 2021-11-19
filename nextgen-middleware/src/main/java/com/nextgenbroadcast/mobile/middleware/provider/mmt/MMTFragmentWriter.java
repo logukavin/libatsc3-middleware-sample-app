@@ -289,7 +289,7 @@ public class MMTFragmentWriter {
         while (true) {
             buffer.clear();
             buffer.position(SAMPLE_HEADER_OFFSET);
-            int payloadSize = ringBuffer.readNextPage(buffer);
+            int payloadSize = ringBuffer.readNextPage(Atsc3RingBuffer.RING_BUFFER_PAGE_FRAGMENT, buffer);
 
             if (payloadSize == Atsc3RingBuffer.RESULT_RETRY) {
                 if (--retryCount >= 0) {
@@ -303,16 +303,6 @@ public class MMTFragmentWriter {
             if (payloadSize <= 0) {
                 buffer.limit(0);
                 return;
-            }
-
-            int pageType = buffer.get();
-            payloadSize -= Byte.BYTES; // skip pageType
-            if (pageType != Atsc3RingBuffer.RING_BUFFER_PAGE_FRAGMENT) {
-                if (--retryCount >= 0) {
-                    continue;
-                } else {
-                    return;
-                }
             }
 
             int headerSize = ringBuffer.getInt(buffer);
@@ -399,16 +389,24 @@ public class MMTFragmentWriter {
     }
 
     private void scanMpuMetadata(ByteBuffer buffer) {
+        int retryCount = 50;
         while (true) {
             buffer.clear();
-            int bufferLen = ringBuffer.readNextPage(buffer);
-            if (bufferLen <= 0) {
+            int payloadSize = ringBuffer.readNextPage(Atsc3RingBuffer.RING_BUFFER_PAGE_INIT, buffer);
+
+            if (payloadSize == Atsc3RingBuffer.RESULT_RETRY) {
+                if (--retryCount >= 0) {
+                    continue; // we skipped page in some reason, let's try again
+                } else {
+                    buffer.limit(0);
+                    return;
+                }
+            }
+
+            if (payloadSize <= 0) {
                 buffer.limit(0);
                 return;
             }
-
-            int pageType = buffer.get();
-            if (pageType != Atsc3RingBuffer.RING_BUFFER_PAGE_INIT) continue;
 
             int headerSize = ringBuffer.getInt(buffer);
             MmtRingBufferHeaders.MmtFragmentHeader fragmentHeader = readFragmentHeader(buffer, headerSize);
@@ -419,8 +417,8 @@ public class MMTFragmentWriter {
             if (service_id != serviceId) continue;
 
             if (InitMpuMetadata_HEVC_NAL_Payload == null) {
-                ByteBuffer init = ByteBuffer.allocate(bufferLen);
-                init.put(buffer.array(), buffer.position(), bufferLen);
+                ByteBuffer init = ByteBuffer.allocate(payloadSize);
+                init.put(buffer.array(), buffer.position(), payloadSize);
                 InitMpuMetadata_HEVC_NAL_Payload = init;
             }
 
