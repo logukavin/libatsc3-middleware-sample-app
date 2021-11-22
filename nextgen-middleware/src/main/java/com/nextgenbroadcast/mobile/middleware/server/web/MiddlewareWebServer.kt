@@ -12,9 +12,9 @@ import com.nextgenbroadcast.mobile.middleware.rpc.processor.CommandRPCProcessor
 import com.nextgenbroadcast.mobile.middleware.rpc.processor.CompanionRPCProcessor
 import com.nextgenbroadcast.mobile.middleware.server.MiddlewareApplicationSession
 import com.nextgenbroadcast.mobile.middleware.server.ServerConstants
-import com.nextgenbroadcast.mobile.middleware.server.companionServer.CompanionServerConstants.APPLICATION_INFO_PATH
+import com.nextgenbroadcast.mobile.middleware.server.CompanionServerConstants.APPLICATION_INFO_PATH
 import com.nextgenbroadcast.mobile.middleware.server.cert.UserAgentSSLContext
-import com.nextgenbroadcast.mobile.middleware.server.companionServer.servlets.ApplicationInfoServlet
+import com.nextgenbroadcast.mobile.middleware.server.servlets.CDApplicationInfoServlet
 import com.nextgenbroadcast.mobile.middleware.server.ws.MiddlewareWebSocket
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collect
@@ -260,7 +260,7 @@ internal class MiddlewareWebServer(
 
         fun webGateway(value: IWebGateway) = apply { webGateway = value }
 
-        fun companionServer(serverHost:String, serverPort: Int) = apply{
+        fun companionServer(serverHost: String, serverPort: Int) = apply {
             companionServerHost = serverHost
             companionServerPort = serverPort
         }
@@ -279,7 +279,7 @@ internal class MiddlewareWebServer(
                     })
                 }
 
-                if(companionServerHost != null && companionServerPort != null) {
+                if (companionServerHost != null && companionServerPort != null) {
                     add(initServletsHandler())
                 }
 
@@ -297,9 +297,8 @@ internal class MiddlewareWebServer(
         private fun initServletsHandler(): Handler {
             val applicationInfoServletHandler = ServletContextHandler().apply {
                 contextPath = "/"
+                addServlet(ServletHolder(CDApplicationInfoServlet()), APPLICATION_INFO_PATH)
             }
-
-            applicationInfoServletHandler.addServlet(ServletHolder(ApplicationInfoServlet()), APPLICATION_INFO_PATH)
 
             return applicationInfoServletHandler
         }

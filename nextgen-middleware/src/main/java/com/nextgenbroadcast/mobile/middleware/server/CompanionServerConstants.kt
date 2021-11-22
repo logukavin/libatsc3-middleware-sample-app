@@ -1,4 +1,4 @@
-package com.nextgenbroadcast.mobile.middleware.server.companionServer
+package com.nextgenbroadcast.mobile.middleware.server
 
 object CompanionServerConstants {
     const val HOST_NAME = "0.0.0.0"
