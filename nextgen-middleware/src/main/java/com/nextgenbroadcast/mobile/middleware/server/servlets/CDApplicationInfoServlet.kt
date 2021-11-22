@@ -8,12 +8,15 @@ import javax.servlet.http.HttpServlet
 import javax.servlet.http.HttpServletRequest
 import javax.servlet.http.HttpServletResponse
 
-class CDApplicationInfoServlet : HttpServlet() {
+class CDApplicationInfoServlet(
+    private val applicationUrl: String,
+    private val wsUrl: String
+) : HttpServlet() {
 
     override fun doGet(req: HttpServletRequest, resp: HttpServletResponse) {
         resp.status = HttpURLConnection.HTTP_OK
         resp.contentType = "text/xml"
-        val applicationInfoXml = getXML("ATSC", false, ApplicationState.RUNNING, "", "", "")
+        val applicationInfoXml = getXML("ATSC", false, ApplicationState.RUNNING, applicationUrl, wsUrl, "")
         resp.writer.println(applicationInfoXml)
     }
 
