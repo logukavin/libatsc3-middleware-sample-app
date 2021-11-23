@@ -9,14 +9,13 @@ import com.nextgenbroadcast.mobile.middleware.gateway.web.ConnectionType
 import com.nextgenbroadcast.mobile.middleware.gateway.web.IWebGateway
 import com.nextgenbroadcast.mobile.middleware.rpc.processor.CommandRPCProcessor
 import com.nextgenbroadcast.mobile.middleware.rpc.processor.CompanionRPCProcessor
-import com.nextgenbroadcast.mobile.middleware.server.CompanionServerConstants.APPLICATION_INFO_PATH
-import com.nextgenbroadcast.mobile.middleware.server.CompanionServerConstants.DEVICE_DESCRIPTION_PATH
+import com.nextgenbroadcast.mobile.middleware.server.CompanionServerConstants
 import com.nextgenbroadcast.mobile.middleware.server.MiddlewareApplicationSession
 import com.nextgenbroadcast.mobile.middleware.server.ServerConstants
 import com.nextgenbroadcast.mobile.middleware.server.cert.IUserAgentSSLContext
 import com.nextgenbroadcast.mobile.middleware.server.cert.UserAgentSSLContext
 import com.nextgenbroadcast.mobile.middleware.server.servlets.CDApplicationInfoServlet
-import com.nextgenbroadcast.mobile.middleware.server.servlets.DeviceDescriptionServlet
+import com.nextgenbroadcast.mobile.middleware.server.servlets.CDDescriptionServlet
 import com.nextgenbroadcast.mobile.middleware.server.ws.MiddlewareWebSocket
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collect
@@ -299,8 +298,8 @@ internal class MiddlewareWebServer(
         private fun initServletsHandler(): Handler {
             val applicationInfoServletHandler = ServletContextHandler().apply {
                 contextPath = "/"
-                addServlet(ServletHolder(CDApplicationInfoServlet()), APPLICATION_INFO_PATH)
-                addServlet(ServletHolder(DeviceDescriptionServlet("testApplicationUrl")), DEVICE_DESCRIPTION_PATH)
+                addServlet(ServletHolder(CDApplicationInfoServlet()), CompanionServerConstants.APPLICATION_INFO_PATH)
+                addServlet(ServletHolder(CDDescriptionServlet("")), CompanionServerConstants.DEVICE_DESCRIPTION_PATH)
             }
 
             return applicationInfoServletHandler
