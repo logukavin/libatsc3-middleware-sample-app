@@ -9,7 +9,6 @@ import com.nextgenbroadcast.mobile.middleware.gateway.web.ConnectionType
 import com.nextgenbroadcast.mobile.middleware.gateway.web.IWebGateway
 import com.nextgenbroadcast.mobile.middleware.rpc.processor.CommandRPCProcessor
 import com.nextgenbroadcast.mobile.middleware.rpc.processor.CompanionRPCProcessor
-import com.nextgenbroadcast.mobile.middleware.server.CompanionServerConstants
 import com.nextgenbroadcast.mobile.middleware.server.CompanionServerConstants.APPLICATION_INFO_PATH
 import com.nextgenbroadcast.mobile.middleware.server.CompanionServerConstants.DEVICE_DESCRIPTION_PATH
 import com.nextgenbroadcast.mobile.middleware.server.MiddlewareApplicationSession
@@ -306,15 +305,15 @@ internal class MiddlewareWebServer(
         private fun initServletsHandler(): Handler {
             val applicationInfoServletHandler = ServletContextHandler().apply {
                 contextPath = "/"
-                addServlet(ServletHolder(DeviceDescriptionServlet(getCompanionHttpUrl())), DEVICE_DESCRIPTION_PATH)
-                addServlet(ServletHolder(CDApplicationInfoServlet("${getCompanionHttpUrl()}${CompanionServerConstants.APPLICATIONS_PATH}", getCompanionWsUrl())), APPLICATION_INFO_PATH)
+                addServlet(ServletHolder(CDDescriptionServlet(getCompanionHttpUrl())), CompanionServerConstants.DEVICE_DESCRIPTION_PATH)
+                addServlet(ServletHolder(CDApplicationInfoServlet("", getCompanionWsUrl())), CompanionServerConstants.APPLICATION_INFO_PATH)
             }
 
             return applicationInfoServletHandler
         }
 
         private fun getCompanionWsUrl(): String {
-            return "ws://$wifiIpAddress:${CompanionServerConstants.PORT_WS}"
+            return "ws://$wifiIpAddress:${CompanionServerConstants.PORT_WS}${CompanionServerConstants.ATSC_CD_PATH}"
         }
 
         private fun getCompanionHttpUrl(): String {
@@ -331,7 +330,7 @@ internal class MiddlewareWebServer(
 
 private fun createWebSocket(req: ServletUpgradeRequest, rpcGateway: IRPCGateway): WebSocketAdapter? {
     return when (req.httpServletRequest.pathInfo) {
-        ServerConstants.ATSC_CMD_PATH ->  {
+        ServerConstants.ATSC_CMD_PATH -> {
             val session = MiddlewareApplicationSession(rpcGateway)
             MiddlewareWebSocket(session, CommandRPCProcessor(session))
         }

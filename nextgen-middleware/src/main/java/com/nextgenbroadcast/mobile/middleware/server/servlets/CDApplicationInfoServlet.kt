@@ -36,7 +36,7 @@ class CDApplicationInfoServlet(
                     attribute("", "allowStop", optionsAllowStop.toString())
                 }
                 addTag("state") {
-                    text(state.getValue())
+                    text(state.name)
                 }
                 addTag("additionalData") {
                     addTag("X_ATSC_App2AppURL") {
@@ -64,13 +64,10 @@ class CDApplicationInfoServlet(
     }
 
     enum class ApplicationState {
+        RUNNING;
 
-        RUNNING {
-            override fun getValue(): String {
-                return "running"
-            }
-        };
-
-        abstract fun getValue(): String
+        override fun toString(): String {
+            return name.lowercase()
+        }
     }
 }
