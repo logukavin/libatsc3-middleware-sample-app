@@ -12,6 +12,8 @@ import com.nextgenbroadcast.mobile.middleware.rpc.processor.CompanionRPCProcesso
 import com.nextgenbroadcast.mobile.middleware.server.CompanionServerConstants
 import com.nextgenbroadcast.mobile.middleware.server.MiddlewareApplicationSession
 import com.nextgenbroadcast.mobile.middleware.server.ServerConstants
+import com.nextgenbroadcast.mobile.middleware.server.ServerUtils.getCompanionHttpUrl
+import com.nextgenbroadcast.mobile.middleware.server.ServerUtils.getCompanionWsUrl
 import com.nextgenbroadcast.mobile.middleware.server.cert.IUserAgentSSLContext
 import com.nextgenbroadcast.mobile.middleware.server.cert.UserAgentSSLContext
 import com.nextgenbroadcast.mobile.middleware.server.servlets.CDApplicationInfoServlet
@@ -124,6 +126,7 @@ internal class MiddlewareWebServer(
         if (companionServerHost != null && companionServerPort != null) {
             serverConnectors.apply {
                 add(getServerConnector(ConnectionType.HTTP, server, companionServerHost, companionServerPort))
+                add(getServerConnector(ConnectionType.WS, server, companionServerHost, CompanionServerConstants.PORT_WS))
             }
         }
 
@@ -254,6 +257,7 @@ internal class MiddlewareWebServer(
         private var webGateway: IWebGateway? = null
         private var companionServerHost: String? = null
         private var companionServerPort: Int? = null
+        private var wifiIpAddress: String? = null
 
         fun stateScope(value: CoroutineScope) = apply { stateScope = value }
 
@@ -264,6 +268,10 @@ internal class MiddlewareWebServer(
         fun companionServer(serverHost: String, serverPort: Int) = apply {
             companionServerHost = serverHost
             companionServerPort = serverPort
+        }
+
+        fun wifiIpAddress(value: String?) = apply {
+            wifiIpAddress = value
         }
 
         fun build(): MiddlewareWebServer {
@@ -298,12 +306,15 @@ internal class MiddlewareWebServer(
         private fun initServletsHandler(): Handler {
             val applicationInfoServletHandler = ServletContextHandler().apply {
                 contextPath = "/"
-                addServlet(ServletHolder(CDApplicationInfoServlet()), CompanionServerConstants.APPLICATION_INFO_PATH)
-                addServlet(ServletHolder(CDDescriptionServlet("")), CompanionServerConstants.DEVICE_DESCRIPTION_PATH)
+                wifiIpAddress?.let { ipAddress ->
+                    addServlet(ServletHolder(CDDescriptionServlet(getCompanionHttpUrl(ipAddress))), CompanionServerConstants.DEVICE_DESCRIPTION_PATH)
+                    addServlet(ServletHolder(CDApplicationInfoServlet("", getCompanionWsUrl(ipAddress))), CompanionServerConstants.APPLICATION_INFO_PATH)
+                }
             }
 
             return applicationInfoServletHandler
         }
+
     }
 
     companion object {
@@ -315,7 +326,7 @@ internal class MiddlewareWebServer(
 
 private fun createWebSocket(req: ServletUpgradeRequest, rpcGateway: IRPCGateway): WebSocketAdapter? {
     return when (req.httpServletRequest.pathInfo) {
-        ServerConstants.ATSC_CMD_PATH ->  {
+        ServerConstants.ATSC_CMD_PATH -> {
             val session = MiddlewareApplicationSession(rpcGateway)
             MiddlewareWebSocket(session, CommandRPCProcessor(session))
         }

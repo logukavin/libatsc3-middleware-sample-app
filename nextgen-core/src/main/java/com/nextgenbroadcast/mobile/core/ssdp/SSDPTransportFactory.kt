@@ -17,8 +17,7 @@ class SSDPTransportFactory(
         port = port,
         role = role,
         deviceId = deviceId,
-        ssdpDeviceInfoFlow = ssdpDeviceInfoFlow,
-        logger = logger
+        ssdpDeviceInfoFlow = ssdpDeviceInfoFlow
     )
 
 }

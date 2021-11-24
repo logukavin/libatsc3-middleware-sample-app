@@ -20,8 +20,7 @@ class SSDPTransportImpl(
     private val port: Int,
     private val deviceId: String,
     private val ssdpDeviceInfoFlow: MutableStateFlow<Set<SSDPDeviceInfo>>,
-    private val payloadFormatter: SSDPPayloadFormatter = SSDPPayloadFormatter(address, port),
-    private val logger: (String) -> Unit = { Log.d(TAG, it) },
+    private val payloadFormatter: SSDPPayloadFormatter = SSDPPayloadFormatter(address, port)
 ) : ISSDPTransport {
 
     private var multicastSocket: MulticastSocket? = null
@@ -46,6 +45,10 @@ class SSDPTransportImpl(
         actionHandlerThread = ActionHandlerThread().apply {
             start()
         }
+    }
+
+    private fun logger(s: String) {
+        Log.d(TAG, s)
     }
 
     override fun advertise(location: String) {
@@ -96,6 +99,7 @@ class SSDPTransportImpl(
             payload.length,
             InetSocketAddress(address, port)
         )
+
         try {
             logger("Unicasting to ip:$address, port: $port:\n$payload")
             unicastSocket?.send(response)
