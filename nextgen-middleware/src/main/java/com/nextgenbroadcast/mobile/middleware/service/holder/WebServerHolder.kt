@@ -6,6 +6,7 @@ import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverCore
 import com.nextgenbroadcast.mobile.middleware.gateway.rpc.IRPCGateway
 import com.nextgenbroadcast.mobile.middleware.gateway.web.IWebGateway
+import com.nextgenbroadcast.mobile.middleware.server.CompanionServerConstants
 import com.nextgenbroadcast.mobile.middleware.server.cert.UserAgentSSLContext
 import com.nextgenbroadcast.mobile.middleware.server.web.IMiddlewareWebServer
 import com.nextgenbroadcast.mobile.middleware.server.web.MiddlewareWebServer
@@ -43,6 +44,7 @@ internal class WebServerHolder(
                 .stateScope(scope)
                 .rpcGateway(rpc)
                 .webGateway(web)
+                .companionServer(CompanionServerConstants.HOST_NAME, CompanionServerConstants.PORT_HTTP)
                 .build().also { server ->
                     GlobalScope.launch {
                         server.start(sslContext)
