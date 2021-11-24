@@ -15,6 +15,7 @@ import kotlinx.coroutines.*
 internal class WebServerHolder(
         private val context: Context,
         private val receiver: Atsc3ReceiverCore,
+        private val wifiIpAddress: String?,
         private val onCreated: (server: IMiddlewareWebServer) -> Unit = {},
         private val onDestroyed: () -> Unit = {}
 ) {
@@ -42,6 +43,7 @@ internal class WebServerHolder(
 
         webServer = MiddlewareWebServer.Builder()
                 .stateScope(scope)
+                .wifiIpAddress(wifiIpAddress)
                 .rpcGateway(rpc)
                 .webGateway(web)
                 .companionServer(CompanionServerConstants.HOST_NAME, CompanionServerConstants.PORT_HTTP)
