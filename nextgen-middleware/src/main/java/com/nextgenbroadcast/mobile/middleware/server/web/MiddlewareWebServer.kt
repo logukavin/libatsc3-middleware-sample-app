@@ -12,6 +12,8 @@ import com.nextgenbroadcast.mobile.middleware.rpc.processor.CompanionRPCProcesso
 import com.nextgenbroadcast.mobile.middleware.server.CompanionServerConstants
 import com.nextgenbroadcast.mobile.middleware.server.MiddlewareApplicationSession
 import com.nextgenbroadcast.mobile.middleware.server.ServerConstants
+import com.nextgenbroadcast.mobile.middleware.server.ServerUtils.getCompanionHttpUrl
+import com.nextgenbroadcast.mobile.middleware.server.ServerUtils.getCompanionWsUrl
 import com.nextgenbroadcast.mobile.middleware.server.cert.IUserAgentSSLContext
 import com.nextgenbroadcast.mobile.middleware.server.cert.UserAgentSSLContext
 import com.nextgenbroadcast.mobile.middleware.server.servlets.CDApplicationInfoServlet
@@ -304,20 +306,15 @@ internal class MiddlewareWebServer(
         private fun initServletsHandler(): Handler {
             val applicationInfoServletHandler = ServletContextHandler().apply {
                 contextPath = "/"
-                addServlet(ServletHolder(CDDescriptionServlet(getCompanionHttpUrl())), CompanionServerConstants.DEVICE_DESCRIPTION_PATH)
-                addServlet(ServletHolder(CDApplicationInfoServlet("", getCompanionWsUrl())), CompanionServerConstants.APPLICATION_INFO_PATH)
+                wifiIpAddress?.let { ipAddress ->
+                    addServlet(ServletHolder(CDDescriptionServlet(getCompanionHttpUrl(ipAddress))), CompanionServerConstants.DEVICE_DESCRIPTION_PATH)
+                    addServlet(ServletHolder(CDApplicationInfoServlet("", getCompanionWsUrl(ipAddress))), CompanionServerConstants.APPLICATION_INFO_PATH)
+                }
             }
 
             return applicationInfoServletHandler
         }
 
-        private fun getCompanionWsUrl(): String {
-            return "ws://$wifiIpAddress:${CompanionServerConstants.PORT_WS}${CompanionServerConstants.ATSC_CD_PATH}"
-        }
-
-        private fun getCompanionHttpUrl(): String {
-            return "http://$wifiIpAddress:${CompanionServerConstants.PORT_HTTP}"
-        }
     }
 
     companion object {
@@ -334,7 +331,7 @@ private fun createWebSocket(req: ServletUpgradeRequest, rpcGateway: IRPCGateway)
             MiddlewareWebSocket(session, CommandRPCProcessor(session))
         }
 
-        CompanionServerConstants.ATSC_CD_PATH -> {
+        ServerConstants.ATSC_CD_PATH -> {
             val session = MiddlewareApplicationSession(rpcGateway)
             MiddlewareWebSocket(session, CompanionRPCProcessor(session))
         }

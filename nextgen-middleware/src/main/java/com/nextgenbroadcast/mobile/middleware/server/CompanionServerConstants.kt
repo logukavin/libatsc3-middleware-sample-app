@@ -6,5 +6,4 @@ object CompanionServerConstants {
     const val PORT_WS = 42580
     const val DEVICE_DESCRIPTION_PATH = ""
     const val APPLICATION_INFO_PATH = "/applications/ATSC"
-    const val ATSC_CD_PATH = "/atscCD"
 }
