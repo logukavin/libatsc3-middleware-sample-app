@@ -4,6 +4,8 @@ import android.app.Application
 import android.net.NetworkCapabilities
 import android.net.Uri
 import android.text.Html
+import android.text.Spannable
+import android.text.SpannableString
 import androidx.lifecycle.*
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.AppData
@@ -72,6 +74,7 @@ class ViewViewModel(
     val showDebugInfo = MutableLiveData<Boolean>()
     val showPhyInfo = MutableLiveData<Boolean>()
     val showPhyChart = MutableLiveData<Boolean>()
+    val showMediaInfo = MutableLiveData<Boolean>()
 
     val debugData = MutableLiveData<CharSequence>()
 
@@ -96,6 +99,9 @@ class ViewViewModel(
 
     val groupedLogsInfo: LiveData<List<LogInfo>>
         get() = logsInfo.map(::groupLogs)
+
+    private var _mediaDataInfo = MutableLiveData<Spannable>()
+    val mediaDataInfo = _mediaDataInfo.distinctUntilChanged()
 
     private fun groupLogs(map: Map<String, Boolean>): List<LogInfo> {
         val records = map.map { (key, enabled) ->
@@ -191,5 +197,9 @@ class ViewViewModel(
         viewModelScope.launch {
             eventSensorEnableChannel.send(sensorEnableState)
         }
+    }
+
+    fun updateMediaInfo(mediaInfo: Spannable) {
+        _mediaDataInfo.value = mediaInfo
     }
 }
