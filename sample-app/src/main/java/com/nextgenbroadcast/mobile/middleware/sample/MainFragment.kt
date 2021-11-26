@@ -3,9 +3,13 @@ package com.nextgenbroadcast.mobile.middleware.sample
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
+import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
 import android.text.Html
+import android.text.Spannable
+import android.text.SpannableStringBuilder
+import android.text.style.ForegroundColorSpan
 import android.util.Log
 import android.view.GestureDetector
 import android.view.LayoutInflater
@@ -17,6 +21,7 @@ import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.constraintlayout.widget.ConstraintSet
+import androidx.core.text.toSpannable
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
@@ -25,16 +30,16 @@ import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.nextgenbroadcast.mobile.core.atsc3.PhyInfoConstants
 import com.nextgenbroadcast.mobile.core.model.*
 import com.nextgenbroadcast.mobile.middleware.dev.atsc3.PHYStatistics
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.TelemetryClient
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.observer.StaticTelemetryObserver
-import com.nextgenbroadcast.mobile.middleware.sample.view.PhyChartView
+import com.nextgenbroadcast.mobile.middleware.sample.adapter.ServiceAdapter
 import com.nextgenbroadcast.mobile.middleware.sample.core.SwipeGestureDetector
 import com.nextgenbroadcast.mobile.middleware.sample.core.mapWith
 import com.nextgenbroadcast.mobile.middleware.sample.databinding.FragmentMainBinding
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.ViewViewModel
-import com.nextgenbroadcast.mobile.middleware.sample.adapter.ServiceAdapter
-import com.nextgenbroadcast.mobile.middleware.dev.telemetry.TelemetryClient
 import com.nextgenbroadcast.mobile.middleware.sample.model.*
 import com.nextgenbroadcast.mobile.middleware.sample.settings.SettingsDialog
+import com.nextgenbroadcast.mobile.middleware.sample.view.PhyChartView
 import com.nextgenbroadcast.mobile.view.AboutDialog
 import com.nextgenbroadcast.mobile.view.TrackSelectionDialog
 import com.nextgenbroadcast.mobile.view.UserAgentView
@@ -52,6 +57,7 @@ class MainFragment : Fragment() {
     private lateinit var receiverContentResolver: ReceiverContentResolver
     private lateinit var telemetryClient: TelemetryClient
     private lateinit var binding: FragmentMainBinding
+    private lateinit var prefs: Prefs
 
     private var servicesList: List<AVService>? = null
     private var currentAppData: AppData? = null
@@ -79,6 +85,7 @@ class MainFragment : Fragment() {
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
+        prefs = Prefs(context)
 
         requireActivity().onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
@@ -120,6 +127,7 @@ class MainFragment : Fragment() {
         binding = FragmentMainBinding.inflate(inflater, container, false).apply {
             lifecycleOwner = viewLifecycleOwner
             viewModel = viewViewModel
+            viewViewModel.showMediaInfo.value = prefs.isShowMediaDataInfo
         }
 
         ReceiverContentResolver.resetPlayerState(requireContext())
@@ -209,6 +217,9 @@ class MainFragment : Fragment() {
 
         binding.receiverPlayer.setOnPlaybackChangeListener { state, position, rate ->
             receiverContentResolver.publishPlayerState(state, position, rate)
+            if (viewViewModel.showMediaInfo.value == true) {
+                showMediaInformation()
+            }
         }
 
         observeLocalData()
@@ -356,6 +367,9 @@ class MainFragment : Fragment() {
         viewViewModel.currentServiceTitle.observe(viewLifecycleOwner) { currentServiceTitle ->
             setSelectedService(currentServiceTitle)
         }
+        viewViewModel.showMediaInfo.observe(viewLifecycleOwner) { isShowMediaInfo ->
+            prefs.isShowMediaDataInfo = isShowMediaInfo
+        }
     }
 
     private fun showPopupSettingsMenu(v: View) {
@@ -418,6 +432,59 @@ class MainFragment : Fragment() {
             ) { isShowingTrackSelectionDialog = false }
             trackSelectionDialog.show(parentFragmentManager, null)
         }
+    }
+
+    private fun showMediaInformation() {
+        val currentTrackSelection = binding.receiverPlayer.player?.currentTrackSelections
+
+        currentTrackSelection?.let { trackSelectionArray ->
+            val stringBuilder = SpannableStringBuilder()
+
+            for (i in 0 until trackSelectionArray.length) {
+                trackSelectionArray[i]?.selectedFormat?.let { selectedFormat ->
+                    with(selectedFormat) {
+
+                        id?.let {
+                            stringBuilder.setGreenColoredText("id:")
+                            stringBuilder.append(it)
+                        }
+                        containerMimeType?.let {
+                            stringBuilder.setGreenColoredText(" ContainerMimeType:")
+                            stringBuilder.append(it)
+                        }
+                        sampleMimeType?.let {
+                            stringBuilder.setGreenColoredText(" SampleMimeType:")
+                            stringBuilder.append(it)
+                        }
+                        codecs?.let {
+                            stringBuilder.setGreenColoredText(" Codecs:")
+                            stringBuilder.append(it)
+                        }
+                        bitrate.let {
+                            stringBuilder.setGreenColoredText(" Bitrate:")
+                            stringBuilder.append(it.toString())
+                        }
+                        frameRate.let {
+                            stringBuilder.setGreenColoredText(" FrameRate:")
+                            stringBuilder.append(it.toString())
+                        }
+                        width.let {
+                            stringBuilder.setGreenColoredText(" Width:")
+                            stringBuilder.append(it.toString())
+                        }
+                        height.let {
+                            stringBuilder.setGreenColoredText(" Height:")
+                            stringBuilder.append(it.toString())
+                        }
+                        height
+                        stringBuilder.append("\n")
+                    }
+                }
+            }
+
+            viewViewModel.updateMediaInfo(stringBuilder.toSpannable())
+        }
+
     }
 
     private fun updateServices(services: List<AVService>) {
@@ -558,4 +625,11 @@ class MainFragment : Fragment() {
             return MainFragment()
         }
     }
+}
+
+private fun SpannableStringBuilder.setGreenColoredText(text: String) {
+    val startPosition = this.length
+    this.append(text)
+    this.setSpan(ForegroundColorSpan(Color.GREEN), startPosition, this.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+
 }

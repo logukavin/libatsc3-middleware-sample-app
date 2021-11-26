@@ -49,6 +49,15 @@
                 app:layout_constraintEnd_toEndOf="@+id/enablePHYDebuggingInformation"
                 app:layout_constraintTop_toBottomOf="@+id/enablePHYDebuggingInformation" />
 
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/enableMediaInformation"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="15dp"
+                android:checked="@={viewModel.showMediaInfo}"
+                android:text="@string/settings_show_media_information"
+                app:layout_constraintEnd_toEndOf="@+id/enablePHYDebuggingInformation"
+                app:layout_constraintTop_toBottomOf="@+id/enablePHYGraphView" />
         </androidx.constraintlayout.widget.ConstraintLayout>
 
     </ScrollView>

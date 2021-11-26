@@ -35,6 +35,16 @@ class Prefs(
             }
         }
 
+    var isShowMediaDataInfo: Boolean
+        get() {
+            return prefs.getBoolean(IS_SHOW_MEDIA_INFO, false)
+        }
+        set(value) {
+            prefs.edit {
+                putBoolean(IS_SHOW_MEDIA_INFO, value)
+            }
+        }
+
     private inline fun <T, R> T.ignoreClassCastException(block: T.() -> R?): R? {
         return try {
             block(this)
@@ -48,5 +58,6 @@ class Prefs(
 
         private const val NOTIFICATION_POLICY_REQUESTED = "notification_policy_requested"
         private const val NOTIFICATION_POLICY_GRANTED = "notification_policy_granted"
+        private const val IS_SHOW_MEDIA_INFO: String = "is_show_media_info"
     }
 }
