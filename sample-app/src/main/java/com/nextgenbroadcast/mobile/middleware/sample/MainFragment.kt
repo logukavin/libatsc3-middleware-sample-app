@@ -3,13 +3,9 @@ package com.nextgenbroadcast.mobile.middleware.sample
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
-import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
 import android.text.Html
-import android.text.Spannable
-import android.text.SpannableStringBuilder
-import android.text.style.ForegroundColorSpan
 import android.util.Log
 import android.view.GestureDetector
 import android.view.LayoutInflater
@@ -21,7 +17,6 @@ import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.constraintlayout.widget.ConstraintSet
-import androidx.core.text.toSpannable
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
@@ -217,7 +212,7 @@ class MainFragment : Fragment() {
 
         binding.receiverPlayer.setOnPlaybackChangeListener { state, position, rate ->
             receiverContentResolver.publishPlayerState(state, position, rate)
-            if (viewViewModel.showMediaInfo.value == true) {
+            if (viewViewModel.showMediaInfo.value == true && viewViewModel.showDebugInfo.value == true) {
                 showMediaInformation()
             }
         }
@@ -438,53 +433,35 @@ class MainFragment : Fragment() {
         val currentTrackSelection = binding.receiverPlayer.player?.currentTrackSelections
 
         currentTrackSelection?.let { trackSelectionArray ->
-            val stringBuilder = SpannableStringBuilder()
+            val stringBuilder = StringBuilder()
 
             for (i in 0 until trackSelectionArray.length) {
                 trackSelectionArray[i]?.selectedFormat?.let { selectedFormat ->
-                    with(selectedFormat) {
 
-                        id?.let {
-                            stringBuilder.setGreenColoredText("id:")
-                            stringBuilder.append(it)
+                    with(selectedFormat) {
+                        stringBuilder.apply {
+
+                            id?.let { append(it) }
+
+                            codecs?.let { appendWithPipeSeparator(it) }
+
+                            appendWithPipeSeparator("BR:$bitrate")
+
+                            containerMimeType?.let { mimeType ->
+                                if (mimeType.contains("video")) {
+                                    appendWithPipeSeparator("FR:$frameRate")
+                                    appendWithPipeSeparator("$width/$height")
+                                }
+                            }
+
+                            append("\n")
                         }
-                        containerMimeType?.let {
-                            stringBuilder.setGreenColoredText(" ContainerMimeType:")
-                            stringBuilder.append(it)
-                        }
-                        sampleMimeType?.let {
-                            stringBuilder.setGreenColoredText(" SampleMimeType:")
-                            stringBuilder.append(it)
-                        }
-                        codecs?.let {
-                            stringBuilder.setGreenColoredText(" Codecs:")
-                            stringBuilder.append(it)
-                        }
-                        bitrate.let {
-                            stringBuilder.setGreenColoredText(" Bitrate:")
-                            stringBuilder.append(it.toString())
-                        }
-                        frameRate.let {
-                            stringBuilder.setGreenColoredText(" FrameRate:")
-                            stringBuilder.append(it.toString())
-                        }
-                        width.let {
-                            stringBuilder.setGreenColoredText(" Width:")
-                            stringBuilder.append(it.toString())
-                        }
-                        height.let {
-                            stringBuilder.setGreenColoredText(" Height:")
-                            stringBuilder.append(it.toString())
-                        }
-                        height
-                        stringBuilder.append("\n")
                     }
                 }
             }
 
-            viewViewModel.updateMediaInfo(stringBuilder.toSpannable())
+            viewViewModel.updateMediaInfo(stringBuilder.toString())
         }
-
     }
 
     private fun updateServices(services: List<AVService>) {
@@ -627,9 +604,6 @@ class MainFragment : Fragment() {
     }
 }
 
-private fun SpannableStringBuilder.setGreenColoredText(text: String) {
-    val startPosition = this.length
-    this.append(text)
-    this.setSpan(ForegroundColorSpan(Color.GREEN), startPosition, this.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-
+private fun StringBuilder.appendWithPipeSeparator(str: String) {
+    append(" | ").append(str)
 }

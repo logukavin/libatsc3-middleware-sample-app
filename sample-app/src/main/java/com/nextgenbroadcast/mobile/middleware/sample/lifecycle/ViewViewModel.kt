@@ -4,8 +4,6 @@ import android.app.Application
 import android.net.NetworkCapabilities
 import android.net.Uri
 import android.text.Html
-import android.text.Spannable
-import android.text.SpannableString
 import androidx.lifecycle.*
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.AppData
@@ -13,12 +11,12 @@ import com.nextgenbroadcast.mobile.core.model.ReceiverState
 import com.nextgenbroadcast.mobile.core.model.bCastEntryPageUrlFull
 import com.nextgenbroadcast.mobile.middleware.sample.MobileInternetDetector.CellularNetworkState
 import com.nextgenbroadcast.mobile.middleware.sample.R
+import com.nextgenbroadcast.mobile.middleware.sample.asString
 import com.nextgenbroadcast.mobile.middleware.sample.core.mapWith
 import com.nextgenbroadcast.mobile.middleware.sample.model.LogInfo
 import com.nextgenbroadcast.mobile.middleware.sample.model.LogInfo.Group
 import com.nextgenbroadcast.mobile.middleware.sample.model.LogInfo.Record
 import com.nextgenbroadcast.mobile.middleware.sample.settings.SensorState
-import com.nextgenbroadcast.mobile.middleware.sample.asString
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 
@@ -100,7 +98,7 @@ class ViewViewModel(
     val groupedLogsInfo: LiveData<List<LogInfo>>
         get() = logsInfo.map(::groupLogs)
 
-    private var _mediaDataInfo = MutableLiveData<Spannable>()
+    private var _mediaDataInfo = MutableLiveData<String>()
     val mediaDataInfo = _mediaDataInfo.distinctUntilChanged()
 
     private fun groupLogs(map: Map<String, Boolean>): List<LogInfo> {
@@ -199,7 +197,7 @@ class ViewViewModel(
         }
     }
 
-    fun updateMediaInfo(mediaInfo: Spannable) {
+    fun updateMediaInfo(mediaInfo: String) {
         _mediaDataInfo.value = mediaInfo
     }
 }
