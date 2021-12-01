@@ -55,6 +55,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="15dp"
                 android:checked="@={viewModel.showMediaInfo}"
+                android:enabled="@{viewModel.showDebugInfo}"
                 android:text="@string/settings_show_media_information"
                 app:layout_constraintEnd_toEndOf="@+id/enablePHYDebuggingInformation"
                 app:layout_constraintTop_toBottomOf="@+id/enablePHYGraphView" />

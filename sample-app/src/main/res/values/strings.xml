@@ -9,9 +9,10 @@
     <string name="settings_frequency_hint">Receiver frequency in MHz</string>
     <string name="settings_apply_btn">Tune</string>
     <string name="settings_scan_btn">Scan range</string>
-    <string name="settings_enable_debug_info">Enable Debug Information</string>
-    <string name="settings_enable_phy_info">Enable Phy Information</string>
-    <string name="settings_display_phy_chart">Display Phy Chart</string>
+    <string name="settings_enable_debug_info">Debug Information</string>
+    <string name="settings_enable_phy_info">Phy Information</string>
+    <string name="settings_display_phy_chart">Phy Chart</string>
+    <string name="settings_show_media_information">Media Information</string>
     <string name="settings_enable_sensor_telemetry">Sensors</string>
     <string name="settings_enable_location_telemetry">Location</string>
     <string name="settings_enable_telemetry">Collect Telemetry</string>
@@ -38,5 +39,4 @@
     <string name="permission_request_info_title">Permission required</string>
     <string name="permission_request_info_dnd">Permission to change Do Not Disturb mode is important for Emergency Alerting</string>
     <string name="debug_cellular_info">Cellular: %s, bandwidth: up - %s Kbps / down - %s Kbps</string>
-    <string name="settings_show_media_information">Show Media Infrormation</string>
 </resources>
