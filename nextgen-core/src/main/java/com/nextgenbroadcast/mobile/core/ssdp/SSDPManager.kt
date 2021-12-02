@@ -3,23 +3,23 @@ package com.nextgenbroadcast.mobile.core.ssdp
 import kotlinx.coroutines.flow.*
 
 class SSDPManager(
-    val role: SSDPRole,
+    override val role: SSDPRole,
     private val ssdpTransportFactory: SSDPTransportFactory
-) {
+) : ISSDPManager {
 
     private var ssdpTransport: ISSDPTransport? = null
 
-    val isRunning: Boolean
+    override val isRunning: Boolean
         get() = ssdpTransport?.isRunning == true
 
-    private val mDeviceFlow = MutableStateFlow<Set<SSDPDeviceInfo>>(mutableSetOf())
-    val deviceFlow = mDeviceFlow.asStateFlow()
+    private val _deviceFlow = MutableStateFlow<Set<SSDPDeviceInfo>>(mutableSetOf())
+    override val deviceFlow = _deviceFlow.asStateFlow()
 
-    fun start(location: String) {
+    override fun start(location: String) {
         ssdpTransport = ssdpTransportFactory.createTransport(
             address = MULTICAST_ADDRESS,
             port = PORT,
-            ssdpDeviceInfoFlow = mDeviceFlow,
+            ssdpDeviceInfoFlow = _deviceFlow,
             role = role
         ).apply {
             start()
@@ -27,7 +27,8 @@ class SSDPManager(
         }
     }
 
-    fun shutdown() {
+    override fun shutdown() {
+        _deviceFlow.value = emptySet()
         ssdpTransport?.shutdown()
     }
 
@@ -35,12 +36,11 @@ class SSDPManager(
         ssdpTransport?.search(searchTarget)
     }
 
-    //TODO: need to return something ?
-    fun search() {
+    override fun search() {
         search(searchTarget = role.oppositeRole().data)
     }
 
-    fun advertise(location: String) {
+    override fun advertise(location: String) {
         ssdpTransport?.advertise(location)
     }
 
