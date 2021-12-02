@@ -65,12 +65,14 @@ internal object XmlUtils {
         return value.split(" ").map { strToInt(it) }
     }
 
-    fun strToDate(value: String): ZonedDateTime? {
-        return try {
-            ZonedDateTime.parse(value)
-        } catch (e: DateTimeParseException) {
-            null
-        }
+    fun strToDate(value: String?): ZonedDateTime? {
+        return if (!value.isNullOrBlank()) {
+            try {
+                ZonedDateTime.parse(value)
+            } catch (e: DateTimeParseException) {
+                null
+            }
+        } else null
     }
 }
 
@@ -105,7 +107,7 @@ internal inline fun XmlPullParser.iterateSubText(action: (name: String, text: St
 
 internal inline fun XmlPullParser.iterateAttrs(action: (name: String, value: String) -> Unit): XmlPullParser {
     for (i in 0 until attributeCount) {
-        action(getAttributeName(i), getAttributeValue(i))
+        action(getAttributeName(i) ?: "", getAttributeValue(i) ?: "")
     }
 
     return this
