@@ -212,9 +212,7 @@ class MainFragment : Fragment() {
 
         binding.receiverPlayer.setOnPlaybackChangeListener { state, position, rate ->
             receiverContentResolver.publishPlayerState(state, position, rate)
-            if (viewViewModel.showMediaInfo.value == true && viewViewModel.showDebugInfo.value == true) {
-                showMediaInformation()
-            }
+            viewViewModel.currentPlaybackState.value = state
         }
 
         observeLocalData()
@@ -359,11 +357,26 @@ class MainFragment : Fragment() {
         viewViewModel.services.observe(viewLifecycleOwner) { services ->
             updateServices(services)
         }
+
         viewViewModel.currentServiceTitle.observe(viewLifecycleOwner) { currentServiceTitle ->
             setSelectedService(currentServiceTitle)
         }
+
         viewViewModel.showMediaInfo.observe(viewLifecycleOwner) { isShowMediaInfo ->
             prefs.isShowMediaDataInfo = isShowMediaInfo
+        }
+
+        viewViewModel.currentPlaybackState.observe(viewLifecycleOwner) { playbackState ->
+            if (playbackState != null
+                && playbackState.state == PlaybackState.PLAYING.state
+                && viewViewModel.showMediaInfo.value == true
+            ) {
+                if (viewViewModel.mediaDataInfo.value.isNullOrBlank()) {
+                    showMediaInformation()
+                }
+            } else if (!viewViewModel.mediaDataInfo.value.isNullOrBlank()) {
+                viewViewModel.mediaDataInfo.value = ""
+            }
         }
     }
 
@@ -460,7 +473,7 @@ class MainFragment : Fragment() {
                 }
             }
 
-            viewViewModel.updateMediaInfo(stringBuilder.toString())
+            viewViewModel.mediaDataInfo.value = stringBuilder.toString()
         }
     }
 

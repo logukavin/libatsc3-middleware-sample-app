@@ -5,10 +5,7 @@ import android.net.NetworkCapabilities
 import android.net.Uri
 import android.text.Html
 import androidx.lifecycle.*
-import com.nextgenbroadcast.mobile.core.model.AVService
-import com.nextgenbroadcast.mobile.core.model.AppData
-import com.nextgenbroadcast.mobile.core.model.ReceiverState
-import com.nextgenbroadcast.mobile.core.model.bCastEntryPageUrlFull
+import com.nextgenbroadcast.mobile.core.model.*
 import com.nextgenbroadcast.mobile.middleware.sample.MobileInternetDetector.CellularNetworkState
 import com.nextgenbroadcast.mobile.middleware.sample.R
 import com.nextgenbroadcast.mobile.middleware.sample.asString
@@ -98,8 +95,8 @@ class ViewViewModel(
     val groupedLogsInfo: LiveData<List<LogInfo>>
         get() = logsInfo.map(::groupLogs)
 
-    private var _mediaDataInfo = MutableLiveData<String>()
-    val mediaDataInfo = _mediaDataInfo.distinctUntilChanged()
+    val mediaDataInfo = MutableLiveData<String>()
+    val currentPlaybackState = MutableLiveData<PlaybackState>()
 
     private fun groupLogs(map: Map<String, Boolean>): List<LogInfo> {
         val records = map.map { (key, enabled) ->
@@ -197,7 +194,4 @@ class ViewViewModel(
         }
     }
 
-    fun updateMediaInfo(mediaInfo: String) {
-        _mediaDataInfo.value = mediaInfo
-    }
 }
