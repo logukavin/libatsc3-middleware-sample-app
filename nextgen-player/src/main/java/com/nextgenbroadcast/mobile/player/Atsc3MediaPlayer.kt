@@ -45,7 +45,7 @@ class Atsc3MediaPlayer(
     private var audioFocusRequest: AudioFocusRequest? = null
     private var listener: EventListener? = null
     private var _player: SimpleExoPlayer? = null
-    private var _trackSelector: DefaultTrackSelector? = null
+    private var trackSelector: TrackSelector? = null
     private var isMMTPlayback = false
     private var rmpState: PlaybackState? = null
     private var resetPlayerJob: Job? = null
@@ -57,8 +57,6 @@ class Atsc3MediaPlayer(
 
     val player: Player?
         get() = _player
-    val trackSelector: DefaultTrackSelector?
-        get() = _trackSelector
 
     var resetWhenLostAudioFocus: Boolean = true
 
@@ -105,7 +103,7 @@ class Atsc3MediaPlayer(
         lastMimeType = mimeType
 
         val selector = DefaultTrackSelector().also {
-            _trackSelector = it
+            trackSelector = it
         }
 
         val mediaSource = createMediaSource(mediaUri, mimeType)
@@ -168,7 +166,7 @@ class Atsc3MediaPlayer(
             it.stop()
             it.release()
             _player = null
-            _trackSelector = null
+            trackSelector = null
         }
         isMMTPlayback = false
 
@@ -179,26 +177,30 @@ class Atsc3MediaPlayer(
         lastMediaUri = null
     }
 
-    fun getSubtitleFormats(): List<Triple<Format, Boolean, Int>> {
-        val rendererType = C.TRACK_TYPE_AUDIO
-
-        return mutableListOf<Triple<Format, Boolean, Int>>().apply {
-            trackSelector?.let { selector ->
+    fun getTrackDescription(types: Set<MediaRendererType>): Map<MediaRendererType, List<MediaTrackDescription>> {
+        val currentTrackSelection = player?.currentTrackSelections
+        return mutableMapOf<MediaRendererType, List<MediaTrackDescription>>().apply {
+            (trackSelector as? DefaultTrackSelector)?.let { selector ->
                 val parameters = selector.parameters
                 selector.currentMappedTrackInfo?.let { trackInfo ->
                     for (rendererIndex in 0 until trackInfo.rendererCount) {
-                        if (rendererType == trackInfo.getRendererType(rendererIndex)) {
+                        val rendererType = MediaRendererType.valueOf(trackInfo.getRendererType(rendererIndex))
+                        if (rendererType != null && types.contains(rendererType)) {
+                            val renderers = get(rendererType)?.toMutableList() ?: mutableListOf()
                             val trackGroups = trackInfo.getTrackGroups(rendererIndex)
                             val override = parameters.getSelectionOverride(rendererIndex, trackGroups)
+                            val isDisabled = parameters.getRendererDisabled(rendererIndex)
                             for (groupIndex in 0 until trackGroups.length) {
                                 val group = trackGroups[groupIndex]
                                 for (trackIndex in 0 until group.length) {
                                     val format = group.getFormat(trackIndex)
-                                    val compositeIndex = ((rendererIndex and 0xff) shl 16) or ((groupIndex and 0xff) shl 8) or (trackIndex and 0xff)
                                     val isSelected = override != null && override.groupIndex == groupIndex && override.containsTrack(trackIndex)
-                                    add(Triple(format, isSelected, compositeIndex))
+                                            || format != null && format == currentTrackSelection?.get(rendererIndex)?.selectedFormat
+                                    val compositeIndex = ((trackIndex and 0xff) shl 16) or ((groupIndex and 0xff) shl 8) or (rendererIndex and 0xff)
+                                    renderers.add(MediaTrackDescription(format, isSelected && !isDisabled, compositeIndex))
                                 }
                             }
+                            put(rendererType, renderers)
                         }
                     }
                 }
@@ -206,22 +208,37 @@ class Atsc3MediaPlayer(
         }
     }
 
-    fun selectTrack(compositeIndex: Int) {
-        val trackIndex = compositeIndex and 0xff
-        val groupIndex = (compositeIndex shr 8) and 0xff
-        val rendererIndex = (compositeIndex shr 16) and 0xff
-
-        trackSelector?.let { selector ->
+    fun selectTracks(disabledTracks: List<MediaTrackDescription>, selectedTracks: List<MediaTrackDescription>) {
+        (trackSelector as? DefaultTrackSelector)?.let { selector ->
             val parameters = selector.parameters
 
-            selector.currentMappedTrackInfo?.let { trackInfo ->
-                val trackGroups = trackInfo.getTrackGroups(rendererIndex)
-                //val override = parameters.getSelectionOverride(rendererIndex, trackGroups)
+            val disabledRenderers = disabledTracks.map { track ->
+                track.index and 0xff // rendererIndex
+            }.distinct().filter { rendererIndex ->
+                selectedTracks.firstOrNull { track ->
+                    (track.index and 0xff) == rendererIndex
+                } == null
+            }
 
-                val builder: DefaultTrackSelector.ParametersBuilder = parameters.buildUpon()
-                builder.clearSelectionOverrides(rendererIndex)
-                //TODO: override.tracks to add/replace tracks
-                builder.setSelectionOverride(rendererIndex, trackGroups, SelectionOverride(groupIndex, trackIndex))
+            selector.currentMappedTrackInfo?.let { trackInfo ->
+                val builder = parameters.buildUpon().apply {
+                    disabledRenderers.forEach { rendererIndex ->
+                        clearSelectionOverrides(rendererIndex)
+                        setRendererDisabled(rendererIndex, true)
+                    }
+
+                    selectedTracks.forEach { track ->
+                        val rendererIndex = track.index and 0xff
+                        val groupIndex = (track.index shr 8) and 0xff
+                        val trackIndex = (track.index shr 16) and 0xff
+
+                        clearSelectionOverrides(rendererIndex)
+
+                        val trackGroups = trackInfo.getTrackGroups(rendererIndex)
+                        setRendererDisabled(rendererIndex, false)
+                        setSelectionOverride(rendererIndex, trackGroups, SelectionOverride(groupIndex, trackIndex))
+                    }
+                }
 
                 selector.setParameters(builder)
             }
