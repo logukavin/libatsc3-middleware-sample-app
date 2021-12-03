@@ -55,7 +55,6 @@ class MainFragment : Fragment() {
 
     private var servicesList: List<AVService>? = null
     private var currentAppData: AppData? = null
-    private var isShowingTrackSelectionDialog = false
 
     private var phyLoggingJob: Timer? = null
 
@@ -405,19 +404,27 @@ class MainFragment : Fragment() {
     }
 
     private fun openSelectTracksDialog() {
-        val trackSelection = binding.receiverPlayer.getTrackSelector()
-        val currentTrackSelection = binding.receiverPlayer.player.currentTrackSelections
-        if (!isShowingTrackSelectionDialog
-                && trackSelection != null
-                && TrackSelectionDialog.willHaveContent(trackSelection)) {
-            isShowingTrackSelectionDialog = true
-            val trackSelectionDialog = TrackSelectionDialog.createForTrackSelector(
-                    getString(R.string.track_selection_title),
-                    currentTrackSelection,
-                    trackSelection
-            ) { isShowingTrackSelectionDialog = false }
-            trackSelectionDialog.show(parentFragmentManager, null)
+        val trackMap = binding.receiverPlayer.getTrackDescriptors()
+        if (trackMap.isEmpty()) return
+
+        val trackSelectionDialog = TrackSelectionDialog().apply {
+            init(
+                this@MainFragment.getString(R.string.track_selection_title),
+                trackMap,
+                onClickListener = { _, _ ->
+                    updateOverrides()
+
+                    val tracks = trackMap.values.flatten()
+                    val disabledTracks = tracks.filter { isDisabled(it.index) }
+                    val selectedTracks = tracks.filter { isSelected(it.index) }
+
+                    binding.receiverPlayer.selectTracks(disabledTracks, selectedTracks)
+                },
+                onDismissListener = {
+                }
+            )
         }
+        trackSelectionDialog.show(parentFragmentManager, null)
     }
 
     private fun updateServices(services: List<AVService>) {
