@@ -5,6 +5,7 @@ import android.net.NetworkCapabilities
 import android.net.Uri
 import android.text.Html
 import androidx.lifecycle.*
+import com.google.android.exoplayer2.Player
 import com.nextgenbroadcast.mobile.core.model.*
 import com.nextgenbroadcast.mobile.middleware.sample.MobileInternetDetector.CellularNetworkState
 import com.nextgenbroadcast.mobile.middleware.sample.R
@@ -69,7 +70,6 @@ class ViewViewModel(
     val showDebugInfo = MutableLiveData<Boolean>()
     val showPhyInfo = MutableLiveData<Boolean>()
     val showPhyChart = MutableLiveData<Boolean>()
-    val showMediaInfo = MutableLiveData<Boolean>()
 
     val debugData = MutableLiveData<CharSequence>()
 
@@ -95,8 +95,13 @@ class ViewViewModel(
     val groupedLogsInfo: LiveData<List<LogInfo>>
         get() = logsInfo.map(::groupLogs)
 
-    val mediaDataInfo = MutableLiveData<String>()
-    val currentPlaybackState = MutableLiveData<PlaybackState>()
+    private val playbackStateIdle = MutableLiveData(Player.STATE_IDLE)
+    val isShowMediaInfo = MutableLiveData<Boolean>()
+    val dataMediaInfo = MutableLiveData<String>()
+    val currentPlaybackState = MutableLiveData<Int>()
+    val showMediaInfo = isShowMediaInfo.switchMap { isShow ->
+        if (isShow) currentPlaybackState else playbackStateIdle
+    }
 
     private fun groupLogs(map: Map<String, Boolean>): List<LogInfo> {
         val records = map.map { (key, enabled) ->

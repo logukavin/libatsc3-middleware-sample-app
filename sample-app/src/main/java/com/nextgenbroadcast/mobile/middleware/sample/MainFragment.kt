@@ -21,6 +21,8 @@ import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.setFragmentResultListener
+import androidx.lifecycle.distinctUntilChanged
+import com.google.android.exoplayer2.Player
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.nextgenbroadcast.mobile.core.atsc3.PhyInfoConstants
 import com.nextgenbroadcast.mobile.core.model.*
@@ -122,7 +124,7 @@ class MainFragment : Fragment() {
         binding = FragmentMainBinding.inflate(inflater, container, false).apply {
             lifecycleOwner = viewLifecycleOwner
             viewModel = viewViewModel
-            viewViewModel.showMediaInfo.value = prefs.isShowMediaDataInfo
+            viewViewModel.isShowMediaInfo.value = prefs.isShowMediaDataInfo
         }
 
         ReceiverContentResolver.resetPlayerState(requireContext())
@@ -212,7 +214,6 @@ class MainFragment : Fragment() {
 
         binding.receiverPlayer.setOnPlaybackChangeListener { state, position, rate ->
             receiverContentResolver.publishPlayerState(state, position, rate)
-            viewViewModel.currentPlaybackState.value = state
         }
 
         observeLocalData()
@@ -292,6 +293,12 @@ class MainFragment : Fragment() {
 
             if (mediaUri != null) {
                 binding.receiverPlayer.play(mediaUri)
+
+                binding.receiverPlayer.player.addListener(object : Player.EventListener {
+                    override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
+                        viewViewModel.currentPlaybackState.value = playbackState
+                    }
+                })
             } else {
                 binding.receiverPlayer.stopAndClear()
             }
@@ -362,20 +369,14 @@ class MainFragment : Fragment() {
             setSelectedService(currentServiceTitle)
         }
 
-        viewViewModel.showMediaInfo.observe(viewLifecycleOwner) { isShowMediaInfo ->
+        viewViewModel.isShowMediaInfo.observe(viewLifecycleOwner) { isShowMediaInfo ->
             prefs.isShowMediaDataInfo = isShowMediaInfo
         }
 
-        viewViewModel.currentPlaybackState.observe(viewLifecycleOwner) { playbackState ->
-            if (playbackState != null
-                && playbackState.state == PlaybackState.PLAYING.state
-                && viewViewModel.showMediaInfo.value == true
-            ) {
-                if (viewViewModel.mediaDataInfo.value.isNullOrBlank()) {
-                    showMediaInformation()
-                }
-            } else if (!viewViewModel.mediaDataInfo.value.isNullOrBlank()) {
-                viewViewModel.mediaDataInfo.value = ""
+        viewViewModel.showMediaInfo.distinctUntilChanged().observe(viewLifecycleOwner) { playbackState ->
+            when (playbackState) {
+                Player.STATE_READY -> showMediaInformation()
+                Player.STATE_IDLE, Player.STATE_ENDED -> viewViewModel.dataMediaInfo.value = ""
             }
         }
     }
@@ -473,7 +474,7 @@ class MainFragment : Fragment() {
                 }
             }
 
-            viewViewModel.mediaDataInfo.value = stringBuilder.toString()
+            viewViewModel.dataMediaInfo.value = stringBuilder.toString()
         }
     }
 
