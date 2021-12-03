@@ -23,6 +23,8 @@ import kotlinx.coroutines.launch
 class ViewViewModel(
     application: Application
 ) : AndroidViewModel(application) {
+    private val alwaysFalse = MutableLiveData(false)
+
     val sources = MutableLiveData<List<Pair<String, String>>>(emptyList())
     val services = MutableLiveData<List<AVService>>(emptyList())
     val currentServiceTitle = MutableLiveData<String>()
@@ -72,6 +74,17 @@ class ViewViewModel(
     val showDebugInfo = MutableLiveData<Boolean>()
     val showPhyInfo = MutableLiveData<Boolean>()
     val showPhyChart = MutableLiveData<Boolean>()
+
+    val isPIPMode = MutableLiveData(false)
+    val isDebugInfoVisible = isPIPMode.switchMap { inPIPMode ->
+        if (inPIPMode) alwaysFalse else showDebugInfo
+    }
+    val isPhyInfoVisible = isPIPMode.switchMap { inPIPMode ->
+        if (inPIPMode) alwaysFalse else showPhyInfo
+    }
+    val isPhyChartVisible = isPIPMode.switchMap { inPIPMode ->
+        if (inPIPMode) alwaysFalse else showPhyChart
+    }
 
     val debugData = MutableLiveData<CharSequence>()
 
