@@ -433,6 +433,8 @@ class MainFragment : Fragment() {
     }
 
     override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean) {
+        viewViewModel.isPIPMode.value = isInPictureInPictureMode
+
         val visibility = if (isInPictureInPictureMode) {
             setBAAvailability(false)
             View.INVISIBLE
