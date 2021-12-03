@@ -4,30 +4,18 @@ import android.content.Context
 import android.util.AttributeSet
 import android.view.LayoutInflater
 import android.view.ViewGroup
-import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.middleware.sample.R
-import com.philips.jhdr.ISlhdrOperatingModeNtf
 import com.philips.jhdr.SlhdrPlayerView
 
 class Atsc3SlhdrPlayerView @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null
-) : SlhdrPlayerView(context, attrs), Atsc3PlayerView, ISlhdrOperatingModeNtf {
+) : SlhdrPlayerView(context, attrs), Atsc3PlayerView {
 
     override fun onFinishInflate() {
         super.onFinishInflate()
 
         if (isInEditMode) return
 
-        setSlhdrModeNtf(this)
-    }
-
-    override fun OnProcessingModeChanged(SlhdrMode: Int, OutputMode: Int, SplitScreenMode: Int) {
-        val processingSlhdr = (SlhdrMode > ISlhdrOperatingModeNtf.Processing_Mode_None)
-        LOG.d(TAG, "OnProcessingModeChanged - SlhdrMode: $SlhdrMode, OutputMode: $OutputMode, SplitScreenMode: $SplitScreenMode -> processingSlhdr: $processingSlhdr")
-    }
-
-    override fun OnDaChanged(onOff: Boolean, level: Int) {
-        LOG.d(TAG, "OnDaChanged - onOff: $onOff, level: $level")
     }
 
     companion object {
