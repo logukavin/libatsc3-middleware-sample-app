@@ -21,20 +21,22 @@ import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.setFragmentResultListener
+import androidx.lifecycle.distinctUntilChanged
+import com.google.android.exoplayer2.Player
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.nextgenbroadcast.mobile.core.atsc3.PhyInfoConstants
 import com.nextgenbroadcast.mobile.core.model.*
 import com.nextgenbroadcast.mobile.middleware.dev.atsc3.PHYStatistics
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.TelemetryClient
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.observer.StaticTelemetryObserver
-import com.nextgenbroadcast.mobile.middleware.sample.view.PhyChartView
+import com.nextgenbroadcast.mobile.middleware.sample.adapter.ServiceAdapter
 import com.nextgenbroadcast.mobile.middleware.sample.core.SwipeGestureDetector
 import com.nextgenbroadcast.mobile.middleware.sample.core.mapWith
 import com.nextgenbroadcast.mobile.middleware.sample.databinding.FragmentMainBinding
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.ViewViewModel
-import com.nextgenbroadcast.mobile.middleware.sample.adapter.ServiceAdapter
-import com.nextgenbroadcast.mobile.middleware.dev.telemetry.TelemetryClient
 import com.nextgenbroadcast.mobile.middleware.sample.model.*
 import com.nextgenbroadcast.mobile.middleware.sample.settings.SettingsDialog
+import com.nextgenbroadcast.mobile.middleware.sample.view.PhyChartView
 import com.nextgenbroadcast.mobile.view.AboutDialog
 import com.nextgenbroadcast.mobile.view.TrackSelectionDialog
 import com.nextgenbroadcast.mobile.view.UserAgentView
@@ -52,6 +54,7 @@ class MainFragment : Fragment() {
     private lateinit var receiverContentResolver: ReceiverContentResolver
     private lateinit var telemetryClient: TelemetryClient
     private lateinit var binding: FragmentMainBinding
+    private lateinit var prefs: Prefs
 
     private var servicesList: List<AVService>? = null
     private var currentAppData: AppData? = null
@@ -78,6 +81,7 @@ class MainFragment : Fragment() {
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
+        prefs = Prefs(context)
 
         requireActivity().onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
@@ -119,6 +123,7 @@ class MainFragment : Fragment() {
         binding = FragmentMainBinding.inflate(inflater, container, false).apply {
             lifecycleOwner = viewLifecycleOwner
             viewModel = viewViewModel
+            viewViewModel.isShowMediaInfo.value = prefs.isShowMediaDataInfo
         }
 
         ReceiverContentResolver.resetPlayerState(requireContext())
@@ -287,6 +292,12 @@ class MainFragment : Fragment() {
 
             if (mediaUri != null) {
                 binding.receiverPlayer.play(mediaUri)
+
+                binding.receiverPlayer.player.addListener(object : Player.EventListener {
+                    override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
+                        viewViewModel.currentPlaybackState.value = playbackState
+                    }
+                })
             } else {
                 binding.receiverPlayer.stopAndClear()
             }
@@ -352,8 +363,20 @@ class MainFragment : Fragment() {
         viewViewModel.services.observe(viewLifecycleOwner) { services ->
             updateServices(services)
         }
+
         viewViewModel.currentServiceTitle.observe(viewLifecycleOwner) { currentServiceTitle ->
             setSelectedService(currentServiceTitle)
+        }
+
+        viewViewModel.isShowMediaInfo.observe(viewLifecycleOwner) { isShowMediaInfo ->
+            prefs.isShowMediaDataInfo = isShowMediaInfo
+        }
+
+        viewViewModel.showMediaInfo.distinctUntilChanged().observe(viewLifecycleOwner) { playbackState ->
+            when (playbackState) {
+                Player.STATE_READY -> showMediaInformation()
+                Player.STATE_IDLE, Player.STATE_ENDED -> viewViewModel.dataMediaInfo.value = ""
+            }
         }
     }
 
@@ -425,6 +448,41 @@ class MainFragment : Fragment() {
             )
         }
         trackSelectionDialog.show(parentFragmentManager, null)
+    }
+
+    private fun showMediaInformation() {
+        val currentTrackSelection = binding.receiverPlayer.player?.currentTrackSelections
+
+        currentTrackSelection?.let { trackSelectionArray ->
+            val stringBuilder = StringBuilder()
+
+            for (i in 0 until trackSelectionArray.length) {
+                trackSelectionArray[i]?.selectedFormat?.let { selectedFormat ->
+
+                    with(selectedFormat) {
+                        stringBuilder.apply {
+
+                            id?.let { append(it) }
+
+                            codecs?.let { appendWithPipeSeparator(it) }
+
+                            appendWithPipeSeparator("BR:$bitrate")
+
+                            containerMimeType?.let { mimeType ->
+                                if (mimeType.contains("video")) {
+                                    appendWithPipeSeparator("FR:$frameRate")
+                                    appendWithPipeSeparator("$width/$height")
+                                }
+                            }
+
+                            append("\n")
+                        }
+                    }
+                }
+            }
+
+            viewViewModel.dataMediaInfo.value = stringBuilder.toString()
+        }
     }
 
     private fun updateServices(services: List<AVService>) {
@@ -567,4 +625,8 @@ class MainFragment : Fragment() {
             return MainFragment()
         }
     }
+}
+
+private fun StringBuilder.appendWithPipeSeparator(str: String) {
+    append(" | ").append(str)
 }

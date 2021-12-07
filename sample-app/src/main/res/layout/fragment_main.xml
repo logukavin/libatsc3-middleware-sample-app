@@ -117,6 +117,19 @@
                 android:visibility="@{viewModel.isPhyChartVisible ? View.VISIBLE : View.GONE }"
                 app:layout_constraintTop_toBottomOf="@+id/phy_data_log" />
 
+            <TextView
+                android:id="@+id/media_information"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginEnd="16dp"
+                android:background="@color/semi_transparent"
+                android:text="@{viewModel.dataMediaInfo}"
+                android:textColor="@color/white"
+                android:textSize="8sp"
+                android:visibility="@{viewModel.isShowMediaInfo ? View.VISIBLE : View.GONE }"
+                app:layout_constraintTop_toBottomOf="@id/phy_chart" />
+
             <androidx.appcompat.widget.AppCompatImageButton
                 android:id="@+id/settings_button"
                 android:layout_width="wrap_content"
