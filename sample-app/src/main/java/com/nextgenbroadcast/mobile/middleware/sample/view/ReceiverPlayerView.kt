@@ -4,12 +4,13 @@ import android.content.Context
 import android.net.Uri
 import android.util.AttributeSet
 import com.google.android.exoplayer2.Player
-import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
 import com.google.android.exoplayer2.ui.PlayerView
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.player.Atsc3MediaPlayer
 import com.nextgenbroadcast.mobile.player.MMTConstants
+import com.nextgenbroadcast.mobile.player.MediaRendererType
+import com.nextgenbroadcast.mobile.player.MediaTrackDescription
 
 typealias OnPlaybackChangeListener = (state: PlaybackState, position: Long, rate: Float) -> Unit
 
@@ -122,8 +123,14 @@ class ReceiverPlayerView @JvmOverloads constructor(
         removeCallbacks(enableBufferingProgress)
     }
 
-    fun getTrackSelector(): DefaultTrackSelector? {
-        return atsc3Player.trackSelector
+    fun getTrackDescriptors(): Map<MediaRendererType, List<MediaTrackDescription>> {
+        return atsc3Player.getTrackDescription(
+            setOf(MediaRendererType.AUDIO, MediaRendererType.TEXT)
+        )
+    }
+
+    fun selectTracks(disabledTracks: List<MediaTrackDescription>, selectedTracks: List<MediaTrackDescription>) {
+        atsc3Player.selectTracks(disabledTracks, selectedTracks)
     }
 
     private val enableBufferingProgress = Runnable {
