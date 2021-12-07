@@ -5,18 +5,16 @@ import android.net.NetworkCapabilities
 import android.net.Uri
 import android.text.Html
 import androidx.lifecycle.*
-import com.nextgenbroadcast.mobile.core.model.AVService
-import com.nextgenbroadcast.mobile.core.model.AppData
-import com.nextgenbroadcast.mobile.core.model.ReceiverState
-import com.nextgenbroadcast.mobile.core.model.bCastEntryPageUrlFull
+import com.google.android.exoplayer2.Player
+import com.nextgenbroadcast.mobile.core.model.*
 import com.nextgenbroadcast.mobile.middleware.sample.MobileInternetDetector.CellularNetworkState
 import com.nextgenbroadcast.mobile.middleware.sample.R
+import com.nextgenbroadcast.mobile.middleware.sample.asString
 import com.nextgenbroadcast.mobile.middleware.sample.core.mapWith
 import com.nextgenbroadcast.mobile.middleware.sample.model.LogInfo
 import com.nextgenbroadcast.mobile.middleware.sample.model.LogInfo.Group
 import com.nextgenbroadcast.mobile.middleware.sample.model.LogInfo.Record
 import com.nextgenbroadcast.mobile.middleware.sample.settings.SensorState
-import com.nextgenbroadcast.mobile.middleware.sample.asString
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 
@@ -109,6 +107,14 @@ class ViewViewModel(
 
     val groupedLogsInfo: LiveData<List<LogInfo>>
         get() = logsInfo.map(::groupLogs)
+
+    private val playbackStateIdle = MutableLiveData(Player.STATE_IDLE)
+    val isShowMediaInfo = MutableLiveData<Boolean>()
+    val dataMediaInfo = MutableLiveData<String>()
+    val currentPlaybackState = MutableLiveData<Int>()
+    val showMediaInfo = isShowMediaInfo.switchMap { isShow ->
+        if (isShow) currentPlaybackState else playbackStateIdle
+    }
 
     private fun groupLogs(map: Map<String, Boolean>): List<LogInfo> {
         val records = map.map { (key, enabled) ->
@@ -205,4 +211,5 @@ class ViewViewModel(
             eventSensorEnableChannel.send(sensorEnableState)
         }
     }
+
 }
