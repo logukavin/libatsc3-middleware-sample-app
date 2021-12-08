@@ -12,8 +12,6 @@ import android.widget.FrameLayout
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import com.google.android.exoplayer2.Player
-import com.google.android.exoplayer2.trackselection.TrackSelectionArray
-import com.google.android.exoplayer2.trackselection.TrackSelector
 import com.google.android.exoplayer2.ui.PlayerView
 import com.google.android.exoplayer2.video.VideoListener
 import com.nextgenbroadcast.mobile.core.LOG
@@ -22,6 +20,8 @@ import com.nextgenbroadcast.mobile.middleware.sample.R
 import com.nextgenbroadcast.mobile.middleware.sample.exoplayer.SlhdrAtsc3RenderersFactory
 import com.nextgenbroadcast.mobile.player.Atsc3MediaPlayer
 import com.nextgenbroadcast.mobile.player.MMTConstants
+import com.nextgenbroadcast.mobile.player.MediaRendererType
+import com.nextgenbroadcast.mobile.player.MediaTrackDescription
 import com.philips.jhdr.ISlhdrOperatingModeNtf
 
 typealias OnPlaybackChangeListener = (state: PlaybackState, position: Long, rate: Float) -> Unit
@@ -322,14 +322,14 @@ class ReceiverPlayerView @JvmOverloads constructor(
         }
     }
 
-    //TODO: replace with custom implementation in Atsc3Player
-    fun getTrackSelector(): TrackSelector? {
-        return atsc3Player.trackSelector
+    fun getTrackDescriptors(): Map<MediaRendererType, List<MediaTrackDescription>> {
+        return atsc3Player.getTrackDescription(
+            setOf(MediaRendererType.AUDIO, MediaRendererType.TEXT)
+        )
     }
 
-    //TODO: replace with custom implementation in Atsc3Player
-    fun getCurrentTrackSelections(): TrackSelectionArray? {
-        return atsc3Player.player?.currentTrackSelections
+    fun selectTracks(disabledTracks: List<MediaTrackDescription>, selectedTracks: List<MediaTrackDescription>) {
+        atsc3Player.selectTracks(disabledTracks, selectedTracks)
     }
 
     private val enableBufferingProgress = Runnable {

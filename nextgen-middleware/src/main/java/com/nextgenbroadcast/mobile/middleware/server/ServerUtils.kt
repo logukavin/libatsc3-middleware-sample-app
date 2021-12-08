@@ -31,4 +31,12 @@ internal object ServerUtils {
     }
 
     fun multipartFilePath(fileName: String, index: Int) = "$fileName?index=$index"
+
+    fun getCompanionWsUrl(wifiIpAddress: String): String {
+        return "ws://$wifiIpAddress:${CompanionServerConstants.PORT_WS}${ServerConstants.ATSC_CD_PATH}"
+    }
+
+    fun getCompanionHttpUrl(wifiIpAddress: String): String {
+        return "http://$wifiIpAddress:${CompanionServerConstants.PORT_HTTP}"
+    }
 }
