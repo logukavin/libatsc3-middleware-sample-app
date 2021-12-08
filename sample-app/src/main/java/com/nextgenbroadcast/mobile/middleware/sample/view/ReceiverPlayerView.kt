@@ -181,10 +181,10 @@ class ReceiverPlayerView @JvmOverloads constructor(
                     updateBufferingState(playbackState == Player.STATE_BUFFERING)
                 }
             })
-            player.videoComponent?.addVideoListener(object : VideoListener {
-                override fun onVideoSizeChanged(width: Int, height: Int, unappliedRotationDegrees: Int, pixelWidthHeightRatio: Float) {
-                    val view: FrameLayout = findViewById(R.id.exo_content_frame) ?: return
-                    if (supportSlHdr1) {
+            if (supportSlHdr1) {
+                player.videoComponent?.addVideoListener(object : VideoListener {
+                    override fun onVideoSizeChanged(width: Int, height: Int, unappliedRotationDegrees: Int, pixelWidthHeightRatio: Float) {
+                        val view: FrameLayout = findViewById(R.id.exo_content_frame) ?: return
                         slhdrActiveTextView.apply {
                             layoutParams = (layoutParams as LayoutParams).apply {
                                 setMargins(
@@ -196,8 +196,8 @@ class ReceiverPlayerView @JvmOverloads constructor(
                             }
                         }
                     }
-                }
-            })
+                })
+            }
         }
     }
 
