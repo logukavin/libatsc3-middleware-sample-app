@@ -113,7 +113,7 @@ class ReceiverPlayerView @JvmOverloads constructor(
             slhdrActiveTextView = TextView(context).apply {
                 text = context.getString(R.string.type_hdr)
                 visibility = View.GONE
-                setTextColor(ContextCompat.getColor(context, android.R.color.white))
+                setTextColor(ContextCompat.getColor(context, R.color.white))
                 setTextSize(TypedValue.COMPLEX_UNIT_PX, resources.getDimension(R.dimen.watermark_text_size))
                 setTypeface(null, Typeface.BOLD)
                 isClickable = false
@@ -125,7 +125,7 @@ class ReceiverPlayerView @JvmOverloads constructor(
                     resources.getDimensionPixelOffset(R.dimen.watermark_horizontal_padding),
                     resources.getDimensionPixelOffset(R.dimen.watermark_vertical_padding)
                 )
-                setBackgroundColor(ContextCompat.getColor(context, android.R.color.black))
+                setBackgroundColor(ContextCompat.getColor(context, R.color.black))
             }
             hdrPlayerView = Atsc3SlhdrPlayerView.inflate(context, this).apply {
                 setSlhdrModeNtf(object : ISlhdrOperatingModeNtf {
@@ -184,7 +184,7 @@ class ReceiverPlayerView @JvmOverloads constructor(
             player.videoComponent?.addVideoListener(object : VideoListener {
                 override fun onVideoSizeChanged(width: Int, height: Int, unappliedRotationDegrees: Int, pixelWidthHeightRatio: Float) {
                     val view: FrameLayout = findViewById(R.id.exo_content_frame) ?: return
-                    if (slhdr1Enabled) {
+                    if (supportSlHdr1) {
                         slhdrActiveTextView.apply {
                             layoutParams = (layoutParams as LayoutParams).apply {
                                 setMargins(
