@@ -2,7 +2,6 @@ package com.nextgenbroadcast.mobile.middleware.server.web
 
 import android.util.Log
 import com.nextgenbroadcast.mobile.core.LOG
-import com.nextgenbroadcast.mobile.middleware.server.cert.IUserAgentSSLContext
 import com.nextgenbroadcast.mobile.core.md5
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.app.Atsc3Application
 import com.nextgenbroadcast.mobile.middleware.gateway.rpc.IRPCGateway
@@ -10,9 +9,15 @@ import com.nextgenbroadcast.mobile.middleware.gateway.web.ConnectionType
 import com.nextgenbroadcast.mobile.middleware.gateway.web.IWebGateway
 import com.nextgenbroadcast.mobile.middleware.rpc.processor.CommandRPCProcessor
 import com.nextgenbroadcast.mobile.middleware.rpc.processor.CompanionRPCProcessor
+import com.nextgenbroadcast.mobile.middleware.server.CompanionServerConstants
 import com.nextgenbroadcast.mobile.middleware.server.MiddlewareApplicationSession
 import com.nextgenbroadcast.mobile.middleware.server.ServerConstants
+import com.nextgenbroadcast.mobile.middleware.server.ServerUtils.getCompanionHttpUrl
+import com.nextgenbroadcast.mobile.middleware.server.ServerUtils.getCompanionWsUrl
+import com.nextgenbroadcast.mobile.middleware.server.cert.IUserAgentSSLContext
 import com.nextgenbroadcast.mobile.middleware.server.cert.UserAgentSSLContext
+import com.nextgenbroadcast.mobile.middleware.server.servlets.CDApplicationInfoServlet
+import com.nextgenbroadcast.mobile.middleware.server.servlets.CDDescriptionServlet
 import com.nextgenbroadcast.mobile.middleware.server.ws.MiddlewareWebSocket
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collect
@@ -38,13 +43,16 @@ import java.util.concurrent.Executors
 import javax.servlet.http.HttpServlet
 import javax.servlet.http.HttpServletRequest
 import javax.servlet.http.HttpServletResponse
+import kotlin.collections.ArrayList
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
-internal class MiddlewareWebServer (
-        private val server: Server,
-        private val webGateway: IWebGateway?,
-        private val stateScope: CoroutineScope?
+internal class MiddlewareWebServer(
+    private val server: Server,
+    private val webGateway: IWebGateway?,
+    private val companionServerHost: String?,
+    private val companionServerPort: Int?,
+    private val stateScope: CoroutineScope?
 ) : IMiddlewareWebServer, AutoCloseable {
 
     private val availResources = arrayListOf<AppResource>()
@@ -113,9 +121,18 @@ internal class MiddlewareWebServer (
 
     @Throws(MiddlewareWebServerError::class)
     suspend fun start(generatedSSLContext: IUserAgentSSLContext?) {
+        val serverConnectors = mutableListOf<Connector>()
+
+        if (companionServerHost != null && companionServerPort != null) {
+            serverConnectors.apply {
+                add(getServerConnector(ConnectionType.HTTP, server, companionServerHost, companionServerPort))
+                add(getServerConnector(ConnectionType.WS, server, companionServerHost, CompanionServerConstants.PORT_WS))
+            }
+        }
+
         webGateway?.let { gateway ->
-            server.connectors = gateway.hostName.let { hostName ->
-                ArrayList<Connector>().apply {
+            gateway.hostName.let { hostName ->
+                serverConnectors.apply {
                     add(getServerConnector(ConnectionType.HTTP, server, hostName, gateway.httpPort))
                     add(getServerConnector(ConnectionType.WS, server, hostName, gateway.wsPort))
 
@@ -132,6 +149,8 @@ internal class MiddlewareWebServer (
                 }.toTypedArray()
             }
         }
+
+        server.connectors = serverConnectors.toTypedArray()
 
         retry(RETRY_COUNT, "Can't start web server") {
             server.start()
@@ -236,12 +255,24 @@ internal class MiddlewareWebServer (
         private var stateScope: CoroutineScope? = null
         private var rpcGateway: IRPCGateway? = null
         private var webGateway: IWebGateway? = null
+        private var companionServerHost: String? = null
+        private var companionServerPort: Int? = null
+        private var wifiIpAddress: String? = null
 
         fun stateScope(value: CoroutineScope) = apply { stateScope = value }
 
         fun rpcGateway(value: IRPCGateway) = apply { rpcGateway = value }
 
         fun webGateway(value: IWebGateway) = apply { webGateway = value }
+
+        fun companionServer(serverHost: String, serverPort: Int) = apply {
+            companionServerHost = serverHost
+            companionServerPort = serverPort
+        }
+
+        fun wifiIpAddress(value: String?) = apply {
+            wifiIpAddress = value
+        }
 
         fun build(): MiddlewareWebServer {
             val server = Server()
@@ -256,6 +287,11 @@ internal class MiddlewareWebServer (
                         }
                     })
                 }
+
+                if (companionServerHost != null && companionServerPort != null) {
+                    add(initServletsHandler())
+                }
+
             }.toTypedArray()
 
             with(server) {
@@ -264,8 +300,21 @@ internal class MiddlewareWebServer (
                 }
             }
 
-            return MiddlewareWebServer(server, webGateway, stateScope)
+            return MiddlewareWebServer(server, webGateway, companionServerHost, companionServerPort, stateScope)
         }
+
+        private fun initServletsHandler(): Handler {
+            val applicationInfoServletHandler = ServletContextHandler().apply {
+                contextPath = "/"
+                wifiIpAddress?.let { ipAddress ->
+                    addServlet(ServletHolder(CDDescriptionServlet(getCompanionHttpUrl(ipAddress))), CompanionServerConstants.DEVICE_DESCRIPTION_PATH)
+                    addServlet(ServletHolder(CDApplicationInfoServlet("", getCompanionWsUrl(ipAddress))), CompanionServerConstants.APPLICATION_INFO_PATH)
+                }
+            }
+
+            return applicationInfoServletHandler
+        }
+
     }
 
     companion object {
@@ -277,7 +326,7 @@ internal class MiddlewareWebServer (
 
 private fun createWebSocket(req: ServletUpgradeRequest, rpcGateway: IRPCGateway): WebSocketAdapter? {
     return when (req.httpServletRequest.pathInfo) {
-        ServerConstants.ATSC_CMD_PATH ->  {
+        ServerConstants.ATSC_CMD_PATH -> {
             val session = MiddlewareApplicationSession(rpcGateway)
             MiddlewareWebSocket(session, CommandRPCProcessor(session))
         }

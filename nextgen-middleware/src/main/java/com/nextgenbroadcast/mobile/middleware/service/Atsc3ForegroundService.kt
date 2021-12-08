@@ -6,22 +6,26 @@ import android.content.Intent
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import android.net.*
+import android.net.wifi.WifiManager
 import android.os.*
 import android.os.PowerManager.WakeLock
 import android.support.v4.media.MediaBrowserCompat
 import android.util.Log
 import androidx.core.content.ContextCompat
-import androidx.core.util.TimeUtils
 import com.nextgenbroadcast.mobile.core.MiddlewareConfig
 import com.nextgenbroadcast.mobile.core.model.AVService
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.core.model.ReceiverState
+import com.nextgenbroadcast.mobile.core.ssdp.SSDPManager
+import com.nextgenbroadcast.mobile.core.ssdp.SSDPRole.PRIMARY_DEVICE
+import com.nextgenbroadcast.mobile.core.ssdp.SSDPTransportFactory
 import com.nextgenbroadcast.mobile.middleware.*
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.alerts.AeaTable
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.Atsc3Source
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.UsbPhyAtsc3Source
 import com.nextgenbroadcast.mobile.middleware.notification.AlertNotificationHelper
 import com.nextgenbroadcast.mobile.middleware.phy.Atsc3DeviceReceiver
+import com.nextgenbroadcast.mobile.middleware.server.CompanionServerConstants
 import com.nextgenbroadcast.mobile.middleware.server.web.IMiddlewareWebServer
 import com.nextgenbroadcast.mobile.middleware.service.holder.*
 import com.nextgenbroadcast.mobile.middleware.service.holder.SrtListHolder.Companion.SRT_PATH_SEPARATOR
@@ -43,6 +47,9 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     }
     private val alertNotificationHelper by lazy {
         AlertNotificationHelper(this)
+    }
+    private val wifiManager: WifiManager by lazy {
+        getSystemService(WIFI_SERVICE) as WifiManager
     }
 
     //TODO: create internal scope?
@@ -71,11 +78,17 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     private val initializer = ArrayList<WeakReference<IServiceInitializer>>()
     private var isInitialized = false
 
+    // SSDP
+    private lateinit var ssdpManager: SSDPManager
+
     private var deviceReceiver: Atsc3DeviceReceiver? = null
+
+    private var wifiIpAddress: String? = null
 
     override fun onCreate() {
         super.onCreate()
 
+        wifiIpAddress = getWifiIpAddress()
         atsc3Receiver = Atsc3ReceiverStandalone.get(applicationContext)
         wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Atsc3ForegroundService::lock")
 
@@ -92,7 +105,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
             }
         }
 
-        webServer = WebServerHolder(applicationContext, atsc3Receiver,
+        webServer = WebServerHolder(applicationContext, atsc3Receiver, wifiIpAddress,
             this::onWebServerCreated,
             this::onWebServerDestroyed
         )
@@ -103,10 +116,25 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
         atsc3Receiver.setRouteList(srtListHolder.getFullSrtList())
 
+        ssdpManager = SSDPManager(
+            role = PRIMARY_DEVICE,
+            ssdpTransportFactory = SSDPTransportFactory(deviceId = atsc3Receiver.settings.deviceId)
+        ).also {
+            it.start("$wifiIpAddress:${CompanionServerConstants.PORT_HTTP}")
+        }
+
         startStateObservation()
 
         maybeInitialize()
     }
+
+    private fun getWifiIpAddress(): String {
+        val connectionInfo = wifiManager.connectionInfo
+        return getIpv4FromInt(connectionInfo.ipAddress)
+    }
+
+    private fun getIpv4FromInt(ipAddress: Int) =
+        String.format("%d.%d.%d.%d", ipAddress and 0xff, ipAddress shr 8 and 0xff, ipAddress shr 16 and 0xff, ipAddress shr 24 and 0xff)
 
     private fun onWebServerCreated(server: IMiddlewareWebServer) {
         // used to rebuild data related to server
@@ -213,6 +241,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
         media.close()
         webServer.close()
         atsc3Receiver.deInitialize()
+        ssdpManager.shutdown()
         serviceScope.cancel()
         if (MiddlewareConfig.DEV_TOOLS) {
             telemetryHolder.close()

@@ -5,11 +5,11 @@ plugins {
     id 'com.google.gms.google-services'
     id 'com.google.firebase.crashlytics'
     id 'com.google.firebase.firebase-perf'
-    id 'com.github.triplet.play' version '3.5.0'
+    id 'com.github.triplet.play' version '3.7.0'
 }
 
 def appVersionCode = project.hasProperty('versionCode') ? versionCode.toInteger() : 1
-def appVersion = "1.0.9"
+def appVersion = "1.0.10"
 
 def getCertPropertyCode(propertyName) {
     if (project.hasProperty(propertyName)) {

@@ -60,7 +60,7 @@ class LLSParserAEAT {
             when (tagName) {
                 "Header" -> {
                     val header = readHeader(parser)
-                    aea.effective = header.effective
+                    aea.effective = header.effective.takeIf { it.isNotBlank() }
                     aea.expires = XmlUtils.strToDate(header.expires)
                 }
                 "AEAText" -> readAEAText(parser).also {

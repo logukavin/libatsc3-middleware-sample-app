@@ -158,8 +158,8 @@ internal class RepositoryImpl(
             }
         }
 
-        currentAlerts.values.removeIf {
-            isExpired(it.expires, currentTime) || canceledIds.contains(it.id)
+        currentAlerts.values.removeIf { aeat ->
+            canceledIds.contains(aeat.id) || (!aeat.effective.isNullOrBlank() && isExpired(aeat.expires, currentTime))
         }
 
         alertsForNotify.value = currentAlerts.values.toMutableList()
@@ -170,8 +170,7 @@ internal class RepositoryImpl(
     }
 
     private fun isExpired(expireTime: ZonedDateTime?, currentTime: ZonedDateTime): Boolean {
-        if (expireTime == null) return true
-        return expireTime.isBefore(currentTime)
+        return expireTime != null && expireTime.isBefore(currentTime)
     }
 
     override fun reset() {
