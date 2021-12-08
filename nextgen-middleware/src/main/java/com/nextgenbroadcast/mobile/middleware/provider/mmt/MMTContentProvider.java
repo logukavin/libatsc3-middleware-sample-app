@@ -350,10 +350,22 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
     }
 
     @Override
-    public void onMpTableComplete(MmtMpTable.MmtAssetTable assetTable) {
+    public void onMpTableSubset(MmtMpTable.MmtAssetTable assetTable) {
         descriptors.forEach(descriptor -> {
             descriptor.pushAssetMappingTable(assetTable);
         });
+    }
+
+    @Override
+    public void onMpTableComplete(MmtMpTable.MmtAssetTable assetTable) {
+        descriptors.forEach(descriptor -> {
+            descriptor.completeAssetMappingTable(assetTable);
+        });
+    }
+
+    @Override
+    public void notifySlHdr1Present(int service_id, int packet_id) {
+        LOG.i(TAG, "SL-HDR detected on service_id: " + service_id + ", packet_id: " + packet_id);
     }
 
     //TODO: do we need this?

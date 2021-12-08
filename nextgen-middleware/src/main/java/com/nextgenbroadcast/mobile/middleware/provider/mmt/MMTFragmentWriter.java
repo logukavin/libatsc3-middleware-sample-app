@@ -59,6 +59,7 @@ public class MMTFragmentWriter {
     private long stppMfuPresentationTimestampUs = Long.MAX_VALUE;
 
     private volatile boolean isActive = true;
+    private volatile boolean mpTableComplete = false;
     private boolean sendFileHeader = true;
     private boolean firstKeyFrameReceived = false;
 
@@ -101,7 +102,7 @@ public class MMTFragmentWriter {
                 }
             }
 
-            if (assetMapping.isEmpty()) {
+            if (!mpTableComplete) {
                 return 0;
             }
 
@@ -636,7 +637,18 @@ public class MMTFragmentWriter {
     }
 
     public void pushAssetMappingTable(MmtMpTable.MmtAssetTable assets) {
-        if (assetMapping.isEmpty()) {
+        if (!mpTableComplete) {
+            for (MmtMpTable.MmtAssetRow asset : assets.getAssetList()) {
+                int packetId = asset.getPacketId();
+                if (isVideoSample(packetId) || isAudioSample(packetId) || isTextSample(packetId)) {
+                    assetMapping.put(packetId, asset);
+                }
+            }
+        }
+    }
+
+    public void completeAssetMappingTable(MmtMpTable.MmtAssetTable assets) {
+        if (!mpTableComplete) {
             // Check is all known
             for (MmtMpTable.MmtAssetRow asset : assets.getAssetList()) {
                 int packetId = asset.getPacketId();
@@ -648,6 +660,8 @@ public class MMTFragmentWriter {
             for (MmtMpTable.MmtAssetRow asset : assets.getAssetList()) {
                 assetMapping.put(asset.getPacketId(), asset);
             }
+
+            mpTableComplete = true;
         }
     }
 
