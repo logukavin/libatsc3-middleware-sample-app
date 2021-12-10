@@ -139,12 +139,14 @@ class PermissionResolver(
 
         private val necessaryPermissions = listOf(
             Manifest.permission.WRITE_EXTERNAL_STORAGE,
+            /* vmatiash - 10/12/21 - comment to remove READ_PHONE_STATE permission dependency
             Manifest.permission.READ_PHONE_STATE,
-        )
+             */
+    )
 
-        private val optionalPermissions = listOf(
-            Manifest.permission.ACCESS_COARSE_LOCATION,
-            Manifest.permission.ACCESS_FINE_LOCATION
-        )
-    }
+    private val optionalPermissions = listOf(
+        Manifest.permission.ACCESS_COARSE_LOCATION,
+        Manifest.permission.ACCESS_FINE_LOCATION
+    )
+}
 }
