@@ -9,4 +9,8 @@
     <dimen name="chart_label_text_size">12sp</dimen>
     <dimen name="dialog_content_padding">24dp</dimen>
     <dimen name="dialog_min_height">350dp</dimen>
+    <dimen name="watermark_horizontal_padding">8dp</dimen>
+    <dimen name="watermark_vertical_padding">0dp</dimen>
+    <dimen name="watermark_text_size">14sp</dimen>
+    <dimen name="media_info_text_size">11sp</dimen>
 </resources>

@@ -1,9 +1,12 @@
 package com.nextgenbroadcast.mobile.middleware.provider.mmt;
 
 import android.util.ArrayMap;
-import android.util.Log;
 
+import androidx.annotation.Nullable;
+
+import com.google.protobuf.Parser;
 import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTClockAnchor;
+import com.nextgenbroadcast.mobile.core.LOG;
 import com.nextgenbroadcast.mobile.middleware.atsc3.buffer.Atsc3RingBuffer;
 import com.nextgenbroadcast.mobile.player.MMTConstants;
 
@@ -13,6 +16,7 @@ import org.ngbp.libatsc3.middleware.android.mmt.models.MMTAudioDecoderConfigurat
 import org.ngbp.libatsc3.middleware.mmt.pb.MmtAudioProperties;
 import org.ngbp.libatsc3.middleware.mmt.pb.MmtCaptionProperties;
 import org.ngbp.libatsc3.middleware.mmt.pb.MmtMpTable;
+import org.ngbp.libatsc3.middleware.mmt.pb.MmtRingBufferHeaders;
 import org.ngbp.libatsc3.middleware.mmt.pb.MmtVideoProperties;
 
 import java.io.FileOutputStream;
@@ -24,9 +28,6 @@ public class MMTFragmentWriter {
     public static final String TAG = MMTFragmentWriter.class.getSimpleName();
 
     private static final int MAX_FIRST_MFU_WAIT_TIME = 5000;
-    private static final byte RING_BUFFER_PAGE_INIT = 1;
-    private static final byte RING_BUFFER_PAGE_FRAGMENT = 2;
-    private static final int FRAGMENT_PACKET_HEADER = Integer.BYTES /* packet_id */ + Integer.BYTES /* sample_number */ + Long.BYTES /* mpu_presentation_time_uS_from_SI */ + 7 /* reserved */;
 
     public static final String AC_4_ID = MMTAudioDecoderConfigurationRecord.AC_4_ID;
     private static final int AC_4_CODE = getIntegerCodeForString(MMTAudioDecoderConfigurationRecord.AC_4_ID);
@@ -37,7 +38,10 @@ public class MMTFragmentWriter {
     private final byte[] ac4header = {(byte) 0xAC, 0x40, (byte) 0xFF, (byte) 0xFF, 0x00, 0x00, 0x00};
 
     // SIZE_SAMPLE_HEADER
-    private final byte[] emptyFragmentHeader = {(byte) MMTConstants.TRACK_TYPE_EMPTY, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    private final byte[] emptyFragmentHeader = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+
+    private final int MAX_SAMPLE_HEADER_SIZE = MMTConstants.SIZE_SAMPLE_HEADER + ac4header.length;
+    private final int SAMPLE_HEADER_OFFSET = MAX_SAMPLE_HEADER_SIZE - Atsc3RingBuffer.RING_BUFFER_PAGE_HEADER_SIZE;
 
     private final Boolean audioOnly;
     private final int serviceId;
@@ -59,6 +63,7 @@ public class MMTFragmentWriter {
     private long stppMfuPresentationTimestampUs = Long.MAX_VALUE;
 
     private volatile boolean isActive = true;
+    private volatile boolean mpTableComplete = false;
     private boolean sendFileHeader = true;
     private boolean firstKeyFrameReceived = false;
 
@@ -101,7 +106,7 @@ public class MMTFragmentWriter {
                 }
             }
 
-            if (assetMapping.isEmpty()) {
+            if (!mpTableComplete) {
                 return 0;
             }
 
@@ -242,14 +247,15 @@ public class MMTFragmentWriter {
         return buff;
     }
 
-    // write empty fragment to buffer to check stream is still alive
-    private void testOutStream(FileOutputStream out) throws IOException {
+    private void writeEmptyFragment(FileOutputStream out, int fragmentType) throws IOException {
+        emptyFragmentHeader[0] = (byte) fragmentType;
         out.write(emptyFragmentHeader,0 , emptyFragmentHeader.length);
         out.flush();
     }
 
     private int writeQueue(FileOutputStream out) throws IOException {
-        testOutStream(out);
+        // write empty fragment to buffer to check stream is still alive
+        writeEmptyFragment(out, MMTConstants.TRACK_TYPE_EMPTY);
 
         int bytesRead = 0;
         while (isActive) {
@@ -282,40 +288,40 @@ public class MMTFragmentWriter {
     private void readFragment(ByteBuffer buffer) {
         int retryCount = 5;
         while (true) {
-            int pageSize = ringBuffer.readNextPage(buffer);
+            buffer.clear();
+            buffer.position(SAMPLE_HEADER_OFFSET);
+            int payloadSize = ringBuffer.readNextPage(Atsc3RingBuffer.RING_BUFFER_PAGE_FRAGMENT, buffer);
 
-            if (pageSize == -2) {
+            if (payloadSize == Atsc3RingBuffer.RESULT_RETRY) {
                 if (--retryCount >= 0) {
                     continue; // we skipped page in some reason, let's try again
                 } else {
+                    buffer.limit(0);
                     return;
                 }
             }
 
-            if (pageSize <= 0) {
+            if (payloadSize <= 0) {
                 buffer.limit(0);
                 return;
             }
 
-            int pageType = buffer.get();
-            if (pageType != RING_BUFFER_PAGE_FRAGMENT) {
-                if (--retryCount >= 0) {
-                    continue;
-                } else {
-                    return;
-                }
-            }
+            int headerSize = ringBuffer.getInt(buffer);
+            payloadSize -= Integer.BYTES; // skip headerSize
+            MmtRingBufferHeaders.MmtFragmentHeader fragmentHeader = readFragmentHeader(buffer, headerSize);
+            if (fragmentHeader == null) return;
+            payloadSize -= headerSize; // skip header
 
-            int service_id = ringBuffer.getInt(buffer);
+            int service_id = fragmentHeader.getServiceId();
             if (service_id != serviceId) {
                 // it's a bad sign, probably receiver switched to another Service or we read a fragment from the previous session
                 buffer.limit(0);
                 return;
             }
 
-            int packet_id = ringBuffer.getInt(buffer);
-            int sample_number = ringBuffer.getInt(buffer);
-            long mpu_presentation_time_uS_from_SI = ringBuffer.getLong(buffer);
+            int packet_id = fragmentHeader.getPacketId();
+            int sample_number = fragmentHeader.getSampleNumber();
+            long mpu_presentation_time_uS_from_SI = fragmentHeader.getPresentationUs();
 
             byte sampleType = MMTConstants.TRACK_TYPE_UNKNOWN;
             if (isVideoSample(packet_id)) {
@@ -338,8 +344,7 @@ public class MMTFragmentWriter {
 
             long computedPresentationTimestampUs = getPresentationTimestampUs(packet_id, sample_number, mpu_presentation_time_uS_from_SI);
 
-            int headerDiff = Atsc3RingBuffer.RING_BUFFER_PAGE_HEADER_SIZE - MMTConstants.SIZE_SAMPLE_HEADER;
-
+            int headerDiff = buffer.position() - MMTConstants.SIZE_SAMPLE_HEADER;
             if (sampleType == MMTConstants.TRACK_TYPE_AUDIO) {
                 MmtMpTable.MmtAssetRow asset = assetMapping.get(packet_id);
 
@@ -347,32 +352,32 @@ public class MMTFragmentWriter {
                 if (asset != null && AC_4_ID.equals(asset.getType())) {
                     headerDiff -= ac4header.length;
 
-                    ac4header[4] = (byte) (pageSize >> 16 & 0xFF);
-                    ac4header[5] = (byte) (pageSize >> 8 & 0xFF);
-                    ac4header[6] = (byte) (pageSize & 0xFF);
+                    ac4header[4] = (byte) (payloadSize >> 16 & 0xFF);
+                    ac4header[5] = (byte) (payloadSize >> 8 & 0xFF);
+                    ac4header[6] = (byte) (payloadSize & 0xFF);
 
                     buffer.position(headerDiff + MMTConstants.SIZE_SAMPLE_HEADER);
                     buffer.put(ac4header);
 
-                    pageSize += ac4header.length;
+                    payloadSize += ac4header.length;
                 }
             }
 
             buffer.position(headerDiff);
             buffer.put(sampleType)
-                    .putInt(pageSize)
+                    .putInt(payloadSize)
                     .putInt(packet_id)
                     .putLong(computedPresentationTimestampUs)
                     .put(isKeySample(sample_number) ? (byte) 1 : (byte) 0);
 
-            int sampleRemaining = pageSize + MMTConstants.SIZE_SAMPLE_HEADER + headerDiff;
+            int dataSize = headerDiff + MMTConstants.SIZE_SAMPLE_HEADER + payloadSize;
 
 //            if(false) {
 //                Log.d(TAG, String.format("readFragment: sampleType: %d, packetId: %d, sampleNumber: %d, presentationTimeUs: %d, isKey: %s, fragmentBuffer.position: %d, len: %d",
 //                        sampleType, packet_id, sample_number, computedPresentationTimestampUs, isKeySample(sample_number), headerDiff, sampleRemaining));
 //            }
 
-            int limit = Math.max(sampleRemaining, 0);
+            int limit = Math.max(dataSize, 0);
             buffer.limit(limit);
             buffer.position(headerDiff);
 
@@ -385,23 +390,36 @@ public class MMTFragmentWriter {
     }
 
     private void scanMpuMetadata(ByteBuffer buffer) {
+        int retryCount = 50;
         while (true) {
-            int bufferLen = ringBuffer.readNextPage(buffer);
-            if (bufferLen <= 0) {
+            buffer.clear();
+            int payloadSize = ringBuffer.readNextPage(Atsc3RingBuffer.RING_BUFFER_PAGE_INIT, buffer);
+
+            if (payloadSize == Atsc3RingBuffer.RESULT_RETRY) {
+                if (--retryCount >= 0) {
+                    continue; // we skipped page in some reason, let's try again
+                } else {
+                    buffer.limit(0);
+                    return;
+                }
+            }
+
+            if (payloadSize <= 0) {
                 buffer.limit(0);
                 return;
             }
 
-            int pageType = buffer.get();
-            if (pageType != RING_BUFFER_PAGE_INIT) continue;
+            int headerSize = ringBuffer.getInt(buffer);
+            MmtRingBufferHeaders.MmtFragmentHeader fragmentHeader = readFragmentHeader(buffer, headerSize);
+            if (fragmentHeader == null) return;
 
-            int service_id = ringBuffer.getInt(buffer);
+            int service_id = fragmentHeader.getServiceId();
             // we read a fragment from the previous session, skip it
             if (service_id != serviceId) continue;
 
             if (InitMpuMetadata_HEVC_NAL_Payload == null) {
-                ByteBuffer init = ByteBuffer.allocate(bufferLen);
-                init.put(buffer.array(), buffer.position() + FRAGMENT_PACKET_HEADER, bufferLen);
+                ByteBuffer init = ByteBuffer.allocate(payloadSize);
+                init.put(buffer.array(), buffer.position(), payloadSize);
                 InitMpuMetadata_HEVC_NAL_Payload = init;
             }
 
@@ -409,6 +427,22 @@ public class MMTFragmentWriter {
 
             return;
         }
+    }
+
+    @Nullable
+    private MmtRingBufferHeaders.MmtFragmentHeader readFragmentHeader(ByteBuffer buffer, int headerSize) {
+        MmtRingBufferHeaders.MmtFragmentHeader fragmentHeader;
+        try {
+            // next method looks faster fragmentHeader = MmtRingBufferHeaders.MmtFragmentHeader.parseFrom(CodedInputStream.newInstance(buffer.array(), buffer.position(), headerSize));
+            Parser<MmtRingBufferHeaders.MmtFragmentHeader> parser = MmtRingBufferHeaders.MmtFragmentHeader.getDefaultInstance().getParserForType();
+            fragmentHeader = parser.parseFrom(buffer.array(), buffer.position(), headerSize);
+            buffer.position(buffer.position() + headerSize);
+        } catch (Exception e) {
+            LOG.e(TAG, "Failed to parse Fragment header", e);
+            buffer.limit(0);
+            return null;
+        }
+        return fragmentHeader;
     }
 
     private int getVideoWidth() {
@@ -636,7 +670,18 @@ public class MMTFragmentWriter {
     }
 
     public void pushAssetMappingTable(MmtMpTable.MmtAssetTable assets) {
-        if (assetMapping.isEmpty()) {
+        if (!mpTableComplete) {
+            for (MmtMpTable.MmtAssetRow asset : assets.getAssetList()) {
+                int packetId = asset.getPacketId();
+                if (isVideoSample(packetId) || isAudioSample(packetId) || isTextSample(packetId)) {
+                    assetMapping.put(packetId, asset);
+                }
+            }
+        }
+    }
+
+    public void completeAssetMappingTable(MmtMpTable.MmtAssetTable assets) {
+        if (!mpTableComplete) {
             // Check is all known
             for (MmtMpTable.MmtAssetRow asset : assets.getAssetList()) {
                 int packetId = asset.getPacketId();
@@ -648,6 +693,8 @@ public class MMTFragmentWriter {
             for (MmtMpTable.MmtAssetRow asset : assets.getAssetList()) {
                 assetMapping.put(asset.getPacketId(), asset);
             }
+
+            mpTableComplete = true;
         }
     }
 
