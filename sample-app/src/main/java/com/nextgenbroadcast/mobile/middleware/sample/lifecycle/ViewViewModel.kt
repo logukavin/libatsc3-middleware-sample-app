@@ -108,13 +108,8 @@ class ViewViewModel(
     val groupedLogsInfo: LiveData<List<LogInfo>>
         get() = logsInfo.map(::groupLogs)
 
-    private val playbackStateIdle = MutableLiveData(Player.STATE_IDLE)
     val isShowMediaInfo = MutableLiveData<Boolean>()
     val dataMediaInfo = MutableLiveData<String>()
-    val currentPlaybackState = MutableLiveData<Int>()
-    val showMediaInfo = isShowMediaInfo.switchMap { isShow ->
-        if (isShow) currentPlaybackState else playbackStateIdle
-    }
 
     private fun groupLogs(map: Map<String, Boolean>): List<LogInfo> {
         val records = map.map { (key, enabled) ->

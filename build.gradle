@@ -75,8 +75,8 @@ ext {
     coreKtxVersion = '1.6.0'
     daggerVersion = '2.28.1'
     lifecycleVersion = '2.3.1'
-    libatsc3Version = "1.2.3"
-    exoplayerVersion = "2.10.7.10"
+    libatsc3Version = "1.2.6"
+    exoplayerVersion = "2.11.8.4"
     coroutinesVersion = "1.4.1"
     startupRuntime = '1.1.0'
 }

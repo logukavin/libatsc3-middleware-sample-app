@@ -28,9 +28,7 @@
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="@+id/phy_chart"
-                app:resize_mode="fit"
-                app:use_controller="false"/>
+                app:layout_constraintTop_toTopOf="@+id/phy_chart"/>
 
             <TextView
                 android:id="@+id/state_description"
@@ -116,19 +114,6 @@
                 android:background="@color/semi_transparent"
                 android:visibility="@{viewModel.isPhyChartVisible ? View.VISIBLE : View.GONE }"
                 app:layout_constraintTop_toBottomOf="@+id/phy_data_log" />
-
-            <TextView
-                android:id="@+id/media_information"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="16dp"
-                android:layout_marginEnd="16dp"
-                android:background="@color/semi_transparent"
-                android:text="@{viewModel.dataMediaInfo}"
-                android:textColor="@color/white"
-                android:textSize="8sp"
-                android:visibility="@{viewModel.isShowMediaInfo ? View.VISIBLE : View.GONE }"
-                app:layout_constraintTop_toBottomOf="@id/phy_chart" />
 
             <androidx.appcompat.widget.AppCompatImageButton
                 android:id="@+id/settings_button"

@@ -4,7 +4,6 @@ import android.content.*
 import android.database.Cursor
 import android.database.MatrixCursor
 import android.net.Uri
-import android.os.Build
 import com.nextgenbroadcast.mobile.core.MiddlewareConfig
 import com.nextgenbroadcast.mobile.core.model.*
 import com.nextgenbroadcast.mobile.core.atsc3.PhyInfoConstants.INFO_DEVICE_ID
@@ -15,6 +14,9 @@ import com.nextgenbroadcast.mobile.middleware.*
 import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverCore
 import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverStandalone
 import com.nextgenbroadcast.mobile.middleware.dev.config.DevConfig
+import com.nextgenbroadcast.mobile.middleware.provider.getReceiverUriForPath
+import com.nextgenbroadcast.mobile.middleware.provider.requireAppContext
+import com.nextgenbroadcast.mobile.middleware.provider.requireAppContextOrNull
 import com.nextgenbroadcast.mobile.middleware.server.ServerUtils
 import com.nextgenbroadcast.mobile.middleware.server.cert.IUserAgentSSLContext
 import com.nextgenbroadcast.mobile.middleware.server.cert.UserAgentSSLContext
@@ -36,11 +38,7 @@ class ReceiverContentProvider : ContentProvider() {
     private lateinit var rmpState: StateFlow<PlaybackState>
 
     private val appContext: Context  by lazy {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            requireContext()
-        } else {
-            context ?: throw IllegalStateException("Provider $this not attached to a context.")
-        }
+        requireAppContext()
     }
 
     private val sslContext: IUserAgentSSLContext by lazy {
@@ -48,7 +46,7 @@ class ReceiverContentProvider : ContentProvider() {
     }
 
     override fun onCreate(): Boolean {
-        val appContext = context?.applicationContext ?: return false
+        val appContext = requireAppContextOrNull() ?: return false
 
         authority = appContext.getString(R.string.receiverContentProvider)
         receiver = Atsc3ReceiverStandalone.get(appContext)
@@ -388,6 +386,9 @@ class ReceiverContentProvider : ContentProvider() {
         return 0
     }
 
+    private fun getUriForPath(context: Context, path: String) =
+        getReceiverUriForPath(context.getString(R.string.receiverContentProvider), path)
+
     companion object {
         private const val QUERY_RECEIVER_ROUTE_LIST = 1
         private const val QUERY_RECEIVER_ROUTE = 2
@@ -448,11 +449,5 @@ class ReceiverContentProvider : ContentProvider() {
         const val COLUMN_PLAYER_STATE = "receiverPlayerState"
         const val COLUMN_PLAYER_POSITION = "receiverPlayerPosition"
         const val COLUMN_PLAYER_RATE = "receiverPlayerRate"
-
-        fun getUriForPath(context: Context, path: String): Uri {
-            return Uri.Builder().scheme(ContentResolver.SCHEME_CONTENT)
-                    .authority(context.getString(R.string.receiverContentProvider))
-                    .encodedPath(path).build()
-        }
     }
 }
