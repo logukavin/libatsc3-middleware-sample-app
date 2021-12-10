@@ -1,34 +1,90 @@
 package com.nextgenbroadcast.mobile.middleware.sample.view
 
+import android.content.ContentResolver
 import android.content.Context
+import android.database.ContentObserver
+import android.graphics.Typeface
 import android.net.Uri
 import android.util.AttributeSet
+import android.util.TypedValue
+import android.view.*
+import android.widget.FrameLayout
+import android.widget.TextView
+import androidx.core.content.ContextCompat
 import com.google.android.exoplayer2.Player
 import com.google.android.exoplayer2.ui.PlayerView
+import com.google.android.exoplayer2.video.VideoListener
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
+import com.nextgenbroadcast.mobile.middleware.sample.R
+import com.nextgenbroadcast.mobile.middleware.sample.exoplayer.SlhdrAtsc3RenderersFactory
 import com.nextgenbroadcast.mobile.player.Atsc3MediaPlayer
 import com.nextgenbroadcast.mobile.player.MMTConstants
 import com.nextgenbroadcast.mobile.player.MediaRendererType
 import com.nextgenbroadcast.mobile.player.MediaTrackDescription
+import com.philips.jhdr.ISlhdrOperatingModeNtf
 
 typealias OnPlaybackChangeListener = (state: PlaybackState, position: Long, rate: Float) -> Unit
 
 class ReceiverPlayerView @JvmOverloads constructor(
-        context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
-) : PlayerView(context, attrs, defStyleAttr) {
+    context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
+) : FrameLayout(context, attrs, defStyleAttr) {
 
     private val atsc3Player = Atsc3MediaPlayer(context).apply {
         resetWhenLostAudioFocus = false
     }
 
+    private val slHdr1Observer: ContentObserver by lazy {
+        object : ContentObserver(handler) {
+            override fun onChange(selfChange: Boolean) {
+                post {
+                    preparePlayerView(supportSlHdr1)
+                }
+            }
+        }
+    }
+
+    private val slHdr1PresentUri: Uri by lazy {
+        Uri.Builder().scheme(ContentResolver.SCHEME_CONTENT)
+            .authority(context.getString(R.string.nextgenMMTContentProvider))
+            .encodedPath(ROUTE_CONTENT_SL_HDR1_PRESENT).build()
+    }
+
+    private lateinit var exoPlayerView: Atsc3ExoPlayerView
+    private lateinit var hdrPlayerView: Atsc3SlhdrPlayerView
+    private lateinit var slhdrActiveTextView: TextView
+
+    private var hasHdr10Display = false
+    private var slhdr1Enabled = false
+
     private var buffering = false
     private var onPlaybackChangeListener: OnPlaybackChangeListener? = null
+
+    private var playerView: Atsc3PlayerView? = null
+
+    private val supportSlHdr1: Boolean
+        get() = hasHdr10Display && slhdr1Enabled
+
+    val isActive: Boolean
+        get() = playerView != null
+
+    // required for USE_DISPLAY_ADAPTATION_HACK
+    private var displayTargetAdaptation: Int = 100
 
     override fun onFinishInflate() {
         super.onFinishInflate()
 
         if (isInEditMode) return
+
+        // SL-HDR to SDR output is not supported in the current SDK
+        // check if the device has an HDR10 capable display, if not just
+        // don't try to use the SL-HDR enabled GPU path
+        // SL-HDR to SDR output is not supported in the current SDK
+        // check if the device has an HDR10 capable display, if not just
+        // don't try to use the SL-HDR enabled GPU path
+        hasHdr10Display = deviceHasHdr10Display(context)
+
+        slhdr1Enabled = resources.getBoolean(R.bool.slhdr1Enabled)
 
         atsc3Player.setListener(object : Atsc3MediaPlayer.EventListener {
             override fun onPlayerStateChanged(state: PlaybackState) {
@@ -51,6 +107,46 @@ class ReceiverPlayerView @JvmOverloads constructor(
                 // will be updated with position in timer
             }
         })
+
+        exoPlayerView = Atsc3ExoPlayerView.inflate(context, this)
+        if (supportSlHdr1) {
+            slhdrActiveTextView = TextView(context).apply {
+                text = context.getString(R.string.type_hdr)
+                visibility = View.GONE
+                setTextColor(ContextCompat.getColor(context, R.color.white))
+                setTextSize(TypedValue.COMPLEX_UNIT_PX, resources.getDimension(R.dimen.watermark_text_size))
+                setTypeface(null, Typeface.BOLD)
+                isClickable = false
+                alpha = 0f
+                layoutParams = LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, Gravity.BOTTOM)
+                setPadding(
+                    resources.getDimensionPixelOffset(R.dimen.watermark_horizontal_padding),
+                    resources.getDimensionPixelOffset(R.dimen.watermark_vertical_padding),
+                    resources.getDimensionPixelOffset(R.dimen.watermark_horizontal_padding),
+                    resources.getDimensionPixelOffset(R.dimen.watermark_vertical_padding)
+                )
+                setBackgroundColor(ContextCompat.getColor(context, R.color.black))
+            }
+            hdrPlayerView = Atsc3SlhdrPlayerView.inflate(context, this).apply {
+                setSlhdrModeNtf(object : ISlhdrOperatingModeNtf {
+                    override fun OnProcessingModeChanged(SlhdrMode: Int, OutputMode: Int, SplitScreenMode: Int) {
+                        val processingSlhdr = (SlhdrMode > ISlhdrOperatingModeNtf.Processing_Mode_None)
+                        if (processingSlhdr) {
+                            makeWatermarkVisible()
+                        } else {
+                            makeWatermarkInvisible()
+                        }
+                        LOG.d(TAG, "OnProcessingModeChanged - SlhdrMode: $SlhdrMode, OutputMode: $OutputMode, SplitScreenMode: $SplitScreenMode -> processingSlhdr: $processingSlhdr")
+                    }
+
+                    override fun OnDaChanged(onOff: Boolean, level: Int) {
+                        LOG.d(TAG, "OnDaChanged - onOff: $onOff, level: $level")
+                    }
+
+                })
+            }
+            displayTargetAdaptation = hdrPlayerView.displayAdaptation
+        }
     }
 
     fun setOnPlaybackChangeListener(listener: OnPlaybackChangeListener) {
@@ -71,15 +167,106 @@ class ReceiverPlayerView @JvmOverloads constructor(
             return
         }
 
-        atsc3Player.play(mediaUri, mimeType)
-
-        player = atsc3Player.player?.also {
-            it.addListener(object : Player.EventListener {
+        // Create SDR player by default. It will be switched to SL-HDR if ContentProvider send appropriate event
+        preparePlayerView(false)
+        if (supportSlHdr1) {
+            val renderersFactory = SlhdrAtsc3RenderersFactory(context, hdrPlayerView.rendererConnectNtf, mimeType)
+            atsc3Player.play(renderersFactory, mediaUri, mimeType)
+        } else {
+            atsc3Player.play(mediaUri, mimeType)
+        }
+        atsc3Player.player?.also { player ->
+            player.addListener(object : Player.EventListener {
                 override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
                     updateBufferingState(playbackState == Player.STATE_BUFFERING)
                 }
             })
+            if (supportSlHdr1) {
+                player.videoComponent?.addVideoListener(object : VideoListener {
+                    override fun onVideoSizeChanged(width: Int, height: Int, unappliedRotationDegrees: Int, pixelWidthHeightRatio: Float) {
+                        val view: FrameLayout = findViewById(R.id.exo_content_frame) ?: return
+                        slhdrActiveTextView.apply {
+                            layoutParams = (layoutParams as LayoutParams).apply {
+                                setMargins(
+                                    view.left,
+                                    0,
+                                    0,
+                                    view.top
+                                )
+                            }
+                        }
+                    }
+                })
+            }
         }
+    }
+
+    private fun preparePlayerView(slHdr1Compatible: Boolean) {
+        if (slHdr1Compatible) {
+            if (USE_DISPLAY_ADAPTATION_HACK) {
+                if (playerView != hdrPlayerView) {
+                    removeAllViews()
+                    addView(hdrPlayerView)
+                    addView(slhdrActiveTextView)
+                    playerView = hdrPlayerView
+                }
+                hdrPlayerView.displayAdaptation = displayTargetAdaptation
+                hdrPlayerView.gammaOutputForSdr = false
+            } else {
+                if (playerView != hdrPlayerView) {
+                    // unused surface must be removed for the view stack using otherwise one will block the other
+                    removeAllViews()
+                    addView(hdrPlayerView)
+                    addView(slhdrActiveTextView)
+                    //instead switchTargetView()
+                    playerView = hdrPlayerView.apply {
+                        player = atsc3Player.player
+                        exoPlayerView.player = null
+                    }
+                }
+            }
+        } else {
+            if (USE_DISPLAY_ADAPTATION_HACK && supportSlHdr1) {
+                if (playerView != hdrPlayerView) {
+                    removeAllViews()
+                    addView(hdrPlayerView)
+                    addView(slhdrActiveTextView)
+                    playerView = hdrPlayerView
+                }
+                hdrPlayerView.displayAdaptation = 100
+                hdrPlayerView.gammaOutputForSdr = true
+            } else {
+                if (playerView != exoPlayerView) {
+                    // unused surface must be removed for the view stack using otherwise one will block the other
+                    removeAllViews()
+                    addView(exoPlayerView)
+                    playerView = exoPlayerView.apply {
+                        player = atsc3Player.player
+                        if (supportSlHdr1) {
+                            hdrPlayerView.player = null
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun makeWatermarkVisible() = with(slhdrActiveTextView) {
+        if (visibility == View.VISIBLE) return@with
+        visibility = View.VISIBLE
+        alpha = 0f
+        animate()
+            .alpha(WATERMARK_ALPHA)
+            .setDuration(WATERMARK_ALPHA_ANIMATION_DURATION)
+            .start()
+    }
+
+    private fun makeWatermarkInvisible() = with(slhdrActiveTextView) {
+        animate()
+            .alpha(0F)
+            .setDuration(WATERMARK_ALPHA_ANIMATION_DURATION)
+            .withEndAction { visibility = View.GONE }
+            .start()
     }
 
     fun tryReplay() {
@@ -87,7 +274,7 @@ class ReceiverPlayerView @JvmOverloads constructor(
 
         atsc3Player.tryReplay()
         // ensure we still observing correct player
-        player = atsc3Player.player
+        playerView?.setPlayer(atsc3Player.player)
     }
 
     fun pause() {
@@ -100,7 +287,7 @@ class ReceiverPlayerView @JvmOverloads constructor(
 
     fun stopAndClear() {
         atsc3Player.reset()
-        player = null
+        playerView?.setPlayer(null)
         atsc3Player.clearSavedState()
     }
 
@@ -113,7 +300,15 @@ class ReceiverPlayerView @JvmOverloads constructor(
         } else {
             buffering = false
             removeCallbacks(enableBufferingProgress)
-            setShowBuffering(SHOW_BUFFERING_NEVER)
+            playerView?.setShowBuffering(PlayerView.SHOW_BUFFERING_NEVER)
+        }
+    }
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+
+        if (supportSlHdr1) {
+            context.contentResolver.registerContentObserver(slHdr1PresentUri, false, slHdr1Observer)
         }
     }
 
@@ -121,6 +316,10 @@ class ReceiverPlayerView @JvmOverloads constructor(
         super.onDetachedFromWindow()
 
         removeCallbacks(enableBufferingProgress)
+
+        if (supportSlHdr1) {
+            context.contentResolver.unregisterContentObserver(slHdr1Observer)
+        }
     }
 
     fun getTrackDescriptors(): Map<MediaRendererType, List<MediaTrackDescription>> {
@@ -134,7 +333,7 @@ class ReceiverPlayerView @JvmOverloads constructor(
     }
 
     private val enableBufferingProgress = Runnable {
-        setShowBuffering(SHOW_BUFFERING_ALWAYS)
+        playerView?.setShowBuffering(PlayerView.SHOW_BUFFERING_ALWAYS)
     }
 
     private val updateMediaTimeRunnable = object : Runnable {
@@ -157,6 +356,27 @@ class ReceiverPlayerView @JvmOverloads constructor(
     companion object {
         val TAG: String = ReceiverPlayerView::class.java.simpleName
 
+        private const val WATERMARK_ALPHA = 0.5F
+        private const val WATERMARK_ALPHA_ANIMATION_DURATION = 500L
+
         private const val MEDIA_TIME_UPDATE_DELAY = 500L
+
+        private const val USE_DISPLAY_ADAPTATION_HACK = false
+
+        private const val ROUTE_CONTENT_SL_HDR1_PRESENT = "routeSlHdr1Present"
+
+        fun deviceHasHdr10Display(ctx: Context): Boolean {
+            val windowManager = ctx.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+            val mainDisplay = windowManager.defaultDisplay
+            val hdrCaps = mainDisplay.hdrCapabilities
+            val myarray = hdrCaps.supportedHdrTypes
+            // android wil indicate which HDR technologies are supported
+            for (i in myarray.indices) {
+                if (myarray[i] == Display.HdrCapabilities.HDR_TYPE_HDR10) {
+                    return true
+                }
+            }
+            return false
+        }
     }
 }

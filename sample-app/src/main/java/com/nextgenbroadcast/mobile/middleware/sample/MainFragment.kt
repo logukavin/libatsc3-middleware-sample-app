@@ -293,11 +293,12 @@ class MainFragment : Fragment() {
             if (mediaUri != null) {
                 binding.receiverPlayer.play(mediaUri)
 
-                binding.receiverPlayer.player.addListener(object : Player.EventListener {
-                    override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
-                        viewViewModel.currentPlaybackState.value = playbackState
-                    }
-                })
+                //TODO: refactor based on new track information
+//                binding.receiverPlayer.player.addListener(object : Player.EventListener {
+//                    override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
+//                        viewViewModel.currentPlaybackState.value = playbackState
+//                    }
+//                })
             } else {
                 binding.receiverPlayer.stopAndClear()
             }
@@ -383,7 +384,7 @@ class MainFragment : Fragment() {
     private fun showPopupSettingsMenu(v: View) {
         PopupMenu(context, v).apply {
             inflate(R.menu.settings_menu)
-            if (binding.receiverPlayer.player == null) {
+            if (!binding.receiverPlayer.isActive) {
                 menu.findItem(R.id.menu_select_tracks)?.isEnabled = false
             }
             setOnMenuItemClickListener { item ->
@@ -451,38 +452,39 @@ class MainFragment : Fragment() {
     }
 
     private fun showMediaInformation() {
-        val currentTrackSelection = binding.receiverPlayer.player?.currentTrackSelections
-
-        currentTrackSelection?.let { trackSelectionArray ->
-            val stringBuilder = StringBuilder()
-
-            for (i in 0 until trackSelectionArray.length) {
-                trackSelectionArray[i]?.selectedFormat?.let { selectedFormat ->
-
-                    with(selectedFormat) {
-                        stringBuilder.apply {
-
-                            id?.let { append(it) }
-
-                            codecs?.let { appendWithPipeSeparator(it) }
-
-                            appendWithPipeSeparator("BR:$bitrate")
-
-                            containerMimeType?.let { mimeType ->
-                                if (mimeType.contains("video")) {
-                                    appendWithPipeSeparator("FR:$frameRate")
-                                    appendWithPipeSeparator("$width/$height")
-                                }
-                            }
-
-                            append("\n")
-                        }
-                    }
-                }
-            }
-
-            viewViewModel.dataMediaInfo.value = stringBuilder.toString()
-        }
+        //TODO: refactor based on new track information
+//        val currentTrackSelection = binding.receiverPlayer.player?.currentTrackSelections
+//
+//        currentTrackSelection?.let { trackSelectionArray ->
+//            val stringBuilder = StringBuilder()
+//
+//            for (i in 0 until trackSelectionArray.length) {
+//                trackSelectionArray[i]?.selectedFormat?.let { selectedFormat ->
+//
+//                    with(selectedFormat) {
+//                        stringBuilder.apply {
+//
+//                            id?.let { append(it) }
+//
+//                            codecs?.let { appendWithPipeSeparator(it) }
+//
+//                            appendWithPipeSeparator("BR:$bitrate")
+//
+//                            containerMimeType?.let { mimeType ->
+//                                if (mimeType.contains("video")) {
+//                                    appendWithPipeSeparator("FR:$frameRate")
+//                                    appendWithPipeSeparator("$width/$height")
+//                                }
+//                            }
+//
+//                            append("\n")
+//                        }
+//                    }
+//                }
+//            }
+//
+//            viewViewModel.dataMediaInfo.value = stringBuilder.toString()
+//        }
     }
 
     private fun updateServices(services: List<AVService>) {
