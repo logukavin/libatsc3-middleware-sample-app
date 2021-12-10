@@ -12,4 +12,5 @@
     <dimen name="watermark_horizontal_padding">8dp</dimen>
     <dimen name="watermark_vertical_padding">0dp</dimen>
     <dimen name="watermark_text_size">14sp</dimen>
+    <dimen name="media_info_text_size">11sp</dimen>
 </resources>

@@ -5,12 +5,14 @@ import android.content.Context
 import android.database.ContentObserver
 import android.graphics.Typeface
 import android.net.Uri
+import android.text.Html
 import android.util.AttributeSet
 import android.util.TypedValue
 import android.view.*
 import android.widget.FrameLayout
 import android.widget.TextView
 import androidx.core.content.ContextCompat
+import androidx.core.view.isVisible
 import com.google.android.exoplayer2.Player
 import com.google.android.exoplayer2.ui.PlayerView
 import com.google.android.exoplayer2.video.VideoListener
@@ -23,6 +25,7 @@ import com.nextgenbroadcast.mobile.player.MMTConstants
 import com.nextgenbroadcast.mobile.player.MediaRendererType
 import com.nextgenbroadcast.mobile.player.MediaTrackDescription
 import com.philips.jhdr.ISlhdrOperatingModeNtf
+import com.philips.jhdr.ISlhdrOperatingModeNtf.*
 
 typealias OnPlaybackChangeListener = (state: PlaybackState, position: Long, rate: Float) -> Unit
 
@@ -53,9 +56,11 @@ class ReceiverPlayerView @JvmOverloads constructor(
     private lateinit var exoPlayerView: Atsc3ExoPlayerView
     private lateinit var hdrPlayerView: Atsc3SlhdrPlayerView
     private lateinit var slhdrActiveTextView: TextView
+    private val mediaDataTextView = TextView(context)
 
     private var hasHdr10Display = false
     private var slhdr1Enabled = false
+    private var slhdrInfo: String? = null
 
     private var buffering = false
     private var onPlaybackChangeListener: OnPlaybackChangeListener? = null
@@ -108,6 +113,22 @@ class ReceiverPlayerView @JvmOverloads constructor(
             }
         })
 
+        mediaDataTextView.apply {
+            visibility = View.GONE
+            isClickable = false
+            text = ""
+            layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT, Gravity.TOP)
+            setPadding(
+                resources.getDimensionPixelOffset(R.dimen.watermark_horizontal_padding),
+                resources.getDimensionPixelOffset(R.dimen.watermark_vertical_padding),
+                resources.getDimensionPixelOffset(R.dimen.watermark_horizontal_padding),
+                resources.getDimensionPixelOffset(R.dimen.watermark_vertical_padding)
+            )
+            setTextColor(ContextCompat.getColor(context, android.R.color.white))
+            setTextSize(TypedValue.COMPLEX_UNIT_PX, resources.getDimension(R.dimen.media_info_text_size))
+            setBackgroundColor(ContextCompat.getColor(context, R.color.black_50_alpha))
+        }
+
         exoPlayerView = Atsc3ExoPlayerView.inflate(context, this)
         if (supportSlHdr1) {
             slhdrActiveTextView = TextView(context).apply {
@@ -130,12 +151,16 @@ class ReceiverPlayerView @JvmOverloads constructor(
             hdrPlayerView = Atsc3SlhdrPlayerView.inflate(context, this).apply {
                 setSlhdrModeNtf(object : ISlhdrOperatingModeNtf {
                     override fun OnProcessingModeChanged(SlhdrMode: Int, OutputMode: Int, SplitScreenMode: Int) {
-                        val processingSlhdr = (SlhdrMode > ISlhdrOperatingModeNtf.Processing_Mode_None)
+                        val processingSlhdr = (SlhdrMode > Processing_Mode_None)
                         if (processingSlhdr) {
                             makeWatermarkVisible()
                         } else {
                             makeWatermarkInvisible()
                         }
+
+                        slhdrInfo = formatHDRData(SlhdrMode, OutputMode, SplitScreenMode)
+                        updateMediaInformation()
+
                         LOG.d(TAG, "OnProcessingModeChanged - SlhdrMode: $SlhdrMode, OutputMode: $OutputMode, SplitScreenMode: $SplitScreenMode -> processingSlhdr: $processingSlhdr")
                     }
 
@@ -179,6 +204,7 @@ class ReceiverPlayerView @JvmOverloads constructor(
             player.addListener(object : Player.EventListener {
                 override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
                     updateBufferingState(playbackState == Player.STATE_BUFFERING)
+                    updateMediaInformation(playbackState)
                 }
             })
             if (supportSlHdr1) {
@@ -208,6 +234,7 @@ class ReceiverPlayerView @JvmOverloads constructor(
                     removeAllViews()
                     addView(hdrPlayerView)
                     addView(slhdrActiveTextView)
+                    addView(mediaDataTextView)
                     playerView = hdrPlayerView
                 }
                 hdrPlayerView.displayAdaptation = displayTargetAdaptation
@@ -218,6 +245,7 @@ class ReceiverPlayerView @JvmOverloads constructor(
                     removeAllViews()
                     addView(hdrPlayerView)
                     addView(slhdrActiveTextView)
+                    addView(mediaDataTextView)
                     //instead switchTargetView()
                     playerView = hdrPlayerView.apply {
                         player = atsc3Player.player
@@ -231,6 +259,7 @@ class ReceiverPlayerView @JvmOverloads constructor(
                     removeAllViews()
                     addView(hdrPlayerView)
                     addView(slhdrActiveTextView)
+                    addView(mediaDataTextView)
                     playerView = hdrPlayerView
                 }
                 hdrPlayerView.displayAdaptation = 100
@@ -238,8 +267,10 @@ class ReceiverPlayerView @JvmOverloads constructor(
             } else {
                 if (playerView != exoPlayerView) {
                     // unused surface must be removed for the view stack using otherwise one will block the other
+                    slhdrInfo = ""
                     removeAllViews()
                     addView(exoPlayerView)
+                    addView(mediaDataTextView)
                     playerView = exoPlayerView.apply {
                         player = atsc3Player.player
                         if (supportSlHdr1) {
@@ -289,7 +320,67 @@ class ReceiverPlayerView @JvmOverloads constructor(
         atsc3Player.reset()
         playerView?.setPlayer(null)
         atsc3Player.clearSavedState()
+
+        slhdrInfo = null
     }
+
+    private fun updateMediaInformation() {
+        updateMediaInformation(atsc3Player.player?.playbackState ?: Player.STATE_IDLE)
+    }
+
+    private fun updateMediaInformation(playerState: Int) {
+        if (mediaDataTextView.visibility != View.VISIBLE) return
+
+        mediaDataTextView.text = when (playerState) {
+            Player.STATE_BUFFERING, Player.STATE_READY -> getMediaInformation()
+            else -> ""
+        }
+    }
+
+    private fun getMediaInformation(): CharSequence {
+        val trackMap = atsc3Player.getTrackDescription(MediaRendererType.values().toSet())
+        return trackMap.flatMap { (type, tracks) ->
+            tracks.map { description ->
+                StringBuilder().apply {
+                    append("<b>${type.name.lowercase()}: </b>")
+                    with(description.format) {
+                        id?.let { appendWithSeparator(it) }
+                        (codecs ?: sampleMimeType)?.let { appendWithSeparator(it) }
+                        bitrate.takeIf { it > 0 }?.let { appendWithSeparator("BR: $it") }
+                        if (type == MediaRendererType.VIDEO) {
+                            appendWithSeparator("FR: $frameRate")
+                            appendWithSeparator("$width/$height")
+                        }
+                    }
+                }.trimSeparator()
+            }
+        }.joinToString(separator = "<br>", postfix = (slhdrInfo?.let { "<br>$it" } ?: "")).let {
+            Html.fromHtml(it, Html.FROM_HTML_MODE_LEGACY)
+        }
+    }
+
+    private fun formatHDRData(SlhdrMode: Int, OutputMode: Int, SplitScreenMode: Int) =
+        StringBuilder()
+            .append("SL-HDR: ")
+            .appendWithSeparator("shldrMode: ${decodeSldrMode(SlhdrMode)}")
+            .appendWithSeparator("outputMode: ${decodeOutputMode(OutputMode)}")
+            .append("splitScreenMode: ${SplitScreenMode == 1}")
+            .toString()
+
+    fun showMediaInformation() {
+        mediaDataTextView.isVisible = true
+        updateMediaInformation()
+    }
+
+    fun hideMediaInformation() {
+        mediaDataTextView.isVisible = false
+    }
+
+    private fun StringBuilder.appendWithSeparator(str: String) = apply {
+        append(str).append(MEDIA_INFO_SEPARATOR)
+    }
+
+    private fun StringBuilder.trimSeparator() = removeSuffix(MEDIA_INFO_SEPARATOR)
 
     private fun updateBufferingState(isBuffering: Boolean) {
         if (isBuffering) {
@@ -365,6 +456,8 @@ class ReceiverPlayerView @JvmOverloads constructor(
 
         private const val ROUTE_CONTENT_SL_HDR1_PRESENT = "routeSlHdr1Present"
 
+        private const val MEDIA_INFO_SEPARATOR = " | "
+
         fun deviceHasHdr10Display(ctx: Context): Boolean {
             val windowManager = ctx.getSystemService(Context.WINDOW_SERVICE) as WindowManager
             val mainDisplay = windowManager.defaultDisplay
@@ -377,6 +470,25 @@ class ReceiverPlayerView @JvmOverloads constructor(
                 }
             }
             return false
+        }
+
+        private fun decodeSldrMode(slhdrMode: Int) = when (slhdrMode) {
+            Processing_Mode_Recovery3 -> "Recovery3"
+            Processing_Mode_Recovery2 -> "Recovery2"
+            Processing_Mode_Recovery1 -> "Recovery1"
+            Processing_Mode_SLHDR_1 -> "SLHDR_1"
+            Processing_Mode_SLHDR_2 -> "SLHDR_2"
+            Processing_Mode_SLHDR_3 -> "SLHDR_3"
+            else -> "None"
+        }
+
+        private fun decodeOutputMode(outputMode: Int) = when (outputMode) {
+            Output_Mode_SDR -> "SDR"
+            Output_Mode_Bt2020pq -> "Bt2020pq"
+            Output_Mode_Bt2020Linear -> "Bt2020Linear"
+            Output_Mode_P3_PassThrough -> "P3_PassThrough"
+            Output_Mode_P3_Linear -> "P3_Linear"
+            else -> "None"
         }
     }
 }
