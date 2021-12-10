@@ -11,4 +11,5 @@
     <color name="chart_grid_color">#4CFFFFFF</color>
     <color name="grey_200">#eeeeee</color>
     <color name="grey_400">#bdbdbd</color>
+    <color name="black_50_alpha">#80000000</color>
 </resources>

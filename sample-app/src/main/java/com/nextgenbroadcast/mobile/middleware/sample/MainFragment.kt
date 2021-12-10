@@ -292,13 +292,6 @@ class MainFragment : Fragment() {
 
             if (mediaUri != null) {
                 binding.receiverPlayer.play(mediaUri)
-
-                //TODO: refactor based on new track information
-//                binding.receiverPlayer.player.addListener(object : Player.EventListener {
-//                    override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
-//                        viewViewModel.currentPlaybackState.value = playbackState
-//                    }
-//                })
             } else {
                 binding.receiverPlayer.stopAndClear()
             }
@@ -371,12 +364,10 @@ class MainFragment : Fragment() {
 
         viewViewModel.isShowMediaInfo.observe(viewLifecycleOwner) { isShowMediaInfo ->
             prefs.isShowMediaDataInfo = isShowMediaInfo
-        }
-
-        viewViewModel.showMediaInfo.distinctUntilChanged().observe(viewLifecycleOwner) { playbackState ->
-            when (playbackState) {
-                Player.STATE_READY -> showMediaInformation()
-                Player.STATE_IDLE, Player.STATE_ENDED -> viewViewModel.dataMediaInfo.value = ""
+            if (isShowMediaInfo) {
+                binding.receiverPlayer.showMediaInformation()
+            } else {
+                binding.receiverPlayer.hideMediaInformation()
             }
         }
     }
@@ -449,42 +440,6 @@ class MainFragment : Fragment() {
             )
         }
         trackSelectionDialog.show(parentFragmentManager, null)
-    }
-
-    private fun showMediaInformation() {
-        //TODO: refactor based on new track information
-//        val currentTrackSelection = binding.receiverPlayer.player?.currentTrackSelections
-//
-//        currentTrackSelection?.let { trackSelectionArray ->
-//            val stringBuilder = StringBuilder()
-//
-//            for (i in 0 until trackSelectionArray.length) {
-//                trackSelectionArray[i]?.selectedFormat?.let { selectedFormat ->
-//
-//                    with(selectedFormat) {
-//                        stringBuilder.apply {
-//
-//                            id?.let { append(it) }
-//
-//                            codecs?.let { appendWithPipeSeparator(it) }
-//
-//                            appendWithPipeSeparator("BR:$bitrate")
-//
-//                            containerMimeType?.let { mimeType ->
-//                                if (mimeType.contains("video")) {
-//                                    appendWithPipeSeparator("FR:$frameRate")
-//                                    appendWithPipeSeparator("$width/$height")
-//                                }
-//                            }
-//
-//                            append("\n")
-//                        }
-//                    }
-//                }
-//            }
-//
-//            viewViewModel.dataMediaInfo.value = stringBuilder.toString()
-//        }
     }
 
     private fun updateServices(services: List<AVService>) {
@@ -627,8 +582,4 @@ class MainFragment : Fragment() {
             return MainFragment()
         }
     }
-}
-
-private fun StringBuilder.appendWithPipeSeparator(str: String) {
-    append(" | ").append(str)
 }
