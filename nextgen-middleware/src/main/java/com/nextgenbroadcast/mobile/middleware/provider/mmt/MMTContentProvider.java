@@ -19,6 +19,10 @@ import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTClockAnchor;
 import com.nextgenbroadcast.mobile.core.LOG;
 import com.nextgenbroadcast.mobile.core.exception.ServiceNotFoundException;
 import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverStandalone;
+
+import static com.nextgenbroadcast.mobile.middleware.provider.ContentProviderUtils.*;
+
+import com.nextgenbroadcast.mobile.middleware.R;
 import com.nextgenbroadcast.mobile.player.MMTConstants;
 import com.nextgenbroadcast.mobile.core.model.AVService;
 import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverCore;
@@ -52,8 +56,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMediaMMTBridgeCallbacks {
     public static final String TAG = MMTContentProvider.class.getSimpleName();
 
-    private static final int RING_BUFFER_MAX_PAGE_COUNT = 320;
-    private static final int RING_BUFFER_PAGE_SIZE = 16 * 1024; // it should be bigger then AC-4 audio frame that takes around ~450 bytes to prevent multiple RB read requests and buffer joint for video frames
+    //jjustman-2021-11-11, old values: 320 and 16*1024
+    private static final int RING_BUFFER_MAX_PAGE_COUNT = 320 * 16;
+    private static final int RING_BUFFER_PAGE_SIZE = 512; // it should be bigger then AC-4 audio frame that takes around ~450 bytes to prevent multiple RB read requests and buffer joint for video frames
     private static final int RING_BUFFER_SIZE = RING_BUFFER_MAX_PAGE_COUNT * RING_BUFFER_PAGE_SIZE;
 
     private static final String[] COLUMNS = {OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE};
@@ -70,6 +75,8 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
     };
 
     private final CopyOnWriteArrayList<MMTFragmentWriter> descriptors = new CopyOnWriteArrayList<>();
+    //TODO: used as temporary solution and must be refactored
+    private final CopyOnWriteArrayList<Integer> slHdr1Services = new CopyOnWriteArrayList<>();
 
     private Executor threadPoolExecutor;
     private Atsc3ReceiverCore receiver;
@@ -79,8 +86,16 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
 
     private final ByteBuffer fragmentBuffer = ByteBuffer.allocateDirect(RING_BUFFER_SIZE);
 
+    private Context appContext;
+    private Uri slHdr1PresentUri;
+
     @Override
     public boolean onCreate() {
+        appContext = requireAppContextOrNull(this);
+        if (appContext == null) return false;
+
+        slHdr1PresentUri = getUriForPath(appContext, ROUTE_CONTENT_SL_HDR1_PRESENT);
+
         MmtPacketIdContext.Initialize();
 
         threadPoolExecutor = new ThreadPoolExecutor(
@@ -183,6 +198,11 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
                 });
 
                 descriptors.add(writer);
+
+                //TODO: used as temporary solution and must be refactored
+                if (slHdr1Services.contains(serviceId)) {
+                    notifySlHdr1Present();
+                }
 
                 // reset with first descriptor only
                 if (descriptors.size() == 1) {
@@ -366,6 +386,21 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
     @Override
     public void notifySlHdr1Present(int service_id, int packet_id) {
         LOG.i(TAG, "SL-HDR detected on service_id: " + service_id + ", packet_id: " + packet_id);
+    }
+
+    @Override
+    public void notifySlHdr1Present(int service_id, int packet_id) {
+        slHdr1Services.add(service_id);
+
+        notifySlHdr1Present();
+    }
+
+    private void notifySlHdr1Present() {
+        appContext.getContentResolver().notifyChange(slHdr1PresentUri, null);
+    }
+
+    private Uri getUriForPath(Context context, String path) {
+        return getReceiverUriForPath(context.getString(R.string.nextgenMMTContentProvider), path);
     }
 
     //TODO: do we need this?

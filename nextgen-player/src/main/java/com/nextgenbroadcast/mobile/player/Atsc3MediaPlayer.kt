@@ -17,19 +17,18 @@ import com.google.android.exoplayer2.upstream.ContentDataSource
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
 import com.google.android.exoplayer2.upstream.DefaultLoadErrorHandlingPolicy
 import com.google.android.exoplayer2.util.Util
-import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTLoadControl
 import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTMediaSource
-import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTRenderersFactory
 import com.nextgenbroadcast.mobile.core.exception.ServiceNotFoundException
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
+import com.nextgenbroadcast.mobile.player.exoplayer.Atsc3LoadControl
 import com.nextgenbroadcast.mobile.player.exoplayer.Atsc3MMTExtractor
-import com.nextgenbroadcast.mobile.player.exoplayer.RouteDASHLoadControl
+import com.nextgenbroadcast.mobile.player.exoplayer.Atsc3RenderersFactory
 import kotlinx.coroutines.*
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 
 class Atsc3MediaPlayer(
-        private val context: Context
+    private val context: Context
 ): AudioManager.OnAudioFocusChangeListener {
 
     interface EventListener {
@@ -95,31 +94,33 @@ class Atsc3MediaPlayer(
     }
 
     fun play(mediaUri: Uri, mimeType: String? = null, requestAudioFocus: Boolean = true) {
+        play(Atsc3RenderersFactory(context, mimeType), mediaUri, mimeType, requestAudioFocus)
+    }
+
+    fun play(renderersFactory: RenderersFactory, mediaUri: Uri, mimeType: String? = null, requestAudioFocus: Boolean = true) {
+        play(renderersFactory, Atsc3LoadControl(mimeType), mediaUri, mimeType, requestAudioFocus)
+    }
+
+    fun play(renderersFactory: RenderersFactory, loadControl: LoadControl, mediaUri: Uri, mimeType: String? = null, requestAudioFocus: Boolean = true) {
+        play(renderersFactory, loadControl, DefaultTrackSelector(context), mediaUri, mimeType, requestAudioFocus)
+    }
+
+    fun play(renderersFactory: RenderersFactory, loadControl: LoadControl, trackSelector: TrackSelector, mediaUri: Uri, mimeType: String? = null, requestAudioFocus: Boolean = true) {
         Log.i(TAG, "play: with mediaUri: $mediaUri and mimeType: $mimeType, requestAudioFocus: $requestAudioFocus")
 
         reset()
 
         lastMediaUri = mediaUri
         lastMimeType = mimeType
-
-        val selector = DefaultTrackSelector().also {
-            trackSelector = it
-        }
-
-        val mediaSource = createMediaSource(mediaUri, mimeType)
-
-        _player =
-            if (mimeType == MMTConstants.MIME_MMT_VIDEO || mimeType == MMTConstants.MIME_MMT_AUDIO) {
-                isMMTPlayback = true
-                createMMTExoPlayer(selector)
-            } else {
-                createDefaultExoPlayer(selector)
-            }.apply {
-                prepare(mediaSource)
-                if (!requestAudioFocus || tryRetrievedAudioFocus()) {
-                    playWhenReady = this@Atsc3MediaPlayer.playWhenReady
-                }
+        this.trackSelector = trackSelector
+        isMMTPlayback = (mimeType == MMTConstants.MIME_MMT_VIDEO || mimeType == MMTConstants.MIME_MMT_AUDIO)
+        _player = createExoPlayer(loadControl, renderersFactory, trackSelector).apply {
+            val mediaSource = createMediaSource(mediaUri, mimeType)
+            prepare(mediaSource)
+            if (!requestAudioFocus || tryRetrievedAudioFocus()) {
+                playWhenReady = this@Atsc3MediaPlayer.playWhenReady
             }
+        }
     }
 
     fun tryReplay(requestAudioFocus: Boolean = true) {
@@ -272,46 +273,40 @@ class Atsc3MediaPlayer(
         }
     }
 
-    private fun createDefaultExoPlayer(trackSelector: TrackSelector): SimpleExoPlayer {
-        //jjustman-2021-09-08 - TODO - refactor DefaultRenderersFactory out into RouteDASHRenderersFactory for AC-4 and MPEGH support
-        return createExoPlayer(RouteDASHLoadControl(), DefaultRenderersFactory(context), trackSelector)
-    }
-
-    private fun createMMTExoPlayer(trackSelector: TrackSelector): SimpleExoPlayer {
-        return createExoPlayer(MMTLoadControl(), MMTRenderersFactory(context), trackSelector)
-    }
-
     private fun createExoPlayer(loadControl: LoadControl, renderersFactory: RenderersFactory, trackSelector: TrackSelector): SimpleExoPlayer {
-        return ExoPlayerFactory.newSimpleInstance(context, renderersFactory, trackSelector, loadControl).apply {
-            addListener(object : Player.EventListener {
-                override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
-                    val state = playbackState(playbackState, playWhenReady) ?: return
-                    if (rmpState != state) {
-                        rmpState = state
-                        listener?.onPlayerStateChanged(state)
-                    }
-                }
-
-                override fun onPlayerError(error: ExoPlaybackException) {
-                    listener?.onPlayerError(error)
-
-                    // Do not retry if source media service not found
-                    if (isContentDataSourceServiceNotFoundException(error.cause)) {
-                        return
+        return SimpleExoPlayer.Builder(context, renderersFactory)
+            .setLoadControl(loadControl)
+            .setTrackSelector(trackSelector)
+            .build().apply {
+                addListener(object : Player.EventListener {
+                    override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
+                        val state = playbackState(playbackState, playWhenReady) ?: return
+                        if (rmpState != state) {
+                            rmpState = state
+                            listener?.onPlayerStateChanged(state)
+                        }
                     }
 
-                    if (isMMTPlayback) {
-                        seekToDefaultPosition()
+                    override fun onPlayerError(error: ExoPlaybackException) {
+                        listener?.onPlayerError(error)
+
+                        // Do not retry if source media service not found
+                        if (isContentDataSourceServiceNotFoundException(error.cause)) {
+                            return
+                        }
+
+                        if (isMMTPlayback) {
+                            seekToDefaultPosition()
+                        }
+
+                        retry()
                     }
 
-                    retry()
-                }
-
-                override fun onPlaybackParametersChanged(playbackParameters: PlaybackParameters) {
-                    listener?.onPlaybackSpeedChanged(playbackParameters.speed)
-                }
-            })
-        }
+                    override fun onPlaybackParametersChanged(playbackParameters: PlaybackParameters) {
+                        listener?.onPlaybackSpeedChanged(playbackParameters.speed)
+                    }
+                })
+            }
     }
 
     private fun createDASHLoadErrorHandlingPolicy(): DefaultLoadErrorHandlingPolicy {
@@ -344,13 +339,7 @@ class Atsc3MediaPlayer(
     }
 
     private fun isContentDataSourceServiceNotFoundException(exception: Throwable?): Boolean {
-        if (exception is ContentDataSource.ContentDataSourceException) {
-            if (exception.cause is ServiceNotFoundException) {
-                return true
-            }
-        }
-
-        return false
+        return (exception is ContentDataSource.ContentDataSourceException) && (exception.cause is ServiceNotFoundException)
     }
 
     private fun playbackState(playbackState: Int, playWhenReady: Boolean): PlaybackState? {
