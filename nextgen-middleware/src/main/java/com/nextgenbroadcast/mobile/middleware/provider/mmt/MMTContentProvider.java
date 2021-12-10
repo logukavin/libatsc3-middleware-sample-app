@@ -385,11 +385,6 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
 
     @Override
     public void notifySlHdr1Present(int service_id, int packet_id) {
-        LOG.i(TAG, "SL-HDR detected on service_id: " + service_id + ", packet_id: " + packet_id);
-    }
-
-    @Override
-    public void notifySlHdr1Present(int service_id, int packet_id) {
         slHdr1Services.add(service_id);
 
         notifySlHdr1Present();
