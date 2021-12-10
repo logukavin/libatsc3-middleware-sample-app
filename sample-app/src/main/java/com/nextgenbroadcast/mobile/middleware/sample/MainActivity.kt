@@ -49,9 +49,11 @@ class MainActivity : BaseActivity() {
         PermissionResolver(this)
     }
 
+    /* vmatiash - 10/12/21 - comment to remove READ_PHONE_STATE permission dependency
     private val mobileInternetDetector: MobileInternetDetector by lazy {
-        MobileInternetDetector(this)
+    MobileInternetDetector(this)
     }
+    */
 
     private lateinit var appUpdateManager: AppUpdateManager
     private lateinit var rootView: View
@@ -132,7 +134,9 @@ class MainActivity : BaseActivity() {
         //make sure we can read from device pcap files and get location
         if (permissionResolver.checkSelfPermission()) {
             bindService()
+            /* vmatiash - 10/12/21 - comment to remove READ_PHONE_STATE permission dependency
             mobileInternetDetector.register()
+            */
         }
     }
 
@@ -155,7 +159,9 @@ class MainActivity : BaseActivity() {
         mediaController?.unregisterCallback(mediaControllerCallback)
 
         unbindService()
+        /* vmatiash - 10/12/21 - comment to remove READ_PHONE_STATE permission dependency
         mobileInternetDetector.unregister()
+        */
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
@@ -266,6 +272,7 @@ class MainActivity : BaseActivity() {
                     }
                 }
 
+                /* vmatiash - 10/12/21 - comment to remove READ_PHONE_STATE permission dependency
                 launch {
                     mobileInternetDetector.state.collect { status ->
                         viewViewModel.cellularState.value = status
@@ -277,6 +284,7 @@ class MainActivity : BaseActivity() {
                         viewViewModel.networkCapabilitiesState.value = capabilities
                     }
                 }
+                 */
             }
 
             showDebugInfo.observe(this@MainActivity) { showDebugInfo ->
