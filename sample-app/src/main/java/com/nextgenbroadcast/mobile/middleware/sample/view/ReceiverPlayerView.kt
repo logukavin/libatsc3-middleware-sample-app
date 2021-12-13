@@ -53,7 +53,7 @@ class ReceiverPlayerView @JvmOverloads constructor(
             .encodedPath(ROUTE_CONTENT_SL_HDR1_PRESENT).build()
     }
 
-    private lateinit var exoPlayerView: Atsc3ExoPlayerView
+    private lateinit var exoPlayerView: Atsc3GlPlayerView//Atsc3ExoPlayerView
     private lateinit var hdrPlayerView: Atsc3SlhdrPlayerView
     private lateinit var slhdrActiveTextView: TextView
     private val mediaDataTextView = TextView(context)
@@ -89,7 +89,7 @@ class ReceiverPlayerView @JvmOverloads constructor(
         // don't try to use the SL-HDR enabled GPU path
         hasHdr10Display = deviceHasHdr10Display(context)
 
-        slhdr1Enabled = resources.getBoolean(R.bool.slhdr1Enabled)
+        slhdr1Enabled = false//resources.getBoolean(R.bool.slhdr1Enabled)
 
         atsc3Player.setListener(object : Atsc3MediaPlayer.EventListener {
             override fun onPlayerStateChanged(state: PlaybackState) {
@@ -129,7 +129,7 @@ class ReceiverPlayerView @JvmOverloads constructor(
             setBackgroundColor(ContextCompat.getColor(context, R.color.black_50_alpha))
         }
 
-        exoPlayerView = Atsc3ExoPlayerView.inflate(context, this)
+        exoPlayerView = /*Atsc3ExoPlayerView*/Atsc3GlPlayerView.inflate(context, this)
         if (supportSlHdr1) {
             slhdrActiveTextView = TextView(context).apply {
                 text = context.getString(R.string.type_hdr)
