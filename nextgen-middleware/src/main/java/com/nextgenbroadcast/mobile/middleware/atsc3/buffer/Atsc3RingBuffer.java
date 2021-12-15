@@ -48,8 +48,9 @@ public class Atsc3RingBuffer {
         int position = outBuffer.position();
         int pageSize = readNextPage(type, position, outBuffer.limit(), outBuffer.array(), zeroBuffer);
         if (pageSize > 0) {
-            outBuffer.position(position + RING_BUFFER_FRAGMENT_HEADER_OFFSET);
             pageSize -= RING_BUFFER_FRAGMENT_HEADER_OFFSET;
+            outBuffer.position(position + RING_BUFFER_FRAGMENT_HEADER_OFFSET);
+            outBuffer.limit(outBuffer.position() + pageSize);
         }
         return pageSize;
     }

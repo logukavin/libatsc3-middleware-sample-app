@@ -24,6 +24,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.Locale;
 
 public class MMTFragmentWriter {
     public static final String TAG = MMTFragmentWriter.class.getSimpleName();
@@ -419,12 +420,11 @@ public class MMTFragmentWriter {
             if (service_id != serviceId) continue;
 
             if (InitMpuMetadata_HEVC_NAL_Payload == null) {
-                //jjustman-2021-11-15 - todo: why is this 60 when it should be payloadSize - headerSize - 4 ?
-                int myNALPayloadSize = payloadSize - headerSize - 4;
-                ByteBuffer init = ByteBuffer.allocate(myNALPayloadSize);
-                init.put(buffer.array(), buffer.position(), myNALPayloadSize);
+                int nalPayloadSize = payloadSize - headerSize - Integer.BYTES /* headerSize value */;
+                ByteBuffer init = ByteBuffer.allocate(nalPayloadSize);
+                buffer.get(init.array(), 0, nalPayloadSize);
                 InitMpuMetadata_HEVC_NAL_Payload = init;
-                LOG.e(TAG, String.format("scanMpuMetadata: InitMpuMetadata_HEVC_NAL_Payload len: %d, is: %s", myNALPayloadSize, Hex.toHexString(InitMpuMetadata_HEVC_NAL_Payload.array())));
+                LOG.e(TAG, String.format(Locale.US, "scanMpuMetadata: InitMpuMetadata_HEVC_NAL_Payload len: %d, is: %s", nalPayloadSize, Hex.toHexString(InitMpuMetadata_HEVC_NAL_Payload.array())));
             }
 
             buffer.limit(0);
