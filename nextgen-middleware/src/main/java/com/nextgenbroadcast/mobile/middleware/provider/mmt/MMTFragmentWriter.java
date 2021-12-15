@@ -10,6 +10,7 @@ import com.nextgenbroadcast.mobile.core.LOG;
 import com.nextgenbroadcast.mobile.middleware.atsc3.buffer.Atsc3RingBuffer;
 import com.nextgenbroadcast.mobile.player.MMTConstants;
 
+import org.bouncycastle.util.encoders.Hex;
 import org.ngbp.libatsc3.middleware.android.mmt.MmtPacketIdContext;
 import org.ngbp.libatsc3.middleware.android.mmt.MpuMetadata_HEVC_NAL_Payload;
 import org.ngbp.libatsc3.middleware.android.mmt.models.MMTAudioDecoderConfigurationRecord;
@@ -418,9 +419,12 @@ public class MMTFragmentWriter {
             if (service_id != serviceId) continue;
 
             if (InitMpuMetadata_HEVC_NAL_Payload == null) {
-                ByteBuffer init = ByteBuffer.allocate(payloadSize);
-                init.put(buffer.array(), buffer.position(), payloadSize);
+                //jjustman-2021-11-15 - todo: why is this 60 when it should be payloadSize - headerSize - 4 ?
+                int myNALPayloadSize = payloadSize - headerSize - 4;
+                ByteBuffer init = ByteBuffer.allocate(myNALPayloadSize);
+                init.put(buffer.array(), buffer.position(), myNALPayloadSize);
                 InitMpuMetadata_HEVC_NAL_Payload = init;
+                LOG.e(TAG, String.format("scanMpuMetadata: InitMpuMetadata_HEVC_NAL_Payload len: %d, is: %s", myNALPayloadSize, Hex.toHexString(InitMpuMetadata_HEVC_NAL_Payload.array())));
             }
 
             buffer.limit(0);
