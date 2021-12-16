@@ -10,6 +10,7 @@ import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
 import android.opengl.GLUtils;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.google.android.exoplayer2.C;
@@ -45,16 +46,18 @@ public class OpenSlhdrVideoRenderer implements GLSurfaceView.Renderer, VideoFram
     };
 
     private static final String VERTEX_SHADER_PROGRAM =
-            "attribute vec4 a_position;\n" +
-                    "attribute vec3 a_texcoord;\n" +
-                    "varying vec2 v_texcoord;\n" +
+            "#version 300 es\n" +
+                    "in vec4 a_position;\n" +
+                    "in vec3 a_texcoord;\n" +
+                    "out vec2 v_texcoord;\n" +
                     "void main() {\n" +
                     " gl_Position = a_position;\n" +
                     " v_texcoord = a_texcoord.xy;\n" +
                     "}\n";
 
     private static final String FRAGMENT_SHADER_PROGRAM =
-            "#extension GL_OES_EGL_image_external : require\n" +
+            "#version 300 es\n" +
+                    "#extension GL_OES_EGL_image_external_essl3 : require\n" +
                     "precision mediump float;\n" +
                     "// External texture containing video decoder output.\n" +
                     "uniform samplerExternalOES tex_sampler_0;\n" +
@@ -64,14 +67,15 @@ public class OpenSlhdrVideoRenderer implements GLSurfaceView.Renderer, VideoFram
                     "uniform float scaleX;\n" +
                     "// Vertical scaling factory for the overlap bitmap.\n" +
                     "uniform float scaleY;\n" +
-                    "varying vec2 v_texcoord;\n" +
+                    "in vec2 v_texcoord;\n" +
+                    "out vec4 fragmentColor;\n" +
                     "void main() {\n" +
-                    "  vec4 videoColor = texture2D(tex_sampler_0, v_texcoord);\n" +
-                    "  vec4 overlayColor = texture2D(tex_sampler_1,\n" +
+                    "  vec4 videoColor = texture(tex_sampler_0, v_texcoord);\n" +
+                    "  vec4 overlayColor = texture(tex_sampler_1,\n" +
                     "                                vec2(v_texcoord.x * scaleX,\n" +
                     "                                     v_texcoord.y * scaleY));\n" +
                     "  // Blend the video decoder output and the overlay bitmap.\n" +
-                    "  gl_FragColor = videoColor * (1.0 - overlayColor.a)\n" +
+                    "  fragmentColor = videoColor * (1.0 - overlayColor.a)\n" +
                     "      + overlayColor * overlayColor.a;\n" +
                     "}\n";
 
@@ -175,7 +179,7 @@ public class OpenSlhdrVideoRenderer implements GLSurfaceView.Renderer, VideoFram
     }
 
     @Override
-    public void onVideoFrameAboutToBeRendered(long presentationTimeUs, long releaseTimeNs, Format format, @Nullable MediaFormat mediaFormat) {
+    public void onVideoFrameAboutToBeRendered(long presentationTimeUs, long releaseTimeNs, @NonNull Format format, @Nullable MediaFormat mediaFormat) {
         sampleTimestampQueue.add(releaseTimeNs, presentationTimeUs);
     }
 
