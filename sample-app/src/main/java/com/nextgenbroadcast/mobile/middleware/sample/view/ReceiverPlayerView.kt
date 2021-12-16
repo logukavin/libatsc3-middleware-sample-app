@@ -20,6 +20,7 @@ import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
 import com.nextgenbroadcast.mobile.middleware.sample.R
 import com.nextgenbroadcast.mobile.middleware.sample.exoplayer.SlhdrAtsc3RenderersFactory
+import com.nextgenbroadcast.mobile.middleware.sample.openSlhdr.OpenSlhdrRenderersFactory
 import com.nextgenbroadcast.mobile.player.Atsc3MediaPlayer
 import com.nextgenbroadcast.mobile.player.MMTConstants
 import com.nextgenbroadcast.mobile.player.MediaRendererType
@@ -69,6 +70,7 @@ class ReceiverPlayerView @JvmOverloads constructor(
 
     private val supportSlHdr1: Boolean
         get() = hasHdr10Display && slhdr1Enabled
+    private val supportOpenSlHdr = true
 
     val isActive: Boolean
         get() = playerView != null
@@ -89,7 +91,7 @@ class ReceiverPlayerView @JvmOverloads constructor(
         // don't try to use the SL-HDR enabled GPU path
         hasHdr10Display = deviceHasHdr10Display(context)
 
-        slhdr1Enabled = false//resources.getBoolean(R.bool.slhdr1Enabled)
+        slhdr1Enabled = !supportOpenSlHdr && resources.getBoolean(R.bool.slhdr1Enabled)
 
         atsc3Player.setListener(object : Atsc3MediaPlayer.EventListener {
             override fun onPlayerStateChanged(state: PlaybackState) {
@@ -196,6 +198,9 @@ class ReceiverPlayerView @JvmOverloads constructor(
         preparePlayerView(false)
         if (supportSlHdr1) {
             val renderersFactory = SlhdrAtsc3RenderersFactory(context, hdrPlayerView.rendererConnectNtf, mimeType)
+            atsc3Player.play(renderersFactory, mediaUri, mimeType)
+        } else if (supportOpenSlHdr) {
+            val renderersFactory = OpenSlhdrRenderersFactory(context)
             atsc3Player.play(renderersFactory, mediaUri, mimeType)
         } else {
             atsc3Player.play(mediaUri, mimeType)

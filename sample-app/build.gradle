@@ -48,6 +48,10 @@ android {
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
+        ndk {
+            abiFilters 'arm64-v8a', 'armeabi-v7a' //, 'armeabi-v7a' //, 'arm64-v8a' //'', 'x86_64',
+        }
+
         buildConfigField("String", "BugfenderKey", "\"nPbJ6hrKCr3NsDdjybzRmWQz7RlPSIWY\"")
 
         // enables Telemetry collection by default
@@ -70,11 +74,18 @@ android {
     buildTypes {
         debug {
             versionNameSuffix ".${appVersionCode}"
+            jniDebuggable = true
         }
         release {
             minifyEnabled false
             signingConfig signingConfigs.release
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    externalNativeBuild {
+        ndkBuild {
+            path 'Android.mk'
         }
     }
 
