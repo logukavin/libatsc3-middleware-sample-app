@@ -6,25 +6,24 @@
 class BitBuffer {
 private:
     uint8_t* ptr;
-    uint32_t bitIndex;
-    uint32_t limit;
-
-    uint32_t readBits(const uint32_t index, const uint32_t count, uint32_t res) const;
+    int bitIndex;
+    int limit;
+    int capacity;
 
 public:
-    BitBuffer(uint8_t* data, uint32_t position, uint32_t size);
+    BitBuffer(uint8_t* data, int position, int size);
 
-    uint32_t bitRemaining() const;
+    int bitRemaining() const;
 
-    uint32_t bytePosition() const;
-    void bytePosition(uint32_t position);
-    void bitPosition(uint32_t position);
+    int bytePosition() const;
+    void bytePosition(int position);
+    void bitPosition(int position);
 
-    uint32_t byteLimit() const;
-    void byteLimit(uint32_t byteLimit);
-    void bitLimit(uint32_t bitLimit);
+    int byteLimit() const;
+    void byteLimit(int byteLimit);
+    void bitLimit(int bitLimit);
 
-    uint32_t read(uint8_t count);
+    uint32_t read(int count);
 };
 
 #endif //ANDROID_ATSC_3_0_SAMPLE_APP_A344_AND_PHY_SUPPORT_BIT_BUFFER_H
