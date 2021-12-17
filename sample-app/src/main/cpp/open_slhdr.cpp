@@ -14,7 +14,7 @@
 #define __SEI_SL_HDR_1_SPEC_AVC_VERSION_IDC   0x01
 
 void parseSlHdrMetadataFromSEI(BitBuffer *buff) {
-    uint8_t sl_hdr_mode_value_minus1= buff->read(4);
+    uint8_t sl_hdr_mode_value_minus1 = buff->read(4);
     uint8_t sl_hdr_spec_major_version_idc = buff->read(4);
     uint8_t sl_hdr_spec_minor_version_idc = buff->read(7);
     uint8_t sl_hdr_cancel_flag = buff->read(1);
