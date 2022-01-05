@@ -9,7 +9,7 @@ plugins {
 }
 
 def appVersionCode = project.hasProperty('versionCode') ? versionCode.toInteger() : 1
-def appVersion = "1.0.14"
+def appVersion = "1.0.15"
 
 def getCertPropertyCode(propertyName) {
     if (project.hasProperty(propertyName)) {
