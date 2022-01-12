@@ -12,8 +12,7 @@ import com.nextgenbroadcast.mobile.middleware.rpc.processor.CompanionRPCProcesso
 import com.nextgenbroadcast.mobile.middleware.server.CompanionServerConstants
 import com.nextgenbroadcast.mobile.middleware.server.MiddlewareApplicationSession
 import com.nextgenbroadcast.mobile.middleware.server.ServerConstants
-import com.nextgenbroadcast.mobile.middleware.server.ServerUtils.getCompanionHttpUrl
-import com.nextgenbroadcast.mobile.middleware.server.ServerUtils.getCompanionWsUrl
+import com.nextgenbroadcast.mobile.middleware.server.ServerUtils
 import com.nextgenbroadcast.mobile.middleware.server.cert.IUserAgentSSLContext
 import com.nextgenbroadcast.mobile.middleware.server.cert.UserAgentSSLContext
 import com.nextgenbroadcast.mobile.middleware.server.servlets.CDApplicationInfoServlet
@@ -241,7 +240,7 @@ internal class MiddlewareWebServer(
                 baseResource = Resource.newResource(resource.cachePath)
                 addServlet(ServletHolder(DefaultServlet()), "/")
             }
-            handler.addHandler(contextHandler)
+            handler.prependHandler(contextHandler)
             contextHandler.start()
         }
     }
@@ -289,9 +288,20 @@ internal class MiddlewareWebServer(
                 }
 
                 if (companionServerHost != null && companionServerPort != null) {
-                    add(initServletsHandler())
+                    add(ServletContextHandler().apply {
+                        contextPath = "/"
+                        wifiIpAddress?.let { ipAddress ->
+                            addServlet(
+                                ServletHolder(CDDescriptionServlet(ServerUtils.getCompanionHttpUrl(ipAddress))),
+                                CompanionServerConstants.DEVICE_DESCRIPTION_PATH
+                            )
+                            addServlet(
+                                ServletHolder(CDApplicationInfoServlet("", ServerUtils.getCompanionWsUrl(ipAddress))),
+                                CompanionServerConstants.APPLICATION_INFO_PATH
+                            )
+                        }
+                    })
                 }
-
             }.toTypedArray()
 
             with(server) {
@@ -301,18 +311,6 @@ internal class MiddlewareWebServer(
             }
 
             return MiddlewareWebServer(server, webGateway, companionServerHost, companionServerPort, stateScope)
-        }
-
-        private fun initServletsHandler(): Handler {
-            val applicationInfoServletHandler = ServletContextHandler().apply {
-                contextPath = "/"
-                wifiIpAddress?.let { ipAddress ->
-                    addServlet(ServletHolder(CDDescriptionServlet(getCompanionHttpUrl(ipAddress))), CompanionServerConstants.DEVICE_DESCRIPTION_PATH)
-                    addServlet(ServletHolder(CDApplicationInfoServlet("", getCompanionWsUrl(ipAddress))), CompanionServerConstants.APPLICATION_INFO_PATH)
-                }
-            }
-
-            return applicationInfoServletHandler
         }
 
     }
