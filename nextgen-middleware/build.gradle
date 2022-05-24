@@ -11,7 +11,6 @@ unMock {
 
 android {
     compileSdkVersion rootProject.compileSdkVersion
-    buildToolsVersion rootProject.buildToolsVersion
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
@@ -131,7 +130,7 @@ def coroutinesVersion = rootProject.ext.coroutinesVersion
 def startupRuntime = rootProject.ext.startupRuntime
 def jettyVersion = '9.4.38.v20210224'
 def powermock_version = "2.0.9"
-def roomVersion = "2.3.0"
+def roomVersion = "2.4.2"
 def kronosVersion = "0.0.1-alpha11"
 
 
@@ -153,6 +152,9 @@ dependencies {
         if (project.hasProperty('org.gradle.project.phy_airwavz_enabled') && project.property('org.gradle.project.phy_airwavz_enabled').toString().toBoolean()) {
             implementation project(":atsc3_phy_airwavz")
         }
+        if (project.hasProperty('org.gradle.project.phy_tolka_enabled') && project.property('org.gradle.project.phy_tolka_enabled').toString().toBoolean()) {
+            implementation project(":atsc3_phy_tolka")
+        }
     } else {
         implementation "org.ngbp.libatsc3:atsc3_core:$libatsc3Version"
         implementation "org.ngbp.libatsc3:atsc3_bridge:$libatsc3Version"
@@ -168,6 +170,9 @@ dependencies {
         if (project.hasProperty('org.gradle.project.phy_airwavz_enabled') && project.property('org.gradle.project.phy_airwavz_enabled').toString().toBoolean()) {
             implementation "org.ngbp.libatsc3:atsc3_phy_airwavz:$libatsc3Version"
         }
+        if (project.hasProperty('org.gradle.project.phy_tolka_enabled') && project.property('org.gradle.project.phy_tolka_enabled').toString().toBoolean()) {
+            implementation "org.ngbp.libatsc3:phy_tolka_enabled:$libatsc3Version"
+        }
     }
 
     // TODO: remove this after removing dependency in MMTContentProvider
@@ -181,8 +186,12 @@ dependencies {
     implementation project(":nextgen-player")
     compileOnly project(":nextgen-dev")
 
-    implementation 'com.github.nmuzhichin:jsonrpc-core:1.0.4.3'
-    implementation 'com.github.nmuzhichin:jsonrpc-jackson-extension:1.0.4.3'
+    //implementation 'com.github.nmuzhichin:jsonrpc-core:1.0.4.3'
+    //implementation 'com.github.nmuzhichin:jsonrpc-jackson-extension:1.0.4.3'
+
+    implementation 'com.github.nmuzhichin:jsonrpc-core:1.0.4.0'
+
+    implementation 'com.github.nmuzhichin:jsonrpc-jackson-extension:1.0.3.0'
 
     implementation 'org.apache.commons:commons-lang3:3.9'
 

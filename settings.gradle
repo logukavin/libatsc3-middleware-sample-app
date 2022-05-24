@@ -45,4 +45,10 @@ if (props.getProperty('org.gradle.project.use_local_src_libatsc3_folder') && pro
         include ':atsc3_phy_airwavz'
         project(':atsc3_phy_airwavz').projectDir = new File(rootProject.projectDir, libatsc3RootFolder + '/android/atsc3_phy_airwavz')
     }
+
+    // jjustman-2022-05-24 - phy_tolka_enabled
+    if (props.getProperty('org.gradle.project.phy_tolka_enabled') && props.getProperty('org.gradle.project.phy_tolka_enabled').toString().toBoolean()) {
+        include ':atsc3_phy_tolka'
+        project(':atsc3_phy_tolka').projectDir = new File(rootProject.projectDir, libatsc3RootFolder + '/android/atsc3_phy_tolka')
+    }
 }
