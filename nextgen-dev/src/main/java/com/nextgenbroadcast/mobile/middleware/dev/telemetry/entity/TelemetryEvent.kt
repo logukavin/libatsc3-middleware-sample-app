@@ -16,5 +16,6 @@ data class TelemetryEvent(
         const val EVENT_TOPIC_PING = "ping"
         const val EVENT_TOPIC_ERROR = "error"
         const val EVENT_TOPIC_IS_ONLINE = "is_online"
+        const val EVENT_TOPIC_VIDEOSURFACEVIEW_SNAPSHOT = "videosurfaceview"
     }
 }
