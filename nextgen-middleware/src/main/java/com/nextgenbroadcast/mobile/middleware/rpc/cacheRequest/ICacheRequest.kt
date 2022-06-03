@@ -10,10 +10,10 @@ import com.nextgenbroadcast.mobile.middleware.rpc.cacheRequest.model.QueryCacheU
 interface ICacheRequest {
     @JsonRpcMethod("org.atsc.CacheRequest")
     fun cacheRequest(
-            @JsonRpcParam("sourceURL", nullable = true) sourceURL: String?,
-            @JsonRpcParam("targetURL", nullable = true) targetURL: String?,
+            @JsonRpcParam("sourceURL") sourceURL: String?,
+            @JsonRpcParam("targetURL") targetURL: String?,
             @JsonRpcParam("URLs") URLs: List<String>,
-            @JsonRpcParam("filters", nullable = true) filters : List<String>?
+            @JsonRpcParam("filters") filters : List<String>?
     ): CacheRequest
 
     @JsonRpcMethod("org.atsc.CacheRequestDASH")

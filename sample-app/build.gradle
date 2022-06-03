@@ -8,8 +8,8 @@ plugins {
     id 'com.github.triplet.play' version '3.7.0'
 }
 
-def appVersionCode = project.hasProperty('versionCode') ? versionCode.toInteger() : 1
-def appVersion = "1.0.17"
+def appVersionCode = project.hasProperty('versionCode') ? versionCode.toInteger() : 55555
+def appVersion = "1.2.99"
 
 def getCertPropertyCode(propertyName) {
     if (project.hasProperty(propertyName)) {
@@ -28,7 +28,6 @@ def getCertPropertyCode(propertyName) {
 
 android {
     compileSdkVersion rootProject.compileSdkVersion
-    buildToolsVersion rootProject.buildToolsVersion
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
@@ -55,7 +54,8 @@ android {
         // disable AEAT test notifications
         //resValue("bool", "testAlertsEnabled", "false")
         // enables SL-HDR1 video processing
-        resValue("bool", "slhdr1Enabled", "true")
+        //jjustman-2022-05-11 - disable renderer surface re-init when playing back...
+        resValue("bool", "slhdr1Enabled", "false")
     }
 
     signingConfigs {
