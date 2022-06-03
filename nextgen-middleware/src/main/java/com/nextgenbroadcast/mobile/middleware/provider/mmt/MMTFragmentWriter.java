@@ -1,11 +1,13 @@
 package com.nextgenbroadcast.mobile.middleware.provider.mmt;
 
+
 import android.util.ArrayMap;
+import android.util.Log;
 
 import androidx.annotation.Nullable;
 
+import com.google.android.exoplayer2.MMTClockAnchor;
 import com.google.protobuf.Parser;
-import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTClockAnchor;
 import com.nextgenbroadcast.mobile.core.LOG;
 import com.nextgenbroadcast.mobile.middleware.atsc3.buffer.Atsc3RingBuffer;
 import com.nextgenbroadcast.mobile.player.MMTConstants;
@@ -28,6 +30,7 @@ import java.util.Locale;
 
 public class MMTFragmentWriter {
     public static final String TAG = MMTFragmentWriter.class.getSimpleName();
+    private static final boolean TRACE_ENABLED = false;
 
     private static final int MAX_FIRST_MFU_WAIT_TIME = 5000;
 
@@ -48,7 +51,7 @@ public class MMTFragmentWriter {
     private final Boolean audioOnly;
     private final int serviceId;
     private final Atsc3RingBuffer ringBuffer;
-    private final ByteBuffer fragmentBuffer = ByteBuffer.allocate(1024 * 1024);
+    private final ByteBuffer fragmentBuffer = ByteBuffer.allocate(1024 * 1024); //jjustman-2022-02-16 - was 1024 * 1024);
     private final ArrayMap<Integer, MMTAudioDecoderConfigurationRecord> audioConfigurationMap = new ArrayMap<>();
 
     private final ArrayMap<Integer, MmtMpTable.MmtAssetRow> assetMapping = new ArrayMap<>();
@@ -120,6 +123,10 @@ public class MMTFragmentWriter {
             out.flush();
 
             sendFileHeader = false;
+            //jjustman-2022-05-11 - super hack!
+//            if(MMTClockAnchor.SystemClockAnchor == 0) {
+//                MMTClockAnchor.SystemClockAnchor = System.currentTimeMillis() + SYSTEM_CLOCK_ANCHOR_PTS_OFFSET_MS;
+//            }
         }
 
         bytesRead += writeQueue(out);
@@ -263,6 +270,9 @@ public class MMTFragmentWriter {
         while (isActive) {
             if (fragmentBuffer.remaining() == 0) {
                 readFragment(fragmentBuffer);
+                if(TRACE_ENABLED) {
+                    Log.d(TAG, String.format("writeQueue - calling readFragment(fragmentBuffer) -  fragmentBuffer.remaining: %d", fragmentBuffer.remaining()));
+                }
             }
 
             // read the sample buffer
@@ -271,10 +281,17 @@ public class MMTFragmentWriter {
                 break;
             }
 
+            if(TRACE_ENABLED) {
+                Log.d(TAG, String.format("writeQueue - writeBuffer - with fragmentBuffer.remaining: %d", fragmentBuffer.remaining()));
+            }
             bytesRead += writeBuffer(out, fragmentBuffer);
 
-            out.flush();
         }
+
+        if(TRACE_ENABLED) {
+            Log.d(TAG, String.format("writeQueue - calling out.flush, total bytesRead: %d", bytesRead));
+        }
+        out.flush();
 
         return bytesRead;
     }
@@ -298,13 +315,20 @@ public class MMTFragmentWriter {
                 if (--retryCount >= 0) {
                     continue; // we skipped page in some reason, let's try again
                 } else {
+                    Log.w(TAG,"readFragment - failed retryCount with RESULT_RETRY");
+
                     buffer.limit(0);
+                    Thread.yield();
                     return;
                 }
             }
 
             if (payloadSize <= 0) {
                 buffer.limit(0);
+                if(TRACE_ENABLED) {
+                    Log.d(TAG,"readFragment - failed payloadSize <= 0");
+                }
+                Thread.yield();
                 return;
             }
 
@@ -374,10 +398,10 @@ public class MMTFragmentWriter {
 
             int dataSize = headerDiff + MMTConstants.SIZE_SAMPLE_HEADER + payloadSize;
 
-//            if(false) {
-//                Log.d(TAG, String.format("readFragment: sampleType: %d, packetId: %d, sampleNumber: %d, presentationTimeUs: %d, isKey: %s, fragmentBuffer.position: %d, len: %d",
-//                        sampleType, packet_id, sample_number, computedPresentationTimestampUs, isKeySample(sample_number), headerDiff, sampleRemaining));
-//            }
+            if(TRACE_ENABLED) {
+                Log.d(TAG, String.format("onmfu\tsampleType\t%d\tpacketId\t%d\tsampleNumber\t%d\tpresentationTimeUs\t%d",
+                        sampleType, packet_id, sample_number, computedPresentationTimestampUs));
+            }
 
             int limit = Math.max(dataSize, 0);
             buffer.limit(limit);
@@ -573,7 +597,8 @@ public class MMTFragmentWriter {
                 if (isVideoSample(packet_id)) {
                     if (videoMfuPresentationTimestampUs == Long.MAX_VALUE) {
                         videoMfuPresentationTimestampUs = mfu_presentation_time_uS_computed;
-                        MMTClockAnchor.SystemClockAnchor = System.currentTimeMillis() + MMTClockAnchor.SYSTEM_CLOCK_ANCHOR_PTS_OFFSET_MS;
+//jjustman-2022-02-16 - we shouldnt set systemClockAnchor here...
+//                        MMTClockAnchor.SystemClockAnchor = System.currentTimeMillis() + MMTClockAnchor.SYSTEM_CLOCK_ANCHOR_PTS_OFFSET_MS;
 
                     }
 //                    track_anchor_timestamp_us = videoMfuPresentationTimestampUs;

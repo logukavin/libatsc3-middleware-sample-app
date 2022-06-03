@@ -2,14 +2,14 @@ package com.nextgenbroadcast.mobile.middleware.sample
 
 import android.annotation.SuppressLint
 import android.app.PictureInPictureParams
-import android.content.*
+import android.content.ActivityNotFoundException
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.media.MediaMetadata
 import android.media.session.MediaController
 import android.media.session.MediaSession
 import android.media.session.PlaybackState
-import android.os.Build
 import android.os.Bundle
 import android.support.v4.media.MediaBrowserCompat
 import android.util.Log
@@ -19,21 +19,22 @@ import androidx.activity.viewModels
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.lifecycle.lifecycleScope
 import com.google.android.play.core.appupdate.AppUpdateInfo
 import com.google.android.play.core.appupdate.AppUpdateManager
 import com.google.android.play.core.appupdate.AppUpdateManagerFactory
 import com.google.android.play.core.install.model.AppUpdateType
 import com.google.android.play.core.install.model.UpdateAvailability
 import com.google.android.play.core.tasks.Task
-import androidx.lifecycle.lifecycleScope
+import com.nextgenbroadcast.mobile.core.dev.service.binder.IServiceBinder
+import com.nextgenbroadcast.mobile.core.dev.service.presentation.IControllerPresenter
 import com.nextgenbroadcast.mobile.core.getApkBaseServicePackage
 import com.nextgenbroadcast.mobile.core.media.MediaSessionConstants
 import com.nextgenbroadcast.mobile.core.model.AVService
-import com.nextgenbroadcast.mobile.core.dev.service.presentation.IControllerPresenter
-import com.nextgenbroadcast.mobile.core.dev.service.binder.IServiceBinder
 import com.nextgenbroadcast.mobile.core.model.toAVService
-import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.ViewViewModel
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.ReceiverTelemetry
+import com.nextgenbroadcast.mobile.middleware.sample.R
+import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.ViewViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
@@ -146,7 +147,9 @@ class MainActivity : BaseActivity() {
         appUpdateManager.appUpdateInfo.addOnSuccessListener { appUpdateInfo ->
             if (appUpdateInfo.updateAvailability() == UpdateAvailability.DEVELOPER_TRIGGERED_UPDATE_IN_PROGRESS) {
                 // If an in-app update is already running, resume the update.
-                appUpdateManager.startUpdateFlowForResult(appUpdateInfo, AppUpdateType.IMMEDIATE, this, APP_UPDATE_REQUEST_CODE)
+                appUpdateManager.startUpdateFlowForResult(appUpdateInfo,
+                    AppUpdateType.IMMEDIATE, this, APP_UPDATE_REQUEST_CODE
+                )
             }
         }
     }
@@ -207,7 +210,10 @@ class MainActivity : BaseActivity() {
             }
         } else if (config.orientation == Configuration.ORIENTATION_PORTRAIT) {
             WindowCompat.setDecorFitsSystemWindows(window, true)
-            WindowInsetsControllerCompat(window, rootView).show(WindowInsetsCompat.Type.systemBars())
+            WindowInsetsControllerCompat(
+                window,
+                rootView
+            ).show(WindowInsetsCompat.Type.systemBars())
         }
     }
 
@@ -359,7 +365,9 @@ class MainActivity : BaseActivity() {
             //jjustman-2021-05-04 - always push our ATSC3 sample app updates, e.g. dont gate on only && appUpdateInfo.isUpdateTypeAllowed(AppUpdateType.IMMEDIATE)
             if (appUpdateInfo.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE) {
                 // Request the update.
-                appUpdateManager.startUpdateFlowForResult(appUpdateInfo, AppUpdateType.IMMEDIATE, this, APP_UPDATE_REQUEST_CODE)
+                appUpdateManager.startUpdateFlowForResult(appUpdateInfo,
+                    AppUpdateType.IMMEDIATE, this, APP_UPDATE_REQUEST_CODE
+                )
             }
         }
 
@@ -409,7 +417,11 @@ class MainActivity : BaseActivity() {
         } ?: false
 
         if (!started) {
-            Toast.makeText(this@MainActivity, getString(R.string.message_service_apk_not_found, appPackage), Toast.LENGTH_SHORT).show()
+            Toast.makeText(
+                this@MainActivity,
+                getString(R.string.message_service_apk_not_found, appPackage),
+                Toast.LENGTH_SHORT
+            ).show()
         }
     }
 

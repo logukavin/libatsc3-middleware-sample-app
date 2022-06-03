@@ -15,7 +15,7 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTClockAnchor;
+import com.google.android.exoplayer2.MMTClockAnchor;
 import com.nextgenbroadcast.mobile.core.LOG;
 import com.nextgenbroadcast.mobile.core.exception.ServiceNotFoundException;
 import com.nextgenbroadcast.mobile.middleware.Atsc3ReceiverStandalone;
@@ -55,6 +55,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMediaMMTBridgeCallbacks {
     public static final String TAG = MMTContentProvider.class.getSimpleName();
+    private static final boolean TRACE_ENABLED = false;
+
 
     //jjustman-2021-11-11, old values: 320 and 16*1024
     private static final int RING_BUFFER_MAX_PAGE_COUNT = 320 * 16;
@@ -171,8 +173,9 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
     public ParcelFileDescriptor openFile(@NonNull Uri uri, @NonNull String mode)
             throws FileNotFoundException {
         // ContentProvider has already checked granted permissions
-        Log.i(TAG, String.format("openFile with uri: %s, mode: %s", uri.toString(), mode));
-
+        if(TRACE_ENABLED) {
+            Log.i(TAG, String.format("openFile with uri: %s, mode: %s", uri.toString(), mode));
+        }
         final AVService service = getServiceForUri(uri);
         if (service == null) {
             throw new ServiceNotFoundException("Unable to find service for " + uri);
@@ -252,7 +255,10 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
                 int counter = -50; // 5 sec
                 while (counter < 5 && writer.isActive()) {
                     int bytesRead = writer.write(out);
-                    //LOG.d(TAG, "writeToFile:: after writer.write, bytesRead: " + bytesRead);
+
+                    if(TRACE_ENABLED) {
+                        LOG.d(TAG, String.format("writeToFile:: after writer.write, counter: %d, bytesRead: %d", counter, bytesRead));
+                    }
 
                     if (bytesRead > 0) {
                         counter = 0;
@@ -262,7 +268,10 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
                             //jjustman-2021-09-01 - was 100ms, changing to 16ms
                             //LOG.d(TAG, "writeToFile:: sleeping for 16ms, counter: " + counter);
                             //noinspection BusyWait
-                            Thread.sleep(16);
+                            if(TRACE_ENABLED) {
+                                LOG.d(TAG, String.format("writeToFile:: calling thread.sleep(8)"));
+                            }
+                            Thread.sleep(8);
                         }
                     }
                 }
