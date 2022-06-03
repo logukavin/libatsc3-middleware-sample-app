@@ -184,6 +184,7 @@ dependencies {
 
     implementation project(":nextgen-core")
     implementation project(":nextgen-player")
+    implementation project(path: ':exoplayer-library-core')
     compileOnly project(":nextgen-dev")
 
     //implementation 'com.github.nmuzhichin:jsonrpc-core:1.0.4.3'

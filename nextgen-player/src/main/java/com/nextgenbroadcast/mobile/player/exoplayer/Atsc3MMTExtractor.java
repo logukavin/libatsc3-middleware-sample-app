@@ -23,8 +23,12 @@ import java.util.Arrays;
 
 public class Atsc3MMTExtractor implements Extractor {
     public static final String TAG = Atsc3MMTExtractor.class.getSimpleName();
+    private static final boolean TRACE_ENABLED = false;
 
-    private static final int DEFAULT_SAMPLE_BUFFER_SIZE = 1024;
+    //jjustman-2022-05-25 - reduce this value?
+    // note, this may be up to ~100ms of audio packets at 1024 bytes
+    private static final int DEFAULT_SAMPLE_BUFFER_SIZE = 512;
+    private static final boolean TRACE_LOGGING = false;
 
     public static int ReadSample_TrackIsNull_counter = 0;
     public static int ReadSample_ExtractSampleHeader_counter = 0;
@@ -59,7 +63,9 @@ public class Atsc3MMTExtractor implements Extractor {
 
     @Override
     public int read(ExtractorInput input, PositionHolder seekPosition) throws IOException, InterruptedException {
-        //Log.d("Atsc3MMTExtractor", String.format("read: enter: with input: %s, position: %d", input, input.getPosition()));
+        if(TRACE_ENABLED) {
+            Log.d("Atsc3MMTExtractor", String.format("read: enter: with input: %s, position: %d, length: %d", input, input.getPosition(), input.getLength()));
+        }
 
         if (input.getPosition() == 0) {
             if (!readMMTHeader(input)) {
@@ -70,7 +76,9 @@ public class Atsc3MMTExtractor implements Extractor {
         int sampleReadResult = readSample(input);
         maybeOutputSeekMap();
 
-        //Log.d("Atsc3MMTExtractor",String.format("read: exit: sampleReadResult: %d", sampleReadResult));
+        if(TRACE_ENABLED) {
+            Log.d("Atsc3MMTExtractor", String.format("read: exit: with input: %s, position: %d, length: %d", input, input.getPosition(), input.getLength()));
+        }
 
         return sampleReadResult;
     }
@@ -96,6 +104,11 @@ public class Atsc3MMTExtractor implements Extractor {
     }
 
     private int readSample(ExtractorInput extractorInput) throws IOException, InterruptedException {
+
+        if(TRACE_ENABLED) {
+            Log.d("Atsc3MMTExtractor", String.format("readSample: enter: with input: %s, position: %d, length: %d", extractorInput, extractorInput.getPosition(), extractorInput.getLength()));
+        }
+
         try {
             if (currentSampleBytesRemaining == 0) {
                 if (sampleBuffer.bytesLeft() < MMTConstants.SIZE_SAMPLE_HEADER) {
@@ -105,6 +118,9 @@ public class Atsc3MMTExtractor implements Extractor {
                         System.arraycopy(sampleBuffer.data, sampleBuffer.getPosition(), sampleBuffer.data, 0, sampleBuffer.bytesLeft());
                     }
 
+                    if(TRACE_ENABLED) {
+                        Log.d(TAG, String.format("calling extractorInput.readFully, 110, offset: %d, len: %d, ", offset, sampleBuffer.limit() - offset));
+                    }
                     extractorInput.readFully(sampleBuffer.data, /* offset= */ offset, /* length= */ sampleBuffer.limit() - offset);
                     sampleBuffer.setPosition(0);
                 }
@@ -122,6 +138,10 @@ public class Atsc3MMTExtractor implements Extractor {
                 }
 
             } else if (sampleBuffer.bytesLeft() == 0) {
+                if(TRACE_ENABLED) {
+                    Log.d(TAG, String.format("calling extractorInput.readFully, 128, offset: %d, len: %d, ", 0, sampleBuffer.limit()));
+                }
+
                 extractorInput.readFully(sampleBuffer.data, /* offset= */ 0, /* length= */ sampleBuffer.limit());
                 sampleBuffer.setPosition(0);
             }
@@ -146,6 +166,9 @@ public class Atsc3MMTExtractor implements Extractor {
                 Log.w(TAG, String.format("readSample - packet_id: %d, track is NULL, skipped: %d, returning Extrator.RESULT_CONTINUE, count: %d", currentSampleId, skipped, ReadSample_TrackIsNull_counter));
             }
 
+            if(TRACE_ENABLED) {
+                Log.d(TAG, String.format("readSample - exit: early Extractor.RESULT_CONTINUE, packet_id: %d, track is NULL, skipped: %d, returning Extrator.RESULT_CONTINUE, count: %d", currentSampleId, skipped, ReadSample_TrackIsNull_counter));
+            }
             return Extractor.RESULT_CONTINUE;
         }
 
@@ -160,7 +183,9 @@ public class Atsc3MMTExtractor implements Extractor {
 
         currentSampleBytesRemaining -= bytesAppended;
         if (currentSampleBytesRemaining > 0) {
-            //Log.w(TAG, String.format("readSample - packet_id: %d, currentSampleBytesRemaining: %d, returning Extractor.RESULT_CONTINUE", currentSampleId, currentSampleBytesRemaining));
+            if(TRACE_ENABLED) {
+                Log.d(TAG, String.format("readSample - exit: early, Extractor.RESULT_CONTINUE - packet_id: %d, currentSampleBytesRemaining: %d, returning Extractor.RESULT_CONTINUE", currentSampleId, currentSampleBytesRemaining));
+            }
             return Extractor.RESULT_CONTINUE;
         }
 
@@ -169,6 +194,12 @@ public class Atsc3MMTExtractor implements Extractor {
             sampleFlags = C.BUFFER_FLAG_KEY_FRAME;
         }
 
+        if(TRACE_LOGGING) {
+            Log.d(TAG, String.format("sampleMetadata\tpacket_id\t%d\tcurrentSampleTimeUs\t%d\tcurrentSampleSize\t%d", currentSampleId, currentSampleTimeUs, currentSampleSize));
+        }
+
+        Log.d(TAG, String.format("sampleMetadata\tpacket_id\t%d\tcurrentSampleTimeUs\t%d\tcurrentSampleSize\t%d", currentSampleId, currentSampleTimeUs, currentSampleSize));
+
         trackOutput.sampleMetadata(
                 currentSampleTimeUs,
                 sampleFlags,
@@ -176,8 +207,8 @@ public class Atsc3MMTExtractor implements Extractor {
                 /* offset= */ 0,
                 /* encryptionData= */ null);
 
-        if(false) {
-            Log.d(TAG, String.format("readSample: packet_id: %d, returning after trackOutput.sampleMetadata, currentSampleTimeUs: %d, currentSampleSize: %d", currentSampleId, currentSampleTimeUs, currentSampleSize));
+        if(TRACE_LOGGING) {
+            Log.d(TAG, String.format("readSample: exit: with input: %s, position: %d, length: %d", extractorInput, extractorInput.getPosition(), extractorInput.getLength()));
         }
 
         return Extractor.RESULT_CONTINUE;

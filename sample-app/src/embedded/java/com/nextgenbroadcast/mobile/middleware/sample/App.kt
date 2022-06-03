@@ -3,6 +3,8 @@ package com.nextgenbroadcast.mobile.middleware.sample
 import android.app.Application
 import com.bugfender.sdk.Bugfender
 import com.nextgenbroadcast.mobile.core.LOG
+import com.nextgenbroadcast.mobile.middleware.sample.ReceiverContentResolver
+import com.nextgenbroadcast.mobile.middleware.sample.BuildConfig
 
 class App : Application() {
 
