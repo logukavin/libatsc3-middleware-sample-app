@@ -7,6 +7,10 @@ import android.media.AudioManager
 import android.net.Uri
 import android.util.Log
 import com.google.android.exoplayer2.*
+import com.google.android.exoplayer2.drm.DefaultDrmSessionManager
+import com.google.android.exoplayer2.drm.FrameworkMediaDrm
+import com.google.android.exoplayer2.drm.HttpMediaDrmCallback
+import com.google.android.exoplayer2.drm.MediaDrmCallback
 import com.google.android.exoplayer2.source.MediaSource
 import com.google.android.exoplayer2.source.dash.DashMediaSource
 import com.google.android.exoplayer2.source.dash.DefaultDashChunkSource
@@ -15,7 +19,9 @@ import com.google.android.exoplayer2.trackselection.DefaultTrackSelector.Selecti
 import com.google.android.exoplayer2.trackselection.TrackSelector
 import com.google.android.exoplayer2.upstream.ContentDataSource
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
+import com.google.android.exoplayer2.upstream.DefaultHttpDataSourceFactory
 import com.google.android.exoplayer2.upstream.DefaultLoadErrorHandlingPolicy
+import com.google.android.exoplayer2.util.EventLogger
 import com.google.android.exoplayer2.util.Util
 import com.nextgenbroadcast.mmt.exoplayer2.ext.MMTMediaSource
 import com.nextgenbroadcast.mobile.core.exception.ServiceNotFoundException
@@ -25,6 +31,7 @@ import com.nextgenbroadcast.mobile.player.exoplayer.Atsc3MMTExtractor
 import com.nextgenbroadcast.mobile.player.exoplayer.Atsc3RenderersFactory
 import kotlinx.coroutines.*
 import java.io.IOException
+import java.util.*
 import java.util.concurrent.TimeUnit
 
 class Atsc3MediaPlayer(
@@ -120,6 +127,7 @@ class Atsc3MediaPlayer(
             if (!requestAudioFocus || tryRetrievedAudioFocus()) {
                 playWhenReady = this@Atsc3MediaPlayer.playWhenReady
             }
+            addAnalyticsListener(EventLogger(null))
         }
     }
 
@@ -246,7 +254,36 @@ class Atsc3MediaPlayer(
         }
     }
 
+    /*
+
+//        if(mediaUri.path?.contains("mpd2.xml)") == true) {
+//            //synamedia - mpd2.xml -
+//            mediaDrmCallback = HttpMediaDrmCallback("https://drm-license.a3sa.yottacloud.tv/v1/wv/license?content_id=tampa_prod_syn_g2p2", DefaultHttpDataSourceFactory("ngen"))
+//        } else if(mediaUri.path?.contains("mpd3.xml") == true) {
+//            //ateme
+//             mediaDrmCallback = HttpMediaDrmCallback("https://drm-license.a3sa.yottacloud.tv/v1/wv/license?content_id=tampa_lab_atm_g1p2", DefaultHttpDataSourceFactory("ngen"))
+//        } else if (mediaUri.path?.contains("mpd5.xml") == true) {
+//            //https://drm-license.a3sa.yottacloud.tv/v1/wv/license?content_id=tampa_lab_ota_g1p2<
+//            mediaDrmCallback = HttpMediaDrmCallback("https://drm-license.a3sa.yottacloud.tv/v1/wv/license?content_id=tampa_lab_ota_g1p2", DefaultHttpDataSourceFactory("ngen"))
+//        } else {
+
+     */
+
     private fun createMediaSource(mediaUri: Uri, mimeType: String?): MediaSource {
+
+        var uuid:UUID = UUID.fromString("edef8ba9-79d6-4ace-a3c8-27dcd51d21ed");
+        var mediaDrmCallback: MediaDrmCallback = HttpMediaDrmCallback("", DefaultHttpDataSourceFactory("ngen"));
+
+        //jjustman-2022-06-07 - multisession is needed for split a/v contentkey requests
+        var drmSessionManager = mediaDrmCallback?.let {
+            DefaultDrmSessionManager.Builder()
+                .setMultiSession( /* multiSession= */true)
+                .setUuidAndExoMediaDrmProvider(
+                    uuid, FrameworkMediaDrm.DEFAULT_PROVIDER
+                )
+                .build(it)
+        }
+
         return if (mimeType == MMTConstants.MIME_MMT_VIDEO || mimeType == MMTConstants.MIME_MMT_AUDIO) {
             MMTMediaSource.Factory({
                 ContentDataSource(context)
@@ -254,9 +291,13 @@ class Atsc3MediaPlayer(
                 arrayOf(Atsc3MMTExtractor())
             }).apply {
                 setLoadErrorHandlingPolicy(createMMTLoadErrorHandlingPolicy())
+                setDrmSessionManager(drmSessionManager);
+
             }.createMediaSource(mediaUri)
         } else {
-            createMediaSourceFactory().createMediaSource(mediaUri)
+            createMediaSourceFactory()
+                .setDrmSessionManager(drmSessionManager)
+                .createMediaSource(mediaUri)
         }
     }
 
