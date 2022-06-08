@@ -232,11 +232,12 @@ class UserAgentView @JvmOverloads constructor(
         }
 
         override fun onReceivedHttpError(view: WebView, request: WebResourceRequest, errorResponse: WebResourceResponse?) {
-            super.onReceivedHttpError(view, request, errorResponse)
+            if(errorResponse?.statusCode != 404) {
+                super.onReceivedHttpError(view, request, errorResponse)
+                LOG.e(TAG, "onReceivedHttpError request: ${request.url}, statusCode: ${errorResponse?.statusCode}, reason: ${errorResponse?.reasonPhrase}")
+                onLoadingError(request.url)
 
-            LOG.e(TAG, "onReceivedHttpError request: ${request.url}, statusCode: ${errorResponse?.statusCode}, reason: ${errorResponse?.reasonPhrase}")
-
-            onLoadingError(request.url)
+            }
         }
 
         override fun onReceivedClientCertRequest(view: WebView, request: ClientCertRequest) {

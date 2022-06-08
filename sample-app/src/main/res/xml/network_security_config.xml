@@ -7,4 +7,6 @@
             <certificates src="system"/>
         </trust-anchors>
     </debug-overrides>
+    <base-config cleartextTrafficPermitted="true"/>
+
 </network-security-config>

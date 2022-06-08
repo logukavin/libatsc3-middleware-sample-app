@@ -38,6 +38,7 @@ internal class Atsc3ReceiverCore(
     val errorFlow = serviceController.errorFlow.asReadOnly()
     val rfPhyMetricsFlow = atsc3Module.rfPhyMetricsFlow.asReadOnly()
     val l1dPhyInfoFlow = atsc3Module.l1dPhyInfoFlow.asReadOnly()
+    val playerBitmapFlow = IAtsc3Module.PlayerBitmapFlow.asReadOnly()
 
     val ntpClock: INtpClock?
         get() = atsc3Module.getNtpClock()

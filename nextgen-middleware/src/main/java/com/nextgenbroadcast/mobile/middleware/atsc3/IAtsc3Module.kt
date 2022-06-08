@@ -3,6 +3,9 @@ package com.nextgenbroadcast.mobile.middleware.atsc3
 import com.nextgenbroadcast.mobile.core.atsc3.INtpClock
 import com.nextgenbroadcast.mobile.middleware.atsc3.entities.Atsc3ServiceLocationTable
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.IAtsc3Source
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.reader.VideoSurfaceViewByteArray
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import org.ngbp.libatsc3.middleware.android.phy.models.L1D_timePhyInformation
 import org.ngbp.libatsc3.middleware.android.phy.models.RfPhyStatistics
@@ -31,4 +34,9 @@ interface IAtsc3Module {
     fun getLLSTableByName(names: List<String>): List<ISignalingData>
 
     fun getNtpClock(): INtpClock?
+
+    companion object {
+        val PlayerBitmapFlow: MutableSharedFlow<VideoSurfaceViewByteArray> = MutableSharedFlow<VideoSurfaceViewByteArray>(0, 3, BufferOverflow.DROP_OLDEST)
+
+    }
 }

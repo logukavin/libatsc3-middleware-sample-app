@@ -221,7 +221,9 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
                 if (descriptors.size() == 1) {
                     //jjustman-2021-01-13 - HACK
                     MMTClockAnchor.SystemClockAnchor = 0;
-                    MMTClockAnchor.MfuClockAnchor = 0;
+                    MMTClockAnchor.SystemClockAnchorResetFromTimestampNegativeDiscontinuity = false;
+                    MMTClockAnchor.MfuAudioClockAnchorNtp64Min = null;
+                    MMTClockAnchor.MfuAudioClockAnchorMpuSequenceMin = null;
                 }
             }
 
@@ -353,8 +355,18 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
             MmtPacketIdContext.selected_audio_packet_id = mmtAudioDecoderConfigurationRecord.packet_id; //jjustman-2021-05-24 - todo: pick min()
         }
         descriptors.forEach(descriptor -> {
-            descriptor.pushAudioDecoderConfigurationRecord(mmtAudioDecoderConfigurationRecord);
+            descriptor.pushAudioDecoderConfigurationRecord(mmtAudioDecoderConfigurationRecord, atsc3NdkMediaMMTBridge);
         });
+    }
+
+    @Override
+    public void atsc3_signallingContext_notify_audio_packet_id_and_mpu_timestamp_descriptor(int audio_packet_id, long mpu_sequence_number, long mpu_presentation_time_ntp64, long mpu_presentation_time_seconds, int mpu_presentation_time_microseconds) {
+//        if(MMTClockAnchor.SystemClockAnchorResetFromTimestampNegativeDiscontinuity) {
+//            if(mpu_sequence_number >= MMTClockAnchor.MfuAudioClockAnchorMpuSequenceMin) {
+//                //we can safely set our audio ntp64 as the mfu timing anchor minimum after wraparound
+//                MMTClockAnchor.MfuAudioClockAnchorNtp64Min = mpu_presentation_time_ntp64;
+//            }
+//        }
     }
 
     @Override

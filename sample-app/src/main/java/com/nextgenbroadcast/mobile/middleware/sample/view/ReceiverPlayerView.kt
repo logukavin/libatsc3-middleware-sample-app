@@ -3,10 +3,14 @@ package com.nextgenbroadcast.mobile.middleware.sample.view
 import android.content.ContentResolver
 import android.content.Context
 import android.database.ContentObserver
+import android.graphics.Bitmap
+import android.graphics.Rect
 import android.graphics.Typeface
 import android.net.Uri
+import android.os.Handler
 import android.text.Html
 import android.util.AttributeSet
+import android.util.Log
 import android.util.TypedValue
 import android.view.*
 import android.widget.FrameLayout
@@ -18,6 +22,8 @@ import com.google.android.exoplayer2.ui.PlayerView
 import com.google.android.exoplayer2.video.VideoListener
 import com.nextgenbroadcast.mobile.core.LOG
 import com.nextgenbroadcast.mobile.core.model.PlaybackState
+import com.nextgenbroadcast.mobile.middleware.atsc3.IAtsc3Module
+import com.nextgenbroadcast.mobile.middleware.dev.telemetry.reader.VideoSurfaceViewByteArray
 import com.nextgenbroadcast.mobile.middleware.sample.R
 import com.nextgenbroadcast.mobile.middleware.sample.exoplayer.SlhdrAtsc3RenderersFactory
 import com.nextgenbroadcast.mobile.player.Atsc3MediaPlayer
@@ -26,12 +32,16 @@ import com.nextgenbroadcast.mobile.player.MediaRendererType
 import com.nextgenbroadcast.mobile.player.MediaTrackDescription
 import com.philips.jhdr.ISlhdrOperatingModeNtf
 import com.philips.jhdr.ISlhdrOperatingModeNtf.*
+import kotlinx.coroutines.*
+import java.io.ByteArrayOutputStream
+import java.lang.Runnable
 
 typealias OnPlaybackChangeListener = (state: PlaybackState, position: Long, rate: Float) -> Unit
 
 class ReceiverPlayerView @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
 ) : FrameLayout(context, attrs, defStyleAttr) {
+
 
     private val atsc3Player = Atsc3MediaPlayer(context).apply {
         resetWhenLostAudioFocus = false
@@ -225,6 +235,50 @@ class ReceiverPlayerView @JvmOverloads constructor(
                 })
             }
         }
+
+        if(job == null) {
+            Log.w("ReceiverPlayerView", "launching vuzix telemetry writer in mainscope")
+
+            job = GlobalScope.launch(newSingleThreadContext("vuzixBitmapWriter")) {
+
+                val bitmap = Bitmap.createBitmap(320, 180, Bitmap.Config.ARGB_8888)
+
+                while (isActive) {
+                    try {
+                        //val view: FrameLayout = findViewById(R.id.exo_content_frame)
+                        val view:SurfaceView = exoPlayerView.videoSurfaceView as SurfaceView;
+
+                        PixelCopy.request(
+                            view,
+                            Rect(0, 0, view.width, view.height),
+                            bitmap,
+                            { copyResult ->
+                                if (copyResult == PixelCopy.SUCCESS) {
+                                    val stream = ByteArrayOutputStream()
+                                    bitmap.compress(Bitmap.CompressFormat.JPEG, 5, stream)
+                                    val byteArray: ByteArray = stream.toByteArray()
+                                    Log.w("ReceiverPlayerView", "PixelCopy.success, width: ${view.width}, height: ${view.height}, emitting new VideoSurfaceViewByteArray with ${byteArray.size}")
+
+                                    IAtsc3Module.PlayerBitmapFlow.tryEmit(VideoSurfaceViewByteArray(byteArray) )
+
+                                    stream.close()
+                                } else {
+                                    Log.w("ReceiverPlayerView", "PixelCopy.request failed $copyResult")
+                                }
+                            }, handler
+
+                        )
+                    } catch (ex: Exception) {
+                        Log.w("ReceiverPlayerView", "exception is: $ex")
+                    }
+                    delay(1000);
+                }
+
+                bitmap.recycle()
+                Log.w("ReceiverPlayerView", "ending vuzix telemetry writer in mainscope")
+
+            }
+        }
     }
 
     private fun preparePlayerView(slHdr1Compatible: Boolean) {
@@ -322,6 +376,12 @@ class ReceiverPlayerView @JvmOverloads constructor(
         atsc3Player.clearSavedState()
 
         slhdrInfo = null
+        job?.cancel()
+//        job?.join()
+        job = null
+        Log.w("ReceiverPlayerView", "vuzix telemetry writer job is now NULL")
+
+
     }
 
     private fun updateMediaInformation() {
@@ -446,6 +506,7 @@ class ReceiverPlayerView @JvmOverloads constructor(
 
     companion object {
         val TAG: String = ReceiverPlayerView::class.java.simpleName
+        private var job:Job? = null
 
         private const val WATERMARK_ALPHA = 0.5F
         private const val WATERMARK_ALPHA_ANIMATION_DURATION = 500L

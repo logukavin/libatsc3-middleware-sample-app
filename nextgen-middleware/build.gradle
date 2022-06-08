@@ -187,10 +187,18 @@ dependencies {
     implementation project(path: ':exoplayer-library-core')
     compileOnly project(":nextgen-dev")
 
+    /*
+        jjustman-2022-06-08 - added in local jsonrpc-core and patched to include nullable functionality for @jsonrpcparam annotation
+
+        interface IQueryDeviceInfo {
+         @JsonRpcMethod("org.atsc.query.deviceInfo")
+         fun queryDeviceInfo(@JsonRpcParam(value = "deviceInfoProperties", nullable = true) deviceInfoParams: List<String>?): DeviceInfo
+
+     */
     //implementation 'com.github.nmuzhichin:jsonrpc-core:1.0.4.3'
+    //implementation 'com.github.nmuzhichin:jsonrpc-core:1.0.4.0'
     //implementation 'com.github.nmuzhichin:jsonrpc-jackson-extension:1.0.4.3'
 
-    implementation 'com.github.nmuzhichin:jsonrpc-core:1.0.4.0'
 
     implementation 'com.github.nmuzhichin:jsonrpc-jackson-extension:1.0.3.0'
 

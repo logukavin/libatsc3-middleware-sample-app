@@ -133,7 +133,8 @@ internal class TelemetryHolder(
                         GPSTelemetryReader(context),
                         RfPhyTelemetryReader(receiver.rfPhyMetricsFlow),
                         L1DPhyTelemetryReader(receiver.l1dPhyInfoFlow, receiver.ntpClock),
-                        ErrorTelemetryReader(receiver.errorFlow)
+                        ErrorTelemetryReader(receiver.errorFlow),
+                        ReceiverPlayerVideoSurfaceViewReader(receiver.playerBitmapFlow)
                 ),
                 listOf(
                         //AWSIoTelemetryWriter(thing),
