@@ -95,9 +95,20 @@ internal class ServiceControllerImpl(
         }
     }
 
+    //jjustman-2022-02-01 - testing for mmt drm: serviceId == 5003
+    /*
+            service.serviceId == 5003
+
+            service.serviceCategory == SLTConstants.SERVICE_CATEGORY_AV
+                    || service.serviceCategory == SLTConstants.SERVICE_CATEGORY_AO
+                    || service.serviceCategory == SLTConstants.SERVICE_CATEGORY_ABS
+                                service.serviceId == 5005
+
+     */
     override fun onServiceLocationTableChanged(bsid: Int, services: List<Atsc3Service>, reportServerUrl: String?) {
         // store A/V services
         val avServices = services.filter { service ->
+//            service.serviceId == 3
             service.serviceCategory == SLTConstants.SERVICE_CATEGORY_AV
                     || service.serviceCategory == SLTConstants.SERVICE_CATEGORY_AO
                     || service.serviceCategory == SLTConstants.SERVICE_CATEGORY_ABS
@@ -337,6 +348,7 @@ internal class ServiceControllerImpl(
     private fun setMediaUrlWithDelay(mediaUrl: MediaUrl, delayMs: Long) {
         cancelMediaUrlAssignment()
         mediaUrlAssignmentJob = mainScope.launch {
+            repository.setMediaUrl(null)
             delay(delayMs)
             repository.setMediaUrl(mediaUrl)
             mediaUrlAssignmentJob = null

@@ -13,6 +13,7 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.buffer.Atsc3RingBuffer;
 import com.nextgenbroadcast.mobile.player.MMTConstants;
 
 import org.bouncycastle.util.encoders.Hex;
+import org.ngbp.libatsc3.middleware.Atsc3NdkMediaMMTBridge;
 import org.ngbp.libatsc3.middleware.android.mmt.MmtPacketIdContext;
 import org.ngbp.libatsc3.middleware.android.mmt.MpuMetadata_HEVC_NAL_Payload;
 import org.ngbp.libatsc3.middleware.android.mmt.models.MMTAudioDecoderConfigurationRecord;
@@ -52,7 +53,9 @@ public class MMTFragmentWriter {
     private final int serviceId;
     private final Atsc3RingBuffer ringBuffer;
     private final ByteBuffer fragmentBuffer = ByteBuffer.allocate(1024 * 1024); //jjustman-2022-02-16 - was 1024 * 1024);
+
     private final ArrayMap<Integer, MMTAudioDecoderConfigurationRecord> audioConfigurationMap = new ArrayMap<>();
+    private final ArrayMap<Integer, Long> audioPacketIdMpuSequenceNumberMap = new ArrayMap<>();
 
     private final ArrayMap<Integer, MmtMpTable.MmtAssetRow> assetMapping = new ArrayMap<>();
 
@@ -66,6 +69,10 @@ public class MMTFragmentWriter {
     private long videoMfuPresentationTimestampUs = Long.MAX_VALUE;
     private final ArrayMap<Integer, Long> audioMfuPresentationTimestampMap = new ArrayMap<>();
     private long stppMfuPresentationTimestampUs = Long.MAX_VALUE;
+
+    private long videoMfuPresentationTimestampUsMaxWraparoundValue = Long.MAX_VALUE;
+    private long audioMfuPresentationTimestampUsMaxWraparoundValue = Long.MAX_VALUE;
+    private long stppMfuPresentationTimestampUsMaxWraparoundValue  = Long.MAX_VALUE;
 
     private volatile boolean isActive = true;
     private volatile boolean mpTableComplete = false;
@@ -123,10 +130,6 @@ public class MMTFragmentWriter {
             out.flush();
 
             sendFileHeader = false;
-            //jjustman-2022-05-11 - super hack!
-//            if(MMTClockAnchor.SystemClockAnchor == 0) {
-//                MMTClockAnchor.SystemClockAnchor = System.currentTimeMillis() + SYSTEM_CLOCK_ANCHOR_PTS_OFFSET_MS;
-//            }
         }
 
         bytesRead += writeQueue(out);
@@ -368,8 +371,13 @@ public class MMTFragmentWriter {
                 }
             }
 
-            long computedPresentationTimestampUs = getPresentationTimestampUs(packet_id, sample_number, mpu_presentation_time_uS_from_SI);
+            Long computedPresentationTimestampUs = getPresentationTimestampUs(packet_id, fragmentHeader.getSequenceNumber(), sample_number, mpu_presentation_time_uS_from_SI);
 
+            if(computedPresentationTimestampUs == null) {
+                //bail
+                buffer.limit(0);
+                return;
+            }
             int headerDiff = buffer.position() - MMTConstants.SIZE_SAMPLE_HEADER;
             if (sampleType == MMTConstants.TRACK_TYPE_AUDIO) {
                 MmtMpTable.MmtAssetRow asset = assetMapping.get(packet_id);
@@ -508,76 +516,12 @@ public class MMTFragmentWriter {
     }
 
     //jjustman-2020-12-22 - TODO: handle when mfu_presentation_time_uS_computed - push last value?
-
-    //moved
-
-    //jjustman-2021-09-02 - TODO: fix isAudioSample() to only check -> audioConfigurationMap.containsKey(packet_id); its checking if MmtPacketIdContext.selected_audio_packet_id == packet_id
-
-//    private long getPresentationTimestampUs_no_anchor(int packet_id, int sample_number, long mpu_presentation_time_uS_from_SI) {
-//        long mpuPresentationTimestampDeltaUs = 0;
-//
-//        if (mpu_presentation_time_uS_from_SI > 0) {
-//            long mfu_presentation_time_uS_computed = 0;
-//            long extracted_sample_duration_us;
-//            if (isVideoSample(packet_id)) {
-//                if (MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us > 0) {
-//                    mfu_presentation_time_uS_computed = mpu_presentation_time_uS_from_SI + (sample_number - 1) * MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us;
-//                    Log.d(TAG, String.format("getPresentationTimestampUs: Video: packet_id: %d, sampleNumber: %d, mpu_presentation_time_uS_from_SI: %d, extracted_sample_duration_us: %d",
-//                            packet_id, sample_number, mpu_presentation_time_uS_from_SI, MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us));
-//                }
-//            } else if (isAudioSample(packet_id)) {
-//                if ((extracted_sample_duration_us = MmtPacketIdContext.getAudioPacketStatistic(packet_id).extracted_sample_duration_us) > 0) {
-//                    mfu_presentation_time_uS_computed = mpu_presentation_time_uS_from_SI + (sample_number - 1) * extracted_sample_duration_us;
-//                    Log.d(TAG, String.format("getPresentationTimestampUs: Audio: packet_id: %d, sample_number: %d, mpu_presentation_time_uS_from_SI: %d, extracted_sample_duration_us: %d",
-//                            packet_id, sample_number, mpu_presentation_time_uS_from_SI, MmtPacketIdContext.getAudioPacketStatistic(packet_id).extracted_sample_duration_us));
-//
-//                }
-//            } else if (isTextSample(packet_id)) {
-//                if (MmtPacketIdContext.stpp_packet_statistics.extracted_sample_duration_us > 0) {
-//                    mfu_presentation_time_uS_computed = mpu_presentation_time_uS_from_SI + (sample_number - 1) * MmtPacketIdContext.stpp_packet_statistics.extracted_sample_duration_us;
-//                    Log.d(TAG, String.format("getPresentationTimestampUs: Stpp: packet_id: %d, sample_number: %d, mpu_presentation_time_uS_from_SI: %d, extracted_sample_duration_us: %d",
-//                            packet_id, sample_number, mpu_presentation_time_uS_from_SI, MmtPacketIdContext.stpp_packet_statistics.extracted_sample_duration_us));
-//
-//                }
-//            }
-//
-//            if(mfu_presentation_time_uS_computed == 0) {
-//                Log.w(TAG, String.format("getPresentationTimestampUs: mfu_presentation_time_uS_computed is 0! packet_id: %d, sample_number: %d, mfu_presentation_time_uS_computed: %d, mpu_presentation_time_uS_from_SI: %d, extracted_sample_duration_us: %d",
-//                        packet_id, sample_number, mfu_presentation_time_uS_computed, mpu_presentation_time_uS_from_SI, MmtPacketIdContext.stpp_packet_statistics.extracted_sample_duration_us));
-//            }
-//
-//            if (mfu_presentation_time_uS_computed > 0) {
-//                //todo: jjustman-2021-09-01 - also convert video and stpp to Map for anchor timestampUs
-//                if (isVideoSample(packet_id)) {
-//                    if (videoMfuPresentationTimestampUs == Long.MAX_VALUE) {
-//                        videoMfuPresentationTimestampUs = mfu_presentation_time_uS_computed;
-//                    }
-//                    mpuPresentationTimestampDeltaUs = mfu_presentation_time_uS_computed - videoMfuPresentationTimestampUs;
-//                } else if (isAudioSample(packet_id)) {
-//                    if (!audioMfuPresentationTimestampMap.containsKey(packet_id)) {
-//                        audioMfuPresentationTimestampMap.put(packet_id, mfu_presentation_time_uS_computed);
-//                    }
-//                    mpuPresentationTimestampDeltaUs = mfu_presentation_time_uS_computed - audioMfuPresentationTimestampMap.get(packet_id);
-//                } else if (isTextSample(packet_id)) {
-//                    if (stppMfuPresentationTimestampUs == Long.MAX_VALUE) {
-//                        stppMfuPresentationTimestampUs = mfu_presentation_time_uS_computed;
-//                    }
-//                    mpuPresentationTimestampDeltaUs = mfu_presentation_time_uS_computed - stppMfuPresentationTimestampUs;
-//                }
-//                return mpuPresentationTimestampDeltaUs;
-//            }
-//        }
-//
-//        return 0;
-//    }
-
-    //jjustman-2020-12-22 - TODO: handle when mfu_presentation_time_uS_computed - push last value?
-    private long getPresentationTimestampUs(int packet_id, int sample_number, long mpu_presentation_time_uS_from_SI) {
+    private Long getPresentationTimestampUs(int packet_id, int mpu_sequence_number, int sample_number, long mpu_presentation_time_uS_from_SI) {
         if (mpu_presentation_time_uS_from_SI > 0) {
             long mfu_presentation_time_uS_computed = 0;
             long extracted_sample_duration_us;
 
-//            long track_anchor_timestamp_us = 0;
+            long track_anchor_timestamp_us = 0;
             if (isVideoSample(packet_id)) {
                 if (MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us > 0) {
                     mfu_presentation_time_uS_computed = mpu_presentation_time_uS_from_SI + (sample_number - 1) * MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us;
@@ -595,33 +539,51 @@ public class MMTFragmentWriter {
             if (mfu_presentation_time_uS_computed > 0) {
                 //todo: expand size as needed, every ~ mfu_presentation_time_uS_computed 1000000uS
                 if (isVideoSample(packet_id)) {
+                    if(videoMfuPresentationTimestampUsMaxWraparoundValue != Long.MAX_VALUE && mfu_presentation_time_uS_computed >= videoMfuPresentationTimestampUsMaxWraparoundValue) {
+                        //drop this, as we haven't seen a sane time yet since our wraparound
+                        return null;
+                    } else {
+                        videoMfuPresentationTimestampUsMaxWraparoundValue = Long.MAX_VALUE;
+                    }
+
                     if (videoMfuPresentationTimestampUs == Long.MAX_VALUE) {
                         videoMfuPresentationTimestampUs = mfu_presentation_time_uS_computed;
-//jjustman-2022-02-16 - we shouldnt set systemClockAnchor here...
-//                        MMTClockAnchor.SystemClockAnchor = System.currentTimeMillis() + MMTClockAnchor.SYSTEM_CLOCK_ANCHOR_PTS_OFFSET_MS;
-
                     }
-//                    track_anchor_timestamp_us = videoMfuPresentationTimestampUs;
+                    track_anchor_timestamp_us = videoMfuPresentationTimestampUs;
                 } else if (isAudioSample(packet_id)) {
+
+                    if(audioMfuPresentationTimestampUsMaxWraparoundValue != Long.MAX_VALUE && mfu_presentation_time_uS_computed >= audioMfuPresentationTimestampUsMaxWraparoundValue) {
+                        //drop this, as we haven't seen a sane time yet since our wraparound
+                        return null;
+                    } else {
+                        audioMfuPresentationTimestampUsMaxWraparoundValue = Long.MAX_VALUE;
+                    }
+
                     if (!audioMfuPresentationTimestampMap.containsKey(packet_id)) {
                         audioMfuPresentationTimestampMap.put(packet_id, mfu_presentation_time_uS_computed);
                     }
-//                    track_anchor_timestamp_us = audioMfuPresentationTimestampMap.get(packet_id);
+                    track_anchor_timestamp_us = audioMfuPresentationTimestampMap.get(packet_id);
                 } else if (isTextSample(packet_id)) {
+                    if(stppMfuPresentationTimestampUsMaxWraparoundValue != Long.MAX_VALUE && mfu_presentation_time_uS_computed >= stppMfuPresentationTimestampUsMaxWraparoundValue) {
+                        //drop this, as we haven't seen a sane time yet since our wraparound
+                        return null;
+                    } else {
+                        stppMfuPresentationTimestampUsMaxWraparoundValue = Long.MAX_VALUE;
+                    }
                     if (stppMfuPresentationTimestampUs == Long.MAX_VALUE) {
                         stppMfuPresentationTimestampUs = mfu_presentation_time_uS_computed;
                     }
-//                    track_anchor_timestamp_us = stppMfuPresentationTimestampUs;
+                    track_anchor_timestamp_us = stppMfuPresentationTimestampUs;
                 }
 
-                long anchorMfuPresentationTimestampUs = getMinNonZeroMfuPresentationTimestampForAnchor(packet_id);
-                long mpuPresentationTimestampDeltaUs = mfu_presentation_time_uS_computed - anchorMfuPresentationTimestampUs;
+                //long anchorMfuPresentationTimestampUs = getMinNonZeroMfuPresentationTimestampForAnchor(packet_id);
+                long mpuPresentationTimestampDeltaUs = mfu_presentation_time_uS_computed - track_anchor_timestamp_us;
 
                 return mpuPresentationTimestampDeltaUs + MMTClockAnchor.MPU_PRESENTATION_DELTA_PTS_OFFSET_US;
             }
         }
 
-        return 0;
+        return null;
     }
 
     private long getMinNonZeroMfuPresentationTimestampForAnchor(int packet_id) {
@@ -645,18 +607,6 @@ public class MMTFragmentWriter {
             minNonZeroMfuPresentationTimestampForAnchor = stppMfuPresentationTimestampUs;
         }
 
-//        if (MMTClockAnchor.SystemClockAnchor == 0) {
-//            //MMTClockAnchor.SystemClockAnchor = System.currentTimeMillis() + MMTClockAnchor.SYSTEM_CLOCK_ANCHOR_PTS_OFFSET_MS;
-//        }
-
-//        if((MMTClockAnchor.MfuClockAnchor == 0) || (minNonZeroMfuPresentationTimestampForAnchor < MMTClockAnchor.MfuClockAnchor)) {
-//            MMTClockAnchor.MfuClockAnchor = minNonZeroMfuPresentationTimestampForAnchor;
-//            long lastSystemClockAnchor = MMTClockAnchor.SystemClockAnchor;
-//            MMTClockAnchor.SystemClockAnchor = System.currentTimeMillis() + MMTClockAnchor.SYSTEM_CLOCK_ANCHOR_PTS_OFFSET_MS;
-//            Log.i(TAG, String.format("old systemClockAnchor: %d, new systemClockAnchor: %d, diff: %d", lastSystemClockAnchor, MMTClockAnchor.SystemClockAnchor, (lastSystemClockAnchor - MMTClockAnchor.SystemClockAnchor)));
-//
-//        }
-
         return minNonZeroMfuPresentationTimestampForAnchor;
     }
 
@@ -670,8 +620,36 @@ public class MMTFragmentWriter {
         }*/
     }
 
-    public void pushAudioDecoderConfigurationRecord(MMTAudioDecoderConfigurationRecord mmtAudioDecoderConfigurationRecord) {
+    public void pushAudioDecoderConfigurationRecord(MMTAudioDecoderConfigurationRecord mmtAudioDecoderConfigurationRecord, Atsc3NdkMediaMMTBridge atsc3NdkMediaMMTBridge) {
         audioConfigurationMap.put(mmtAudioDecoderConfigurationRecord.packet_id, mmtAudioDecoderConfigurationRecord);
+        if(audioPacketIdMpuSequenceNumberMap.containsKey(mmtAudioDecoderConfigurationRecord.packet_id)) {
+            Long lastAudioPacketMpuSequenceNumber = audioPacketIdMpuSequenceNumberMap.get(mmtAudioDecoderConfigurationRecord.packet_id);
+
+            if(mmtAudioDecoderConfigurationRecord.mpu_sequence_number < lastAudioPacketMpuSequenceNumber) {
+                Log.w(TAG, String.format("pushAudioDecoderConfigurationRecord - detected mpu_sequence_number wraparound with packet_id: %d, lastAudioPacketMpuSequenceNumber: %d, current mpuSequenceNumber: %d - resetting MMTClockAnchor.SystemClockAnchor to 0!",
+                        mmtAudioDecoderConfigurationRecord.packet_id,
+                        lastAudioPacketMpuSequenceNumber,
+                        mmtAudioDecoderConfigurationRecord.mpu_sequence_number));
+
+                resetMfuPresentationTimestampAnchorsAndMMTSystemClockAnchor(atsc3NdkMediaMMTBridge, mmtAudioDecoderConfigurationRecord);
+            }
+        }
+        audioPacketIdMpuSequenceNumberMap.put(mmtAudioDecoderConfigurationRecord.packet_id, mmtAudioDecoderConfigurationRecord.mpu_sequence_number);
+    }
+
+    private void resetMfuPresentationTimestampAnchorsAndMMTSystemClockAnchor(Atsc3NdkMediaMMTBridge atsc3NdkMediaMMTBridge, MMTAudioDecoderConfigurationRecord mmtAudioDecoderConfigurationRecord) {
+        MMTClockAnchor.SystemClockAnchor = 0;
+        MMTClockAnchor.SystemClockAnchorResetFromTimestampNegativeDiscontinuity = true;
+
+        videoMfuPresentationTimestampUsMaxWraparoundValue = videoMfuPresentationTimestampUs;
+        videoMfuPresentationTimestampUs = Long.MAX_VALUE;
+
+        audioMfuPresentationTimestampUsMaxWraparoundValue = audioMfuPresentationTimestampMap.getOrDefault(mmtAudioDecoderConfigurationRecord.packet_id, Long.MAX_VALUE);
+        audioMfuPresentationTimestampMap.clear();
+
+        stppMfuPresentationTimestampUsMaxWraparoundValue = stppMfuPresentationTimestampUs;
+        stppMfuPresentationTimestampUs = Long.MAX_VALUE;
+        //atsc3NdkMediaMMTBridge.rewindBuffer();
     }
 
     public void pushVideoStreamProperties(MmtVideoProperties.MmtVideoPropertiesDescriptor descriptor) {

@@ -177,11 +177,11 @@ class TelemetryManager(
             TelemetryEvent.EVENT_TOPIC_BATTERY
         )
         val observer = when {
-            device.availableOnNSD -> WebTelemetryObserver(
-                device.host,
-                device.port,
-                topics
-            )
+//            device.availableOnNSD -> WebTelemetryObserver(
+//                device.host,
+//                device.port,
+//                topics
+//            )
             device.availableOnAWS -> AWSTelemetryObserver(
                 AWSIOT_EVENT_TOPIC_FORMAT,
                 awsIoThing,
