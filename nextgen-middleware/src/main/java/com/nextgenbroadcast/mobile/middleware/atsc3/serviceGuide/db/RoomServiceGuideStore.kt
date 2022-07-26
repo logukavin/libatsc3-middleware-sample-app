@@ -35,7 +35,7 @@ internal class RoomServiceGuideStore(
         notifyUpdated?.invoke()
     }
 
-    override fun storeService(serviceMap: Map<Int, SGService>) {
+    override fun storeService(serviceMap: Map<String, SGService>) {
         val services = serviceMap.values
 
         storeServiceList(services)
@@ -84,7 +84,7 @@ internal class RoomServiceGuideStore(
         )
     }
 
-    private fun storeScheduleList(serviceId: Int, schedules: Collection<SGSchedule>) {
+    private fun storeScheduleList(serviceId: String, schedules: Collection<SGSchedule>) {
         db.scheduleDAO().insert(
                 schedules.mapNotNull { schedule ->
                     schedule.id?.let { id ->

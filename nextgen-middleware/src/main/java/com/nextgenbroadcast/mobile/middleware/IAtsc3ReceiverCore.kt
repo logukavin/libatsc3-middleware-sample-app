@@ -14,6 +14,9 @@ internal interface IAtsc3ReceiverCore {
     fun selectService(service: AVService, block: suspend (result: Boolean) -> Unit = {})
     fun cancelScanning()
 
+    fun getDemodPcapCapture(): Boolean?
+    fun setDemodPcapCapture(enabled:Boolean)
+
     fun getReceiverState(): ReceiverState
 
     fun getPhyVersionInfo(): Map<String, String?>

@@ -35,6 +35,7 @@ class ReceiverContentResolver(
     private val certificateUri = getUriForPath(context, CONTENT_SERVER_CERTIFICATE)
     private val receiverStateUri = getUriForPath(context, CONTENT_RECEIVER_STATE)
     private val receiverPhyInfoUri = getUriForPath(context, CONTENT_PHY_VERSION_INFO)
+    private val receiverDemodPcapCapture = getUriForPath(context, CONTENT_RECEIVER_DEMOD_PCAP_CAPTURE)
 
     private var providerClient: ContentProviderClient? = null
 
@@ -86,6 +87,14 @@ class ReceiverContentResolver(
             queryPlayerData()?.let { (mediaUri, layoutParams, state) ->
                 block(mediaUri, layoutParams, state)
             }
+        }
+    }
+
+    //jjustman-2022-07-11 - adding method to enable/disable demod pcap capture output
+    fun setDemodPcapCapture(enabled: Boolean) {
+        receiverDemodPcapCapture.delete()
+        receiverDemodPcapCapture.insert {
+            it.put(COLUMN_RECEIVER_DEMOD_PCAP_CAPTURE, enabled)
         }
     }
 
@@ -352,6 +361,7 @@ class ReceiverContentResolver(
         const val CONTENT_SERVER_CERTIFICATE = "serverCertificate"
         const val CONTENT_RECEIVER_STATE = "receiverState"
         const val CONTENT_RECEIVER_MEDIA_PLAYER = "receiverMediaPlayer"
+        const val CONTENT_RECEIVER_DEMOD_PCAP_CAPTURE = "demodPcapCapture"
 
         const val COLUMN_APP_CONTEXT_ID = "appContextId"
         const val COLUMN_APP_BASE_URL = "appBaseUrl"
@@ -371,6 +381,7 @@ class ReceiverContentResolver(
         const val COLUMN_ROUTE_NAME = "receiverRouteName"
         const val COLUMN_FREQUENCY = "receiverFrequency"
         const val COLUMN_FREQUENCY_LIST = "receiverFrequencyList"
+        const val COLUMN_RECEIVER_DEMOD_PCAP_CAPTURE = "isEnableDemodPcapCapture"
 
         const val COLUMN_SERVICE_BSID = "receiverServiceBsid"
         const val COLUMN_SERVICE_ID = "receiverServiceId"

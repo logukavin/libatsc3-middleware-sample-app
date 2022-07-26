@@ -22,6 +22,7 @@
                 android:id="@+id/enableDebuggingInformation"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginLeft="@dimen/settings_margin_level_2"
                 android:checked="@={viewModel.showDebugInfo}"
                 android:text="@string/settings_enable_debug_info"
                 app:layout_constraintLeft_toLeftOf="parent"
@@ -31,12 +32,11 @@
                 android:id="@+id/enablePHYDebuggingInformation"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginLeft="@dimen/settings_margin_level_2"
                 android:layout_marginTop="15dp"
                 android:checked="@={viewModel.showPhyInfo}"
                 android:enabled="@{viewModel.showDebugInfo}"
                 android:text="@string/settings_enable_phy_info"
-                app:layout_constraintLeft_toLeftOf="parent"
+                app:layout_constraintEnd_toEndOf="@+id/enableDebuggingInformation"
                 app:layout_constraintTop_toBottomOf="@+id/enableDebuggingInformation" />
 
             <androidx.appcompat.widget.SwitchCompat
@@ -46,7 +46,7 @@
                 android:layout_marginTop="15dp"
                 android:checked="@={viewModel.showPhyChart}"
                 android:text="@string/settings_display_phy_chart"
-                app:layout_constraintEnd_toEndOf="@+id/enablePHYDebuggingInformation"
+                app:layout_constraintEnd_toEndOf="@+id/enableDebuggingInformation"
                 app:layout_constraintTop_toBottomOf="@+id/enablePHYDebuggingInformation" />
 
             <androidx.appcompat.widget.SwitchCompat
@@ -56,9 +56,19 @@
                 android:layout_marginTop="15dp"
                 android:checked="@={viewModel.isShowMediaInfo}"
                 android:text="@string/settings_show_media_information"
-                app:layout_constraintEnd_toEndOf="@+id/enablePHYDebuggingInformation"
+                app:layout_constraintEnd_toEndOf="@+id/enableDebuggingInformation"
                 app:layout_constraintTop_toBottomOf="@+id/enablePHYGraphView" />
-        </androidx.constraintlayout.widget.ConstraintLayout>
 
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/enableDemodPcapCapture"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="15dp"
+                android:checked="@={viewModel.isEnableDemodPcapCapture}"
+                android:text="@string/settings_enable_demod_pcap_capture"
+                app:layout_constraintEnd_toEndOf="@+id/enableDebuggingInformation"
+                app:layout_constraintTop_toBottomOf="@+id/enableMediaInformation" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
     </ScrollView>
 </layout>

@@ -15,5 +15,5 @@ import androidx.room.ForeignKey
 )
 data class SGContentServiceIdEntity(
         val contentId: String,
-        val serviceId: Int
+        val serviceId: String
 )

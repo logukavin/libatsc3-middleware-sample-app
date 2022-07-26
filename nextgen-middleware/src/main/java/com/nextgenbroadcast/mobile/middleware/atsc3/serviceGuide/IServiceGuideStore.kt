@@ -5,6 +5,6 @@ import com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.unit.SGService
 
 internal interface IServiceGuideStore {
     fun clearAll()
-    fun storeService(serviceMap: Map<Int, SGService>)
+    fun storeService(serviceMap: Map<String, SGService>)
     fun storeContent(contentMap: Map<String, SGContent>)
 }

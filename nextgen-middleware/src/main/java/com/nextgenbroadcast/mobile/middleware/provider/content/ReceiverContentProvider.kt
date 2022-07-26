@@ -63,6 +63,7 @@ class ReceiverContentProvider : ContentProvider() {
             addURI(authority, CONTENT_SERVER_CERTIFICATE, QUERY_CERTIFICATE)
             addURI(authority, CONTENT_RECEIVER_STATE, QUERY_RECEIVER_STATE)
             addURI(authority, CONTENT_RECEIVER_MEDIA_PLAYER, QUERY_RECEIVER_MEDIA_PLAYER)
+            addURI(authority, CONTENT_RECEIVER_DEMOD_PCAP_CAPTURE, QUERY_DEMOD_PCAP_CAPTURE)
         }
 
         val contentResolver = appContext.contentResolver
@@ -261,6 +262,14 @@ class ReceiverContentProvider : ContentProvider() {
                 }
             }
 
+            QUERY_DEMOD_PCAP_CAPTURE -> {
+                val isEnabledDemodPcapCapture = receiver.getDemodPcapCapture()
+
+                MatrixCursor(arrayOf(COLUMN_RECEIVER_DEMOD_PCAP_CAPTURE)).apply {
+                    newRow().add(COLUMN_RECEIVER_DEMOD_PCAP_CAPTURE, isEnabledDemodPcapCapture)
+                }
+            }
+
             else -> null
         }
     }
@@ -334,6 +343,14 @@ class ReceiverContentProvider : ContentProvider() {
                     }
                 }
 
+                QUERY_DEMOD_PCAP_CAPTURE -> {
+                    if (value.containsKey(COLUMN_RECEIVER_DEMOD_PCAP_CAPTURE)) {
+                        value.getAsBoolean(COLUMN_RECEIVER_DEMOD_PCAP_CAPTURE)?.let { enabled ->
+                            receiver.setDemodPcapCapture(enabled)
+                        }
+                    }
+                }
+
                 else -> throw IllegalArgumentException("Wrong URI: $uri")
             }
         }
@@ -401,6 +418,8 @@ class ReceiverContentProvider : ContentProvider() {
         private const val QUERY_CERTIFICATE = 9
         private const val QUERY_RECEIVER_STATE = 10
         private const val QUERY_RECEIVER_MEDIA_PLAYER = 11
+        private const val QUERY_DEMOD_PCAP_CAPTURE = 12
+
 
         const val CONTENT_RECEIVER_ROUTE_LIST = "receiverRouteList"
         const val CONTENT_RECEIVER_ROUTE = "receiverOpenRoute"
@@ -413,6 +432,7 @@ class ReceiverContentProvider : ContentProvider() {
         const val CONTENT_SERVER_CERTIFICATE = "serverCertificate"
         const val CONTENT_RECEIVER_STATE = "receiverState"
         const val CONTENT_RECEIVER_MEDIA_PLAYER = "receiverMediaPlayer"
+        const val CONTENT_RECEIVER_DEMOD_PCAP_CAPTURE = "demodPcapCapture"
 
         const val COLUMN_APP_CONTEXT_ID = "appContextId"
         const val COLUMN_APP_BASE_URL = "appBaseUrl"
@@ -432,6 +452,8 @@ class ReceiverContentProvider : ContentProvider() {
         const val COLUMN_ROUTE_NAME = "receiverRouteName"
         const val COLUMN_FREQUENCY = "receiverFrequency"
         const val COLUMN_FREQUENCY_LIST = "receiverFrequencyList"
+        const val COLUMN_RECEIVER_DEMOD_PCAP_CAPTURE = "isEnableDemodPcapCapture"
+
 
         const val COLUMN_SERVICE_BSID = "receiverServiceBsid"
         const val COLUMN_SERVICE_ID = "receiverServiceId"

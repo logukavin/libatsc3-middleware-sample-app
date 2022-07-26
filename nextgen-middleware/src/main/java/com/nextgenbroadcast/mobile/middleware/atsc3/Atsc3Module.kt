@@ -783,7 +783,7 @@ internal class Atsc3Module(
                 if (src is UsbPhyAtsc3Source) {
                     val deviceType = when (src.type) {
                         Atsc3Source.DEVICE_TYPE_KAILASH -> "KAILASH"
-                        Atsc3Source.DEVICE_TYPE_KAILASH_3 -> "KAILASH_3"
+                        Atsc3Source.DEVICE_TYPE_SILISA -> "SILISA"
 
                         Atsc3Source.DEVICE_TYPE_YOGA -> "YOGA"
                         Atsc3Source.DEVICE_TYPE_AUTO -> "MARKONE"
@@ -802,6 +802,15 @@ internal class Atsc3Module(
         }
         return if (serialId.isNullOrBlank()) null else serialId
     }
+
+    override fun getDemodPcapCapture(): Boolean? {
+        return atsc3NdkApplicationBridge.atsc3_get_demod_pcap_capture();
+    }
+
+    override fun setDemodPcapCapture(enabled:Boolean) {
+        atsc3NdkApplicationBridge.atsc3_set_demod_pcap_capture(enabled);
+    }
+
 
     override fun getLLSTableByName(names: List<String>): List<ISignalingData> {
         return if (names.contains(SignalingDataType.ALL.name)) {

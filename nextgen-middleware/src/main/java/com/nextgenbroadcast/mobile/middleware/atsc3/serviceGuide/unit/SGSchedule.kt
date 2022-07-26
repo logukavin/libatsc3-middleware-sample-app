@@ -58,11 +58,11 @@ package com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.unit
 
 internal class SGSchedule (
         // required
-        var id: String? = null,
-        var serviceId: Int = -1,
-        override var version: Long = 0,
+    var id: String? = null,
+    var serviceId: String = "",
+    override var version: Long = 0,
         // links
-        var contentMap: MutableMap<String, SGScheduleContent>? = null
+    var contentMap: MutableMap<String, SGScheduleContent>? = null
 ) : SGUnit() {
     fun addContent(scheduleContent: SGScheduleContent) {
         val contentId = scheduleContent.contentId ?: return

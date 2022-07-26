@@ -111,6 +111,8 @@ class ViewViewModel(
     val isShowMediaInfo = MutableLiveData<Boolean>()
     val dataMediaInfo = MutableLiveData<String>()
 
+    val isEnableDemodPcapCapture = MutableLiveData<Boolean>()
+
     private fun groupLogs(map: Map<String, Boolean>): List<LogInfo> {
         val records = map.map { (key, enabled) ->
             Record(

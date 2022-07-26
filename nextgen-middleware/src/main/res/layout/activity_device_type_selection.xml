@@ -14,11 +14,11 @@
         android:text="@string/device_type_action_kailash" />
 
     <Button
-        android:id="@+id/kailash_3_type_btn"
+        android:id="@+id/silisa_type_btn"
         style="@style/Widget.AppCompat.ActionButton"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/device_type_action_kailash_3" />
+        android:text="@string/device_type_action_silisa" />
 
     <Button
         android:id="@+id/yoga_type_btn"
