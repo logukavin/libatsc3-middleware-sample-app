@@ -198,8 +198,6 @@ public class Atsc3MMTExtractor implements Extractor {
             Log.d(TAG, String.format("sampleMetadata\tpacket_id\t%d\tcurrentSampleTimeUs\t%d\tcurrentSampleSize\t%d", currentSampleId, currentSampleTimeUs, currentSampleSize));
         }
 
-        Log.d(TAG, String.format("sampleMetadata\tpacket_id\t%d\tcurrentSampleTimeUs\t%d\tcurrentSampleSize\t%d", currentSampleId, currentSampleTimeUs, currentSampleSize));
-
         trackOutput.sampleMetadata(
                 currentSampleTimeUs,
                 sampleFlags,

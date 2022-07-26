@@ -6,7 +6,7 @@ import androidx.room.PrimaryKey
 @Entity(tableName = "sg_service")
 data class SGServiceEntity(
         @PrimaryKey
-        val serviceId: Int,
+        val serviceId: String,
         val globalServiceId: String?,
         val majorChannelNo: Int,
         val minorChannelNo: Int,

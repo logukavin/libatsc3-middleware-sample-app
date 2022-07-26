@@ -8,6 +8,6 @@ import androidx.room.*
 data class SGScheduleEntity(
         @PrimaryKey
         val id: String,
-        val serviceId: Int,
+        val serviceId: String,
         val version: Long
 )

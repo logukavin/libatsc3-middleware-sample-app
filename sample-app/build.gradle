@@ -27,6 +27,9 @@ def getCertPropertyCode(propertyName) {
 }
 
 android {
+
+    //jjustman-2022-07-23 - apple m1 silicon still wants to use NDK 21.4.7075529 which only has x86_64 support instead of
+    //    ndkVersion "25.0.8775105"
     compileSdkVersion rootProject.compileSdkVersion
 
     compileOptions {
@@ -55,7 +58,7 @@ android {
         //resValue("bool", "testAlertsEnabled", "false")
         // enables SL-HDR1 video processing
         //jjustman-2022-05-11 - disable renderer surface re-init when playing back...
-        resValue("bool", "slhdr1Enabled", "false")
+        resValue("bool", "slhdr1Enabled", "true")
     }
 
     signingConfigs {

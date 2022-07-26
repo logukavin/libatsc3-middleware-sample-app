@@ -298,6 +298,15 @@ internal class ServiceControllerImpl(
         }
     }
 
+    override suspend fun setDemodPcapCapture(enabled: Boolean) {
+        withContext(Dispatchers.Main) {
+            atsc3ScopeLock.withLock {
+                atsc3Module.setDemodPcapCapture(enabled);
+            }
+        }
+    }
+
+
     override fun findServiceById(globalServiceId: String): AVService? {
         return repository.findServiceBy(globalServiceId)
     }

@@ -7,7 +7,6 @@ import android.hardware.usb.UsbManager
 import android.os.Bundle
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
-import com.nextgenbroadcast.mobile.core.FileUtils
 import com.nextgenbroadcast.mobile.core.MiddlewareConfig
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.Atsc3Source
 import com.nextgenbroadcast.mobile.middleware.dev.config.DevConfig
@@ -32,7 +31,7 @@ class DeviceTypeSelectionDialog : AppCompatActivity() {
             DevConfig.get(applicationContext).phyType?.let { type ->
                 when {
                     "KAILASH".equals(type, true) -> Atsc3Source.DEVICE_TYPE_KAILASH
-                    "KAILASH_3".equals(type, true) -> Atsc3Source.DEVICE_TYPE_KAILASH_3
+                    "SILISA".equals(type, true) -> Atsc3Source.DEVICE_TYPE_SILISA
                     "YOGA".equals(type, true) -> Atsc3Source.DEVICE_TYPE_YOGA
                     else -> null
                 }
@@ -55,8 +54,8 @@ class DeviceTypeSelectionDialog : AppCompatActivity() {
             Atsc3ForegroundService.startForDevice(this, device, Atsc3Source.DEVICE_TYPE_KAILASH)
             finish()
         }
-        findViewById<View>(R.id.kailash_3_type_btn).setOnClickListener {
-            Atsc3ForegroundService.startForDevice(this, device, Atsc3Source.DEVICE_TYPE_KAILASH_3)
+        findViewById<View>(R.id.silisa_type_btn).setOnClickListener {
+            Atsc3ForegroundService.startForDevice(this, device, Atsc3Source.DEVICE_TYPE_SILISA)
             finish()
         }
 

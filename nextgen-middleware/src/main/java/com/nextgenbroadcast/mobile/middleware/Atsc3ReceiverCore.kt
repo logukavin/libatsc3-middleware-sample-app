@@ -153,6 +153,19 @@ internal class Atsc3ReceiverCore(
         return atsc3Module.getVersionInfo()
     }
 
+    override fun getDemodPcapCapture(): Boolean? {
+
+        return atsc3Module.getDemodPcapCapture()
+    }
+
+    override fun setDemodPcapCapture(enabled: Boolean) {
+        mainScope.launch {
+            serviceController.setDemodPcapCapture(enabled)
+        }
+    }
+
+
+
     suspend inline fun observeReceiverState(crossinline action: suspend (state: ReceiverState) -> Unit) {
         serviceController.receiverState.collect(action)
     }

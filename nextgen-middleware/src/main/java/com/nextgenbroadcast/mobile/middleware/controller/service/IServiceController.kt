@@ -22,6 +22,8 @@ internal interface IServiceController {
     suspend fun selectService(service: AVService): Boolean
     suspend fun cancelScanning()
 
+    suspend fun setDemodPcapCapture(enabled: Boolean)
+
     fun findServiceById(globalServiceId: String): AVService?
     fun getNearbyService(offset: Int): AVService?
     fun getCurrentService(): AVService?

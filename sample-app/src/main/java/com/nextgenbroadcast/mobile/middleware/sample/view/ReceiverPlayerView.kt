@@ -236,7 +236,7 @@ class ReceiverPlayerView @JvmOverloads constructor(
             }
         }
 
-        if(job == null) {
+        if(false && job == null) {
             Log.w("ReceiverPlayerView", "launching vuzix telemetry writer in mainscope")
 
             job = GlobalScope.launch(newSingleThreadContext("vuzixBitmapWriter")) {

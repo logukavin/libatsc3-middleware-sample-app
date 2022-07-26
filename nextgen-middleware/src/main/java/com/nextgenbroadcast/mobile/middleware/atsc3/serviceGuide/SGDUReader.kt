@@ -12,7 +12,7 @@ import java.io.File
 import java.io.IOException
 
 internal class SGDUReader(
-        private val services: MutableMap<Int, SGService>,
+        private val services: MutableMap<String, SGService>,
         private val contents: MutableMap<String, SGContent>
 ) {
 
@@ -56,7 +56,7 @@ internal class SGDUReader(
         }
     }
 
-    private fun getOrCreateService(serviceId: Int): SGService {
+    private fun getOrCreateService(serviceId: String): SGService {
         return services[serviceId] ?: SGService(serviceId).also {
             services[serviceId] = it
         }
@@ -69,13 +69,14 @@ internal class SGDUReader(
             parser.nextTag()
             parser.require(XmlPullParser.START_TAG, null, "Service")
 
-            var serviceId: Int = -1
+            var serviceId: String = ""
             var globalServiceId: String? = null
             var version: Long = 0
 
             parser.iterateAttrs { name, value ->
+                // serviceId = XmlUtils.strToInt(value)
                 when (name) {
-                    "id" -> serviceId = XmlUtils.strToInt(value)
+                    "id" -> value
                     "globalServiceID" -> globalServiceId = value
                     "version" -> version = XmlUtils.strToLong(value)
                 }
@@ -277,10 +278,26 @@ internal class SGDUReader(
         }
     }
 
-    private fun readIdRefTag(parser: XmlPullParser, action: (Int) -> Unit) {
+    /*
+    jjustman-2022-07-25 - fix
+
+2022-07-25 00:35:04.521 26889-27576/com.nextgenbroadcast.mobile.middleware.sample W/System.err: java.lang.NumberFormatException: For input string: "bcast://trivenidigital.com/Service-8"
+2022-07-25 00:35:04.521 26889-27576/com.nextgenbroadcast.mobile.middleware.sample W/System.err:     at java.lang.Integer.parseInt(Integer.java:747)
+2022-07-25 00:35:04.521 26889-27576/com.nextgenbroadcast.mobile.middleware.sample W/System.err:     at java.lang.Integer.parseInt(Integer.java:865)
+2022-07-25 00:35:04.521 26889-27576/com.nextgenbroadcast.mobile.middleware.sample W/System.err:     at com.nextgenbroadcast.mobile.middleware.atsc3.utils.XmlUtils.strToInt(XmlUtils.kt:39)
+2022-07-25 00:35:04.521 26889-27576/com.nextgenbroadcast.mobile.middleware.sample W/System.err:     at com.nextgenbroadcast.mobile.middleware.atsc3.utils.XmlUtils.strToInt$default(XmlUtils.kt:37)
+2022-07-25 00:35:04.521 26889-27576/com.nextgenbroadcast.mobile.middleware.sample W/System.err:     at com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.SGDUReader.readIdRefTag(SGDUReader.kt:283)
+2022-07-25 00:35:04.522 26889-27576/com.nextgenbroadcast.mobile.middleware.sample W/System.err:     at com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.SGDUReader.parseContentXML(SGDUReader.kt:224)
+2022-07-25 00:35:04.522 26889-27576/com.nextgenbroadcast.mobile.middleware.sample W/System.err:     at com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.SGDUReader.readFromFile(SGDUReader.kt:39)
+2022-07-25 00:35:04.522 26889-27576/com.nextgenbroadcast.mobile.middleware.sample W/System.err:     at com.nextgenbroadcast.mobile.middleware.atsc3.serviceGuide.ServiceGuideDeliveryUnitReader$readDeliveryUnit$1.invokeSuspend(ServiceGuideDeliveryUnitReader.kt:40)
+2022-07-25 00:35:04.522 26889-27576/com.nextgenbroadcast.mobile.middleware.sample W/System.err:     at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:33)
+     */
+
+    private fun readIdRefTag(parser: XmlPullParser, action: (String) -> Unit) {
         parser.iterateAttrs { name, value ->
             if (name == "idRef") {
-                action(XmlUtils.strToInt(value))
+                //XmlUtils.strToInt(value);
+                action(value);
             }
         }.skipSubTags()
     }

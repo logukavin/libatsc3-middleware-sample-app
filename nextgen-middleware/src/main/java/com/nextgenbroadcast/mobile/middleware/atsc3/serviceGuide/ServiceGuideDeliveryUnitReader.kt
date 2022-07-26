@@ -14,7 +14,7 @@ internal class ServiceGuideDeliveryUnitReader(
     @Volatile
     private var READER_IO: CoroutineDispatcher? = null
 
-    private val serviceMap = ConcurrentHashMap<Int, SGService>()
+    private val serviceMap = ConcurrentHashMap<String, SGService>()
     private val contentMap = ConcurrentHashMap<String, SGContent>()
 
     @Synchronized

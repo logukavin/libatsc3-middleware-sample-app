@@ -370,6 +370,12 @@ class MainFragment : Fragment() {
                 binding.receiverPlayer.hideMediaInformation()
             }
         }
+
+        viewViewModel.isEnableDemodPcapCapture.observe(viewLifecycleOwner) { isEnableDemodPcapCapture ->
+            //jjustman-2022-07-11 - dont save oue demod pcap state value, as its transient...
+            //            receiverContentResolver.tune(freqKhz)
+            receiverContentResolver.setDemodPcapCapture(isEnableDemodPcapCapture)
+        }
     }
 
     private fun showPopupSettingsMenu(v: View) {
