@@ -14,4 +14,16 @@
     <!-- jjustman-2022-05-18 - TOLKA/ITE -->
     <usb-device vendor-id="1165" product-id="37638" />
 
+
+
+    <!-- jjustman-2022-07-28 - Airwavz RedZone Receiver
+
+        RZR-1200
+
+        RZR-1400 - ID 16d0 RedZone Receiver RZR-1400
+            VID: 16d0 -> 5840
+            PID: 0e99 -> 3737
+    -->
+    <usb-device vendor-id="5840" product-id="3500" />
+    <usb-device vendor-id="5840" product-id="3737" />
 </resources>
