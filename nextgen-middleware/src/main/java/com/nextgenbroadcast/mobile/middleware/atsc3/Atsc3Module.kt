@@ -603,7 +603,8 @@ internal class Atsc3Module(
     }
 
     override fun onAeatTablePresent(aeatPayloadXML: String) {
-        if (getState() == Atsc3ModuleState.SCANNING) return
+//jjustman-2022-08-11-hack...
+//        if (getState() == Atsc3ModuleState.SCANNING) return
 
         listener?.onAeatTableChanged(LLSParserAEAT().parseAeaTable(aeatPayloadXML))
     }
