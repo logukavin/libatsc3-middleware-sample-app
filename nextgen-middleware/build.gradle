@@ -155,6 +155,9 @@ dependencies {
         if (project.hasProperty('org.gradle.project.phy_tolka_enabled') && project.property('org.gradle.project.phy_tolka_enabled').toString().toBoolean()) {
             implementation project(":atsc3_phy_tolka")
         }
+        if (project.hasProperty('org.gradle.project.phy_sony_enabled') && project.property('org.gradle.project.phy_sony_enabled').toString().toBoolean()) {
+            implementation project(":atsc3_phy_sony")
+        }
     } else {
         implementation "org.ngbp.libatsc3:atsc3_core:$libatsc3Version"
         implementation "org.ngbp.libatsc3:atsc3_bridge:$libatsc3Version"
@@ -171,7 +174,10 @@ dependencies {
             implementation "org.ngbp.libatsc3:atsc3_phy_airwavz:$libatsc3Version"
         }
         if (project.hasProperty('org.gradle.project.phy_tolka_enabled') && project.property('org.gradle.project.phy_tolka_enabled').toString().toBoolean()) {
-            implementation "org.ngbp.libatsc3:phy_tolka_enabled:$libatsc3Version"
+            implementation "org.ngbp.libatsc3:atsc3_phy_tolka:$libatsc3Version"
+        }
+        if (project.hasProperty('org.gradle.project.phy_sony_enabled') && project.property('org.gradle.project.phy_sony_enabled').toString().toBoolean()) {
+            implementation "org.ngbp.libatsc3:atsc3_phy_sony:$libatsc3Version"
         }
     }
 

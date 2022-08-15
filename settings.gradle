@@ -51,4 +51,10 @@ if (props.getProperty('org.gradle.project.use_local_src_libatsc3_folder') && pro
         include ':atsc3_phy_tolka'
         project(':atsc3_phy_tolka').projectDir = new File(rootProject.projectDir, libatsc3RootFolder + '/android/atsc3_phy_tolka')
     }
+
+    // jjustman-2022-08-11 - phy_sony_enabled
+    if (props.getProperty('org.gradle.project.phy_sony_enabled') && props.getProperty('org.gradle.project.phy_sony_enabled').toString().toBoolean()) {
+        include ':atsc3_phy_sony'
+        project(':atsc3_phy_sony').projectDir = new File(rootProject.projectDir, libatsc3RootFolder + '/android/atsc3_phy_sony')
+    }
 }

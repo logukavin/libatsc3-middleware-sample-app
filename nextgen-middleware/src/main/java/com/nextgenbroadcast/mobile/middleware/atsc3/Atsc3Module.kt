@@ -52,7 +52,8 @@ internal class Atsc3Module(
     private val llsTableMap = ConcurrentHashMap<SignalingDataType, ISignalingData>()
     private val stateLock = ReentrantLock()
     private val configurationTimer = Timer()
-    private val stateScope = CoroutineScope(Executors.newSingleThreadExecutor().asCoroutineDispatcher())
+    //newSingleThreadExecutor.asCoroutineDispatcher()
+    private val stateScope = CoroutineScope(Executors.newWorkStealingPool(4).asCoroutineDispatcher())
 
     private var defaultConfiguration: Map<Any, Atsc3ServiceLocationTable>? = null
 
@@ -331,9 +332,9 @@ internal class Atsc3Module(
     }
 
     private fun getState(): Atsc3ModuleState {
-        return withStateLock {
-            state
-        }
+      //  return withStateLock {
+           return state
+        //}
     }
 
     private fun setState(newState: Atsc3ModuleState) {
@@ -559,7 +560,7 @@ internal class Atsc3Module(
     override fun jni_getCacheDir(): File = cacheDir
 
     override fun onSltTablePresent(tableId: Int, tableVersion: Int, groupId: Int, slt_payload_xml: String) {
-        val shouldSkip = isReconfiguring
+        val shouldSkip = false ; // isReconfiguring
 
         cancelSourceConfigTimeoutTask()
 
@@ -574,7 +575,9 @@ internal class Atsc3Module(
         val currentState = getState()
 
         val slt = LLSParserSLT().parseXML(slt_payload_xml)
-        synchronized(this) {
+        //synchronized(this) {
+         //setState(Atsc3ModuleState.SCANNING)
+
             llsTableMap[SignalingDataType.SLT] = Atsc3SLTData(
                 id = tableId,
                 version = tableVersion,
@@ -584,7 +587,7 @@ internal class Atsc3Module(
 
             serviceLocationTable[slt.bsid] = slt
             serviceToSourceConfig[slt.bsid] = currentSourceConfiguration
-        }
+        //}
 
         log("onSltTablePresent, currentState: $currentState, skip: $shouldSkip, slt_xml:\n$slt_payload_xml")
 
@@ -884,7 +887,7 @@ internal class Atsc3Module(
     companion object {
         val TAG: String = Atsc3Module::class.java.simpleName
 
-        private val SLT_ACQUIRE_TUNE_DELAY = TimeUnit.SECONDS.toMillis(20)
+        private val SLT_ACQUIRE_TUNE_DELAY = TimeUnit.SECONDS.toMillis(5)
 
         private const val CONTENT_TYPE_DASH = "application/dash+xml"
         private const val CONTENT_TYPE_SGDD = "application/vnd.oma.bcast.sgdd+xml"
