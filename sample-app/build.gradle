@@ -215,14 +215,40 @@ dependencies {
         implementation project(':exoplayer-library-core')
         implementation project(':exoplayer-library-dash')
         implementation project(':exoplayer-library-ui')
-        implementation project(':exoplayer-extension-daa')
+
         implementation project(':exoplayer-extension-mmt')
+
+        if (project.hasProperty('org.gradle.project.exoplayer_extensions.ffmpeg_enabled') && project.property('org.gradle.project.exoplayer_extensions.ffmpeg_enabled').toString().toBoolean()) {
+            implementation project(':exoplayer-extension-ffmpeg')
+        }
+
+        if (project.hasProperty('org.gradle.project.exoplayer_extensions.libdaa_enabled') && project.property('org.gradle.project.exoplayer_extensions.libdaa_enabled').toString().toBoolean()) {
+            implementation project(':exoplayer-extension-daa')
+        }
+
+        if (project.hasProperty('org.gradle.project.exoplayer_extensions.mpegh_enabled') && project.property('org.gradle.project.exoplayer_extensions.mpegh_enabled').toString().toBoolean()) {
+            implementation project(':exoplayer-extension-mpegh')
+        }
+
     } else {
         implementation "com.google.android.exoplayer:exoplayer-core:$exoplayerVersion"
         implementation "com.google.android.exoplayer:exoplayer-dash:$exoplayerVersion"
         implementation "com.google.android.exoplayer:exoplayer-ui:$exoplayerVersion"
-        implementation "com.google.android.exoplayer:exoplayer-daa:$exoplayerVersion"
+
         implementation "com.google.android.exoplayer:exoplayer-mmt:$exoplayerVersion"
+
+        if (project.hasProperty('org.gradle.project.exoplayer_extensions.ffmpeg_enabled') && project.property('org.gradle.project.exoplayer_extensions.ffmpeg_enabled').toString().toBoolean()) {
+            implementation "com.google.android.exoplayer:exoplayer-ffmpeg:$exoplayerVersion"
+        }
+
+        if (project.hasProperty('org.gradle.project.exoplayer_extensions.libdaa_enabled') && project.property('org.gradle.project.exoplayer_extensions.libdaa_enabled').toString().toBoolean()) {
+            implementation "com.google.android.exoplayer:exoplayer-daa:$exoplayerVersion"
+        }
+
+        if (project.hasProperty('org.gradle.project.exoplayer_extensions.mpegh_enabled') && project.property('org.gradle.project.exoplayer_extensions.mpegh_enabled').toString().toBoolean()) {
+            implementation "com.google.android.exoplayer:exoplayer-mpegh:$exoplayerVersion"
+        }
+
     }
 
     implementation 'com.google.android.gms:play-services-basement:17.6.0'

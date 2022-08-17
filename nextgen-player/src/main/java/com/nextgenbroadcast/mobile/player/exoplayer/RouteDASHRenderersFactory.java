@@ -13,6 +13,8 @@ import com.google.android.exoplayer2.drm.DrmSessionManager;
 import com.google.android.exoplayer2.drm.FrameworkMediaCrypto;
 import com.google.android.exoplayer2.mediacodec.MediaCodecSelector;
 import com.google.android.exoplayer2.util.Log;
+import com.google.android.exoplayer2.video.MediaCodecVideoRenderer;
+import com.google.android.exoplayer2.video.VideoRendererEventListener;
 
 import java.lang.reflect.Constructor;
 import java.util.ArrayList;
@@ -27,8 +29,55 @@ public class RouteDASHRenderersFactory extends DefaultRenderersFactory {
     }
 
     @Override
+    protected void buildVideoRenderers(
+            Context context,
+            @ExtensionRendererMode int extensionRendererMode,
+            MediaCodecSelector mediaCodecSelector,
+            @Nullable DrmSessionManager<FrameworkMediaCrypto> drmSessionManager,
+            boolean playClearSamplesWithoutKeys,
+            boolean enableDecoderFallback,
+            Handler eventHandler,
+            VideoRendererEventListener eventListener,
+            long allowedVideoJoiningTimeMs,
+            ArrayList<Renderer> out) {
+
+
+        super.buildVideoRenderers(context, extensionRendererMode, mediaCodecSelector, drmSessionManager, playClearSamplesWithoutKeys, enableDecoderFallback, eventHandler, eventListener,
+                allowedVideoJoiningTimeMs, out);
+
+        int extensionRendererIndex = out.size();
+
+        try {
+            // Full class names used for constructor args so the LINT rule triggers if any of them move.
+            // LINT.IfChange
+            Class<?> clazz = Class.forName("com.google.android.exoplayer2.ext.ffmpeg.FfmpegVideoRenderer");
+            Constructor<?> constructor =
+                    clazz.getConstructor(
+                            long.class,
+                            android.os.Handler.class,
+                            com.google.android.exoplayer2.video.VideoRendererEventListener.class,
+                            int.class);
+            // LINT.ThenChange(../../../../../../../proguard-rules.txt)
+            Renderer renderer =
+                    (Renderer)
+                            constructor.newInstance(
+                                    allowedVideoJoiningTimeMs,
+                                    eventHandler,
+                                    eventListener,
+                                    MAX_DROPPED_VIDEO_FRAME_COUNT_TO_NOTIFY);
+            out.add(extensionRendererIndex++, renderer);
+            Log.i(TAG, "Loaded FfmpegVideoRenderer.");
+        } catch (ClassNotFoundException e) {
+            // Expected if the app was built without the extension.
+        } catch (Exception e) {
+            // The extension is present, but instantiation failed.
+            throw new RuntimeException("Error instantiating FfmpegVideoRenderer", e);
+        }
+    }
+
+    @Override
     protected void buildAudioRenderers(Context context, int extensionRendererMode, MediaCodecSelector mediaCodecSelector, @Nullable DrmSessionManager<FrameworkMediaCrypto> drmSessionManager, boolean playClearSamplesWithoutKeys, boolean enableDecoderFallback, AudioProcessor[] audioProcessors, Handler eventHandler, AudioRendererEventListener eventListener, ArrayList<Renderer> out) {
-        super.buildAudioRenderers(context, extensionRendererMode, mediaCodecSelector, drmSessionManager, playClearSamplesWithoutKeys, enableDecoderFallback, audioProcessors, eventHandler, eventListener, out);
+       // super.buildAudioRenderers(context, extensionRendererMode, mediaCodecSelector, drmSessionManager, playClearSamplesWithoutKeys, enableDecoderFallback, audioProcessors, eventHandler, eventListener, out);
 
         if (extensionRendererMode == EXTENSION_RENDERER_MODE_OFF) {
             return;
@@ -55,7 +104,7 @@ public class RouteDASHRenderersFactory extends DefaultRenderersFactory {
             Log.i(TAG, "Loaded LibDaaAudioRenderer.");
         } catch (ClassNotFoundException e) {
             // Expected if the app was built without the extension.
-            Log.i(TAG, "Error instantiating LibDaaAudioRenderer, ex:"+e);
+            Log.i(TAG, "Error instantiating LibDaaAudioRenderer, ex:" + e);
         } catch (Exception e) {
             // The extension is present, but instantiation failed.
             throw new RuntimeException("Error instantiating DAA extension", e);
@@ -82,6 +131,29 @@ public class RouteDASHRenderersFactory extends DefaultRenderersFactory {
         } catch (Exception e) {
             // The extension is present, but instantiation failed.
             throw new RuntimeException("Error instantiating mpegh extension", e);
+        }
+
+        //jjustman-2022-08-16 - ffmpeg ac4 decoder
+        try {
+            // Full class names used for constructor args so the LINT rule triggers if any of them move.
+            // LINT.IfChange
+            Class<?> clazz = Class.forName("com.google.android.exoplayer2.ext.ffmpeg.FfmpegAudioRenderer");
+            Constructor<?> constructor =
+                    clazz.getConstructor(
+                            android.os.Handler.class,
+                            com.google.android.exoplayer2.audio.AudioRendererEventListener.class,
+                            com.google.android.exoplayer2.audio.AudioProcessor[].class);
+
+            Renderer renderer =
+                    (Renderer) constructor.newInstance(eventHandler, eventListener, audioProcessors);
+            out.add(extensionRendererIndex++, renderer);
+            Log.i(TAG, "Loaded FfmpegAudioRenderer");
+        } catch (ClassNotFoundException e) {
+            // Expected if the app was built without the extension.
+            Log.i(TAG, "Error instantiating FfmpegAudioRenderer, ex:"+e);
+        } catch (Exception e) {
+            // The extension is present, but instantiation failed.
+            throw new RuntimeException("Error instantiating FfmpegAudioRenderer extension", e);
         }
     }
 }

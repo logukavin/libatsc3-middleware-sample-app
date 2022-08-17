@@ -2,6 +2,7 @@ rootProject.name='Android ATSC 3.0 Sample App (A344 and PHY support)'
 
 // jjustman-2020-12-22 - local props loader hack before we have a project ref
 def props = new Properties()
+
 file("gradle.properties").withInputStream { props.load(it) }
 
 // include our default project artifacts
@@ -12,6 +13,7 @@ if (props.getProperty('org.gradle.project.use_local_src_exoplayer_folder') && pr
 
     gradle.ext.exoplayerRoot = getProperty('org.gradle.project.local_src_exoPlayerFolder')
     gradle.ext.exoplayerModulePrefix = 'exoplayer-'
+    gradle.ext.props = props
     apply from: new File(gradle.ext.exoplayerRoot, 'core_settings.gradle')
 }
 
