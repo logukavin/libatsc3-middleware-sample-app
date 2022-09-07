@@ -26,7 +26,7 @@ final class InvokeArgumentInterceptor implements Interceptor<List<ParameterMetad
 //        }
 
         for (ParameterMetadata arg : args) {
-            final Object value = params.get(arg.getParameterName());
+            Object value = params.get(arg.getParameterName());
             //jjustman-2022-06-08 - if our parameter has nullable=true and we don't have this parameter name present, add a null entry
             if(arg.getParameterNullable() && value == null) {
                 orderedArgs.add(null);
@@ -38,6 +38,10 @@ final class InvokeArgumentInterceptor implements Interceptor<List<ParameterMetad
                 if (!Map.class.isAssignableFrom(arg.getParameterClass()) && Map.class.isAssignableFrom(value.getClass())) {
                     orderedArgs.add(normalization.normalize(value, arg.getParameterClass()));
                 } else {
+                    //jjustman-2022-08-30 - super hack...
+                    if(arg.getParameterClass().getName().equalsIgnoreCase("java.lang.Double") && value.getClass().getName().equalsIgnoreCase("java.lang.Integer")) {
+                        value = Double.valueOf(((Integer)value).doubleValue());
+                    }
                     orderedArgs.add(value);
                 }
             }

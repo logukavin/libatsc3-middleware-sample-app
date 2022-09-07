@@ -64,7 +64,7 @@ internal class RepositoryImpl(
             AppData(
                 appContextId,
                 ServerUtils.createEntryPoint(appContextId, null, settings),
-                held.bbandEntryPageUrl,
+                held.bbandEntryPageUrl?.let { ServerUtils.appendSocketPathOrNull(it, settings) },
                 held.bcastEntryPageUrl?.let { ServerUtils.appendSocketPathOrNull(it, settings) },
                 held.coupledServices ?: emptyList(),
                 application?.cachePath,

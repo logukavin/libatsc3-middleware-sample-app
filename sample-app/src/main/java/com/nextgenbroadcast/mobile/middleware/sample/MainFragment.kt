@@ -497,7 +497,11 @@ class MainFragment : Fragment() {
         setBAAvailability(false)
         unloadBroadcasterApplication()
 
-        Toast.makeText(requireContext(), getText(R.string.ba_loading_problem), Toast.LENGTH_SHORT).show()
+        when(viewViewModel.showDebugInfo.value) {
+            true -> {
+                Toast.makeText(requireContext(), getText(R.string.ba_loading_problem), Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     private fun setBAAvailability(available: Boolean) {

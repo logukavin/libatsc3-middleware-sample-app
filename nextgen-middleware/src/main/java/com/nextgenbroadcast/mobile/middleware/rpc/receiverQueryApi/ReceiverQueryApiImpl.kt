@@ -45,7 +45,7 @@ class ReceiverQueryApiImpl(
     }
 
     override fun queryReceiverWebServerURI(): BaseURIRpcResponse {
-        return session.getParam(IApplicationSession.Params.MediaUrl)?.let {
+        return session.getParam(IApplicationSession.Params.AppBaseUrl)?.let {
             BaseURIRpcResponse(it)
         } ?: throw RpcException()
     }
@@ -62,6 +62,7 @@ class ReceiverQueryApiImpl(
 
     override fun queryServiceGuideURLs(service: String?): ServiceGuideUrlsRpcResponse {
         return ServiceGuideUrlsRpcResponse(
+
             session.getServiceGuideUrls(service).map { sgUrl ->
                 ServiceGuideUrlsRpcResponse.Url(
                     sgUrl.sgType.toString(),

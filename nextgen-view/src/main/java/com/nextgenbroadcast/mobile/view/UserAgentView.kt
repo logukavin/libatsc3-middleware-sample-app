@@ -230,12 +230,12 @@ class UserAgentView @JvmOverloads constructor(
             //super.onReceivedError(view, request, error)
 
 
-            //onLoadingError(request.url)
+            onLoadingError(request.url)
         }
 
         override fun onReceivedHttpError(view: WebView, request: WebResourceRequest, errorResponse: WebResourceResponse?) {
             if(errorResponse?.statusCode != 404) {
-                super.onReceivedHttpError(view, request, errorResponse)
+                //super.onReceivedHttpError(view, request, errorResponse)
                 LOG.e(TAG, "onReceivedHttpError request: ${request.url}, statusCode: ${errorResponse?.statusCode}, reason: ${errorResponse?.reasonPhrase}")
                 onLoadingError(request.url)
 
@@ -254,6 +254,7 @@ class UserAgentView @JvmOverloads constructor(
         }
     }
 
+    /* jjustman-2022-09-06 - only unload if our loadingError page was the appEntryPoint */
     private fun onLoadingError(uri: Uri) {
         if (reloadRunnable != null) return
 
@@ -279,7 +280,8 @@ class UserAgentView @JvmOverloads constructor(
                 } ?: listener?.onLoadingError()
             }
         } else {
-            listener?.onLoadingError()
+            //jjustman-2022-09-06 - don't bubble up this error if its not from our BA entry
+            //listener?.onLoadingError()
         }
     }
 
