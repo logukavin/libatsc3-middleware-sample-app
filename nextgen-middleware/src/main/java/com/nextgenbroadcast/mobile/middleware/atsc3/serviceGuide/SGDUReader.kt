@@ -76,7 +76,7 @@ internal class SGDUReader(
             parser.iterateAttrs { name, value ->
                 // serviceId = XmlUtils.strToInt(value)
                 when (name) {
-                    "id" -> value
+                    "id" -> serviceId = value
                     "globalServiceID" -> globalServiceId = value
                     "version" -> version = XmlUtils.strToLong(value)
                 }
