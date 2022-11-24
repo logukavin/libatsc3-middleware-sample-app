@@ -1,9 +1,11 @@
 package com.nextgenbroadcast.mobile.middleware.atsc3.entities.alerts
 
 import android.util.Log
+import android.util.Xml
 import com.nextgenbroadcast.mobile.middleware.atsc3.utils.*
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserException
+import java.io.ByteArrayInputStream
 import java.io.IOException
 import java.util.*
 import kotlin.jvm.Throws
@@ -12,29 +14,36 @@ class LLSParserAEAT {
 
     fun parseAeaTable(xmlPayload: String): ArrayList<AeaTable> {
         val aeaList = ArrayList<AeaTable>()
+
         try {
-            val parser = XmlUtils.newParser(xmlPayload)
+
+            var xmlPayloadInputStream = ByteArrayInputStream(xmlPayload.toByteArray())
+
+            val parser = Xml.newPullParser().apply {
+                setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, false)
+                setInput(xmlPayloadInputStream, null)
+            }
+
             parser.nextTag()
             parser.require(XmlPullParser.START_TAG, null, "AEAT")
 
+
             parser.iterateDocument { tagName ->
                 when (tagName) {
-                    "AEA" -> aeaList.add(readAEA(parser))
-                    else -> parser.skipTag()
+                    "AEA" -> {
+                        var aeaTableEntry = readAEA(parser)
+                        aeaTableEntry.xml = xmlPayload //jjustman-2022-11-24 - duplicate this but only dispatch one entry from alertingChanged
+                        aeaList.add(aeaTableEntry)
+                    }
+                    else -> {
+                        parser.skipTag()
+                    }
                 }
             }
         } catch (e: XmlPullParserException) {
+            Log.e("LLSParserAEAT", "XmlPullParserException in parsing: $e")
+        } catch (e: Exception) {
             Log.e("LLSParserAEAT", "exception in parsing: $e")
-        } catch (e: IOException) {
-            Log.e("LLSParserAEAT", "exception in parsing: $e")
-        }
-
-        //TODO: This is temporary solutions, it should be reworked
-        val startIndxs = getAEATagsIdx(xmlPayload, "<AEA ")
-        val endIndxs = getAEATagsIdx(xmlPayload, "</AEA>")
-
-        aeaList.forEachIndexed { index, aeaStore ->
-            aeaStore.xml = xmlPayload.substring(startIndxs[index], endIndxs[index] + "</AEA>".length)
         }
 
         return aeaList
@@ -99,15 +108,6 @@ class LLSParserAEAT {
         parser.iterateSubTags { parser.skipTag() }
 
         return header
-    }
-
-    private fun getAEATagsIdx(str: String, substr: String): ArrayList<Int> {
-        val listIdx = arrayListOf<Int>()
-        var lastIndex = -1
-        while (str.indexOf(substr, lastIndex + 1).also { lastIndex = it } != -1) {
-            listIdx.add(lastIndex)
-        }
-        return listIdx
     }
 
     @Throws(IOException::class, XmlPullParserException::class)

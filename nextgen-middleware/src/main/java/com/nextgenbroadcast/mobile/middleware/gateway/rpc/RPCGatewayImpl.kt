@@ -245,7 +245,11 @@ internal class RPCGatewayImpl(
 
     private fun onAlertingChanged(alertList: List<AeaTable>) {
         if (hasActiveSessions()) {
-            sendNotification(NotificationType.ALERT_CHANGE, alertList.map { it.xml })
+            //don't dispatch every element, just dispatch the xml payload (e.g. from the first element in the internal table)
+            //sendNotification(NotificationType.ALERT_CHANGE, alertList.map { it.xml })
+            if(alertList.size > 0) {
+                sendNotification(NotificationType.ALERT_CHANGE, alertList.first().xml)
+            }
         }
     }
 
