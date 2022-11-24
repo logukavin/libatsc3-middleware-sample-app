@@ -58,17 +58,17 @@ android {
         //resValue("bool", "testAlertsEnabled", "false")
         // enables SL-HDR1 video processing
         //jjustman-2022-05-11 - disable renderer surface re-init when playing back...
-        resValue("bool", "slhdr1Enabled", "true")
+        resValue("bool", "slhdr1Enabled", "false")
     }
 
-    signingConfigs {
-        release {
-            storeFile file(getCertPropertyCode('storeFile'))
-            storePassword getCertPropertyCode('password')
-            keyAlias getCertPropertyCode('keyAlias')
-            keyPassword getCertPropertyCode('keyPassword')
-        }
-    }
+//    signingConfigs {
+//        release {
+//            storeFile file(getCertPropertyCode('storeFile'))
+//            storePassword getCertPropertyCode('password')
+//            keyAlias getCertPropertyCode('keyAlias')
+//            keyPassword getCertPropertyCode('keyPassword')
+//        }
+//    }
 
     buildTypes {
         debug {
@@ -76,7 +76,7 @@ android {
         }
         release {
             minifyEnabled false
-            signingConfig signingConfigs.release
+            //signingConfig signingConfigs.release
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
@@ -229,7 +229,6 @@ dependencies {
         if (project.hasProperty('org.gradle.project.exoplayer_extensions.mpegh_enabled') && project.property('org.gradle.project.exoplayer_extensions.mpegh_enabled').toString().toBoolean()) {
             implementation project(':exoplayer-extension-mpegh')
         }
-
     } else {
         implementation "com.google.android.exoplayer:exoplayer-core:$exoplayerVersion"
         implementation "com.google.android.exoplayer:exoplayer-dash:$exoplayerVersion"
@@ -248,7 +247,6 @@ dependencies {
         if (project.hasProperty('org.gradle.project.exoplayer_extensions.mpegh_enabled') && project.property('org.gradle.project.exoplayer_extensions.mpegh_enabled').toString().toBoolean()) {
             implementation "com.google.android.exoplayer:exoplayer-mpegh:$exoplayerVersion"
         }
-
     }
 
     implementation 'com.google.android.gms:play-services-basement:17.6.0'
