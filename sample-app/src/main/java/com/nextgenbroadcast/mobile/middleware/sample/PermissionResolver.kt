@@ -64,7 +64,12 @@ class PermissionResolver(
 
             if (requiredPermissions.contains(Manifest.permission.ACCESS_COARSE_LOCATION)
                 || requiredPermissions.contains(Manifest.permission.ACCESS_FINE_LOCATION)) {
-                Toast.makeText(activity, activity.getString(R.string.warning_access_background_location_permission), Toast.LENGTH_LONG).show()
+//                Toast.makeText(activity, activity.getString(R.string.warning_access_background_location_permission), Toast.LENGTH_LONG).show()
+            }
+
+            if (requiredPermissions.contains(Manifest.permission.BLUETOOTH_CONNECT)) {
+                //Toast.makeText(activity, activity.getString(R.string.warning_access_background_location_permission), Toast.LENGTH_LONG).show()
+                Toast.makeText(activity, "BLUETOOTH_CONNECT permission is required", Toast.LENGTH_LONG).show()
             }
 
             // Ignore optional permissions
@@ -137,6 +142,7 @@ class PermissionResolver(
     companion object {
         private const val PERMISSION_REQUEST_FIRST = 1000
         private const val PERMISSION_REQUEST_SECOND = 1001
+        public const val REQUEST_ENABLE_BT = 1002
 
         private val necessaryPermissions = listOf(
             Manifest.permission.WRITE_EXTERNAL_STORAGE,
@@ -146,7 +152,8 @@ class PermissionResolver(
     )
     private val optionalPermissions = listOf(
         Manifest.permission.ACCESS_COARSE_LOCATION,
-        Manifest.permission.ACCESS_FINE_LOCATION
+        Manifest.permission.ACCESS_FINE_LOCATION,
+        Manifest.permission.BLUETOOTH_CONNECT
     )
 }
 }

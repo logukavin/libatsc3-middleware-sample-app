@@ -26,4 +26,8 @@
     -->
     <usb-device vendor-id="5840" product-id="3500" />
     <usb-device vendor-id="5840" product-id="3737" />
+
+    <!-- jjustman-2023-01-26 - c e w i j j -->
+    <usb-device vendor-id="52942" product-id="256" />
+
 </resources>

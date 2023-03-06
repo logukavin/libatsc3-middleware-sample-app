@@ -59,4 +59,9 @@ if (props.getProperty('org.gradle.project.use_local_src_libatsc3_folder') && pro
         include ':atsc3_phy_sony'
         project(':atsc3_phy_sony').projectDir = new File(rootProject.projectDir, libatsc3RootFolder + '/android/atsc3_phy_sony')
     }
+
+    if ((props.getProperty('org.gradle.project.phy_cewi_enabled') && props.getProperty('org.gradle.project.phy_cewi_enabled').toString().toBoolean()) || props.getProperty('org.gradle.project.abi_x86_enabled').toBoolean()) {
+        include ':atsc3_phy_cewi'
+        project(':atsc3_phy_cewi').projectDir = new File(rootProject.projectDir, libatsc3RootFolder + '/android/atsc3_phy_cewi')
+    }
 }

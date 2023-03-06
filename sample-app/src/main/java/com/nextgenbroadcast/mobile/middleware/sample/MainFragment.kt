@@ -1,10 +1,17 @@
 package com.nextgenbroadcast.mobile.middleware.sample
 
+import android.Manifest
 import android.annotation.SuppressLint
+import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothDevice
+import android.bluetooth.BluetoothManager
+import android.bluetooth.BluetoothSocket
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
+import android.os.ParcelUuid
 import android.text.Html
 import android.util.Log
 import android.view.GestureDetector
@@ -17,6 +24,9 @@ import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.constraintlayout.widget.ConstraintSet
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import androidx.core.content.ContextCompat.getSystemService
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
@@ -37,12 +47,17 @@ import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.ViewViewModel
 import com.nextgenbroadcast.mobile.middleware.sample.model.*
 import com.nextgenbroadcast.mobile.middleware.sample.settings.SettingsDialog
 import com.nextgenbroadcast.mobile.middleware.sample.view.PhyChartView
+import com.nextgenbroadcast.mobile.middleware.service.Atsc3ForegroundService
 import com.nextgenbroadcast.mobile.view.AboutDialog
 import com.nextgenbroadcast.mobile.view.TrackSelectionDialog
 import com.nextgenbroadcast.mobile.view.UserAgentView
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
+import org.ngbp.libatsc3.middleware.android.phy.CeWiBluetoothPHYAndroid
+import java.io.IOException
+import java.io.InputStream
+import java.io.OutputStream
 import java.util.*
 import kotlin.concurrent.fixedRateTimer
 
@@ -55,6 +70,7 @@ class MainFragment : Fragment() {
     private lateinit var telemetryClient: TelemetryClient
     private lateinit var binding: FragmentMainBinding
     private lateinit var prefs: Prefs
+
 
     private var servicesList: List<AVService>? = null
     private var currentAppData: AppData? = null
@@ -117,7 +133,189 @@ class MainFragment : Fragment() {
 
         serviceAdapter = ServiceAdapter(requireContext())
         sourceAdapter = ArrayAdapter<String>(requireContext(), R.layout.service_list_item)
+
+        val bluetoothManager: BluetoothManager? = getSystemService(requireContext(), BluetoothManager::class.java)
+        val bluetoothAdapter: BluetoothAdapter? = bluetoothManager?.getAdapter()
+        if (bluetoothAdapter == null) {
+            // Device doesn't support Bluetooth
+        }
+
+        if (bluetoothAdapter?.isEnabled == false) {
+            val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
+            startActivityForResult(enableBtIntent, PermissionResolver.REQUEST_ENABLE_BT)
+        }
+
+        if (ActivityCompat.checkSelfPermission(requireContext(), Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return
+        }
+
+        var deviceListenerThread = DeviceListenerThread(bluetoothAdapter!!);
+        deviceListenerThread.start()
+/*
+
+2023-02-12 01:30:31.837 16115-16115 pairedDevices           com...cast.mobile.middleware.sample  D  name: jjbtstreamer24 58:93:D8:4B:9C:92, hardwareAddr: 58:93:D8:4B:9C:92
+2023-02-12 01:30:31.847 16115-16115 btUUIDS                 com...cast.mobile.middleware.sample  D  00001101-0000-1000-8000-00805f9b34fb
+ */
     }
+
+
+    private inner class DeviceListenerThread(bluetoothAdapter: BluetoothAdapter) : Thread() {
+
+        private val bluetoothAdapter: BluetoothAdapter = bluetoothAdapter
+        var matchingdevice:BluetoothDevice? = null
+
+
+        @SuppressLint("MissingPermission")
+        public override fun run() {
+
+            while(true) {
+                Log.d("bt:DeviceListenerThread", String.format("loop"))
+
+                val pairedDevices: Set<BluetoothDevice>? =
+                    bluetoothAdapter?.bondedDevices
+
+                pairedDevices?.forEach { device ->
+                    val deviceName = device.name
+                    val deviceHardwareAddress = device.address // MAC address
+                    if ("58:93:D8:31:6F:31".equals(deviceHardwareAddress)) {
+                        matchingdevice = device
+                        Log.d("bt:pairedDevices", String.format("name: %s, hardwareAddr: %s", deviceName, deviceHardwareAddress));
+                    }
+                }
+
+                //fetchUuidsWithSdp
+                var btUUIDs: Array<ParcelUuid>? = matchingdevice?.getUuids()
+                btUUIDs?.forEach { entry ->
+                    Log.d("btUUIDS", entry.toString())
+                }
+
+                if (matchingdevice != null) {
+                    //matchingdevice?.fetchUuidsWithSdp();
+                    var connectThread: ConnectThread = ConnectThread(matchingdevice!!)
+                    connectThread.start()
+
+                    Log.d("bt:DeviceListenerThread", String.format("calling connectThread.join"))
+                    connectThread.join();
+                }
+                sleep(10000)
+            }
+        }
+
+        // Closes the client socket and causes the thread to finish.
+        fun cancel() {
+        }
+    }
+    fun manageMyConnectedSocket(socket: BluetoothSocket) {
+
+        val cewiBluetoothPhy: CeWiBluetoothPHYAndroid = CeWiBluetoothPHYAndroid()
+
+        val mmInStream: InputStream = socket.inputStream
+        val mmOutStream: OutputStream = socket.outputStream
+        val bufSize = 65535; //188*10
+        val mmBuffer: ByteArray = ByteArray(bufSize) // mmBuffer store for the stream
+        var numBytes: Int // bytes returned from read()
+
+        var bytesReceived: Int = 0;
+        var lastBytesReceived = 0;
+        var lastTimestamp: Long = System.currentTimeMillis()
+        var loopCount: Int = 0;
+
+//        cewiBluetoothPhy.init()
+//        cewiBluetoothPhy.tune(533000, 0);
+
+
+
+//                newIntent(context, Atsc3ForegroundService.ACTION_OPEN_ROUTE).let { serviceIntent ->
+//            ContextCompat.startForegroundService(context, serviceIntent)
+//        }
+//
+        while(socket.isConnected) {
+            //read
+
+            numBytes = try {
+                mmInStream.read(mmBuffer)
+            } catch (e: IOException) {
+                Log.d(TAG, "bt:Input stream was disconnected", e)
+                break
+            }
+
+            bytesReceived += numBytes; //mmBuffer.size;
+            cewiBluetoothPhy.RxDataCallback(mmBuffer, numBytes);
+
+            if((loopCount++ % 300) == 0) {
+                var timeDiffMS = System.currentTimeMillis() - lastTimestamp
+                var bytes_last_sample_diff = bytesReceived - lastBytesReceived
+                var bits_per_second_last_sample = (bytes_last_sample_diff * 8.0) / (timeDiffMS / 1000.0)
+                Log.d("bt", String.format("received $bytesReceived, last interval: $bits_per_second_last_sample bits/s, bytes: 0x%02x 0x%02x 0x%02x 0x%02x, last 4: 0x%02x 0x%02x 0x%02x 0x%02x",
+                    mmBuffer.get(0), mmBuffer.get(1), mmBuffer.get(2), mmBuffer.get(3),
+                    mmBuffer.get(bufSize-4), mmBuffer.get(bufSize-3), mmBuffer.get(bufSize-2), mmBuffer.get(bufSize-1),
+
+                    ))
+
+                lastBytesReceived = bytesReceived;
+                lastTimestamp = System.currentTimeMillis()
+            }
+//            mmOutStream.write(1);
+//            mmOutStream.flush();
+//
+        }
+
+        cewiBluetoothPhy.stop()
+    }
+
+    private val SPP_UUID:UUID =  UUID.fromString("00001101-0000-1000-8000-00805f9b34fb")
+
+    private inner class ConnectThread(device: BluetoothDevice) : Thread() {
+
+        private val device: BluetoothDevice = device
+        private val mmSocket: BluetoothSocket? by lazy(LazyThreadSafetyMode.NONE) {
+            device.createRfcommSocketToServiceRecord(SPP_UUID)
+            //device.createL2capChannel(0x01)
+            //device.createInsecureL2capChannel(0x01)
+        }
+        var loopCount:Int = 0;
+
+        public override fun run() {
+            try {
+
+                mmSocket?.let { socket ->
+                    while (!socket.isConnected && (loopCount++) < 10) {
+                        socket.connect()
+                        if (socket.isConnected) {
+                            // The connection attempt succeeded. Perform work associated with
+                            // the connection in a separate thread.
+                            Log.d("bt", "connected!");
+                            manageMyConnectedSocket(socket)
+                            Log.d("bt", "return from manageMyConnectedSocket, isConnected: $socket.isConnected");
+                        }
+                    }
+                }
+            } catch (ex: Exception) {
+                Log.e("bt", "exception $ex")
+                sleep(1000);
+                loopCount++;
+            }
+        }
+
+        // Closes the client socket and causes the thread to finish.
+        fun cancel() {
+            try {
+                mmSocket?.close()
+            } catch (e: IOException) {
+                Log.e(TAG, "Could not close the client socket", e)
+            }
+        }
+    }
+
+
+
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         binding = FragmentMainBinding.inflate(inflater, container, false).apply {

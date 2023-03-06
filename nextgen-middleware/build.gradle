@@ -158,6 +158,9 @@ dependencies {
         if (project.hasProperty('org.gradle.project.phy_sony_enabled') && project.property('org.gradle.project.phy_sony_enabled').toString().toBoolean()) {
             implementation project(":atsc3_phy_sony")
         }
+        if (project.hasProperty('org.gradle.project.phy_cewi_enabled') && project.property('org.gradle.project.phy_cewi_enabled').toString().toBoolean()) {
+            implementation project(":atsc3_phy_cewi")
+        }
     } else {
         implementation "org.ngbp.libatsc3:atsc3_core:$libatsc3Version"
         implementation "org.ngbp.libatsc3:atsc3_bridge:$libatsc3Version"
@@ -178,6 +181,9 @@ dependencies {
         }
         if (project.hasProperty('org.gradle.project.phy_sony_enabled') && project.property('org.gradle.project.phy_sony_enabled').toString().toBoolean()) {
             implementation "org.ngbp.libatsc3:atsc3_phy_sony:$libatsc3Version"
+        }
+        if (project.hasProperty('org.gradle.project.phy_cewi_enabled') && project.property('org.gradle.project.phy_cewi_enabled').toString().toBoolean()) {
+            implementation project(":atsc3_phy_cewi")
         }
     }
 
