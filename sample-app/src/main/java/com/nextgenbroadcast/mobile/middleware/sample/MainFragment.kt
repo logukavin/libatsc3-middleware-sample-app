@@ -184,20 +184,23 @@ class MainFragment : Fragment() {
                 pairedDevices?.forEach { device ->
                     val deviceName = device.name
                     val deviceHardwareAddress = device.address // MAC address
-                    if ("58:93:D8:31:6F:31".equals(deviceHardwareAddress)) {
+                    if (deviceName.contains("CeWi", true)) {
+
                         matchingdevice = device
                         Log.d("bt:pairedDevices", String.format("name: %s, hardwareAddr: %s", deviceName, deviceHardwareAddress));
                     }
                 }
 
                 //fetchUuidsWithSdp
-                var btUUIDs: Array<ParcelUuid>? = matchingdevice?.getUuids()
+                 var btUUIDs: Array<ParcelUuid>? = matchingdevice?.getUuids()
                 btUUIDs?.forEach { entry ->
                     Log.d("btUUIDS", entry.toString())
                 }
 
-                if (matchingdevice != null) {
-                    //matchingdevice?.fetchUuidsWithSdp();
+
+                if (matchingdevice != null &&  matchingdevice?.bondState == BluetoothDevice.BOND_BONDED) {
+                   //jjustman-2023-03-19 - not needed if we are paired
+                    // matchingdevice?.fetchUuidsWithSdp();
                     var connectThread: ConnectThread = ConnectThread(matchingdevice!!)
                     connectThread.start()
 
@@ -212,13 +215,16 @@ class MainFragment : Fragment() {
         fun cancel() {
         }
     }
+
+
     fun manageMyConnectedSocket(socket: BluetoothSocket) {
 
         val cewiBluetoothPhy: CeWiBluetoothPHYAndroid = CeWiBluetoothPHYAndroid()
 
         val mmInStream: InputStream = socket.inputStream
         val mmOutStream: OutputStream = socket.outputStream
-        val bufSize = 65535; //188*10
+        val bufSize = 1024; //jjustman-2023-04-15 - hack, BT RFCOMM mtu on Android is 990 bytes...
+        // jjustman-2023-04-05 - hack! 16544; //188*10
         val mmBuffer: ByteArray = ByteArray(bufSize) // mmBuffer store for the stream
         var numBytes: Int // bytes returned from read()
 
@@ -227,8 +233,9 @@ class MainFragment : Fragment() {
         var lastTimestamp: Long = System.currentTimeMillis()
         var loopCount: Int = 0;
 
-//        cewiBluetoothPhy.init()
-//        cewiBluetoothPhy.tune(533000, 0);
+        cewiBluetoothPhy.init()
+//jjustman-2023-04-07 - TODO - wire up tune method via bt rfcomm, but trigger a dummy tune call so we can start our processing threads
+        cewiBluetoothPhy.tune(533000, 0);
 
 
 
@@ -236,6 +243,7 @@ class MainFragment : Fragment() {
 //            ContextCompat.startForegroundService(context, serviceIntent)
 //        }
 //
+
         while(socket.isConnected) {
             //read
 
@@ -248,6 +256,18 @@ class MainFragment : Fragment() {
 
             bytesReceived += numBytes; //mmBuffer.size;
             cewiBluetoothPhy.RxDataCallback(mmBuffer, numBytes);
+
+            //jjustman-2023-04-05 - super hack for blue sdk credit rfcomm mode
+//            mmOutStream.write(3)
+//            mmOutStream.write(System.currentTimeMillis().toString().toByteArray())
+//            mmOutStream.write(2)
+//
+//            mmOutStream.write(numBytes.toString().toByteArray())
+//            mmOutStream.write(1)
+//            mmOutStream.write(bytesReceived.toString().toByteArray())
+//            mmOutStream.write(0)
+//            mmOutStream.flush()
+
 
             if((loopCount++ % 300) == 0) {
                 var timeDiffMS = System.currentTimeMillis() - lastTimestamp
