@@ -9,6 +9,7 @@ import androidx.annotation.Nullable;
 import com.google.android.exoplayer2.MMTClockAnchor;
 import com.google.protobuf.Parser;
 import com.nextgenbroadcast.mobile.core.LOG;
+import com.nextgenbroadcast.mobile.middleware.BuildConfig;
 import com.nextgenbroadcast.mobile.middleware.atsc3.buffer.Atsc3RingBuffer;
 import com.nextgenbroadcast.mobile.player.MMTConstants;
 
@@ -31,8 +32,7 @@ import java.util.Locale;
 
 public class MMTFragmentWriter {
     public static final String TAG = MMTFragmentWriter.class.getSimpleName();
-    private static final boolean TRACE_ENABLED = false;
-
+    private static final boolean MMT_DEBUG_LOGGING_ENABLED = BuildConfig.MMTDebugLoggingEnabled;
     private static final int MAX_FIRST_MFU_WAIT_TIME = 5000;
 
     public static final String AC_4_ID = MMTAudioDecoderConfigurationRecord.AC_4_ID;
@@ -73,6 +73,9 @@ public class MMTFragmentWriter {
     private long videoMfuPresentationTimestampUsMaxWraparoundValue = Long.MAX_VALUE;
     private long audioMfuPresentationTimestampUsMaxWraparoundValue = Long.MAX_VALUE;
     private long stppMfuPresentationTimestampUsMaxWraparoundValue  = Long.MAX_VALUE;
+
+    private long minMfuPresentationTimestampUsMaxWraparoundValue = Long.MAX_VALUE;
+
 
     private volatile boolean isActive = true;
     private volatile boolean mpTableComplete = false;
@@ -273,7 +276,7 @@ public class MMTFragmentWriter {
         while (isActive) {
             if (fragmentBuffer.remaining() == 0) {
                 readFragment(fragmentBuffer);
-                if(TRACE_ENABLED) {
+                if(MMT_DEBUG_LOGGING_ENABLED) {
                     Log.d(TAG, String.format("writeQueue - calling readFragment(fragmentBuffer) -  fragmentBuffer.remaining: %d", fragmentBuffer.remaining()));
                 }
             }
@@ -284,14 +287,14 @@ public class MMTFragmentWriter {
                 break;
             }
 
-            if(TRACE_ENABLED) {
+            if(MMT_DEBUG_LOGGING_ENABLED) {
                 Log.d(TAG, String.format("writeQueue - writeBuffer - with fragmentBuffer.remaining: %d", fragmentBuffer.remaining()));
             }
             bytesRead += writeBuffer(out, fragmentBuffer);
 
         }
 
-        if(TRACE_ENABLED) {
+        if(MMT_DEBUG_LOGGING_ENABLED) {
             Log.d(TAG, String.format("writeQueue - calling out.flush, total bytesRead: %d", bytesRead));
         }
         out.flush();
@@ -328,7 +331,7 @@ public class MMTFragmentWriter {
 
             if (payloadSize <= 0) {
                 buffer.limit(0);
-                if(TRACE_ENABLED) {
+                if(MMT_DEBUG_LOGGING_ENABLED) {
                     Log.d(TAG,"readFragment - failed payloadSize <= 0");
                 }
                 Thread.yield();
@@ -365,13 +368,25 @@ public class MMTFragmentWriter {
             if (!audioOnly && !firstKeyFrameReceived) {
                 if (sampleType == MMTConstants.TRACK_TYPE_VIDEO && isKeySample(sample_number)) {
                     firstKeyFrameReceived = true;
-                } else if (sampleType != MMTConstants.TRACK_TYPE_AUDIO) {
+                } else {
+                    //jjustman-2023-04-26 - hack! discard all samples until first video keyframe received
                     buffer.limit(0);
                     continue;
                 }
+//
+//                else if (sampleType != MMTConstants.TRACK_TYPE_AUDIO) {
+//                    buffer.limit(0);
+//                    continue;
+//                }
             }
 
             Long computedPresentationTimestampUs = getPresentationTimestampUs(packet_id, fragmentHeader.getSequenceNumber(), sample_number, mpu_presentation_time_uS_from_SI);
+            //jjustman-2023-04-21 - provide computedPresentationTimestampUs from our mpu_presentation_time_uS_from_SI
+            //Long computedPresentationTimestampUs = getPresentationTimestampUsNoAnchor(packet_id, fragmentHeader.getSequenceNumber(), sample_number, mpu_presentation_time_uS_from_SI);
+            if(MMT_DEBUG_LOGGING_ENABLED) {
+                Log.d(TAG, String.format("computedPresentationTimestampUs\tpacket_id\t%d\tmpu_sequence_number\t%d\tsample_number\t%d\tmpu_presentation_time_uS_from_SI\t%d\tcomputedPresentationTimestampUs\t%d",
+                        packet_id, fragmentHeader.getSequenceNumber(), sample_number, mpu_presentation_time_uS_from_SI, computedPresentationTimestampUs));
+            }
 
             if(computedPresentationTimestampUs == null) {
                 //bail
@@ -406,7 +421,7 @@ public class MMTFragmentWriter {
 
             int dataSize = headerDiff + MMTConstants.SIZE_SAMPLE_HEADER + payloadSize;
 
-            if(TRACE_ENABLED) {
+            if(MMT_DEBUG_LOGGING_ENABLED) {
                 Log.d(TAG, String.format("onmfu\tsampleType\t%d\tpacketId\t%d\tsampleNumber\t%d\tpresentationTimeUs\t%d",
                         sampleType, packet_id, sample_number, computedPresentationTimestampUs));
             }
@@ -528,7 +543,9 @@ public class MMTFragmentWriter {
                 }
             } else if (isAudioSample(packet_id)) {
                 if ((extracted_sample_duration_us = MmtPacketIdContext.getAudioPacketStatistic(packet_id).extracted_sample_duration_us) > 0) {
+//jjustman-2023-04-15 - super super super hack!
                     mfu_presentation_time_uS_computed = mpu_presentation_time_uS_from_SI + (sample_number - 1) * extracted_sample_duration_us;
+//                    mfu_presentation_time_uS_computed += 30000000;
                 }
             } else if (isTextSample(packet_id)) {
                 if (MmtPacketIdContext.stpp_packet_statistics.extracted_sample_duration_us > 0) {
@@ -580,6 +597,88 @@ public class MMTFragmentWriter {
                 long mpuPresentationTimestampDeltaUs = mfu_presentation_time_uS_computed - track_anchor_timestamp_us;
 
                 return mpuPresentationTimestampDeltaUs + MMTClockAnchor.MPU_PRESENTATION_DELTA_PTS_OFFSET_US;
+            }
+        }
+
+        return null;
+    }
+
+
+    //jjustman-2023-04-21 - don't rebase from anchor?
+    private Long getPresentationTimestampUsNoAnchor(int packet_id, int mpu_sequence_number, int sample_number, long mpu_presentation_time_uS_from_SI) {
+        if (mpu_presentation_time_uS_from_SI > 0) {
+            long mfu_presentation_time_uS_computed = 0;
+            long extracted_sample_duration_us;
+
+            long track_anchor_timestamp_us = 0;
+            if (isVideoSample(packet_id)) {
+                if (MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us > 0) {
+                    mfu_presentation_time_uS_computed = mpu_presentation_time_uS_from_SI + (sample_number - 1) * MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us;
+                }
+            } else if (isAudioSample(packet_id)) {
+                if ((extracted_sample_duration_us = MmtPacketIdContext.getAudioPacketStatistic(packet_id).extracted_sample_duration_us) > 0) {
+//jjustman-2023-04-15 - super super super hack!
+                    mfu_presentation_time_uS_computed = mpu_presentation_time_uS_from_SI + (sample_number - 1) * extracted_sample_duration_us;
+//                    mfu_presentation_time_uS_computed += 30000000;
+                }
+            } else if (isTextSample(packet_id)) {
+                if (MmtPacketIdContext.stpp_packet_statistics.extracted_sample_duration_us > 0) {
+                    mfu_presentation_time_uS_computed = mpu_presentation_time_uS_from_SI + (sample_number - 1) * MmtPacketIdContext.stpp_packet_statistics.extracted_sample_duration_us;
+                }
+            }
+
+            if (mfu_presentation_time_uS_computed > 0) {
+                //todo: expand size as needed, every ~ mfu_presentation_time_uS_computed 1000000uS
+                if (isVideoSample(packet_id)) {
+                    if(videoMfuPresentationTimestampUsMaxWraparoundValue != Long.MAX_VALUE && mfu_presentation_time_uS_computed >= videoMfuPresentationTimestampUsMaxWraparoundValue) {
+                        //drop this, as we haven't seen a sane time yet since our wraparound
+                        minMfuPresentationTimestampUsMaxWraparoundValue = Long.MAX_VALUE;
+
+                        return null;
+                    } else {
+                        videoMfuPresentationTimestampUsMaxWraparoundValue = Long.MAX_VALUE;
+                    }
+
+                    if (videoMfuPresentationTimestampUs == Long.MAX_VALUE) {
+                        videoMfuPresentationTimestampUs = mfu_presentation_time_uS_computed;
+                    }
+                    track_anchor_timestamp_us = videoMfuPresentationTimestampUs;
+                } else if (isAudioSample(packet_id)) {
+
+                    if(audioMfuPresentationTimestampUsMaxWraparoundValue != Long.MAX_VALUE && mfu_presentation_time_uS_computed >= audioMfuPresentationTimestampUsMaxWraparoundValue) {
+                        //drop this, as we haven't seen a sane time yet since our wraparound
+                        return null;
+                    } else {
+                        audioMfuPresentationTimestampUsMaxWraparoundValue = Long.MAX_VALUE;
+                    }
+
+                    if (!audioMfuPresentationTimestampMap.containsKey(packet_id)) {
+                        audioMfuPresentationTimestampMap.put(packet_id, mfu_presentation_time_uS_computed);
+                    }
+                    track_anchor_timestamp_us = audioMfuPresentationTimestampMap.get(packet_id);
+                } else if (isTextSample(packet_id)) {
+                    if(stppMfuPresentationTimestampUsMaxWraparoundValue != Long.MAX_VALUE && mfu_presentation_time_uS_computed >= stppMfuPresentationTimestampUsMaxWraparoundValue) {
+                        //drop this, as we haven't seen a sane time yet since our wraparound
+                        return null;
+                    } else {
+                        stppMfuPresentationTimestampUsMaxWraparoundValue = Long.MAX_VALUE;
+                    }
+                    if (stppMfuPresentationTimestampUs == Long.MAX_VALUE) {
+                        stppMfuPresentationTimestampUs = mfu_presentation_time_uS_computed;
+                    }
+                    track_anchor_timestamp_us = stppMfuPresentationTimestampUs;
+                }
+
+
+                if(minMfuPresentationTimestampUsMaxWraparoundValue == Long.MAX_VALUE) {
+                    minMfuPresentationTimestampUsMaxWraparoundValue = mpu_presentation_time_uS_from_SI;
+                }
+
+
+//                //long anchorMfuPresentationTimestampUs = getMinNonZeroMfuPresentationTimestampForAnchor(packet_id);
+//                long mpuPresentationTimestampDeltaUs = mfu_presentation_time_uS_computed - track_anchor_timestamp_us;
+
+                return mfu_presentation_time_uS_computed + MMTClockAnchor.MPU_PRESENTATION_DELTA_PTS_OFFSET_US - minMfuPresentationTimestampUsMaxWraparoundValue;
             }
         }
 
@@ -638,7 +737,7 @@ public class MMTFragmentWriter {
     }
 
     private void resetMfuPresentationTimestampAnchorsAndMMTSystemClockAnchor(Atsc3NdkMediaMMTBridge atsc3NdkMediaMMTBridge, MMTAudioDecoderConfigurationRecord mmtAudioDecoderConfigurationRecord) {
-        MMTClockAnchor.SystemClockAnchor = 0;
+        MMTClockAnchor.SystemClockAnchor = Long.MIN_VALUE;
         MMTClockAnchor.SystemClockAnchorResetFromTimestampNegativeDiscontinuity = true;
 
         videoMfuPresentationTimestampUsMaxWraparoundValue = videoMfuPresentationTimestampUs;
@@ -684,6 +783,10 @@ public class MMTFragmentWriter {
                     assetMapping.put(packetId, asset);
                 }
             }
+            //jjustman-2023-03-06 - hack for triveni packager that doesn't emit mp_table_complete
+            if(assetMapping.size() >= 2 && MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us > 0) {
+                mpTableComplete = true;
+            }
         }
     }
 
@@ -701,7 +804,9 @@ public class MMTFragmentWriter {
                 assetMapping.put(asset.getPacketId(), asset);
             }
 
-            mpTableComplete = true;
+            if(MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us > 0){
+                mpTableComplete = true;
+            }
         }
     }
 

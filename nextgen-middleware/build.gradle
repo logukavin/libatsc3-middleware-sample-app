@@ -56,7 +56,22 @@ android {
         resValue("string", "nextgenServicesGuideProvider", "com.nextgenbroadcast.mobile.middleware.provider.esg")
         resValue("string", "receiverContentProvider", "com.nextgenbroadcast.mobile.middleware.provider.content")
 
-        resValue("bool", "telemetryEnabled", "false")
+        //jjustman-2023-05-21 - adding top-level project configuration option for telemetry enabled
+        if (project.getProperty('com.nextgen.project.telemetry.enabled').toBoolean()) {
+            resValue("bool", "telemetryEnabled", "true")
+            buildConfigField("Boolean", "TelemetryEnabled", "true")
+        } else {
+            resValue("bool", "telemetryEnabled", "false")
+            buildConfigField("Boolean", "TelemetryEnabled", "false")
+        }
+
+        //jjustman-2023-05-21 - adding top-level project configuration option for telemetry enabled
+        if (project.getProperty('com.nextgen.project.mmt.debug_logging_enabled').toBoolean()) {
+            buildConfigField("Boolean", "MMTDebugLoggingEnabled", "true")
+        } else {
+            buildConfigField("Boolean", "MMTDebugLoggingEnabled", "false")
+        }
+
         resValue("bool", "testAlertsEnabled", "true")
 
         buildConfigField("String", "SinclairPlatformUrl", "\"https://prod-property-gateway.sinclairplatform.com\"")

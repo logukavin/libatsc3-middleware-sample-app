@@ -220,7 +220,7 @@ public class MMTContentProvider extends ContentProvider implements IAtsc3NdkMedi
                 // vmatiash - reset time for first session only
                 if (descriptors.size() == 1) {
                     //jjustman-2021-01-13 - HACK
-                    MMTClockAnchor.SystemClockAnchor = 0;
+                    MMTClockAnchor.SystemClockAnchor = Long.MIN_VALUE;
                     MMTClockAnchor.SystemClockAnchorResetFromTimestampNegativeDiscontinuity = false;
                     MMTClockAnchor.MfuAudioClockAnchorNtp64Min = null;
                     MMTClockAnchor.MfuAudioClockAnchorMpuSequenceMin = null;

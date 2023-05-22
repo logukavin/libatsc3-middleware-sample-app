@@ -11,6 +11,7 @@ import android.media.AudioManager
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
 import android.net.wifi.WifiManager
+import android.util.Log
 import androidx.annotation.MainThread
 import androidx.core.content.edit
 import androidx.media.MediaBrowserServiceCompat
@@ -120,6 +121,11 @@ internal class TelemetryHolder(
     @MainThread
     fun open() {
         if (telemetryBroker != null) return
+
+        if(!BuildConfig.TelemetryEnabled) {
+            Log.i(TAG, "BuildConfig.TelemetryEnabled is false, returning NULL for TelemetryHolder::open");
+            return;
+        }
 
         telemetryBroker = TelemetryBroker(
                 listOf(

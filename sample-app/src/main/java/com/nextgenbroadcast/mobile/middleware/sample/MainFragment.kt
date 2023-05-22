@@ -156,7 +156,15 @@ class MainFragment : Fragment() {
             return
         }
 
-        var deviceListenerThread = DeviceListenerThread(bluetoothAdapter!!);
+//
+//        if (ActivityCompat.checkSelfPermission(requireContext(), Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
+//            //jjustman-2023-05-03 - todo - fix me
+//
+//            return;
+//        }
+
+
+            var deviceListenerThread = DeviceListenerThread(bluetoothAdapter!!);
         deviceListenerThread.start()
 /*
 
@@ -165,6 +173,12 @@ class MainFragment : Fragment() {
  */
     }
 
+    /*
+
+    jjustman-2023-05-03 - TODO: if we aren't bonded with the dongle, initiate startDiscovery()
+
+    https://developer.android.com/reference/android/bluetooth/BluetoothAdapter#startDiscovery()
+     */
 
     private inner class DeviceListenerThread(bluetoothAdapter: BluetoothAdapter) : Thread() {
 
@@ -201,6 +215,12 @@ class MainFragment : Fragment() {
                 if (matchingdevice != null &&  matchingdevice?.bondState == BluetoothDevice.BOND_BONDED) {
                    //jjustman-2023-03-19 - not needed if we are paired
                     // matchingdevice?.fetchUuidsWithSdp();
+                    try {
+                        bluetoothAdapter.cancelDiscovery();
+                    } catch (ex:Exception) {
+                        Log.d("bt:pairedDevices", String.format("bluetoothAdapter.cancelDiscovery exception is: %s", ex));
+
+                    }
                     var connectThread: ConnectThread = ConnectThread(matchingdevice!!)
                     connectThread.start()
 
@@ -223,7 +243,13 @@ class MainFragment : Fragment() {
 
         val mmInStream: InputStream = socket.inputStream
         val mmOutStream: OutputStream = socket.outputStream
-        val bufSize = 1024; //jjustman-2023-04-15 - hack, BT RFCOMM mtu on Android is 990 bytes...
+
+        //jjustman-2023-05-03 - using 1024 bytes on S10+ -> results in about 350kbit/s, trying to increase to larger buf size
+        //          no difference when using 16384
+        //          - added mmOutStream.write(0xFF) when bufSize=8192
+       //jjustman-2023-05-11-01.58 val bufSize = 1024; //jjustman-2023-04-15 - hack, BT RFCOMM mtu on Android is 990 bytes...
+        val bufSize = 1024;
+
         // jjustman-2023-04-05 - hack! 16544; //188*10
         val mmBuffer: ByteArray = ByteArray(bufSize) // mmBuffer store for the stream
         var numBytes: Int // bytes returned from read()
@@ -237,13 +263,6 @@ class MainFragment : Fragment() {
 //jjustman-2023-04-07 - TODO - wire up tune method via bt rfcomm, but trigger a dummy tune call so we can start our processing threads
         cewiBluetoothPhy.tune(533000, 0);
 
-
-
-//                newIntent(context, Atsc3ForegroundService.ACTION_OPEN_ROUTE).let { serviceIntent ->
-//            ContextCompat.startForegroundService(context, serviceIntent)
-//        }
-//
-
         while(socket.isConnected) {
             //read
 
@@ -253,38 +272,35 @@ class MainFragment : Fragment() {
                 Log.d(TAG, "bt:Input stream was disconnected", e)
                 break
             }
-
+            loopCount++;
             bytesReceived += numBytes; //mmBuffer.size;
             cewiBluetoothPhy.RxDataCallback(mmBuffer, numBytes);
 
-            //jjustman-2023-04-05 - super hack for blue sdk credit rfcomm mode
-//            mmOutStream.write(3)
-//            mmOutStream.write(System.currentTimeMillis().toString().toByteArray())
-//            mmOutStream.write(2)
-//
-//            mmOutStream.write(numBytes.toString().toByteArray())
-//            mmOutStream.write(1)
-//            mmOutStream.write(bytesReceived.toString().toByteArray())
-//            mmOutStream.write(0)
-//            mmOutStream.flush()
+            var timeDiffMS = System.currentTimeMillis() - lastTimestamp
+            //if((loopCount++ % 100) == 0) {
+            if(timeDiffMS >= 1000) {
 
-
-            if((loopCount++ % 300) == 0) {
-                var timeDiffMS = System.currentTimeMillis() - lastTimestamp
                 var bytes_last_sample_diff = bytesReceived - lastBytesReceived
                 var bits_per_second_last_sample = (bytes_last_sample_diff * 8.0) / (timeDiffMS / 1000.0)
-                Log.d("bt", String.format("received $bytesReceived, last interval: $bits_per_second_last_sample bits/s, bytes: 0x%02x 0x%02x 0x%02x 0x%02x, last 4: 0x%02x 0x%02x 0x%02x 0x%02x",
-                    mmBuffer.get(0), mmBuffer.get(1), mmBuffer.get(2), mmBuffer.get(3),
-                    mmBuffer.get(bufSize-4), mmBuffer.get(bufSize-3), mmBuffer.get(bufSize-2), mmBuffer.get(bufSize-1),
-
-                    ))
+                Log.d(
+                    "bt", String.format(
+                        "received $bytesReceived, packet count: $loopCount, last interval: $bits_per_second_last_sample bits/s, last packet: $numBytes, bytes: 0x%02x 0x%02x 0x%02x 0x%02x",
+                        mmBuffer.get(0), mmBuffer.get(1), mmBuffer.get(2), mmBuffer.get(3),
+                        )
+                    // last 4: 0x%02x 0x%02x 0x%02x 0x%02x"
+                    // mmBuffer.get(bufSize - 4), mmBuffer.get(bufSize - 3), mmBuffer.get(bufSize - 2), mmBuffer.get(bufSize - 1),
+                )
 
                 lastBytesReceived = bytesReceived;
                 lastTimestamp = System.currentTimeMillis()
             }
-//            mmOutStream.write(1);
-//            mmOutStream.flush();
-//
+
+            if((loopCount % 5000) == 0) {
+                mmOutStream.write(0x31);
+                mmOutStream.write(0x33);
+                mmOutStream.write(0x70);
+                mmOutStream.flush();
+            }
         }
 
         cewiBluetoothPhy.stop()
@@ -304,7 +320,7 @@ class MainFragment : Fragment() {
 
         public override fun run() {
             try {
-
+                priority = MAX_PRIORITY
                 mmSocket?.let { socket ->
                     while (!socket.isConnected && (loopCount++) < 10) {
                         socket.connect()

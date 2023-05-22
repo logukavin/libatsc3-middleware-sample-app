@@ -19,11 +19,15 @@ class Atsc3RenderersFactory(
 ) : RenderersFactory {
     private val factory = if (mimeType == MMTConstants.MIME_MMT_VIDEO || mimeType == MMTConstants.MIME_MMT_AUDIO) {
         MMTRenderersFactory(context)
+            .setEnableDecoderFallback(true)
+
     } else {
         RouteDASHRenderersFactory(context)
+            .setEnableDecoderFallback(true)
     }
 
     override fun createRenderers(eventHandler: Handler, videoRendererEventListener: VideoRendererEventListener, audioRendererEventListener: AudioRendererEventListener, textRendererOutput: TextOutput, metadataRendererOutput: MetadataOutput, drmSessionManager: DrmSessionManager<FrameworkMediaCrypto>?): Array<Renderer> {
+
         return factory.createRenderers(eventHandler, videoRendererEventListener, audioRendererEventListener, textRendererOutput, metadataRendererOutput, drmSessionManager)
     }
 }

@@ -676,12 +676,14 @@ internal class Atsc3Module(
     override fun onPackageExtractCompleted(packageMetadata: PackageExtractEnvelopeMetadataAndPayload) {
         if (getState() == Atsc3ModuleState.SCANNING) return
 
-        log("onPackageExtractCompleted packageExtractPath: ${packageMetadata.packageExtractPath} packageName: ${packageMetadata.packageName}, appContextIdList: ${packageMetadata.appContextIdList}, files: [${packageMetadata.multipartRelatedPayloadList.map { it.contentLocation }}]")
-
+        //jjustman-2023-03-03 - fix for packageMetadata.multipartRelatedPayloadList must not be null
         if (!packageMetadata.isValid()) {
             log("onPackageExtractCompleted INVALID: $packageMetadata")
             return
         }
+
+        log("onPackageExtractCompleted packageExtractPath: ${packageMetadata.packageExtractPath} packageName: ${packageMetadata.packageName}, appContextIdList: ${packageMetadata.appContextIdList}, files: [${packageMetadata.multipartRelatedPayloadList.map { it.contentLocation }}]")
+
 
         val pkgUID = "${packageMetadata.packageExtractPath}/${packageMetadata.packageName}"
         val pkg = packageMetadata.toApplication(pkgUID)
@@ -856,6 +858,7 @@ internal class Atsc3Module(
         return !packageName.isNullOrEmpty()
                 && !appContextIdList.isNullOrEmpty()
                 && !packageExtractPath.isNullOrEmpty()
+                && !multipartRelatedPayloadList.isNullOrEmpty()
     }
 
     private fun PackageExtractEnvelopeMetadataAndPayload.toApplication(uid: String): Atsc3Application {
