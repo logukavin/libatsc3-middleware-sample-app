@@ -10,6 +10,35 @@
     <!--    To make service endless-->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
+    <!-- jjustman-2023-05-24 - bluetooth permissions -->
+
+
+    <!-- jjustman-2023-02-11 - android bluetooth support -->
+    <uses-permission android:name="android.permission.BLUETOOTH"
+        android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"
+        android:maxSdkVersion="30" />
+
+    <!-- Needed only if your app looks for Bluetooth devices.
+         If your app doesn't use Bluetooth scan results to derive physical
+         location information, you can strongly assert that your app
+         doesn't derive physical location. -->
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN"
+        android:usesPermissionFlags="neverForLocation" />
+
+
+    <!-- Needed only if your app makes the device discoverable to Bluetooth
+         devices. -->
+    <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
+
+    <!-- Needed only if your app communicates with already-paired Bluetooth
+         devices. -->
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+
+    <uses-feature android:name="android.hardware.bluetooth" android:required="true"/>
+
+
+
     <application>
 
         <activity

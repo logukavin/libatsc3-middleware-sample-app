@@ -48,7 +48,12 @@ class MiddlewareWebSocket(
         if (isConnected) {
             Log.d("WSServer: ", "--> onWebSocketText: $message")
 
-            session.remote.sendString(message, null)
+            try {
+                session.remote.sendString(message, null)
+            } catch (ex: Exception) {
+                Log.w("WSServer:sendMessage", "--> exception: $ex")
+
+            }
         }
     }
 

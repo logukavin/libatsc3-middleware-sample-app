@@ -1,6 +1,7 @@
 package com.nextgenbroadcast.mobile.middleware.service
 
 import android.app.PendingIntent
+import android.bluetooth.BluetoothManager
 import android.content.Context
 import android.content.Intent
 import android.hardware.usb.UsbDevice
@@ -41,6 +42,9 @@ import kotlin.random.Random
 abstract class Atsc3ForegroundService : BindableForegroundService() {
     private val usbManager: UsbManager by lazy {
         getSystemService(Context.USB_SERVICE) as UsbManager
+    }
+    private val bluetoothManager: BluetoothManager by lazy {
+        getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
     }
     private val powerManager: PowerManager by lazy {
         getSystemService(Context.POWER_SERVICE) as PowerManager
@@ -368,7 +372,17 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
                 initializer.add(WeakReference(it))
             }
 
+            val bluetoothPhyInitializer = BluetoothPhyInitializer(atsc3Receiver, bluetoothManager).also {
+                initializer.add(WeakReference(it));
+            }
+
             serviceScope.launch(handler) {
+                //jjustman-2023-05-24 - invoke our bluetoothPhyInitializer before the ndkPhy impl
+                //jjustman-2023-05-24 - SUPER hack!
+                startForeground(applicationContext);
+
+                bluetoothPhyInitializer.initialize(appContext, components);
+
                 if (phyInitializer.initialize(appContext, components)) {
                     startForeground(applicationContext)
                 } else {
@@ -540,7 +554,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
         private val OPEN_TIMEOUT = TimeUnit.SECONDS.toMillis(25L)
 
-        private const val SERVICE_ACTION = "${BuildConfig.LIBRARY_PACKAGE_NAME}.intent.action"
+        public const val SERVICE_ACTION = "${BuildConfig.LIBRARY_PACKAGE_NAME}.intent.action"
 
         internal const val ACTION_START_FOREGROUND = "$SERVICE_ACTION.START_FOREGROUND"
 

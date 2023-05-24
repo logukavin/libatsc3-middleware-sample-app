@@ -22,10 +22,10 @@
                 android:resource="@xml/saankhya_phy" />
 
 
-            <meta-data
-                android:name="org.ngbp.libatsc3.middleware.android.phy.CeWiBluetoothPHYAndroid"
-                android:resource="@xml/cewibluetooth_phy"
-                />
+<!--            <meta-data-->
+<!--                android:name="org.ngbp.libatsc3.middleware.android.phy.CeWiBluetoothPHYAndroid"-->
+<!--                android:resource="@xml/cewibluetooth_phy"-->
+<!--                />-->
 
             <meta-data
                 android:name="com.nextgenbroadcast.mobile.middleware.phy.Atsc3UsbPhyConnector"
