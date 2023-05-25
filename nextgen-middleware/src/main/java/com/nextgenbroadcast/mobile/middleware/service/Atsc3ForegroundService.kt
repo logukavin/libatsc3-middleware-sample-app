@@ -234,6 +234,8 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
     }
 
     override fun onDestroy() {
+        Log.d(TAG, "onDestroy")
+
         super.onDestroy()
 
         initializer.forEach { ref ->
@@ -266,6 +268,7 @@ abstract class Atsc3ForegroundService : BindableForegroundService() {
 
     override fun onUnbind(intent: Intent): Boolean {
         super.onUnbind(intent)
+        Log.d(TAG, "onUnbind");
 
         return true // allow reBind
     }

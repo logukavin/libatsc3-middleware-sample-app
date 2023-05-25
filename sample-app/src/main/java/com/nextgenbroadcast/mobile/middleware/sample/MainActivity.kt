@@ -35,6 +35,7 @@ import com.nextgenbroadcast.mobile.core.model.toAVService
 import com.nextgenbroadcast.mobile.middleware.dev.telemetry.ReceiverTelemetry
 import com.nextgenbroadcast.mobile.middleware.sample.R
 import com.nextgenbroadcast.mobile.middleware.sample.lifecycle.ViewViewModel
+import com.nextgenbroadcast.mobile.middleware.service.BindableForegroundService
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
@@ -119,6 +120,7 @@ class MainActivity : BaseActivity() {
 
             tryOpenPcapFile(intent)
         }
+        BindableForegroundService.MainActivityReference = this
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -152,6 +154,8 @@ class MainActivity : BaseActivity() {
                 )
             }
         }
+
+        BindableForegroundService.MainActivityReference = this
     }
 
     override fun onStop() {
@@ -159,12 +163,24 @@ class MainActivity : BaseActivity() {
 
         super.onStop()
 
+        //jjustman-2023-05-25 - don't unbind service here
         mediaController?.unregisterCallback(mediaControllerCallback)
 
+        //jjustman-2023-05-25 - don't unbind service here
         unbindService()
+
         /* vmatiash - 10/12/21 - comment to remove READ_PHONE_STATE permission dependency
         mobileInternetDetector.unregister()
         */
+
+        BindableForegroundService.MainActivityReference = null
+
+    }
+
+    override fun onPause() {
+        super.onPause()
+        BindableForegroundService.MainActivityReference = null
+
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {

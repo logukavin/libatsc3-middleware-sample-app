@@ -1,5 +1,6 @@
 package com.nextgenbroadcast.mobile.middleware.service
 
+import android.app.Activity
 import android.app.Notification
 import android.content.Intent
 import android.os.IBinder
@@ -127,6 +128,8 @@ abstract class BindableForegroundService : MediaBrowserServiceCompat() {
         private const val NOTIFICATION_CHANNEL_ID = "Atsc3ServiceChannel"
         private const val NOTIFICATION_ID = 1
 
+        //jjustman-2023-05-24 - hack
+        var MainActivityReference: Activity? = null
         const val EXTRA_FOREGROUND = "foreground"
     }
 }

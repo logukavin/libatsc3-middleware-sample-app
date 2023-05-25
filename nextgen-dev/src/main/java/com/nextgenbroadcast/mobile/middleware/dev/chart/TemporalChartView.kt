@@ -132,6 +132,9 @@ open class TemporalChartView @JvmOverloads constructor(
                 LOG.d(TAG, "Failed to append new value: $dataPoint", e)
             } catch (e: IllegalArgumentException) {
                 LOG.d(TAG, "Failed to append new value: $dataPoint", e)
+            } catch (e: Exception) {
+                LOG.d(TAG, "Failed to append new value: $dataPoint", e)
+
             }
 
             eventCounter++

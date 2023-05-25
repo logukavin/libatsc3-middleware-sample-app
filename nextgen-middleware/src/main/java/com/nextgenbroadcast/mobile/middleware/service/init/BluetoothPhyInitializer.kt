@@ -2,36 +2,28 @@ package com.nextgenbroadcast.mobile.middleware.service.init
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.app.Application
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothSocket
-import android.content.BroadcastReceiver
-import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
-import android.content.res.Resources
+import android.content.*
 import android.content.res.XmlResourceParser
 import android.os.Bundle
 import android.os.ParcelUuid
 import android.util.Log
+import androidx.appcompat.app.AppCompatActivity
 import com.nextgenbroadcast.mobile.middleware.BuildConfig
 import com.nextgenbroadcast.mobile.middleware.IAtsc3ReceiverCore
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.BluetoothPhyAtsc3Source
-import com.nextgenbroadcast.mobile.middleware.atsc3.source.NdkPhyAtsc3Source
 import com.nextgenbroadcast.mobile.middleware.atsc3.utils.XmlUtils
-import com.nextgenbroadcast.mobile.middleware.service.Atsc3ForegroundService
-import kotlinx.coroutines.suspendCancellableCoroutine
-import org.ngbp.libatsc3.middleware.android.phy.Atsc3NdkPHYClientBase
+import com.nextgenbroadcast.mobile.middleware.service.BindableForegroundService
 import org.ngbp.libatsc3.middleware.android.phy.CeWiBluetoothPHYAndroid
 import org.xmlpull.v1.XmlPullParser
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
-import java.lang.Exception
 import java.util.*
-import kotlin.collections.ArrayList
-import kotlin.coroutines.resume
 
 internal class BluetoothPhyInitializer(
         private val receiver: IAtsc3ReceiverCore,
@@ -72,7 +64,12 @@ internal class BluetoothPhyInitializer(
         if (bluetoothAdapter?.isEnabled == false) {
             context.registerReceiver(broadcastReceiver, IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED))
             val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
-            (context as Activity).startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT)
+            BindableForegroundService.MainActivityReference?.startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT)
+            //(context as Application)
+            //getParentActivity()?.startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT)
+            //context.getParentActivity()?.startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT)
+            //getActivity(context)?.startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT)
+            //context.activity()?.startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT)
 
             return false;
         }
@@ -131,11 +128,12 @@ internal class BluetoothPhyInitializer(
        return false
     }
 
+    private lateinit var deviceListenerThread:DeviceListenerThread
 
     fun startBluetoothListenerThread() {
 
-        if(!ConnectThreadIsRunning) {
-            var deviceListenerThread = DeviceListenerThread(bluetoothAdapter!!);
+        if(!isCanceled && !ConnectThreadIsRunning) {
+            deviceListenerThread = DeviceListenerThread(bluetoothAdapter!!);
             deviceListenerThread.start()
             ConnectThreadIsRunning = true
         }
@@ -157,12 +155,12 @@ internal class BluetoothPhyInitializer(
 
         private val bluetoothAdapter: BluetoothAdapter = bluetoothAdapter
         var matchingdevice: BluetoothDevice? = null
-
+        var connectThread: ConnectThread? = null
 
         @SuppressLint("MissingPermission")
         public override fun run() {
 
-            while(true) {
+            while(!isCanceled) {
                 Log.d("bt:DeviceListenerThread", String.format("loop"))
 
                 val pairedDevices: Set<BluetoothDevice>? =
@@ -194,11 +192,12 @@ internal class BluetoothPhyInitializer(
                         Log.d("bt:pairedDevices", String.format("bluetoothAdapter.cancelDiscovery exception is: %s", ex));
 
                     }
-                    var connectThread: ConnectThread = ConnectThread(matchingdevice!!)
-                    connectThread.start()
+
+                    connectThread = ConnectThread(matchingdevice!!)
+                    connectThread?.start()
 
                     Log.d("bt:DeviceListenerThread", String.format("calling connectThread.join"))
-                    connectThread.join();
+                    connectThread?.join();
                 }
                 sleep(10000)
             }
@@ -206,6 +205,8 @@ internal class BluetoothPhyInitializer(
 
         // Closes the client socket and causes the thread to finish.
         fun cancel() {
+            //jjustman-2023-05-24 - dirty hack
+            connectThread?.interrupt()
         }
     }
 
@@ -214,10 +215,12 @@ internal class BluetoothPhyInitializer(
 
         val cewiBluetoothPhy: CeWiBluetoothPHYAndroid = CeWiBluetoothPHYAndroid()
 
-        receiver.openRoute(BluetoothPhyAtsc3Source(cewiBluetoothPhy, -1, "bluetooth", 0), false, {})
-
         val mmInStream: InputStream = socket.inputStream
         val mmOutStream: OutputStream = socket.outputStream
+
+        cewiBluetoothPhy.setBluetoothOutputStream(mmOutStream);
+        receiver.openRoute(BluetoothPhyAtsc3Source(cewiBluetoothPhy, -1, "bluetooth", 0), false, {})
+
 
         //jjustman-2023-05-03 - using 1024 bytes on S10+ -> results in about 350kbit/s, trying to increase to larger buf size
         //          no difference when using 16384
@@ -234,11 +237,7 @@ internal class BluetoothPhyInitializer(
         var lastTimestamp: Long = System.currentTimeMillis()
         var loopCount: Int = 0;
 
-        cewiBluetoothPhy.init()
-    //jjustman-2023-04-07 - TODO - wire up tune method via bt rfcomm, but trigger a dummy tune call so we can start our processing threads
-        cewiBluetoothPhy.tune(533000, 0);
-
-        while(socket.isConnected) {
+        while(!isCanceled && socket.isConnected) {
             //read
 
             numBytes = try {
@@ -270,12 +269,15 @@ internal class BluetoothPhyInitializer(
                 lastTimestamp = System.currentTimeMillis()
             }
 
-            if((loopCount % 5000) == 0) {
-                mmOutStream.write(0x31);
-                mmOutStream.write(0x33);
-                mmOutStream.write(0x70);
-                mmOutStream.flush();
-            }
+            //retune example
+//            if((loopCount % 1000) == 0) {
+//                //tune command
+//                //ntohl for frequency: 533000 - 0x00 08 22 08
+//                //plp0: 0x00
+//                var byteArray = byteArrayOf(0xF0.toByte(), 0x08.toByte(), 0x22.toByte(), 0x08.toByte(), 0x00.toByte(), 0x00.toByte());
+//                mmOutStream.write(byteArray);
+//                mmOutStream.flush();
+//            }
         }
 
         cewiBluetoothPhy.stop()
@@ -297,7 +299,7 @@ internal class BluetoothPhyInitializer(
             try {
                 priority = MAX_PRIORITY
                 mmSocket?.let { socket ->
-                    while (!socket.isConnected && (loopCount++) < 10) {
+                    while (!isCanceled && !socket.isConnected && (loopCount++) < 10) {
                         socket.connect()
                         if (socket.isConnected) {
                             // The connection attempt succeeded. Perform work associated with
@@ -327,6 +329,8 @@ internal class BluetoothPhyInitializer(
 
     override fun cancel() {
         isCanceled = true
+        deviceListenerThread.cancel()
+
     }
 
     private fun readPhyAttributes(parser: XmlResourceParser): List<Triple<Int, String?, Int>> {
@@ -371,6 +375,41 @@ internal class BluetoothPhyInitializer(
             return result
         }
     }
+//
+////    private fun getActivityByContext(context: Context?): Activity? {
+////        if (context == null) {
+////            return null
+////        } else if (context is ContextWrapper && context is Activity) {
+////            return context
+////        } else if (context is ContextWrapper) {
+////            return getActivity((context as ContextWrapper).getBaseContext())
+////        }
+////        return null
+////    }
+//
+//    private fun getActivity(context: Context?): Activity? {
+//        if (context == null) {
+//            return null
+//        } else if (context is ContextWrapper) {
+//            return if (context is Activity) {
+//                context
+//            } else {
+//                getActivity(context.baseContext)
+//            }
+//        }
+//        return null
+//    }
+////    private fun Context?.getParentActivity() : AppCompatActivity? = when {
+////        this is ContextWrapper -> if (this is AppCompatActivity) this else this.baseContext.getParentActivity()
+////        else -> null
+////    }
+//
+//    tailrec fun Context.activity(): Activity? = when {
+//        this is Activity -> this
+//        else -> (this as? ContextWrapper)?.baseContext?.activity()
+//    }
+
+
 
     companion object {
         val TAG: String = BluetoothPhyInitializer::class.java.simpleName

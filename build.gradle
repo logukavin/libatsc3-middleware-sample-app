@@ -26,7 +26,8 @@ buildscript {
 }
 
 plugins {
-    id "net.linguica.maven-settings" version "0.5"
+    //jjustman-2023-05-24 - disable maven-settings plugin for gradle build cache
+//id "net.linguica.maven-settings" version "0.5"
     id "org.jetbrains.dokka" version "${dokka_version}"
 
 }
@@ -61,7 +62,8 @@ allprojects {
 }
 
 subprojects {
-    apply plugin: 'net.linguica.maven-settings'
+    //jjustman-2023-05-24 - disable maven-settings plugin for gradle build cache
+//    apply plugin: 'net.linguica.maven-settings'
     apply plugin: 'org.jetbrains.dokka'
 }
 
