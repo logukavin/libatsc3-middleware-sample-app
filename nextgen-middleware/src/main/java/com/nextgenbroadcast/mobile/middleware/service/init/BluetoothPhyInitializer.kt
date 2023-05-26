@@ -213,14 +213,13 @@ internal class BluetoothPhyInitializer(
 
     fun manageMyConnectedSocket(socket: BluetoothSocket) {
 
-        val cewiBluetoothPhy: CeWiBluetoothPHYAndroid = CeWiBluetoothPHYAndroid()
+        var cewiBluetoothPhy: CeWiBluetoothPHYAndroid = CeWiBluetoothPHYAndroid()
 
-        val mmInStream: InputStream = socket.inputStream
-        val mmOutStream: OutputStream = socket.outputStream
+        var mmInStream: InputStream = socket.inputStream
+        var mmOutStream: OutputStream = socket.outputStream
 
         cewiBluetoothPhy.setBluetoothOutputStream(mmOutStream);
         receiver.openRoute(BluetoothPhyAtsc3Source(cewiBluetoothPhy, -1, "bluetooth", 0), false, {})
-
 
         //jjustman-2023-05-03 - using 1024 bytes on S10+ -> results in about 350kbit/s, trying to increase to larger buf size
         //          no difference when using 16384
@@ -281,6 +280,10 @@ internal class BluetoothPhyInitializer(
         }
 
         cewiBluetoothPhy.stop()
+        cewiBluetoothPhy.deinit()
+        //jjustman-2023-05-26 - TODO: refactor for deinit java wrapper impl cleanup
+        cewiBluetoothPhy.setBluetoothOutputStream(null);
+
     }
 
     private val SPP_UUID: UUID =  UUID.fromString("00001101-0000-1000-8000-00805f9b34fb")
