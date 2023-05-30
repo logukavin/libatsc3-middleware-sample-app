@@ -27,7 +27,9 @@
     <usb-device vendor-id="5840" product-id="3500" />
     <usb-device vendor-id="5840" product-id="3737" />
 
-    <!-- jjustman-2023-01-26 - c e w i j j -->
+    <!-- jjustman-2023-01-26 - c e w i j j - with cypress vendor id-->
     <usb-device vendor-id="52942" product-id="256" />
+    <!-- jjustman-2023-05-26 - updated to 0x3133:0x7777 c e w i j j -->
+    <usb-device vendor-id="12595" product-id="30583" />
 
 </resources>
