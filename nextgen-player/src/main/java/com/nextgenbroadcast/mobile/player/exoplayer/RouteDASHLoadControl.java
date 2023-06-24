@@ -1,5 +1,7 @@
 package com.nextgenbroadcast.mobile.player.exoplayer;
 
+import android.util.Log;
+
 import com.google.android.exoplayer2.C;
 import com.google.android.exoplayer2.DefaultLoadControl;
 import com.google.android.exoplayer2.Renderer;
@@ -10,25 +12,25 @@ public class RouteDASHLoadControl extends DefaultLoadControl {
 
     public RouteDASHLoadControl() {
         super(new DefaultAllocator(true, C.DEFAULT_BUFFER_SEGMENT_SIZE),
-                /*DEFAULT_MIN_BUFFER_MS*/ 100,
+                /*DEFAULT_MIN_BUFFER_MS*/ 2000,
 
                 //jjustman-2020-08-06 - reduce down to 5 from 50s?
-                /*DEFAULT_MAX_BUFFER_MS*/ 100,
+                /*DEFAULT_MAX_BUFFER_MS*/ 2000,
 
                 //jjustman-2020-08-06 - reduce down to 5 from 50s?
-                /*DEFAULT_MAX_BUFFER_MS*/ 100,
+                /*DEFAULT_MAX_BUFFER_MS*/ 2000,
 
-                /*DEFAULT_BUFFER_FOR_PLAYBACK_MS*/ 0,
+                /*DEFAULT_BUFFER_FOR_PLAYBACK_MS*/ 2000,
 
-                /*DEFAULT_BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS*/ 0,
+                /*DEFAULT_BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS*/ 2000,
 
                 //jjustman-2020-08-06 - set to 32KB from DEFAULT_TARGET_BUFFER_BYTES
-                /*DEFAULT_TARGET_BUFFER_BYTES*/ 1024,
+                /*DEFAULT_TARGET_BUFFER_BYTES*/ 8192,
 
                 DEFAULT_PRIORITIZE_TIME_OVER_SIZE_THRESHOLDS,
 
                 // ~6 frames?
-                /*DEFAULT_BACK_BUFFER_DURATION_MS*/ 100,
+                /*DEFAULT_BACK_BUFFER_DURATION_MS*/ 2000,
 
                 /*
                   jjustman-2020-08-06 - don't set to false, will stall playback after 2s at:
@@ -46,7 +48,15 @@ public class RouteDASHLoadControl extends DefaultLoadControl {
     public boolean shouldStartPlayback(long bufferedDurationUs, float playbackSpeed, boolean rebuffering) {
         //return super.shouldStartPlayback(bufferedDurationUs, playbackSpeed, rebuffering);
         //jjustman-2020-08-06 - HACK for forcing playback start without waiting for first period
-        return true;
+
+        if(bufferedDurationUs > 1000000) {
+            Log.d("RouteDASHLoadControl", String.format("shouldStartPlayback with bufferedDurationUs: %d, rebuffering: %s, returning TRUE", bufferedDurationUs, rebuffering));
+
+            return true; //jjustman-2020-08-06 - HACK for forcing playback start without waiting for first period
+        } else {
+            Log.d("RouteDASHLoadControl", String.format("shouldStartPlayback with bufferedDurationUs: %d, rebuffering: %s, returning false", bufferedDurationUs, rebuffering));
+            return false;
+        }
     }
 
     @Override

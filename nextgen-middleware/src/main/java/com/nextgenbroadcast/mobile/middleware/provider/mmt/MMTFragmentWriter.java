@@ -745,6 +745,8 @@ public class MMTFragmentWriter {
 
         audioMfuPresentationTimestampUsMaxWraparoundValue = audioMfuPresentationTimestampMap.getOrDefault(mmtAudioDecoderConfigurationRecord.packet_id, Long.MAX_VALUE);
         audioMfuPresentationTimestampMap.clear();
+        //jjustman-2023-06-10 - fixup for mmt wraparound?
+        audioPacketIdMpuSequenceNumberMap.clear();
 
         stppMfuPresentationTimestampUsMaxWraparoundValue = stppMfuPresentationTimestampUs;
         stppMfuPresentationTimestampUs = Long.MAX_VALUE;

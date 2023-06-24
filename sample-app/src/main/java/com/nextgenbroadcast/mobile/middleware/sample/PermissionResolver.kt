@@ -72,6 +72,12 @@ class PermissionResolver(
                 Toast.makeText(activity, "BLUETOOTH_CONNECT permission is required", Toast.LENGTH_LONG).show()
             }
 
+            //jjustman-2023-06-14 - workaround for bt scan
+            if (requiredPermissions.contains(Manifest.permission.BLUETOOTH_SCAN)) {
+                //Toast.makeText(activity, activity.getString(R.string.warning_access_background_location_permission), Toast.LENGTH_LONG).show()
+                Toast.makeText(activity, "BLUETOOTH_SCAN permission is required", Toast.LENGTH_LONG).show()
+            }
+
             // Ignore optional permissions
             requiredPermissions.removeAll(optionalPermissions - necessaryPermissions)
 
@@ -149,11 +155,13 @@ class PermissionResolver(
             /* vmatiash - 10/12/21 - comment to remove READ_PHONE_STATE permission dependency
             Manifest.permission.READ_PHONE_STATE,
              */
-    )
-    private val optionalPermissions = listOf(
-        Manifest.permission.ACCESS_COARSE_LOCATION,
-        Manifest.permission.ACCESS_FINE_LOCATION,
-        Manifest.permission.BLUETOOTH_CONNECT
-    )
-}
+        )
+
+        private val optionalPermissions = listOf(
+            Manifest.permission.ACCESS_COARSE_LOCATION,
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.BLUETOOTH_CONNECT,
+            Manifest.permission.BLUETOOTH_SCAN,
+        )
+    }
 }

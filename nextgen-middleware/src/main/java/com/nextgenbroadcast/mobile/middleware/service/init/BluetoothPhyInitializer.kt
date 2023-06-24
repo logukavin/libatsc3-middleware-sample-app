@@ -1,5 +1,6 @@
 package com.nextgenbroadcast.mobile.middleware.service.init
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.Application
@@ -8,11 +9,14 @@ import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothSocket
 import android.content.*
+import android.content.pm.PackageManager
 import android.content.res.XmlResourceParser
 import android.os.Bundle
 import android.os.ParcelUuid
 import android.util.Log
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import com.nextgenbroadcast.mobile.middleware.BuildConfig
 import com.nextgenbroadcast.mobile.middleware.IAtsc3ReceiverCore
 import com.nextgenbroadcast.mobile.middleware.atsc3.source.BluetoothPhyAtsc3Source
@@ -23,6 +27,7 @@ import org.xmlpull.v1.XmlPullParser
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
+import java.nio.ByteBuffer
 import java.util.*
 
 internal class BluetoothPhyInitializer(
@@ -73,6 +78,12 @@ internal class BluetoothPhyInitializer(
 
             return false;
         }
+//
+//        when {
+//            ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED -> {
+//                // You can use the API that requires the permission.
+//            }
+//        }
 
         //otherwise
         startBluetoothListenerThread()
@@ -166,6 +177,15 @@ internal class BluetoothPhyInitializer(
                 val pairedDevices: Set<BluetoothDevice>? =
                     bluetoothAdapter?.bondedDevices
 
+                try {
+                    /*
+                    This is an asynchronous call, it will return immediately. Register for ACTION_DISCOVERY_STARTED and ACTION_DISCOVERY_FINISHED intents to determine exactly when the discovery starts and completes. Register for BluetoothDevice.ACTION_FOUND to be notified as remote Bluetooth devices are found.
+                     */
+                    bluetoothAdapter.startDiscovery();
+                } catch (ex:Exception) {
+                    Log.w("bt:pairedDevices", String.format("bluetoothAdapter.startDiscovery exception, bluetoothAdapter: %s, ex: %s", bluetoothAdapter, ex));
+                }
+
                 pairedDevices?.forEach { device ->
                     val deviceName = device.name
                     val deviceHardwareAddress = device.address // MAC address
@@ -184,13 +204,23 @@ internal class BluetoothPhyInitializer(
 
 
                 if (matchingdevice != null &&  matchingdevice?.bondState == BluetoothDevice.BOND_BONDED) {
+
+                    //jjustman-2023-06-14 18.19 - test for bonding persistence
+
+                    try {
+                        matchingdevice?.createBond();
+                        Thread.sleep(4000);
+                        Log.w("bt:pairedDevices", String.format("matchingdevice: %s, .bondState: %d", matchingdevice, matchingdevice?.bondState));
+
+                    } catch (ex:Exception) {
+                        Log.w("bt:pairedDevices", String.format("matchingdevice?.createBond() failed, device: %s, ex: %s", matchingdevice, ex));
+                    }
                     //jjustman-2023-03-19 - not needed if we are paired
                     // matchingdevice?.fetchUuidsWithSdp();
                     try {
                         bluetoothAdapter.cancelDiscovery();
                     } catch (ex:Exception) {
-                        Log.d("bt:pairedDevices", String.format("bluetoothAdapter.cancelDiscovery exception is: %s", ex));
-
+                        Log.w("bt:pairedDevices", String.format("bluetoothAdapter.cancelDiscovery exception is: %s", ex));
                     }
 
                     connectThread = ConnectThread(matchingdevice!!)
@@ -198,8 +228,12 @@ internal class BluetoothPhyInitializer(
 
                     Log.d("bt:DeviceListenerThread", String.format("calling connectThread.join"))
                     connectThread?.join();
+
+                    Log.d("bt:DeviceListenerThread", String.format("bluetoothAdapter.bondedDevices: $bluetoothAdapter.bondedDevices"))
+
+
                 }
-                sleep(10000)
+                sleep(2000)
             }
         }
 
@@ -214,12 +248,13 @@ internal class BluetoothPhyInitializer(
     fun manageMyConnectedSocket(socket: BluetoothSocket) {
 
         var cewiBluetoothPhy: CeWiBluetoothPHYAndroid = CeWiBluetoothPHYAndroid()
+        Log.d(TAG, "bt:manageMyConnectedSocket, cewiBluetoothPhy is: $cewiBluetoothPhy")
 
         var mmInStream: InputStream = socket.inputStream
         var mmOutStream: OutputStream = socket.outputStream
 
-        cewiBluetoothPhy.setBluetoothOutputStream(mmOutStream);
-        receiver.openRoute(BluetoothPhyAtsc3Source(cewiBluetoothPhy, -1, "bluetooth", 0), false, {})
+        receiver.openRoute(BluetoothPhyAtsc3Source(cewiBluetoothPhy, mmInStream, mmOutStream), false, {})
+
 
         //jjustman-2023-05-03 - using 1024 bytes on S10+ -> results in about 350kbit/s, trying to increase to larger buf size
         //          no difference when using 16384
@@ -229,25 +264,33 @@ internal class BluetoothPhyInitializer(
 
         // jjustman-2023-04-05 - hack! 16544; //188*10
         val mmBuffer: ByteArray = ByteArray(bufSize) // mmBuffer store for the stream
-        var numBytes: Int // bytes returned from read()
+        var numBytes: Long = 0 // bytes returned from read()
 
-        var bytesReceived: Int = 0;
-        var lastBytesReceived = 0;
+        //val mmByteBuffer: ByteBuffer = ByteBuffer.allocateDirect(bufSize)
+
+        var bytesReceived: Long = 0;
+        var lastBytesReceived: Long = 0;
         var lastTimestamp: Long = System.currentTimeMillis()
         var loopCount: Int = 0;
 
         while(!isCanceled && socket.isConnected) {
+
             //read
 
+            //mmByteBuffer
             numBytes = try {
-                mmInStream.read(mmBuffer)
+                //mmInStream.read(mmByteBuffer.array()).toLong()
+                mmInStream.read(mmBuffer).toLong()
             } catch (e: IOException) {
                 Log.d(TAG, "bt:Input stream was disconnected", e)
                 break
             }
             loopCount++;
             bytesReceived += numBytes; //mmBuffer.size;
-            cewiBluetoothPhy.RxDataCallback(mmBuffer, numBytes);
+            //cewiBluetoothPhy.RxDataCallback(mmByteBuffer.array(), numBytes.toInt());
+            cewiBluetoothPhy.RxDataCallback(mmBuffer, numBytes.toInt());
+
+            //cewiBluetoothPhy.RxDataCallback(mmBuffer, numBytes.toInt());
 
             var timeDiffMS = System.currentTimeMillis() - lastTimestamp
             //if((loopCount++ % 100) == 0) {
@@ -268,17 +311,9 @@ internal class BluetoothPhyInitializer(
                 lastTimestamp = System.currentTimeMillis()
             }
 
-            //retune example
-//            if((loopCount % 1000) == 0) {
-//                //tune command
-//                //ntohl for frequency: 533000 - 0x00 08 22 08
-//                //plp0: 0x00
-//                var byteArray = byteArrayOf(0xF0.toByte(), 0x08.toByte(), 0x22.toByte(), 0x08.toByte(), 0x00.toByte(), 0x00.toByte());
-//                mmOutStream.write(byteArray);
-//                mmOutStream.flush();
-//            }
         }
 
+        receiver.closeRoute()
         cewiBluetoothPhy.stop()
         cewiBluetoothPhy.deinit()
         //jjustman-2023-05-26 - TODO: refactor for deinit java wrapper impl cleanup
