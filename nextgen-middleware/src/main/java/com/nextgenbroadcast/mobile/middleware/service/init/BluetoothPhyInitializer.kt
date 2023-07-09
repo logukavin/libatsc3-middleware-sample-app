@@ -291,14 +291,13 @@ internal class BluetoothPhyInitializer(
             cewiBluetoothPhy.RxDataCallback(mmBuffer, numBytes.toInt());
 
             //cewiBluetoothPhy.RxDataCallback(mmBuffer, numBytes.toInt());
-
             var timeDiffMS = System.currentTimeMillis() - lastTimestamp
             //if((loopCount++ % 100) == 0) {
             if(timeDiffMS >= 1000) {
 
                 var bytes_last_sample_diff = bytesReceived - lastBytesReceived
                 var bits_per_second_last_sample = (bytes_last_sample_diff * 8.0) / (timeDiffMS / 1000.0)
-                Log.d(
+                Log.i(
                     "bt", String.format(
                         "received $bytesReceived, packet count: $loopCount, last interval: $bits_per_second_last_sample bits/s, last packet: $numBytes, bytes: 0x%02x 0x%02x 0x%02x 0x%02x",
                         mmBuffer.get(0), mmBuffer.get(1), mmBuffer.get(2), mmBuffer.get(3),

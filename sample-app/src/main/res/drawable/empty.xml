@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- jjustman-2021-09-07 - possible hack work around for crash on markone:
+
+    https://stackoverflow.com/questions/50360227/tgkill-native-error-on-android-8-0-samsung-s8
+
+*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
+Build fingerprint: 'qti/sdm660_64/sdm660_64:9/jjj/root05252152:userdebug/test-keys'
+Revision: '0'
+ABI: 'arm64'
+pid: 24591, tid: 24735, name: RenderThread  >>> com.nextgenbroadcast.mobile.middleware.sample <<<
+signal 6 (SIGABRT), code -6 (SI_TKILL), fault addr
+Abort message: 'Failed to create EGLSurface for window 0x7d6a5ac010, eglErr = EGL_BAD_ALLOC'
+    x0  0000000000000000  x1  000000000000609f  x2  0000000000000006  x3  0000000000000008
+    x4  feff71647164636d  x5  feff71647164636d  x6  feff71647164636d  x7  7f7f7f7f7f7f7f7f
+    x8  0000000000000083  x9  98bfe07cecb13648  x10 0000000000000000  x11 fffffffc7ffffbdf
+    x12 0000000000000001  x13 ffffffffffffffff  x14 ffffffffff000000  x15 ffffffffffffffff
+    x16 0000007e18e722b8  x17 0000007e18d93a50  x18 0000000000000010  x19 000000000000600f
+    x20 000000000000609f  x21 0000000000000000  x22 0000007d6e901588  x23 0000000000000001
+    x24 0000007d77894b68  x25 0000007d77894b50  x26 0000007d77894b50  x27 0000000000000000
+    x28 0000000000000009  x29 0000007d6e900d40
+    sp  0000007d6e900d00  lr  0000007e18d85084  pc  0000007e18d850ac
+
+backtrace:
+    #00 pc 00000000000220ac  /system/lib64/libc.so (abort+116)
+    #01 pc 0000000000008644  /system/lib64/liblog.so (__android_log_assert+296)
+    #02 pc 00000000000f6948  /system/lib64/libhwui.so (android::uirenderer::renderthread::EglManager::createSurface(ANativeWindow*, bool)+312)
+
+stack:
+         0000007d6e900c80  0000007d6e900d28  <anonymous:0000007d6e806000>
+         0000007d6e900c88  0000000000000000
+         0000007d6e900c90  0000007d6e900cf0  <anonymous:0000007d6e806000>
+         0000007d6e900c98  0000005ed5e5c9fc  /system/bin/app_process64 (sigprocmask64+124)
+         0000007d6e900ca0  0000007d6e900d40  <anonymous:0000007d6e806000>
+         0000007d6e900ca8  0000007e1909315c  /system/lib64/liblog.so (__android_log_buf_write+288)
+         0000007d6e900cb0  0000000700000000
+         0000007d6e900cb8  98bfe07cecb13648
+         0000007d6e900cc0  0000000000000001
+         0000007d6e900cc8  0000000000000001
+         0000007d6e900cd0  0000007d6e901588  <anonymous:0000007d6e806000>
+         0000007d6e900cd8  0000000000000000
+         0000007d6e900ce0  000000000000609f
+         0000007d6e900ce8  000000000000600f
+         0000007d6e900cf0  0000007d6e900d40  <anonymous:0000007d6e806000>
+         0000007d6e900cf8  0000007e18d85084  /system/lib64/libc.so (abort+76)
+    #00  0000007d6e900d00  000000000000004c
+         ........  ........
+    #01  0000007d6e900d50  2e2e2e2e2e2e2e2e
+         ........  ........
+    #02  0000007d6e901260  0000000000000000
+         0000007d6e901268  0000308a0000309d
+         0000007d6e901270  0000007d00003038
+         0000007d6e901278  98bfe07cecb13648
+         0000007d6e901280  0000007d6a5ac000  [anon:libc_malloc]
+         0000007d6e901288  0000000000000000
+         0000007d6e901290  0000000000000000
+         0000007d6e901298  0000007d7789c660  [anon:libc_malloc]
+         0000007d6e9012a0  0000007d6e9012d0  <anonymous:0000007d6e806000>
+         0000007d6e9012a8  0000007e178465ec  /system/lib64/libhwui.so (_ZN7android10uirenderer12skiapipeline18SkiaOpenGLPipeline10setSurfaceEPNS_7SurfaceENS0_12renderthread12SwapBehaviorENS5_9ColorModeE+88)
+         0000007d6e9012b0  0000007e18eb2060  /system/lib64/libcutils.so
+         0000007d6e9012b8  0000007e18eb2120  /system/lib64/libcutils.so
+         0000007d6e9012c0  0000007d6e901588  <anonymous:0000007d6e806000>
+         0000007d6e9012c8  0000007d77976d00  [anon:libc_malloc]
+         0000007d6e9012d0  0000007d6e901330  <anonymous:0000007d6e806000>
+         0000007d6e9012d8  0000007e1784fbcc  /system/lib64/libhwui.so (_ZN7android10uirenderer12renderthread13CanvasContext10setSurfaceEONS_2spINS_7SurfaceEEE+108)
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle" >
+    <!-- nothing -->
+</shape>

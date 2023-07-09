@@ -516,8 +516,8 @@ internal class TelemetryHolder(
         private const val CONNECTION_TCP_PORT = 8081
         private const val CONNECTION_UDP_PORT = 6969
 
-        private const val AWSIOT_RECEIVER_TEMPLATE_NAME = "ATSC3MobileReceiverProvisioning"
-        private const val AWSIOT_CLIENT_ID_FORMAT = "ATSC3MobileReceiver_${AWSIoThing.AWSIOT_FORMAT_SERIAL}"
+        private const val AWSIOT_RECEIVER_TEMPLATE_NAME = com.nextgenbroadcast.mobile.middleware.dev.BuildConfig.AWSIoTClientProvisioningTemplateName
+        private const val AWSIOT_CLIENT_ID_FORMAT = "ngbp_mobile_receiver_${AWSIoThing.AWSIOT_FORMAT_SERIAL}"
         private const val AWSIOT_EVENT_TOPIC_FORMAT = "telemetry/${AWSIoThing.AWSIOT_FORMAT_SERIAL}"
         private const val AWSIOT_TOPIC_CONTROL = "control/${AWSIoThing.AWSIOT_FORMAT_SERIAL}"
         private const val AWSIOT_GLOBAL_TOPIC_CONTROL = "global/command/request/#"

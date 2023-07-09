@@ -24,7 +24,9 @@ android {
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
 
-        buildConfigField("String", "AWSIoTCustomerUrl", "\"a2mpoqnjkscij4-ats.iot.us-east-1.amazonaws.com\"")
+        buildConfigField("String", "AWSIoTCustomerUrl", "\"a1ejw3kdp519-ats.iot.us-west-2.amazonaws.com\"")
+        buildConfigField("String", "AWSIoTManagerProvisioningTemplateName", "\"libatsc3_manager_provisioning_template\"")
+        buildConfigField("String", "AWSIoTClientProvisioningTemplateName", "\"libatsc3_provisioning_template\"")
     }
 
     buildTypes {

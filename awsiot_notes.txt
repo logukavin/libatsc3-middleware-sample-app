@@ -1,0 +1,305 @@
+provisoning policy document example
+
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "iot:Connect",
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "iot:Publish",
+        "iot:Receive"
+      ],
+      "Resource": [
+        "arn:aws:iot:us-west-2:497936090616:topic/$aws/certificates/create/*",
+        "arn:aws:iot:us-west-2:497936090616:topic/$aws/provisioning-templates/libatsc3_provisioning_template/provision/*"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": "iot:Subscribe",
+      "Resource": [
+        "arn:aws:iot:us-west-2:497936090616:topicfilter/$aws/certificates/create/*",
+        "arn:aws:iot:us-west-2:497936090616:topicfilter/$aws/provisioning-templates/libatsc3_provisioning_template/provision/*"
+      ]
+    }
+  ]
+}
+
+
+{
+  "Parameters": {
+    "SerialNumber": {
+      "Type": "String"
+    },
+    "AWS::IoT::Certificate::Id": {
+      "Type": "String"
+    }
+  },
+  "Resources": {
+      "policy": {
+      "Type": "AWS::IoT::Policy",
+      "Properties": {
+        "PolicyName": "libatsc3_android_client_device_provisioned_policy"
+      }
+    },
+    "certificate": {
+      "Type": "AWS::IoT::Certificate",
+      "Properties": {
+        "CertificateId": {
+          "Ref": "AWS::IoT::Certificate::Id"
+        },
+        "Status": "Active"
+      }
+    },
+    "thing": {
+      "Type": "AWS::IoT::Thing",
+      "OverrideSettings": {
+        "AttributePayload": "MERGE",
+        "ThingGroups": "DO_NOTHING",
+        "ThingTypeName": "REPLACE"
+      },
+      "Properties": {
+        "AttributePayload": {
+          "serialNumber": {
+            "Ref": "SerialNumber"
+          }
+        },
+        "ThingTypeName": "libatsc3_android_client_device",
+        "ThingGroups": [],
+        "ThingName": {
+          "Fn::Join": [
+            "",
+            [
+              "ngbp_mobile_receiver_",
+              {
+                "Ref": "SerialNumber"
+              }
+            ]
+          ]
+        }
+      }
+    }
+  }
+}
+
+
+policy: libatsc3_android_client_device_provisioned_policy
+
+iot:connect
+
+arn:aws:iot:us-west-2:497936090616:client/${iot:Connection.Thing.ThingName}
+
+iot:subscribe: for global channel - note, Failed subscribe topic: global/command/request/# but we need to use /* for awsiot policy acl
+
+arn:aws:iot:us-west-2:497936090616:global/command/request/*
+
+
+
+iot:subscribe for thingName control channel
+
+arn:aws:iot:us-west-2:497936090616:control/${iot:Connection.Thing.ThingName}
+
+
+
+....
+
+
+
+
+
+
+-----
+
+libatsc3_android_sampe_app_provisioning_policy
+
+
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "iot:Connect",
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "iot:Publish",
+        "iot:Receive"
+      ],
+      "Resource": [
+        "arn:aws:iot:us-west-2:497936090616:topic/$aws/certificates/create/*",
+        "arn:aws:iot:us-west-2:497936090616:topic/$aws/provisioning-templates/libatsc3_provisioning_template/provision/*"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": "iot:Subscribe",
+      "Resource": [
+        "arn:aws:iot:us-west-2:497936090616:topicfilter/$aws/certificates/create/*",
+        "arn:aws:iot:us-west-2:497936090616:topicfilter/$aws/provisioning-templates/libatsc3_provisioning_template/provision/*"
+      ]
+    }
+  ]
+}
+
+
+
+
+
+
+
+---
+
+libatsc3_android_client_device_provisioned_policy
+
+
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "iot:Connect",
+      "Resource": "arn:aws:iot:us-west-2:497936090616:client/${iot:Connection.Thing.ThingName}"
+    },
+    {
+      "Effect": "Allow",
+      "Action": "iot:Subscribe",
+      "Resource": "arn:aws:iot:us-west-2:497936090616:topicfilter/global/command/request*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": "iot:Receive",
+      "Resource": "arn:aws:iot:us-west-2:497936090616:topic/global/command/request*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": "iot:Subscribe",
+      "Resource": "arn:aws:iot:us-west-2:497936090616:topicfilter/control/${iot:Connection.Thing.ThingName}"
+    },
+    {
+      "Effect": "Allow",
+      "Action": "iot:Receive",
+      "Resource": "arn:aws:iot:us-west-2:497936090616:topic/control/${iot:Connection.Thing.ThingName}"
+    },
+    {
+      "Effect": "Allow",
+      "Action": "iot:Publish",
+      "Resource": "arn:aws:iot:us-west-2:497936090616:topic/telemetry/${iot:Connection.Thing.ThingName}/*"
+    }
+  ]
+}
+
+
+
+
+
+
+
+----
+
+libatsc3_manager_provisioning_policy
+
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "iot:Connect",
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "iot:Publish",
+        "iot:Receive"
+      ],
+      "Resource": [
+        "arn:aws:iot:us-west-2:497936090616:topic/$aws/certificates/create/*",
+        "arn:aws:iot:us-west-2:497936090616:topic/$aws/provisioning-templates/libatsc3_manager_provisioning/provision/*"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": "iot:Subscribe",
+      "Resource": [
+        "arn:aws:iot:us-west-2:497936090616:topicfilter/$aws/certificates/create/*",
+        "arn:aws:iot:us-west-2:497936090616:topicfilter/$aws/provisioning-templates/libatsc3_manager_provisioning/provision/*"
+      ]
+    }
+  ]
+}
+
+
+
+---
+
+
+
+
+libatsc3_android_manager_provisioned_policy
+
+
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "iot:Connect",
+      "Resource": "arn:aws:iot:us-west-2:497936090616:client/${iot:Connection.Thing.ThingName}"
+    },
+    {
+      "Effect": "Allow",
+      "Action": "iot:Subscribe",
+      "Resource": "arn:aws:iot:us-west-2:497936090616:topicfilter/global/command/request*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": "iot:Receive",
+      "Resource": "arn:aws:iot:us-west-2:497936090616:topic/global/command/request*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": "iot:Subscribe",
+      "Resource": "arn:aws:iot:us-west-2:497936090616:topicfilter/control/${iot:Connection.Thing.ThingName}"
+    },
+    {
+      "Effect": "Allow",
+      "Action": "iot:Receive",
+      "Resource": "arn:aws:iot:us-west-2:497936090616:topic/control/${iot:Connection.Thing.ThingName}"
+    },
+    {
+      "Effect": "Allow",
+      "Action": "iot:Publish",
+      "Resource": "arn:aws:iot:us-west-2:497936090616:topic/global/command/request"
+    },
+    {
+      "Effect": "Allow",
+      "Action": "iot:Publish",
+      "Resource": "arn:aws:iot:us-west-2:497936090616:topic/control/ngbp_mobile_receiver_*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": "iot:Subscribe",
+      "Resource": "arn:aws:iot:us-west-2:497936090616:topicfilter/telemetry/*/*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": "iot:Receive",
+      "Resource": "arn:aws:iot:us-west-2:497936090616:topic/telemetry/*/*"
+    }
+  ]
+}
+
+
+
+
+
+----
+
+

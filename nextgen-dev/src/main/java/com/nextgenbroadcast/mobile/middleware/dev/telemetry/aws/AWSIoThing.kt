@@ -161,7 +161,7 @@ class AWSIoThing(
                         connectAWSIoT(certificateStream, privateKeyStream)
                     }
                 } catch (e: Exception) {
-                    LOG.e(TAG, "Can't initialize AWS IoT connection", e)
+                    LOG.e(TAG, "Can't initialize AWS IoT connection in fleet provisioning flow", e)
                 }
             }
         } else {
@@ -176,7 +176,17 @@ class AWSIoThing(
                         connectAWSIoT(certificateStream, privateKeyStream)
                     }
                 } catch (e: Exception) {
-                    LOG.e(TAG, "Can't initialize AWS IoT connection", e)
+                    LOG.e(TAG, "Can't initialize AWS IoT connection in provisioned device connect flow", e)
+
+                    //jjustman-2023-07-09 - hack-ish
+                    //Thread.sleep(5000);
+
+                    //try and reprovision?
+                    preferences.edit().remove(PREF_CERTIFICATE_ID).apply()
+
+                    //jjustman-2023-07-09 hack!
+                    requireClient()
+
                 }
             }
         }

@@ -190,6 +190,7 @@ public class MMTFragmentWriter {
                     // write initial MFU Metadata
                     InitMpuMetadata_HEVC_NAL_Payload.rewind();
 
+                    Log.i(TAG, String.format("video: frame rate: %f", getVideoFrameRate()));
                     int headerSize = MMTConstants.VIDEO_TRACK_HEADER_SIZE + mpuMetadataSize;
                     videoHeaderBuffer = ensureBufferSize(videoHeaderBuffer, headerSize);
                     videoHeaderBuffer
@@ -506,6 +507,7 @@ public class MMTFragmentWriter {
     }
 
     private float getVideoFrameRate() {
+        Log.d(TAG, String.format("getVideoFrameRate: extracted_sample_duration_us: %d, calculated value: %f ", MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us, (float) (1000000.0 / MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us)));
         return (float) 1000000.0 / MmtPacketIdContext.video_packet_statistics.extracted_sample_duration_us;
     }
 
